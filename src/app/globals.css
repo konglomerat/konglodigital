@@ -3,9 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
+  color-scheme: light;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -16,6 +14,67 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    color-scheme: dark;
+  }
+
+  .bg-zinc-50 {
+    background-color: #0b0b0f !important;
+  }
+
+  .bg-zinc-100 {
+    background-color: #1c1c20 !important;
+  }
+
+  .bg-white {
+    background-color: #111113 !important;
+  }
+
+  .bg-zinc-50\/60 {
+    background-color: rgba(11, 11, 15, 0.6) !important;
+  }
+
+  .bg-white\/60 {
+    background-color: rgba(17, 17, 19, 0.6) !important;
+  }
+
+  .text-zinc-900 {
+    color: #f4f4f5 !important;
+  }
+
+  .text-zinc-800 {
+    color: #e4e4e7 !important;
+  }
+
+  .text-zinc-700 {
+    color: #d4d4d8 !important;
+  }
+
+  .text-zinc-600 {
+    color: #a1a1aa !important;
+  }
+
+  .text-zinc-500 {
+    color: #8b8b94 !important;
+  }
+
+  .text-zinc-400 {
+    color: #71717a !important;
+  }
+
+  .border-zinc-200 {
+    border-color: #27272a !important;
+  }
+
+  .border-zinc-100 {
+    border-color: #1f1f23 !important;
+  }
+
+  .border-zinc-300 {
+    border-color: #3f3f46 !important;
+  }
+
+  .ring-zinc-200 {
+    --tw-ring-color: #3f3f46 !important;
   }
 }
 
