@@ -3,8 +3,29 @@ export type RawProduct = Record<string, unknown>;
 export type ProductPayload = {
   id: string;
   title: string;
+  number?: string;
+  unit?: string;
+  stock?: number;
   details?: string;
   unitAmount: number;
+  imageUrl?: string | null;
+};
+
+const extractImageUrl = (value: unknown): string | null => {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const resource = record.resource ?? record.url ?? record.href;
+    if (typeof resource === "string") {
+      return resource;
+    }
+  }
+  return null;
 };
 
 const toNumber = (value: unknown): number | null => {
@@ -57,6 +78,23 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
   const details =
     (item.details as string | undefined) ??
     (item.description as string | undefined);
+  const number =
+    (item.number as string | undefined) ??
+    (item.productNumber as string | undefined) ??
+    (item.code as string | undefined) ??
+    (item.sku as string | undefined);
+  const unit =
+    (item.unit as string | undefined) ??
+    (item.unitName as string | undefined) ??
+    (item.unitLabel as string | undefined);
+  const stockValue =
+    (item.stock as number | undefined) ??
+    (item.quantity as number | undefined) ??
+    (item.qty as number | undefined);
+  const stock =
+    typeof stockValue === "number" && Number.isFinite(stockValue)
+      ? Math.max(0, Math.round(stockValue))
+      : undefined;
   const rawAmount =
     (item.unitAmount as number | undefined) ??
     (item.unit_amount as number | undefined) ??
@@ -80,12 +118,20 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
     (item.priceGross as { amount?: number } | undefined) ??
     (item.amount as { amount?: number } | undefined);
   const unitAmount = normalizeAmount(rawAmount);
+  const imageUrl =
+    extractImageUrl(item.image) ??
+    extractImageUrl(item.imageUrl) ??
+    extractImageUrl((item.info as { image?: unknown } | undefined)?.image) ??
+    extractImageUrl(
+      (item.info as { imageUrl?: unknown } | undefined)?.imageUrl,
+    ) ??
+    null;
 
   if (!id || !title || unitAmount === null) {
     return null;
   }
 
-  return { id, title, details, unitAmount };
+  return { id, title, number, unit, stock, details, unitAmount, imageUrl };
 };
 
 export const extractProducts = (payload: unknown): RawProduct[] => {

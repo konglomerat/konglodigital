@@ -1,187 +1,292 @@
-"use client";
-/* eslint-disable @next/next/no-img-element */
+import type { ResourcePayload } from "@/lib/campai-resources";
+import { unstable_cache } from "next/cache";
+import { redirect } from "next/navigation";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  buildResourcePath,
+  resolveResourceIdByPrettyTitle,
+} from "@/lib/resource-pretty-title";
+import ResourceDetailClient from "./ResourceDetailClient";
+import { normalizeResourceMapFeatures } from "../map-features";
 
-import { useEffect, useState, use } from "react";
-import Link from "next/link";
-
-type ResourceCategory = {
+type StoredCategory = {
   name?: string;
-  bookingCategoryId?: string;
+  bookingCategoryId?: string | null;
 };
 
-type Resource = {
+type ResourceRow = {
   id: string;
+  pretty_title?: string | null;
   name: string;
-  description?: string;
-  image?: string | null;
-  type?: string;
-  attachable?: boolean;
-  tags?: string[];
-  categories?: ResourceCategory[];
+  description: string | null;
+  image: string | null;
+  images?: string[] | null;
+  gps_altitude?: number | null;
+  type: string | null;
+  attachable: boolean | null;
+  tags: string[] | null;
+  categories: StoredCategory[] | null;
+  map_features?: unknown;
 };
 
-const fetchJson = async <T,>(url: string, init?: RequestInit) => {
-  const response = await fetch(url, init);
-  const data = (await response.json()) as { error?: string } & T;
-  if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+export const dynamic = "force-static";
+export const revalidate = 604800;
+
+const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
+  id: row.id,
+  prettyTitle: row.pretty_title ?? null,
+  name: row.name,
+  description: row.description ?? undefined,
+  image: row.image ?? null,
+  images: row.images ?? (row.image ? [row.image] : undefined),
+  gpsAltitude: row.gps_altitude ?? null,
+  type: row.type ?? undefined,
+  attachable: row.attachable ?? undefined,
+  tags: row.tags ?? undefined,
+  categories: Array.isArray(row.categories)
+    ? row.categories.map((category) => ({
+        name: category.name,
+        bookingCategoryId: category.bookingCategoryId ?? undefined,
+      }))
+    : undefined,
+  mapFeatures: normalizeResourceMapFeatures(row.map_features ?? null),
+  relatedResources: undefined,
+});
+
+const getRelatedResourcesMap = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  sourceIds: string[],
+) => {
+  const normalizedSourceIds = Array.from(
+    new Set(sourceIds.map((id) => id.trim()).filter(Boolean)),
+  );
+  const relatedMap = new Map<
+    string,
+    Array<{ id: string; name?: string; prettyTitle?: string | null }>
+  >();
+  normalizedSourceIds.forEach((id) => relatedMap.set(id, []));
+
+  if (normalizedSourceIds.length === 0) {
+    return relatedMap;
   }
-  return data;
+
+  const [
+    { data: linksA, error: linksAError },
+    { data: linksB, error: linksBError },
+  ] = await Promise.all([
+    supabase
+      .from("resource_links")
+      .select("resource_a, resource_b")
+      .in("resource_a", normalizedSourceIds),
+    supabase
+      .from("resource_links")
+      .select("resource_a, resource_b")
+      .in("resource_b", normalizedSourceIds),
+  ]);
+
+  if (linksAError || linksBError) {
+    const missingTable = [linksAError?.message, linksBError?.message].some(
+      (message) =>
+        typeof message === "string" &&
+        message.includes("resource_links") &&
+        message.includes("schema cache"),
+    );
+    if (missingTable) {
+      return relatedMap;
+    }
+    throw new Error(
+      linksAError?.message ||
+        linksBError?.message ||
+        "Unable to load related resources.",
+    );
+  }
+
+  const allLinks = [...(linksA ?? []), ...(linksB ?? [])].filter(
+    (row): row is { resource_a: string; resource_b: string } =>
+      typeof row.resource_a === "string" && typeof row.resource_b === "string",
+  );
+
+  const counterpartIds = Array.from(
+    new Set(
+      allLinks.flatMap((row) => {
+        const ids: string[] = [];
+        if (normalizedSourceIds.includes(row.resource_a)) {
+          ids.push(row.resource_b);
+        }
+        if (normalizedSourceIds.includes(row.resource_b)) {
+          ids.push(row.resource_a);
+        }
+        return ids;
+      }),
+    ),
+  );
+
+  const { data: counterpartRows, error: counterpartError } =
+    counterpartIds.length
+      ? await supabase
+          .from("resources")
+          .select("id, name, pretty_title")
+          .in("id", counterpartIds)
+      : { data: [], error: null };
+
+  if (counterpartError) {
+    throw new Error(
+      counterpartError.message || "Unable to load related resources.",
+    );
+  }
+
+  const counterpartById = new Map(
+    (counterpartRows ?? [])
+      .filter(
+        (
+          row,
+        ): row is {
+          id: string;
+          name: string | null;
+          pretty_title: string | null;
+        } => typeof row.id === "string",
+      )
+      .map((row) => [
+        row.id,
+        {
+          name: row.name ?? undefined,
+          prettyTitle: row.pretty_title ?? null,
+        },
+      ]),
+  );
+
+  allLinks.forEach((row) => {
+    if (normalizedSourceIds.includes(row.resource_a)) {
+      const counterpart = counterpartById.get(row.resource_b);
+      relatedMap.get(row.resource_a)?.push({
+        id: row.resource_b,
+        name: counterpart?.name,
+        prettyTitle: counterpart?.prettyTitle,
+      });
+    }
+    if (normalizedSourceIds.includes(row.resource_b)) {
+      const counterpart = counterpartById.get(row.resource_a);
+      relatedMap.get(row.resource_b)?.push({
+        id: row.resource_a,
+        name: counterpart?.name,
+        prettyTitle: counterpart?.prettyTitle,
+      });
+    }
+  });
+
+  return relatedMap;
 };
 
-export default function ResourceDetailPage({
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const resolveResourceId = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  idOrPrettyTitle: string,
+) => {
+  if (UUID_PATTERN.test(idOrPrettyTitle)) {
+    return idOrPrettyTitle;
+  }
+
+  const resolved = await resolveResourceIdByPrettyTitle(
+    supabase,
+    idOrPrettyTitle,
+  );
+  return resolved?.resourceId ?? null;
+};
+
+const loadResourceFromDb = async (idOrPrettyTitle: string) => {
+  const supabase = createSupabaseAdminClient();
+  const resolvedResourceId = await resolveResourceId(supabase, idOrPrettyTitle);
+  if (!resolvedResourceId) {
+    return {
+      resource: null as ResourcePayload | null,
+      errorMessage: "Not found",
+    };
+  }
+
+  const { data: row, error } = await supabase
+    .from("resources")
+    .select("*")
+    .eq("id", resolvedResourceId)
+    .single();
+
+  if (error || !row) {
+    return {
+      resource: null as ResourcePayload | null,
+      errorMessage: "Not found",
+    };
+  }
+
+  const resource = toResourcePayload(row as ResourceRow);
+  resource.relatedResources =
+    (await getRelatedResourcesMap(supabase, [resource.id])).get(resource.id) ??
+    [];
+
+  return {
+    resource,
+    errorMessage: null,
+  };
+};
+
+const getCachedResource = unstable_cache(
+  loadResourceFromDb,
+  ["resources-by-id"],
+  {
+    revalidate: 60 * 60 * 24 * 7,
+    tags: ["resources"],
+  },
+);
+
+const loadResource = async (id: string | undefined) => {
+  if (!id) {
+    return {
+      resource: null as ResourcePayload | null,
+      errorMessage: "Missing resource id.",
+    };
+  }
+
+  return getCachedResource(id);
+};
+
+export const generateStaticParams = async () => {
+  const supabase = createSupabaseAdminClient();
+  const { data: rows } = await supabase
+    .from("resources")
+    .select("id, pretty_title")
+    .order("created_at", { ascending: false })
+    .range(0, 499);
+
+  return (rows ?? [])
+    .map((row) =>
+      typeof row?.pretty_title === "string" && row.pretty_title.length > 0
+        ? row.pretty_title
+        : row?.id,
+    )
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+    .map((id) => ({ id }));
+};
+
+export default async function ResourceDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string } | Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const [resource, setResource] = useState<Resource | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { id } = await Promise.resolve(params);
+  const { resource, errorMessage } = await loadResource(id);
 
-  useEffect(() => {
-    let active = true;
-    const loadResource = async () => {
-      setLoading(true);
-      setErrorMessage(null);
-      try {
-        const data = await fetchJson<{ resource: Resource }>(
-          `/api/campai/resources/${id}`,
-        );
-        if (active) {
-          setResource(data.resource ?? null);
-        }
-      } catch (error) {
-        if (active) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to load Campai resource.",
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadResource();
-
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  if (resource) {
+    const canonicalPath = buildResourcePath(resource);
+    if (canonicalPath !== `/resources/${id}`) {
+      redirect(canonicalPath);
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Resource details
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              View details and metadata for the selected resource.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/resources"
-              className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-            >
-              Back to resources
-            </Link>
-            <Link
-              href="/"
-              className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </header>
-
-        {errorMessage ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            {errorMessage}
-          </section>
-        ) : null}
-
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          {loading ? (
-            <p className="text-sm text-zinc-500">Loading resource...</p>
-          ) : !resource ? (
-            <p className="text-sm text-zinc-500">Resource not found.</p>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50/60">
-                <div className="relative aspect-[4/3] w-full overflow-hidden">
-                  {resource.image ? (
-                    <img
-                      src={resource.image}
-                      alt={resource.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-zinc-100">
-                      <span className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
-                        No image
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-zinc-900">
-                  {resource.name}
-                </h2>
-                {resource.description ? (
-                  <p className="mt-2 text-sm text-zinc-600">
-                    {resource.description}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
-                {resource.type ? (
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1">
-                    {resource.type}
-                  </span>
-                ) : null}
-                {resource.attachable !== undefined ? (
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1">
-                    {resource.attachable ? "Attachable" : "Not attachable"}
-                  </span>
-                ) : null}
-                {resource.tags?.map((tag) => (
-                  <span
-                    key={`${resource.id}-${tag}`}
-                    className="rounded-full border border-zinc-200 bg-white px-3 py-1"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-              {resource.categories && resource.categories.length > 0 ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Categories
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
-                    {resource.categories.map((category, index) => (
-                      <li
-                        key={`${resource.id}-category-${index}`}
-                        className="rounded-full border border-zinc-200 bg-white px-3 py-1"
-                      >
-                        {category.name ?? category.bookingCategoryId ?? ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+    <ResourceDetailClient
+      resourceId={resource?.id ?? id}
+      initialResource={resource}
+      initialErrorMessage={errorMessage}
+    />
   );
 }

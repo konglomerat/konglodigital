@@ -2,9 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-
 import { type PrinterStatus } from "@/lib/bambu";
+import Button from "./components/Button";
 import {
   getCartJobs,
   getCartProducts,
@@ -185,6 +184,7 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
 
 export default function Home() {
   const [printers, setPrinters] = useState<Printer[]>([]);
+  const [printersLoading, setPrintersLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [descriptions, setDescriptions] = useState<
     Record<string, DescriptionEntry>
@@ -224,6 +224,9 @@ export default function Home() {
     let active = true;
 
     const loadPrinters = async () => {
+      if (active) {
+        setPrintersLoading(true);
+      }
       try {
         const data = await fetchJson<{ printers: Printer[] }>(
           "/api/bambu/printers",
@@ -238,6 +241,10 @@ export default function Home() {
               ? error.message
               : "Unable to fetch printers from BambuLab cloud.",
           );
+        }
+      } finally {
+        if (active) {
+          setPrintersLoading(false);
         }
       }
     };
@@ -443,18 +450,9 @@ export default function Home() {
         <header className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <img
-                src="/konglodigital-logo.svg"
-                alt="KongloDigital"
-                className="mb-3 h-16 w-auto"
-              />
               <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                Konglomerat Digitale Werkstätten
+                3D Printer Dashboard
               </h1>
-              <p className="mt-2 max-w-2xl text-base text-zinc-600">
-                Live view of all 3D-printers at Konglomerat. Claim your prints
-                and generate invoices.
-              </p>
             </div>
           </div>
         </header>
@@ -471,58 +469,94 @@ export default function Home() {
         ) : null}
 
         <section className="grid gap-6 md:grid-cols-2">
-          {printers.map((printer) => (
-            <article
-              key={printer.id}
-              className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-4">
-                  {getPrinterImage(printer.name) ? (
-                    <img
-                      src={getPrinterImage(printer.name)?.url}
-                      alt={getPrinterImage(printer.name)?.alt}
-                      className="h-16 w-16 rounded-xl border border-zinc-200 object-cover"
-                    />
-                  ) : null}
-                  <div>
-                    <h2 className="text-lg font-semibold text-zinc-900">
-                      {printer.name}
-                    </h2>
-                    <p className="text-sm text-zinc-500">
-                      {printer.model} • {printer.serial}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                    statusStyles[printer.status]
-                  }`}
+          {printersLoading
+            ? Array.from({ length: 2 }).map((_, index) => (
+                <article
+                  key={`printer-skeleton-${index}`}
+                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
                 >
-                  {statusLabels[printer.status]}
-                </span>
-              </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-xl border border-zinc-200 bg-zinc-100 animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-40 rounded-full bg-zinc-100 animate-pulse" />
+                        <div className="h-3 w-32 rounded-full bg-zinc-100 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="h-6 w-20 rounded-full bg-zinc-100 animate-pulse" />
+                  </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm text-zinc-600">
-                  <span>Job progress</span>
-                  <span className="font-medium text-zinc-900">
-                    {printer.progress}%
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className="h-full rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
-                    style={{ width: `${printer.progress}%` }}
-                  />
-                </div>
-                <div className="flex flex-col gap-1 text-sm text-zinc-600">
-                  <span>Current job: {printer.jobName ?? "No active job"}</span>
-                  <span>Last update: {formatUpdated(printer.updatedAt)}</span>
-                </div>
-              </div>
-            </article>
-          ))}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm text-zinc-600">
+                      <span className="h-3 w-24 rounded-full bg-zinc-100 animate-pulse" />
+                      <span className="h-3 w-10 rounded-full bg-zinc-100 animate-pulse" />
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                      <div className="h-full w-2/3 rounded-full bg-zinc-200 animate-pulse" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="h-3 w-52 rounded-full bg-zinc-100 animate-pulse" />
+                      <div className="h-3 w-36 rounded-full bg-zinc-100 animate-pulse" />
+                    </div>
+                  </div>
+                </article>
+              ))
+            : printers.map((printer) => (
+                <article
+                  key={printer.id}
+                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                      {getPrinterImage(printer.name) ? (
+                        <img
+                          src={getPrinterImage(printer.name)?.url}
+                          alt={getPrinterImage(printer.name)?.alt}
+                          className="h-16 w-16 rounded-xl border border-zinc-200 object-cover"
+                        />
+                      ) : null}
+                      <div>
+                        <h2 className="text-lg font-semibold text-zinc-900">
+                          {printer.name}
+                        </h2>
+                        <p className="text-sm text-zinc-500">
+                          {printer.model} • {printer.serial}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                        statusStyles[printer.status]
+                      }`}
+                    >
+                      {statusLabels[printer.status]}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm text-zinc-600">
+                      <span>Job progress</span>
+                      <span className="font-medium text-zinc-900">
+                        {printer.progress}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className="h-full rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
+                        style={{ width: `${printer.progress}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 text-sm text-zinc-600">
+                      <span>
+                        Current job: {printer.jobName ?? "No active job"}
+                      </span>
+                      <span>
+                        Last update: {formatUpdated(printer.updatedAt)}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
         </section>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -534,37 +568,36 @@ export default function Home() {
               <p className="text-sm text-zinc-500">{jobs.length} jobs</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleToggleAll}
-                className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600"
-              >
+              <Button type="button" onClick={handleToggleAll} kind="secondary">
                 {selectedJobIds.length === jobs.length
                   ? "Clear selection"
                   : "Select all"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={handleClaimSelected}
-                className="rounded-full bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                kind="primary"
+                className="px-3 py-2 text-xs"
                 disabled={selectedJobIds.length === 0}
               >
                 Claim selected
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={handleAddSelectedToCart}
-                className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600"
+                kind="secondary"
+                className="px-3 py-2 text-xs"
                 disabled={selectedJobIds.length === 0}
               >
                 Add selected to checkout
-              </button>
-              <Link
+              </Button>
+              <Button
                 href="/checkout"
-                className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600"
+                kind="secondary"
+                className="px-3 py-2 text-xs"
               >
                 Checkout ({cartJobIds.length + cartProducts.length})
-              </Link>
+              </Button>
             </div>
           </div>
 
@@ -638,7 +671,7 @@ export default function Home() {
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => handleToggleJob(job.id)}
-                                  className="h-4 w-4 rounded border-zinc-300"
+                                  className="h-4 w-4 rounded-md border-zinc-300"
                                 />
                                 Select
                               </label>
@@ -702,12 +735,12 @@ export default function Home() {
                                     defaultValue={description}
                                     placeholder="Add a short description"
                                     maxLength={160}
-                                    className="flex-1 rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm"
+                                    className="flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm"
                                     disabled={!canEdit}
                                   />
-                                  <button
+                                  <Button
                                     type="submit"
-                                    className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white"
+                                    kind="secondary"
                                     disabled={!canEdit}
                                   >
                                     {savingJobId === job.id
@@ -715,7 +748,7 @@ export default function Home() {
                                       : ownerId
                                         ? "Update"
                                         : "Claim & Save"}
-                                  </button>
+                                  </Button>
                                 </div>
                                 {saveError && saveErrorJobId === job.id ? (
                                   <p className="text-xs text-rose-500">
@@ -742,29 +775,35 @@ export default function Home() {
                               </div>
                               {isOwnedByUser ? (
                                 <div className="flex items-center gap-2">
-                                  <button
+                                  <Button
                                     type="button"
                                     onClick={() => handleToggleCartJob(job.id)}
+                                    kind={
+                                      isInCart
+                                        ? "danger-secondary"
+                                        : "secondary"
+                                    }
                                     className={
                                       isInCart
-                                        ? "rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600"
-                                        : "rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700"
+                                        ? "px-3 py-1 text-xs"
+                                        : "border-blue-200 px-3 py-1 text-xs text-blue-700"
                                     }
                                   >
                                     {isInCart
                                       ? "Remove from checkout"
                                       : "Add to checkout"}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
                                     onClick={() => handleUnclaimJob(job.id)}
-                                    className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600"
+                                    kind="secondary"
+                                    className="px-3 py-1 text-xs"
                                     disabled={unclaimingJobId === job.id}
                                   >
                                     {unclaimingJobId === job.id
                                       ? "Unclaiming..."
                                       : "Unclaim"}
-                                  </button>
+                                  </Button>
                                 </div>
                               ) : null}
                             </div>

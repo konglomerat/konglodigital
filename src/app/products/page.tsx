@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
+import Button from "../components/Button";
 
 type CampaiProduct = {
   id: string;
@@ -57,7 +58,7 @@ export default function CampaiProductsPage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to load Campai products.",
+              : "Unable to load Einkaufen.",
           );
         }
       } finally {
@@ -122,9 +123,7 @@ export default function CampaiProductsPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Campai products
-            </h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Einkaufen</h1>
             <p className="mt-2 text-sm text-zinc-600">
               Browse products and add them to the checkout cart.
             </p>
@@ -193,21 +192,23 @@ export default function CampaiProductsPage() {
                           </span>
                         ) : null}
                         {inCart ? (
-                          <button
+                          <Button
                             type="button"
                             onClick={() => handleDecreaseProduct(product.id)}
-                            className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600"
+                            kind="secondary"
+                            className="px-3 py-1 text-xs"
                           >
                             −
-                          </button>
+                          </Button>
                         ) : null}
-                        <button
+                        <Button
                           type="button"
                           onClick={() => handleAddProduct(product)}
-                          className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700"
+                          kind="secondary"
+                          className="border-blue-200 px-3 py-1 text-xs text-blue-700"
                         >
                           +
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     <div className="flex justify-end">

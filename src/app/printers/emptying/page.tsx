@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import Button from "../../components/Button";
+
 type Printer = {
   id: string;
   name: string;
@@ -197,14 +199,15 @@ export default function PrinterEmptyingPage() {
             {printer.needsEmptying ? (
               <div className="mt-5 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <span>Needs to be emptied</span>
-                <button
+                <Button
                   type="button"
                   onClick={() => handleEmptied(printer.id)}
                   disabled={savingId === printer.id}
-                  className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  kind="secondary"
+                  className="border-amber-300 px-3 py-1 text-xs text-amber-700 hover:bg-amber-100"
                 >
                   {savingId === printer.id ? "Updating..." : "Is emptied now"}
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

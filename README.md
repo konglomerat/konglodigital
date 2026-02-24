@@ -1,13 +1,17 @@
 # KongloDigital
 
-KongloDigital is a Next.js dashboard for BambuLab printers and print jobs. It
-aggregates printer status, live job telemetry, and per-job notes backed by
-Supabase.
+KongloDigital is the web dashboard that powers the digital workshop experience
+for konglomerat.org. It brings together 3D printing operations, the member
+shop, and the shared resource inventory in one place. The app aggregates live
+printer status, print-job telemetry, and per-job notes, while also integrating
+Campai for products and invoices and Supabase for authentication and data.
 
 ## Features
 
 - Live printer status from the BambuLab cloud API + MQTT
 - Print job dashboard with description/notes
+- Member shop and checkout powered by Campai
+- Resource inventory (Inventar) with location mapping
 - Auth-protected UI via Supabase
 - Campai integration for products and invoice drafts
 
@@ -69,11 +73,27 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 - CAMPAI_ACCOUNT_NAME (optional)
 - CAMPAI_DUE_DAYS (optional, default 14)
 
-### Campai Products
+### Einkaufen
 
 The products page fetches items via `/api/campai/products`.
 By default it uses the Campai endpoint `/finance/products/list` (POST).
 Optionally set `CAMPAI_PRODUCTS_ENDPOINT` to override the products URL.
+
+### Inventar
+
+The resources page fetches items via `/api/campai/resources`.
+Resources are stored in the Supabase `resources` table.
+
+To allow creating and updating resources (including image uploads), configure:
+
+- SUPABASE_RESOURCES_BUCKET (optional, defaults to `resources`; bucket must be public for images to load in the app)
+- SUPABASE_SERVICE_ROLE_KEY (required for server-side storage uploads)
+- OPENAI_API_KEY (required to generate descriptions from images)
+- OPENAI_BASE_URL (optional, for OpenAI-compatible providers)
+- OPENAI_IMAGE_EDIT_MODEL (optional, defaults to `gpt-image-1`)
+- IMAGE_EDIT_PROVIDER (optional, `google` or `openai`; defaults to `google`)
+- GOOGLE_AI_API_KEY or GOOGLE_API_KEY (optional; required if IMAGE_EDIT_PROVIDER=google and no OPENAI_API_KEY fallback)
+- GOOGLE_GEMINI_IMAGE_MODEL (optional, Gemini model id for image edits; defaults to `gemini-3-pro-image-preview`)
 
 ## API Routes
 
@@ -89,14 +109,42 @@ Optionally set `CAMPAI_PRODUCTS_ENDPOINT` to override the products URL.
 - Main UI: `src/app/page.tsx`
 - Mock data: `src/lib/bambu.ts`
 
+### UI Components
+
+Use `Button` from `src/app/components/Button.tsx` for any button-like UI.
+It supports the `kind` variants `primary`, `secondary`, `danger-primary`, and
+`danger-secondary`. If you pass `href`, it renders an anchor element; otherwise
+it renders a native button. Use it for Links styled as buttons to keep styling
+consistent.
+
 ## Scripts
 
 - `npm run dev` — start dev server
 - `npm run build` — build for production
 - `npm run start` — start production server
 - `npm run lint` — lint codebase
+- `npm run storage:png-to-jpg` — convert PNG files in Supabase Storage to JPG (quality 60), delete original PNG files, and update `resources.image` / `resources.images` DB references
+
+### Storage migration script
+
+The PNG-to-JPG script uses:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_RESOURCES_BUCKET` (optional; defaults to `resources`)
+
+Example usage:
+
+- Dry run: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs --dry-run`
+- Execute migration: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs`
+- Only inside a folder: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs --prefix=uploads/2026`
+- Skip DB updates: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs --skip-db`
 
 ## Deployment
 
 Deploy on Vercel or any Node.js host that supports Next.js App Router.
 Configure the same environment variables in your hosting provider.
+
+## Inspiration
+
+https://www.maker-space.de/maschinen/

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import Button from "../components/Button";
+
 import {
   getCartJobs,
   getCartProducts,
@@ -391,13 +393,9 @@ export default function CheckoutPage() {
             Review cart items and create a Campai invoice draft.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleClearCart}
-          className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-        >
+        <Button type="button" onClick={handleClearCart} kind="secondary">
           Clear cart
-        </button>
+        </Button>
       </header>
 
       {jobsError ? <p className="text-sm text-rose-600">{jobsError}</p> : null}
@@ -426,7 +424,7 @@ export default function CheckoutPage() {
               Offer title
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.title}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -441,7 +439,7 @@ export default function CheckoutPage() {
               Contact email
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.email}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -456,7 +454,7 @@ export default function CheckoutPage() {
               Intro
             </label>
             <textarea
-              className="min-h-[96px] w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.intro}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -471,7 +469,7 @@ export default function CheckoutPage() {
               Recipient name
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.details1}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -486,7 +484,7 @@ export default function CheckoutPage() {
               Address line
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.addressLine}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -501,7 +499,7 @@ export default function CheckoutPage() {
               ZIP
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.zip}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -516,7 +514,7 @@ export default function CheckoutPage() {
               City
             </label>
             <input
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={invoiceForm.city}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -539,7 +537,7 @@ export default function CheckoutPage() {
               Price rate €/100g
             </label>
             <select
-              className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
               value={priceRate}
               onChange={(event) => setPriceRate(Number(event.target.value))}
             >
@@ -550,14 +548,15 @@ export default function CheckoutPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button
+          <Button
             type="button"
             onClick={handleInvoiceDraft}
-            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            kind="primary"
+            className="px-4 py-2 text-sm"
             disabled={creatingInvoice}
           >
             {creatingInvoice ? "Creating draft..." : "Create invoice draft"}
-          </button>
+          </Button>
           {invoiceError ? (
             <p className="text-sm text-rose-600">{invoiceError}</p>
           ) : null}
@@ -598,13 +597,14 @@ export default function CheckoutPage() {
                 <span className="text-xs text-zinc-500">
                   {getJobStatusLabel(job.status)}
                 </span>
-                <button
+                <Button
                   type="button"
                   onClick={() => handleRemoveCartJob(job.id)}
-                  className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600"
+                  kind="danger-secondary"
+                  className="px-3 py-1 text-xs"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -624,23 +624,25 @@ export default function CheckoutPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => handleDecreaseProduct(product.id)}
-                  className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600"
+                  kind="secondary"
+                  className="px-3 py-1 text-xs"
                 >
                   −
-                </button>
+                </Button>
                 <span className="text-xs text-zinc-600">
                   {product.quantity ?? 1}
                 </span>
-                <button
+                <Button
                   type="button"
                   onClick={() => handleIncreaseProduct(product.id)}
-                  className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700"
+                  kind="secondary"
+                  className="border-blue-200 px-3 py-1 text-xs text-blue-700"
                 >
                   +
-                </button>
+                </Button>
               </div>
             </div>
           ))}

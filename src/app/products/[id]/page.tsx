@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, use } from "react";
-import Link from "next/link";
-
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
+import Button from "../../components/Button";
 
 type CampaiProduct = {
   id: string;
@@ -142,18 +141,16 @@ export default function CampaiProductDetailPage({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link
+            <Button
               href="/products"
-              className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
+              kind="secondary"
+              className="px-4 py-2 text-xs"
             >
               Back to products
-            </Link>
-            <Link
-              href="/"
-              className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-            >
+            </Button>
+            <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
               Dashboard
-            </Link>
+            </Button>
           </div>
         </header>
 
@@ -190,24 +187,26 @@ export default function CampaiProductDetailPage({
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
+                  <Button
                     type="button"
                     onClick={handleDecreaseProduct}
-                    className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-600"
+                    kind="secondary"
+                    className="px-4 py-2 text-sm"
                     disabled={!cartEntry}
                   >
                     −
-                  </button>
+                  </Button>
                   <div className="text-sm text-zinc-600">
                     In cart: {cartEntry?.quantity ?? 0}
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={handleAddProduct}
-                    className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700"
+                    kind="secondary"
+                    className="border-blue-200 px-4 py-2 text-sm text-blue-700"
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

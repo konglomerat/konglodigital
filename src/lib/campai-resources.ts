@@ -6,15 +6,61 @@ export type ResourceCategory = {
   bookingCategoryId?: string;
 };
 
+export type RelatedResource = {
+  id: string;
+  name?: string;
+  prettyTitle?: string | null;
+};
+
+export type ResourceMapFeature = {
+  id: string;
+  layer: string;
+} & (
+  | {
+      geometryType: "Polygon";
+      coordinates: [number, number][];
+    }
+  | {
+      geometryType: "Point";
+      point: [number, number];
+    }
+);
+
 export type ResourcePayload = {
   id: string;
+  prettyTitle?: string | null;
   name: string;
   description?: string;
   image?: string | null;
+  images?: string[] | null;
+  gpsLatitude?: number | null;
+  gpsLongitude?: number | null;
+  gpsAltitude?: number | null;
   type?: string;
+  priority?: number | null;
   attachable?: boolean;
   tags?: string[];
   categories?: ResourceCategory[];
+  relatedResources?: RelatedResource[];
+  mapFeatures?: ResourceMapFeature[];
+};
+
+const toPriority = (value: unknown): number | null | undefined => {
+  if (value === null) {
+    return null;
+  }
+  if (value === undefined) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+  const rounded = Math.round(parsed);
+  if (rounded < 1 || rounded > 5) {
+    return undefined;
+  }
+  return rounded;
 };
 
 const extractImageUrl = (value: unknown): string | null => {
@@ -80,6 +126,115 @@ const toCategoryArray = (value: unknown): ResourceCategory[] | undefined => {
   return categories.length > 0 ? categories : undefined;
 };
 
+const toRelatedResources = (value: unknown): RelatedResource[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const relatedResources = value
+    .map((entry): RelatedResource | null => {
+      if (typeof entry === "string") {
+        const id = entry.trim();
+        return id ? { id } : null;
+      }
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+      const record = entry as Record<string, unknown>;
+      const id =
+        typeof record.id === "string"
+          ? record.id
+          : typeof record.resourceId === "string"
+            ? record.resourceId
+            : null;
+      if (!id) {
+        return null;
+      }
+      return {
+        id,
+        name: typeof record.name === "string" ? record.name : undefined,
+        prettyTitle:
+          typeof record.prettyTitle === "string"
+            ? record.prettyTitle
+            : typeof record.pretty_title === "string"
+              ? record.pretty_title
+              : null,
+      };
+    })
+    .filter((entry): entry is RelatedResource => entry !== null);
+  return relatedResources.length > 0 ? relatedResources : undefined;
+};
+
+const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const mapFeatures = value
+    .map((entry): ResourceMapFeature | null => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+      const row = entry as Record<string, unknown>;
+      if (typeof row.id !== "string" || typeof row.layer !== "string") {
+        return null;
+      }
+      const geometryType =
+        typeof row.geometryType === "string" &&
+        row.geometryType.toLowerCase() === "point"
+          ? "Point"
+          : "Polygon";
+
+      if (geometryType === "Point") {
+        const pointRaw =
+          row.point ??
+          row.coordinate ??
+          row.coordinates ??
+          (row.geometry as { coordinates?: unknown } | undefined)?.coordinates;
+        if (!Array.isArray(pointRaw) || pointRaw.length < 2) {
+          return null;
+        }
+        const lng = Number(pointRaw[0]);
+        const lat = Number(pointRaw[1]);
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+          return null;
+        }
+        return {
+          id: row.id,
+          layer: row.layer,
+          geometryType: "Point",
+          point: [lng, lat],
+        };
+      }
+
+      if (!Array.isArray(row.coordinates)) {
+        return null;
+      }
+      const coordinates = row.coordinates
+        .map((point): [number, number] | null => {
+          if (!Array.isArray(point) || point.length < 2) {
+            return null;
+          }
+          const lng = Number(point[0]);
+          const lat = Number(point[1]);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+            return null;
+          }
+          return [lng, lat];
+        })
+        .filter((point): point is [number, number] => point !== null);
+      if (coordinates.length < 3) {
+        return null;
+      }
+      return {
+        id: row.id,
+        layer: row.layer,
+        geometryType: "Polygon",
+        coordinates,
+      };
+    })
+    .filter((entry): entry is ResourceMapFeature => entry !== null);
+  return mapFeatures.length > 0 ? mapFeatures : undefined;
+};
+
 export const normalizeResource = (
   item: RawResource,
 ): ResourcePayload | null => {
@@ -107,10 +262,16 @@ export const normalizeResource = (
     extractImageUrl(item.imageUrl) ??
     null;
   const type = (item.type as string | undefined) ?? undefined;
+  const priority =
+    toPriority(item.priority) ?? toPriority(info.priority) ?? undefined;
   const attachable =
     typeof item.attachable === "boolean" ? item.attachable : undefined;
   const tags = toStringArray(info.tags ?? item.tags);
   const categories = toCategoryArray(info.categories ?? item.categories);
+  const relatedResources = toRelatedResources(
+    info.relatedResources ?? item.relatedResources,
+  );
+  const mapFeatures = toMapFeatures(info.mapFeatures ?? item.mapFeatures);
 
   if (!id || !name) {
     return null;
@@ -118,13 +279,20 @@ export const normalizeResource = (
 
   return {
     id,
+    prettyTitle:
+      (item.prettyTitle as string | undefined) ??
+      (item.pretty_title as string | undefined) ??
+      null,
     name,
     description,
     image,
     type,
+    priority,
     attachable,
     tags,
     categories,
+    relatedResources,
+    mapFeatures,
   } satisfies ResourcePayload;
 };
 

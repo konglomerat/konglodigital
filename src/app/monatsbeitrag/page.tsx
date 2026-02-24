@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
+import Button from "../components/Button";
 
 type MembershipPlanId = "full" | "quarter" | "none";
 
@@ -115,12 +114,9 @@ export default function MonatsbeitragPage() {
               Wähle deinen Monatsbeitrag und buche eine 10er Karte.
             </p>
           </div>
-          <Link
-            href="/"
-            className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-          >
+          <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
             Back to dashboard
-          </Link>
+          </Button>
         </header>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -142,10 +138,8 @@ export default function MonatsbeitragPage() {
             {membershipPlans.map((plan) => (
               <label
                 key={plan.id}
-                className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
-                  selectedPlan === plan.id
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-zinc-100 bg-zinc-50/60"
+                className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl p-4 text-sm transition ${
+                  selectedPlan === plan.id ? " bg-blue-600" : " bg-zinc-100"
                 }`}
               >
                 <div>
@@ -154,11 +148,11 @@ export default function MonatsbeitragPage() {
                       <p className="text-sm font-semibold text-zinc-900">
                         {plan.title}
                       </p>
-                      <p className="mt-2 text-xs text-zinc-500">
+                      <p className="mt-2 text-xs text-zinc-100">
                         {plan.description}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold text-zinc-900">
+                    <span className="text-sm font-semibold text-zinc-900 whitespace-nowrap">
                       {plan.priceLabel}
                     </span>
                   </div>
@@ -173,7 +167,7 @@ export default function MonatsbeitragPage() {
                     value={plan.id}
                     checked={selectedPlan === plan.id}
                     onChange={() => setSelectedPlan(plan.id)}
-                    className="h-4 w-4 accent-blue-600"
+                    className="h-4 w-4 rounded-md accent-blue-600"
                   />
                 </div>
               </label>
@@ -202,27 +196,22 @@ export default function MonatsbeitragPage() {
             </div>
             <div className="flex items-center gap-2">
               {tenVisitInCart ? (
-                <button
+                <Button
                   type="button"
                   onClick={handleDecreaseTenVisitCard}
-                  className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600"
+                  kind="secondary"
+                  className="px-3 py-1 text-xs"
                 >
                   −
-                </button>
+                </Button>
               ) : null}
-              <button
+              <Button
                 type="button"
+                kind="primary"
                 onClick={handleAddTenVisitCard}
-                className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700"
               >
                 In den Warenkorb
-              </button>
-              <Link
-                href="/checkout"
-                className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600"
-              >
-                Zum Checkout
-              </Link>
+              </Button>
             </div>
           </div>
         </section>

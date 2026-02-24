@@ -1,7 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Suspense, useState } from "react";
+
+import Button from "../components/Button";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +56,7 @@ function LoginForm() {
               name="email"
               type="email"
               required
-              className="w-full rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -64,7 +67,7 @@ function LoginForm() {
               name="password"
               type="password"
               required
-              className="w-full rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm"
+              className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
             />
           </div>
           {error ? (
@@ -72,14 +75,21 @@ function LoginForm() {
               {error}
             </p>
           ) : null}
-          <button
+          <Button
             type="submit"
-            className="w-full rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            kind="primary"
+            className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
             {isLoading ? "Signing in..." : "Sign in"}
-          </button>
+          </Button>
         </form>
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          New here?{" "}
+          <Link className="font-semibold text-blue-600" href="/register">
+            Create an account
+          </Link>
+        </p>
       </div>
     </div>
   );

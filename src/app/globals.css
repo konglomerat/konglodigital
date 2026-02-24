@@ -10,76 +10,157 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    color-scheme: dark;
-  }
+@custom-variant dark (&:where(.dark, .dark *));
 
-  .bg-zinc-50 {
-    background-color: #0b0b0f !important;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
+}
 
-  .bg-zinc-100 {
-    background-color: #1c1c20 !important;
-  }
+.dark .bg-zinc-50 {
+  background-color: #0b0b0f !important;
+}
 
-  .bg-white {
-    background-color: #111113 !important;
-  }
+.dark .bg-zinc-100 {
+  background-color: #1c1c20 !important;
+}
 
-  .bg-zinc-50\/60 {
-    background-color: rgba(11, 11, 15, 0.6) !important;
-  }
+.dark .bg-white {
+  background-color: #111113 !important;
+}
 
-  .bg-white\/60 {
-    background-color: rgba(17, 17, 19, 0.6) !important;
-  }
+.dark .bg-zinc-50\/60 {
+  background-color: rgba(11, 11, 15, 0.6) !important;
+}
 
-  .text-zinc-900 {
-    color: #f4f4f5 !important;
-  }
+.dark .bg-white\/60 {
+  background-color: rgba(17, 17, 19, 0.6) !important;
+}
 
-  .text-zinc-800 {
-    color: #e4e4e7 !important;
-  }
+.dark .text-zinc-900 {
+  color: #f4f4f5;
+}
 
-  .text-zinc-700 {
-    color: #d4d4d8 !important;
-  }
+.dark .text-zinc-800 {
+  color: #e4e4e7;
+}
 
-  .text-zinc-600 {
-    color: #a1a1aa !important;
-  }
+.dark .text-zinc-700 {
+  color: #d4d4d8;
+}
 
-  .text-zinc-500 {
-    color: #8b8b94 !important;
-  }
+.dark .text-zinc-600 {
+  color: #a1a1aa;
+}
 
-  .text-zinc-400 {
-    color: #71717a !important;
-  }
+.dark .text-zinc-500 {
+  color: #8b8b94;
+}
 
-  .border-zinc-200 {
-    border-color: #27272a !important;
-  }
+.dark .text-zinc-400 {
+  color: #71717a;
+}
 
-  .border-zinc-100 {
-    border-color: #1f1f23 !important;
-  }
+.dark .border-zinc-200 {
+  border-color: #27272a !important;
+}
 
-  .border-zinc-300 {
-    border-color: #3f3f46 !important;
-  }
+.dark .border-zinc-100 {
+  border-color: #1f1f23 !important;
+}
 
-  .ring-zinc-200 {
-    --tw-ring-color: #3f3f46 !important;
-  }
+.dark .border-zinc-300 {
+  border-color: #3f3f46 !important;
+}
+
+.dark .ring-zinc-200 {
+  --tw-ring-color: #3f3f46 !important;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+body[data-page="batch-upload"] > div > header,
+body[data-page="batch-upload"] > div > aside {
+  display: none;
+}
+
+body[data-page="batch-upload"] > div {
+  overflow: hidden;
+  min-height: 100svh;
+  min-height: 100dvh;
+  max-height: 100svh;
+  max-height: 100dvh;
+}
+
+body[data-page="batch-upload"] > div > div {
+  margin-left: 0 !important;
+  overflow: hidden;
+  min-height: 100svh;
+  min-height: 100dvh;
+}
+
+body[data-page="batch-upload"] > div > div > main {
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  max-height: 100svh;
+  max-height: 100dvh;
+}
+
+body[data-page="batch-upload"] {
+  overflow: hidden;
+}
+
+body[data-page="batch-upload"] .mapboxgl-map,
+body[data-page="batch-upload"] .mapboxgl-canvas,
+body[data-page="batch-upload"] .mapboxgl-control-container {
+  z-index: 0;
+}
+
+.mapboxgl-map .mapboxgl-popup.resource-map-popup,
+.mapboxgl-map .mapboxgl-popup.resource-map-popup * {
+  z-index: 9999 !important;
+}
+
+@layer base {
+  :where(input, textarea, select) {
+    @apply rounded-md;
+  }
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.mapboxgl-popup-close-button {
+  font-size: 2em;
+  margin: 0.15em 0.3em;
+}
+
+.mapboxgl-popup-content {
+  padding: 0;
+  img {
+    display: block;
+    width: 100%;
+  }
+}
+
+.mapbox-popup-link {
+  color: #2563eb;
+  font-size: 12px;
+  display: block;
+  font-weight: 600;
+  line-height: 1.1;
+  text-decoration: none;
+  padding: 1em;
 }
