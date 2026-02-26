@@ -35,7 +35,13 @@ import {
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Button from "../components/Button";
-import { FormField, FormSection, Input, Select, Textarea } from "../components/ui/form";
+import {
+  FormField,
+  FormSection,
+  Input,
+  Select,
+  Textarea,
+} from "../components/ui/form";
 
 type KontoOption = "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
 type InvoiceState = "offen" | "bezahlt";
@@ -149,7 +155,9 @@ function bytesToBase64(bytes: Uint8Array) {
 }
 
 function isPdfFile(file: File) {
-  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
 }
 
 function createBuchungPdf(values: FormValues) {
@@ -202,7 +210,10 @@ function createBuchungPdf(values: FormValues) {
   line("Nachweis-Datei", normalizeValue(values.evidence?.item(0)?.name));
 
   heading("Betrag");
-  line("Buchungsart", values.bookingType === "ausgabe" ? "Ausgabe" : "Einnahme");
+  line(
+    "Buchungsart",
+    values.bookingType === "ausgabe" ? "Ausgabe" : "Einnahme",
+  );
   line("Betrag in Euro", normalizeValue(values.amountEuro));
 
   heading("Metadaten");
@@ -317,7 +328,12 @@ export default function BuchungenPage() {
     },
   });
 
-  const { fields: postenFields, append, remove, replace } = useFieldArray({
+  const {
+    fields: postenFields,
+    append,
+    remove,
+    replace,
+  } = useFieldArray({
     control,
     name: "postens",
   });
@@ -348,7 +364,9 @@ export default function BuchungenPage() {
   const extractFromEvidence = async () => {
     const file = selectedEvidence?.item(0);
     if (!file) {
-      setExtractMessage("Bitte zuerst eine Datei bei 'Beleg hochladen' auswählen.");
+      setExtractMessage(
+        "Bitte zuerst eine Datei bei 'Beleg hochladen' auswählen.",
+      );
       return;
     }
 
@@ -392,7 +410,10 @@ export default function BuchungenPage() {
         return currentValue === null || currentValue === undefined;
       };
 
-      if (typeof payload.issueDate === "string" && canApply(currentValues.issueDate)) {
+      if (
+        typeof payload.issueDate === "string" &&
+        canApply(currentValues.issueDate)
+      ) {
         setValue("issueDate", payload.issueDate, { shouldDirty: true });
       }
       if (
@@ -422,12 +443,16 @@ export default function BuchungenPage() {
         setValue("bookingText", payload.bookingText, { shouldDirty: true });
       }
       if (
-        (payload.bookingType === "ausgabe" || payload.bookingType === "einnahme") &&
+        (payload.bookingType === "ausgabe" ||
+          payload.bookingType === "einnahme") &&
         canApply(currentValues.bookingType)
       ) {
         setValue("bookingType", payload.bookingType, { shouldDirty: true });
       }
-      if (typeof payload.amountEuro === "string" && canApply(currentValues.amountEuro)) {
+      if (
+        typeof payload.amountEuro === "string" &&
+        canApply(currentValues.amountEuro)
+      ) {
         setValue("amountEuro", payload.amountEuro, { shouldDirty: true });
       }
       if (
@@ -444,14 +469,18 @@ export default function BuchungenPage() {
       if (typeof payload.area === "string" && canApply(currentValues.area)) {
         setValue("area", payload.area, { shouldDirty: true });
       }
-      if (typeof payload.project === "string" && canApply(currentValues.project)) {
+      if (
+        typeof payload.project === "string" &&
+        canApply(currentValues.project)
+      ) {
         setValue("project", payload.project, { shouldDirty: true });
       }
       if (typeof payload.notes === "string" && canApply(currentValues.notes)) {
         setValue("notes", payload.notes, { shouldDirty: true });
       }
       if (
-        (payload.invoiceState === "offen" || payload.invoiceState === "bezahlt") &&
+        (payload.invoiceState === "offen" ||
+          payload.invoiceState === "bezahlt") &&
         canApply(currentValues.invoiceState)
       ) {
         setValue("invoiceState", payload.invoiceState, { shouldDirty: true });
@@ -486,13 +515,18 @@ export default function BuchungenPage() {
             (posten.amountEuro?.trim().length ?? 0) > 0,
         );
 
-        if (nextPostens.length > 0 && (!fillOnlyEmptyFields || !hasExistingPostens)) {
+        if (
+          nextPostens.length > 0 &&
+          (!fillOnlyEmptyFields || !hasExistingPostens)
+        ) {
           replace(nextPostens);
         }
       }
 
       clearErrors();
-      setExtractMessage("Felder wurden aus dem Beleg vorausgefüllt. Bitte kurz prüfen.");
+      setExtractMessage(
+        "Felder wurden aus dem Beleg vorausgefüllt. Bitte kurz prüfen.",
+      );
     } catch {
       setExtractMessage("Extraktion fehlgeschlagen.");
     } finally {
@@ -543,8 +577,12 @@ export default function BuchungenPage() {
     );
 
     const isExpenseFlow = values.bookingType === "ausgabe";
-    const senderName = isExpenseFlow ? "Konglomerat e.V." : values.senderOrReceiver;
-    const receiverName = isExpenseFlow ? values.senderOrReceiver : "Konglomerat e.V.";
+    const senderName = isExpenseFlow
+      ? "Konglomerat e.V."
+      : values.senderOrReceiver;
+    const receiverName = isExpenseFlow
+      ? values.senderOrReceiver
+      : "Konglomerat e.V.";
     const expense = isExpenseFlow ? values.amountEuro : "";
     const income = isExpenseFlow ? "" : values.amountEuro;
     const notes = [
@@ -609,7 +647,9 @@ export default function BuchungenPage() {
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
       };
-      setStoreResult({ error: payload.error ?? "Speichern in Campai fehlgeschlagen." });
+      setStoreResult({
+        error: payload.error ?? "Speichern in Campai fehlgeschlagen.",
+      });
     }
 
     setSubmittedAt(new Date().toLocaleString("de-DE"));
@@ -633,16 +673,22 @@ export default function BuchungenPage() {
             <span>Generator Buchungen</span>
           </h1>
           <p className="max-w-4xl text-sm leading-relaxed text-zinc-600">
-            Einbuchung von Rechnungen und Belegen für Einnahmen oder Ausgaben des Vereins,
-            seiner Projekte und Werkbereiche.
+            Einbuchung von Rechnungen und Belegen für Einnahmen oder Ausgaben
+            des Vereins, seiner Projekte und Werkbereiche.
           </p>
-          <p className="text-xs text-zinc-500">Pflichtfelder sind mit * markiert.</p>
+          <p className="text-xs text-zinc-500">
+            Pflichtfelder sind mit * markiert.
+          </p>
         </header>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="E-Mail-Adresse" required error={errors.email?.message}>
+              <FormField
+                label="E-Mail-Adresse"
+                required
+                error={errors.email?.message}
+              >
                 <Input
                   type="email"
                   placeholder="name@beispiel.de"
@@ -724,7 +770,9 @@ export default function BuchungenPage() {
                       required: (files) =>
                         !!files?.length || "Bitte einen Beleg hochladen.",
                       maxOneFile: (files) =>
-                        !files || files.length <= 1 || "Es ist nur eine Datei erlaubt.",
+                        !files ||
+                        files.length <= 1 ||
+                        "Es ist nur eine Datei erlaubt.",
                       maxSize: (files) => {
                         if (!files || files.length === 0) {
                           return true;
@@ -743,7 +791,9 @@ export default function BuchungenPage() {
                 />
                 {selectedEvidenceName ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-zinc-500">Ausgewählt: {selectedEvidenceName}</p>
+                    <p className="text-xs text-zinc-500">
+                      Ausgewählt: {selectedEvidenceName}
+                    </p>
                     <Button
                       type="button"
                       kind="secondary"
@@ -751,14 +801,18 @@ export default function BuchungenPage() {
                       onClick={extractFromEvidence}
                       disabled={isExtracting}
                     >
-                      {isExtracting ? "Beleg wird analysiert…" : "PDF auslesen (GPT)"}
+                      {isExtracting
+                        ? "Beleg wird analysiert…"
+                        : "PDF auslesen (GPT)"}
                     </Button>
                     <label className="inline-flex items-center gap-2 text-xs text-zinc-600">
                       <input
                         type="checkbox"
                         className="h-4 w-4 accent-blue-600"
                         checked={fillOnlyEmptyFields}
-                        onChange={(event) => setFillOnlyEmptyFields(event.target.checked)}
+                        onChange={(event) =>
+                          setFillOnlyEmptyFields(event.target.checked)
+                        }
                       />
                       Nur leere Felder füllen
                     </label>
@@ -785,7 +839,10 @@ export default function BuchungenPage() {
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
-                    <FontAwesomeIcon icon={faArrowTrendDown} className="h-3.5 w-3.5" />
+                    <FontAwesomeIcon
+                      icon={faArrowTrendDown}
+                      className="h-3.5 w-3.5"
+                    />
                   </span>
                   Ausgabe
                 </button>
@@ -799,7 +856,10 @@ export default function BuchungenPage() {
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
-                    <FontAwesomeIcon icon={faArrowTrendUp} className="h-3.5 w-3.5" />
+                    <FontAwesomeIcon
+                      icon={faArrowTrendUp}
+                      className="h-3.5 w-3.5"
+                    />
                   </span>
                   Einnahme
                 </button>
@@ -821,7 +881,9 @@ export default function BuchungenPage() {
               >
                 <Input
                   placeholder={
-                    selectedBookingType === "einnahme" ? "z. B. 30,00" : "z. B. 95,00"
+                    selectedBookingType === "einnahme"
+                      ? "z. B. 30,00"
+                      : "z. B. 95,00"
                   }
                   readOnly={hasPostenAmounts}
                   {...register("amountEuro", {
@@ -839,7 +901,7 @@ export default function BuchungenPage() {
           <FormSection title="Metadaten" icon={faUser}>
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Konto/Kasse" required>
-                <Select {...register("accountCash")}> 
+                <Select {...register("accountCash")}>
                   <option value="K0004 B">K0004 B</option>
                   <option value="K0104 A">K0104 A</option>
                   <option value="BAR">BAR</option>
@@ -862,7 +924,10 @@ export default function BuchungenPage() {
                   isClearable
                   formatOptionLabel={(option) => (
                     <span className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={option.icon} className="h-3.5 w-3.5 text-zinc-500" />
+                      <FontAwesomeIcon
+                        icon={option.icon}
+                        className="h-3.5 w-3.5 text-zinc-500"
+                      />
                       <span>{option.label}</span>
                     </span>
                   )}
@@ -934,7 +999,10 @@ export default function BuchungenPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Rechnungsstand / Überweisungsauftrag" icon={faCalendarCheck}>
+          <FormSection
+            title="Rechnungsstand / Überweisungsauftrag"
+            icon={faCalendarCheck}
+          >
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Ist die Rechnung bereits beglichen?" required>
                 <Select {...register("invoiceState")}>
@@ -959,18 +1027,33 @@ export default function BuchungenPage() {
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" kind="secondary" onClick={handleLoadTestData}>
+              <Button
+                type="button"
+                kind="secondary"
+                onClick={handleLoadTestData}
+              >
                 Testdaten laden
               </Button>
-              <Button type="submit" kind="primary" icon={faCalendarCheck} disabled={isSubmitting}>
-                {isSubmitting ? "Wird gespeichert…" : "Buchung speichern & PDF erstellen"}
+              <Button
+                type="submit"
+                kind="primary"
+                icon={faCalendarCheck}
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Wird gespeichert…"
+                  : "Buchung speichern & PDF erstellen"}
               </Button>
 
               {submittedAt ? (
-                <p className="text-sm text-emerald-700">Formular lokal erfasst: {submittedAt}</p>
+                <p className="text-sm text-emerald-700">
+                  Formular lokal erfasst: {submittedAt}
+                </p>
               ) : null}
               {storeResult?.id ? (
-                <p className="text-sm text-emerald-700">In Campai gespeichert: {storeResult.id}</p>
+                <p className="text-sm text-emerald-700">
+                  In Campai gespeichert: {storeResult.id}
+                </p>
               ) : null}
               {storeResult?.warning ? (
                 <p className="text-sm text-amber-700">{storeResult.warning}</p>

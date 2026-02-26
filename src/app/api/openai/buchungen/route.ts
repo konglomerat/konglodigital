@@ -67,7 +67,9 @@ const normalizeAmount = (value: unknown): string | undefined => {
     return undefined;
   }
   const compact = value.replace(/\s/g, "").replace("€", "");
-  const parsed = Number.parseFloat(compact.replace(/\./g, "").replace(",", "."));
+  const parsed = Number.parseFloat(
+    compact.replace(/\./g, "").replace(",", "."),
+  );
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return undefined;
   }
@@ -109,16 +111,29 @@ export const POST = async (request: NextRequest) => {
             receiptNumber: { type: ["string", "null"] },
             orderNumber: { type: ["string", "null"] },
             bookingText: { type: ["string", "null"] },
-            bookingType: { type: ["string", "null"], enum: ["ausgabe", "einnahme", null] },
+            bookingType: {
+              type: ["string", "null"],
+              enum: ["ausgabe", "einnahme", null],
+            },
             amountEuro: { type: ["string", "null"] },
             accountCash: {
               type: ["string", "null"],
-              enum: ["K0004 B", "K0104 A", "BAR", "PAYPAL", "Kreditkarte", null],
+              enum: [
+                "K0004 B",
+                "K0104 A",
+                "BAR",
+                "PAYPAL",
+                "Kreditkarte",
+                null,
+              ],
             },
             area: { type: ["string", "null"] },
             project: { type: ["string", "null"] },
             notes: { type: ["string", "null"] },
-            invoiceState: { type: ["string", "null"], enum: ["offen", "bezahlt", null] },
+            invoiceState: {
+              type: ["string", "null"],
+              enum: ["offen", "bezahlt", null],
+            },
             accountOwner: { type: ["string", "null"] },
             iban: { type: ["string", "null"] },
             postens: {
@@ -206,13 +221,15 @@ REGELN:
 
   const postens = Array.isArray(parsed.postens)
     ? parsed.postens
-        .filter((entry): entry is { title: string; amountEuro?: string | null } => {
-          return (
-            typeof entry === "object" &&
-            entry !== null &&
-            typeof (entry as { title?: unknown }).title === "string"
-          );
-        })
+        .filter(
+          (entry): entry is { title: string; amountEuro?: string | null } => {
+            return (
+              typeof entry === "object" &&
+              entry !== null &&
+              typeof (entry as { title?: unknown }).title === "string"
+            );
+          },
+        )
         .map((entry) => ({
           title: entry.title.trim(),
           amountEuro: normalizeAmount(entry.amountEuro ?? undefined),
@@ -246,8 +263,13 @@ REGELN:
     accountCash: normalizeAccount(parsed.accountCash),
     area: normalizeArea(parsed.area),
     project:
-      typeof parsed.project === "string" ? parsed.project.trim() || undefined : undefined,
-    notes: typeof parsed.notes === "string" ? parsed.notes.trim() || undefined : undefined,
+      typeof parsed.project === "string"
+        ? parsed.project.trim() || undefined
+        : undefined,
+    notes:
+      typeof parsed.notes === "string"
+        ? parsed.notes.trim() || undefined
+        : undefined,
     invoiceState:
       parsed.invoiceState === "offen" || parsed.invoiceState === "bezahlt"
         ? parsed.invoiceState
@@ -256,7 +278,10 @@ REGELN:
       typeof parsed.accountOwner === "string"
         ? parsed.accountOwner.trim() || undefined
         : undefined,
-    iban: typeof parsed.iban === "string" ? parsed.iban.trim() || undefined : undefined,
+    iban:
+      typeof parsed.iban === "string"
+        ? parsed.iban.trim() || undefined
+        : undefined,
     postens,
   });
 };
