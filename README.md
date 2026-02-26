@@ -73,6 +73,17 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 - CAMPAI_ACCOUNT_NAME (optional)
 - CAMPAI_DUE_DAYS (optional, default 14)
 
+### Campai Expense Receipts (Eigenbeleg)
+
+- CAMPAI_CREDITOR_ACCOUNT (required; valid Kreditorenkonto for expense receipts)
+- CAMPAI_EXPENSE_ACCOUNT (optional; Sachkonto for positions, falls back to CAMPAI_ACCOUNT)
+- CAMPAI_COST_CENTER1 (required in setups with Sphären; numeric positive integer)
+- CAMPAI_RECEIPT_FILE_UPLOAD_ENDPOINT (optional; override for Campai file upload endpoint used to attach generated PDF)
+
+Hinweis: Für Dateianhänge wird primär `GET /api/storage/uploadUrl` von Campai genutzt,
+anschließend wird die Datei auf die zurückgegebene URL hochgeladen und die `id` als
+`receiptFileId` beim Receipt gesetzt.
+
 ### Einkaufen
 
 The products page fetches items via `/api/campai/products`.

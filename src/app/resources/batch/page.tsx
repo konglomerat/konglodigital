@@ -8,6 +8,7 @@ import {
   faCamera,
   faCheck,
   faPaperPlane,
+  faSpinner,
   faTriangleExclamation,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -748,8 +749,14 @@ export default function BatchResourcePage() {
             attachable: false,
             imageUrl: imageUrls[0] ?? null,
             imageUrls,
-            gpsLatitude: location.latitude,
-            gpsLongitude: location.longitude,
+            mapFeatures: [
+              {
+                id: "gps-point",
+                layer: "location",
+                geometryType: "Point",
+                point: [location.longitude, location.latitude],
+              },
+            ],
           }),
         });
 
@@ -984,10 +991,20 @@ export default function BatchResourcePage() {
                     </button>
                   </div>
                 ))}
+                {isCapturing ? (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/30 bg-white/10">
+                    <FontAwesomeIcon
+                      icon={faSpinner}
+                      className="animate-spin text-base text-white"
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p className="text-xs text-zinc-400">
-                Tap the shutter to capture photos
+                {isCapturing
+                  ? "Processing photo…"
+                  : "Tap the shutter to capture photos"}
               </p>
             )}
           </div>

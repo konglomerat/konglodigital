@@ -220,13 +220,10 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       const data = await fetchJson<{
         resource?: Resource & { prettyTitle?: string | null };
         id?: string;
-      }>(
-        "/api/campai/resources",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      }>("/api/campai/resources", {
+        method: "POST",
+        body: formData,
+      });
       setFormMessage("Resource created.");
       if (data.id) {
         router.push(
