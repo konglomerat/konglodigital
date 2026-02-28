@@ -330,10 +330,7 @@ export const POST = async (request: NextRequest) => {
       .join(" | ")
       .slice(0, 140);
 
-    const tags = [
-      compactText(body.senderProject),
-      compactText(body.receiverProject),
-    ].filter(Boolean);
+    const tags = ["API TEST"];
 
     const receiptFileBase64 = compactText(
       body.receiptFileBase64 ?? body.pdfBase64,
