@@ -42,16 +42,6 @@ const normalizeNumericLike = (value: string | null): string | null => {
   return digitsOnly.length > 0 ? digitsOnly : null;
 };
 
-const unwrapPayload = (raw: unknown): unknown => {
-  if (Array.isArray(raw)) {
-    const first = asRecord(raw[0]);
-    const result = asRecord(first?.result);
-    const data = asRecord(result?.data);
-    return data?.json ?? data ?? result ?? first ?? raw;
-  }
-  return raw;
-};
-
 const extractCostCenterArray = (payload: unknown): Record<string, unknown>[] => {
   if (Array.isArray(payload)) {
     return payload
@@ -131,68 +121,42 @@ const normalizeCostCenter = (
 
 const fetchCostCenters = async (params: {
   apiKey: string;
-  baseUrl: string;
   organizationId: string;
   mandateId: string;
 }) => {
-  const { apiKey, baseUrl, organizationId, mandateId } = params;
-  const endpointOverride = process.env.CAMPAI_COST_CENTERS_ENDPOINT;
-  const endpoints = endpointOverride
-    ? [endpointOverride]
-    : [
-        `https://cloud.campai.com/api/organizations/${organizationId}/mandates/${mandateId}`,
-        `${baseUrl}/finance/cost-centers/list`,
-        `${baseUrl}/finance/costCenters/list`,
-        `${baseUrl}/finance/accounting/cost-centers/list`,
-        `${baseUrl}/finance/accounting/costCenters/list`,
-        `${baseUrl}/cost-centers/list`,
-      ];
+  const { apiKey, organizationId, mandateId } = params;
+  const endpoint = `https://cloud.campai.com/api/organizations/${organizationId}/mandates/${mandateId}`;
 
-  const tried: string[] = [];
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
+    },
+    cache: "no-store",
+  });
 
-  for (const endpoint of endpoints) {
-    for (const method of ["GET", "POST"] as const) {
-      tried.push(`${method} ${endpoint}`);
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": apiKey,
-        },
-        body:
-          method === "POST"
-            ? JSON.stringify({
-                limit: 500,
-                offset: 0,
-                returnCount: false,
-              })
-            : undefined,
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        continue;
-      }
-
-      const raw = (await response.json().catch(() => null)) as unknown;
-      const unwrapped = unwrapPayload(raw);
-      const list = extractCostCenterArray(unwrapped)
-        .map((item) => normalizeCostCenter(item))
-        .filter((item): item is CostCenterOption => Boolean(item));
-
-      const deduped = Array.from(
-        new Map(list.map((entry) => [entry.value, entry])).values(),
-      );
-
-      if (deduped.length > 0) {
-        return deduped;
-      }
-    }
+  if (!response.ok) {
+    throw new Error(
+      `Campai API error: ${response.status} ${await response.text().catch(() => "")}`,
+    );
   }
 
-  throw new Error(
-    `Could not load cost centers from Campai. Tried: ${tried.join(", ")}`,
+  const raw = (await response.json().catch(() => null)) as unknown;
+  const record = asRecord(raw);
+  const list = extractCostCenterArray(record)
+    .map((item) => normalizeCostCenter(item))
+    .filter((item): item is CostCenterOption => Boolean(item));
+
+  const deduped = Array.from(
+    new Map(list.map((entry) => [entry.value, entry])).values(),
   );
+
+  if (deduped.length === 0) {
+    throw new Error("No bookable cost centers found in mandate response.");
+  }
+
+  return deduped;
 };
 
 export const GET = async (request: NextRequest) => {
@@ -206,11 +170,9 @@ export const GET = async (request: NextRequest) => {
     const apiKey = requiredEnv("CAMPAI_API_KEY");
     const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
     const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-    const baseUrl = `https://cloud.campai.com/api/${organizationId}/${mandateId}`;
 
     const costCenters = await fetchCostCenters({
       apiKey,
-      baseUrl,
       organizationId,
       mandateId,
     });
