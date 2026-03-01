@@ -660,7 +660,9 @@ export default function ResourceFeaturesEditorClient({
   const drawingGeometryTypeRef = useRef<"Polygon" | "Point">("Polygon");
   const featureLayerRef = useRef("default");
   const activeFeatureRef = useRef<ResourceMapFeature | null>(null);
+  const activeFeatureIdRef = useRef<string | null>(activeFeatureId);
   const selectedResourceIdRef = useRef<string>(selectedResourceId);
+  const lastLoadedResourceIdRef = useRef<string>("");
   const hasAppliedInitialFeatureFitRef = useRef(false);
   const draggingVertexRef = useRef<{
     featureId: string;
@@ -794,6 +796,10 @@ export default function ResourceFeaturesEditorClient({
   useEffect(() => {
     activeFeatureRef.current = activeFeature;
   }, [activeFeature]);
+
+  useEffect(() => {
+    activeFeatureIdRef.current = activeFeatureId;
+  }, [activeFeatureId]);
 
   useEffect(() => {
     selectedResourceIdRef.current = selectedResourceId;
@@ -1153,8 +1159,12 @@ export default function ResourceFeaturesEditorClient({
     if (!selectedResourceId) {
       setMapFeatures([]);
       setActiveFeatureId(null);
+      lastLoadedResourceIdRef.current = "";
       return;
     }
+
+    const loadingResourceId = selectedResourceId;
+    const isResourceSwitch = lastLoadedResourceIdRef.current !== loadingResourceId;
 
     setLoadingFeatures(true);
     setMessage(null);
@@ -1175,10 +1185,20 @@ export default function ResourceFeaturesEditorClient({
         payload.mapFeatures ?? [],
       );
       setMapFeatures(normalized);
-      setActiveFeatureId(null);
+
+      const previousActiveId = activeFeatureIdRef.current;
+      const nextActiveId = isResourceSwitch
+        ? (normalized[0]?.id ?? null)
+        : previousActiveId && normalized.some((feature) => feature.id === previousActiveId)
+          ? previousActiveId
+          : (normalized[0]?.id ?? null);
+
+      setActiveFeatureId(nextActiveId);
       setDraftPoints([]);
       setIsDrawing(false);
       setSwitchMenu(null);
+
+      lastLoadedResourceIdRef.current = loadingResourceId;
 
       if (mapRef.current && !hasAppliedInitialFeatureFitRef.current) {
         fitToFeatureBounds(mapRef.current, normalized);
@@ -1481,6 +1501,8 @@ export default function ResourceFeaturesEditorClient({
 
           const hitFeatures = map.queryRenderedFeatures(event.point, {
             layers: [
+              "resource-map-points-other",
+              "resource-map-points",
               "resource-map-features-other-fill",
               "resource-map-features-fill",
               "resource-map-feature-active-fill",
@@ -1497,7 +1519,8 @@ export default function ResourceFeaturesEditorClient({
               }
               if (
                 layerId === "resource-map-features-fill" ||
-                layerId === "resource-map-feature-active-fill"
+                layerId === "resource-map-feature-active-fill" ||
+                layerId === "resource-map-points"
               ) {
                 return selectedId;
               }

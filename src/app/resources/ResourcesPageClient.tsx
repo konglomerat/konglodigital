@@ -11,7 +11,6 @@ import {
   faCamera,
   faChevronLeft,
   faChevronRight,
-  faFilter,
   faXmark,
   faList,
   faMagnifyingGlass,
@@ -23,8 +22,12 @@ import {
 import type { ResourcePayload } from "@/lib/campai-resources";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import Button from "../components/Button";
+import { Input, Select } from "../components/ui/form";
 import ResourcesMapView from "./ResourcesMapView";
+import { getPointFeatures, getPolygonFeatures } from "./map-features";
 import { RESOURCE_TYPES } from "./resource-types";
+
+type MapPolygonPoint = [number, number];
 
 type Resource = ResourcePayload;
 
@@ -70,6 +73,44 @@ const truncateText = (text: string, maxLength: number) => {
     return normalized;
   }
   return `${normalized.slice(0, maxLength - 3)}...`;
+};
+
+const getPolygonBounds = (polygon: MapPolygonPoint[]) => {
+  let minLng = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+
+  polygon.forEach(([lng, lat]) => {
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  });
+
+  return { minLng, maxLng, minLat, maxLat };
+};
+
+const isPointInPolygon = (
+  point: MapPolygonPoint,
+  polygon: MapPolygonPoint[],
+) => {
+  const [x, y] = point;
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+
+    const intersects =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
 };
 
 const getSupabaseThumbnailUrl = (url: string, width = 700) => {
@@ -302,6 +343,8 @@ export default function ResourcesPageClient({
   const hasInitializedRef = useRef(false);
   const lastQueryRef = useRef<string>("");
   const lastTypeRef = useRef<string>("");
+  const lastMapRef = useRef<string>("");
+  const lastWithinRef = useRef<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResourceType, setSelectedResourceType] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
@@ -312,6 +355,7 @@ export default function ResourcesPageClient({
   const [hasRestoredState, setHasRestoredState] = useState(false);
   const [hasAppliedScroll, setHasAppliedScroll] = useState(false);
   const [filterByMapView, setFilterByMapView] = useState(false);
+  const [includeWithinPolygons, setIncludeWithinPolygons] = useState(false);
   const [visibleMapResourceIds, setVisibleMapResourceIds] = useState<string[]>(
     [],
   );
@@ -346,6 +390,20 @@ export default function ResourcesPageClient({
     [resourceTypes],
   );
 
+  const parseBooleanUrlParam = useCallback((value: string | null) => {
+    if (value === null) {
+      return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "1" || normalized === "true" || normalized === "yes") {
+      return true;
+    }
+    if (normalized === "0" || normalized === "false" || normalized === "no") {
+      return false;
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -357,16 +415,30 @@ export default function ResourcesPageClient({
     const stored = sessionStorage.getItem(overviewStorageKey);
     const urlQuery = searchParams.get("q");
     const urlType = searchParams.get("type");
+    const urlMap = searchParams.get("map");
+    const urlWithin = searchParams.get("within");
     const hasUrlQuery = urlQuery !== null;
     const hasUrlType = urlType !== null;
+    const parsedUrlMap = parseBooleanUrlParam(urlMap);
+    const parsedUrlWithin = parseBooleanUrlParam(urlWithin);
+    const hasUrlMap = parsedUrlMap !== null;
+    const hasUrlWithin = parsedUrlWithin !== null;
     lastQueryRef.current = urlQuery ?? "";
     lastTypeRef.current = urlType ?? "";
+    lastMapRef.current = urlMap ?? "";
+    lastWithinRef.current = urlWithin ?? "";
     if (!stored) {
       if (hasUrlQuery) {
         setSearchTerm(urlQuery ?? "");
       }
       if (hasUrlType) {
         setSelectedResourceType(urlType ?? "");
+      }
+      if (hasUrlMap) {
+        setFilterByMapView(Boolean(parsedUrlMap));
+      }
+      if (hasUrlWithin) {
+        setIncludeWithinPolygons(Boolean(parsedUrlWithin));
       }
       setHasRestoredState(true);
       return;
@@ -376,6 +448,8 @@ export default function ResourcesPageClient({
         searchTerm?: string;
         selectedResourceType?: string;
         viewMode?: "list" | "map";
+        includeWithinPolygons?: boolean;
+        filterByMapView?: boolean;
         scrollY?: number;
       };
       if (hasUrlQuery) {
@@ -387,6 +461,16 @@ export default function ResourcesPageClient({
         setSelectedResourceType(urlType ?? "");
       } else if (typeof parsed.selectedResourceType === "string") {
         setSelectedResourceType(parsed.selectedResourceType);
+      }
+      if (hasUrlMap) {
+        setFilterByMapView(Boolean(parsedUrlMap));
+      } else if (typeof parsed.filterByMapView === "boolean") {
+        setFilterByMapView(parsed.filterByMapView);
+      }
+      if (hasUrlWithin) {
+        setIncludeWithinPolygons(Boolean(parsedUrlWithin));
+      } else if (typeof parsed.includeWithinPolygons === "boolean") {
+        setIncludeWithinPolygons(parsed.includeWithinPolygons);
       }
       if (parsed.viewMode === "list" || parsed.viewMode === "map") {
         setViewMode(parsed.viewMode);
@@ -400,7 +484,7 @@ export default function ResourcesPageClient({
     } finally {
       setHasRestoredState(true);
     }
-  }, [overviewStorageKey, searchParams]);
+  }, [overviewStorageKey, parseBooleanUrlParam, searchParams]);
 
   useEffect(() => {
     if (!hasRestoredState) {
@@ -434,6 +518,57 @@ export default function ResourcesPageClient({
     setSelectedResourceType(urlType);
   }, [hasRestoredState, searchParams, selectedResourceType]);
 
+  useEffect(() => {
+    if (!hasRestoredState) {
+      return;
+    }
+    const urlMap = searchParams.get("map");
+    const parsed = parseBooleanUrlParam(urlMap);
+    if (parsed === null) {
+      lastMapRef.current = urlMap ?? "";
+      return;
+    }
+
+    const nextValue = Boolean(parsed);
+    if (nextValue === filterByMapView) {
+      lastMapRef.current = urlMap ?? "";
+      return;
+    }
+    if ((urlMap ?? "") === lastMapRef.current) {
+      return;
+    }
+    lastMapRef.current = urlMap ?? "";
+    setFilterByMapView(nextValue);
+  }, [filterByMapView, hasRestoredState, parseBooleanUrlParam, searchParams]);
+
+  useEffect(() => {
+    if (!hasRestoredState) {
+      return;
+    }
+    const urlWithin = searchParams.get("within");
+    const parsed = parseBooleanUrlParam(urlWithin);
+    if (parsed === null) {
+      lastWithinRef.current = urlWithin ?? "";
+      return;
+    }
+
+    const nextValue = Boolean(parsed);
+    if (nextValue === includeWithinPolygons) {
+      lastWithinRef.current = urlWithin ?? "";
+      return;
+    }
+    if ((urlWithin ?? "") === lastWithinRef.current) {
+      return;
+    }
+    lastWithinRef.current = urlWithin ?? "";
+    setIncludeWithinPolygons(nextValue);
+  }, [
+    hasRestoredState,
+    includeWithinPolygons,
+    parseBooleanUrlParam,
+    searchParams,
+  ]);
+
   const persistOverviewState = useCallback(
     (scrollYOverride?: number) => {
       if (typeof window === "undefined") {
@@ -445,12 +580,21 @@ export default function ResourcesPageClient({
         searchTerm,
         selectedResourceType,
         viewMode,
+        includeWithinPolygons,
+        filterByMapView,
         scrollY,
         updatedAt: Date.now(),
       };
       sessionStorage.setItem(overviewStorageKey, JSON.stringify(payload));
     },
-    [overviewStorageKey, searchTerm, selectedResourceType, viewMode],
+    [
+      filterByMapView,
+      includeWithinPolygons,
+      overviewStorageKey,
+      searchTerm,
+      selectedResourceType,
+      viewMode,
+    ],
   );
 
   useEffect(() => {
@@ -458,10 +602,21 @@ export default function ResourcesPageClient({
       return;
     }
     persistOverviewState();
-  }, [hasRestoredState, persistOverviewState, searchTerm, viewMode]);
+  }, [
+    hasRestoredState,
+    includeWithinPolygons,
+    persistOverviewState,
+    searchTerm,
+    viewMode,
+  ]);
 
   const replaceFilterParamsInUrl = useCallback(
-    (nextQueryValue: string, nextTypeValue: string) => {
+    (
+      nextQueryValue: string,
+      nextTypeValue: string,
+      nextMapValue: boolean,
+      nextWithinValue: boolean,
+    ) => {
       if (!hasRestoredState || typeof window === "undefined") {
         return;
       }
@@ -476,15 +631,32 @@ export default function ResourcesPageClient({
       } else {
         params.delete("type");
       }
+
+      if (nextMapValue) {
+        params.set("map", "1");
+      } else {
+        params.delete("map");
+      }
+
+      if (nextWithinValue) {
+        params.set("within", "1");
+      } else {
+        params.delete("within");
+      }
+
       const nextQuery = params.toString();
       const currentQuery = window.location.search.replace(/^\?/, "");
       if (nextQuery === currentQuery) {
         lastQueryRef.current = nextQueryValue;
         lastTypeRef.current = nextTypeValue;
+        lastMapRef.current = nextMapValue ? "1" : "";
+        lastWithinRef.current = nextWithinValue ? "1" : "";
         return;
       }
       lastQueryRef.current = nextQueryValue;
       lastTypeRef.current = nextTypeValue;
+      lastMapRef.current = nextMapValue ? "1" : "";
+      lastWithinRef.current = nextWithinValue ? "1" : "";
       const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
       router.replace(nextUrl, { scroll: false });
     },
@@ -492,21 +664,52 @@ export default function ResourcesPageClient({
   );
 
   const commitSearchToUrl = useCallback(() => {
-    replaceFilterParamsInUrl(searchTerm.trim(), selectedResourceType);
-  }, [replaceFilterParamsInUrl, searchTerm, selectedResourceType]);
+    replaceFilterParamsInUrl(
+      searchTerm.trim(),
+      selectedResourceType,
+      filterByMapView,
+      includeWithinPolygons,
+    );
+  }, [
+    filterByMapView,
+    includeWithinPolygons,
+    replaceFilterParamsInUrl,
+    searchTerm,
+    selectedResourceType,
+  ]);
 
   const handleResourceTypeChange = useCallback(
     (nextTypeValue: string) => {
       setSelectedResourceType(nextTypeValue);
-      replaceFilterParamsInUrl(searchTerm.trim(), nextTypeValue);
+      replaceFilterParamsInUrl(
+        searchTerm.trim(),
+        nextTypeValue,
+        filterByMapView,
+        includeWithinPolygons,
+      );
     },
-    [replaceFilterParamsInUrl, searchTerm],
+    [
+      filterByMapView,
+      includeWithinPolygons,
+      replaceFilterParamsInUrl,
+      searchTerm,
+    ],
   );
 
   const handleClearSearch = useCallback(() => {
     setSearchTerm("");
-    replaceFilterParamsInUrl("", selectedResourceType);
-  }, [replaceFilterParamsInUrl, selectedResourceType]);
+    replaceFilterParamsInUrl(
+      "",
+      selectedResourceType,
+      filterByMapView,
+      includeWithinPolygons,
+    );
+  }, [
+    filterByMapView,
+    includeWithinPolygons,
+    replaceFilterParamsInUrl,
+    selectedResourceType,
+  ]);
 
   useEffect(() => {
     if (!hasRestoredState || typeof window === "undefined") {
@@ -595,7 +798,7 @@ export default function ResourcesPageClient({
 
   const searchAndTypeFilteredResources = useMemo(() => {
     const normalizedQuery = normalizedSearchTerm.toLowerCase();
-    return typeFilteredResources.filter((resource) => {
+    const directMatches = typeFilteredResources.filter((resource) => {
       if (!normalizedQuery) {
         return true;
       }
@@ -611,7 +814,55 @@ export default function ResourcesPageClient({
         .toLowerCase();
       return searchable.includes(normalizedQuery);
     });
-  }, [normalizedSearchTerm, typeFilteredResources]);
+
+    if (!normalizedQuery || !includeWithinPolygons) {
+      return directMatches;
+    }
+
+    const polygons = directMatches
+      .flatMap((resource) => getPolygonFeatures(resource.mapFeatures ?? []))
+      .map((feature) => ({
+        coordinates: feature.coordinates,
+        bounds: getPolygonBounds(feature.coordinates),
+      }));
+
+    if (polygons.length === 0) {
+      return directMatches;
+    }
+
+    const directMatchIdSet = new Set(
+      directMatches.map((resource) => resource.id),
+    );
+
+    const expandedMatches = typeFilteredResources.filter((resource) => {
+      if (directMatchIdSet.has(resource.id)) {
+        return true;
+      }
+
+      const points = getPointFeatures(resource.mapFeatures ?? []).map(
+        (feature) => feature.point,
+      );
+      if (points.length === 0) {
+        return false;
+      }
+
+      return points.some((point) =>
+        polygons.some(({ coordinates, bounds }) => {
+          if (
+            point[0] < bounds.minLng ||
+            point[0] > bounds.maxLng ||
+            point[1] < bounds.minLat ||
+            point[1] > bounds.maxLat
+          ) {
+            return false;
+          }
+          return isPointInPolygon(point, coordinates);
+        }),
+      );
+    });
+
+    return expandedMatches;
+  }, [includeWithinPolygons, normalizedSearchTerm, typeFilteredResources]);
 
   const visibleMapResourceIdSet = useMemo(
     () => new Set(visibleMapResourceIds),
@@ -708,46 +959,51 @@ export default function ResourcesPageClient({
 
       <section className="grid w-full flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
         <div className={`${viewMode === "list" ? "block" : "hidden"} lg:block`}>
-          <section className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex w-full flex-col gap-3 sm:w-auto">
-              <div className="relative w-full sm:w-[24rem]">
-                <FontAwesomeIcon
-                  icon={faMagnifyingGlass}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm"
-                />
-                <input
-                  id="resource-search"
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  onBlur={commitSearchToUrl}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      commitSearchToUrl();
-                    }
-                  }}
-                  placeholder="Search by name, tag, or category"
-                  className="w-full rounded-md bg-white py-3.5 pl-11 pr-11 text-base shadow-xs shadow-zinc-900/30 transition focus:border-white focus:outline-none focus:ring-4 focus:ring-blue-900/10"
-                />
-                {searchTerm.trim().length > 0 ? (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
-                  </button>
-                ) : null}
-              </div>
-              <div>
-                <select
+          <section className="space-y-4">
+            <div className="relative">
+              <label htmlFor="resource-search" className="sr-only">
+                Search
+              </label>
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500"
+              />
+              <Input
+                id="resource-search"
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onBlur={commitSearchToUrl}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    commitSearchToUrl();
+                  }
+                }}
+                aria-label="Search resources"
+                placeholder="Search by name, tag, or category"
+                className="pl-9 pr-10 py-3 text-base"
+              />
+              {searchTerm.trim().length > 0 ? (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={handleClearSearch}
+                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+                >
+                  <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="w-full sm:w-auto sm:min-w-56">
+                <Select
                   value={selectedResourceType}
                   onChange={(event) =>
                     handleResourceTypeChange(event.target.value)
                   }
-                  className="rounded-md bg-white px-4 py-2 text-xs font-semibold text-zinc-700 shadow-xs shadow-zinc-900/20 transition focus:outline-none focus:ring-4 focus:ring-blue-900/10"
                   aria-label="Filter by resource type"
+                  className="py-2 text-xs font-semibold text-zinc-700"
                 >
                   <option value="">All resource types</option>
                   {resourceTypeOptions.map((resourceType) => (
@@ -755,34 +1011,58 @@ export default function ResourcesPageClient({
                       {resourceType.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setFilterByMapView((prev) => !prev)}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition ${
-                    filterByMapView
-                      ? "bg-zinc-900 text-white"
-                      : "bg-white text-zinc-600 hover:text-zinc-900"
-                  }`}
-                >
-                  <FontAwesomeIcon icon={faFilter} className="text-[10px]" />
-                  <span>
-                    {filterByMapView
-                      ? "Showing map viewport"
-                      : "Filter by map viewport"}
-                  </span>
-                </button>
+
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={filterByMapView}
+                  onChange={(event) => {
+                    const nextValue = event.target.checked;
+                    setFilterByMapView(nextValue);
+                    replaceFilterParamsInUrl(
+                      searchTerm.trim(),
+                      selectedResourceType,
+                      nextValue,
+                      includeWithinPolygons,
+                    );
+                  }}
+                  className="h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 shadow-xs shadow-zinc-900/20 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                <span>Filter by map viewport</span>
+              </label>
+
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={includeWithinPolygons}
+                  onChange={(event) => {
+                    const nextValue = event.target.checked;
+                    setIncludeWithinPolygons(nextValue);
+                    replaceFilterParamsInUrl(
+                      searchTerm.trim(),
+                      selectedResourceType,
+                      filterByMapView,
+                      nextValue,
+                    );
+                  }}
+                  disabled={normalizedSearchTerm.length === 0}
+                  className="h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 shadow-xs shadow-zinc-900/20 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                />
+                <span>Include resources inside rooms</span>
+              </label>
+
+              <div className="ml-auto hidden text-right md:block">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Results
+                </p>
+                <p className="text-sm font-semibold text-zinc-900">
+                  {loading
+                    ? "Loading..."
+                    : `${visibleResources.length} of ${count ?? searchAndTypeFilteredResources.length}`}
+                </p>
               </div>
-            </div>
-            <div className="hidden md:block text-right">
-              <h2 className="text-sm font-semibold text-white">Resources</h2>
-              <p className="text-xs">
-                {loading
-                  ? "Loading..."
-                  : `${visibleResources.length} of ${count ?? searchAndTypeFilteredResources.length}`}
-              </p>
             </div>
           </section>
 

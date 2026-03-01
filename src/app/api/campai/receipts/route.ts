@@ -131,13 +131,19 @@ const uploadViaStorageUploadUrl = async (params: {
     return null;
   }
 
+  const normalizedFileBytes = Uint8Array.from(fileBytes);
+
+  const fileBlob = new Blob([normalizedFileBytes], {
+    type: fileContentType || "application/octet-stream",
+  });
+
   const putResponse = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
       "Content-Type": fileContentType || "application/octet-stream",
       "Content-Disposition": `inline; filename="${fileName || "nachweis.dat"}"`,
     },
-    body: fileBytes,
+    body: fileBlob,
   });
 
   if (putResponse.ok) {
@@ -145,9 +151,6 @@ const uploadViaStorageUploadUrl = async (params: {
   }
 
   const formData = new FormData();
-  const fileBlob = new Blob([fileBytes], {
-    type: fileContentType || "application/octet-stream",
-  });
   formData.append("file", fileBlob, fileName || "nachweis.dat");
   const postResponse = await fetch(uploadUrl, {
     method: "POST",

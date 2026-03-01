@@ -31,3 +31,14 @@ export const createSupabaseRouteClient = (request: NextRequest) => {
 
   return { supabase, response };
 };
+
+export const withSupabaseCookies = (
+  target: NextResponse,
+  source: NextResponse,
+) => {
+  for (const cookie of source.cookies.getAll()) {
+    target.cookies.set(cookie);
+  }
+
+  return target;
+};
