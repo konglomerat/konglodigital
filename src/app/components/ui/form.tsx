@@ -136,3 +136,28 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = "Select";
+
+type CheckboxProps = Omit<ComponentPropsWithoutRef<"input">, "type"> & {
+  label: string;
+};
+
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
+  ({ className, label, ...props }, ref) => {
+    return (
+      <label className="inline-flex items-center gap-2 text-sm text-zinc-900 select-none">
+        <input
+          ref={ref}
+          type="checkbox"
+          className={cn(
+            "h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30",
+            className,
+          )}
+          {...props}
+        />
+        <span>{label}</span>
+      </label>
+    );
+  },
+);
+
+Checkbox.displayName = "Checkbox";

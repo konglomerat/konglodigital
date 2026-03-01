@@ -330,7 +330,7 @@ export const POST = async (request: NextRequest) => {
       .join(" | ")
       .slice(0, 140);
 
-    const tags = ["API TEST"];
+    const tags = ["API"];
 
     const receiptFileBase64 = compactText(
       body.receiptFileBase64 ?? body.pdfBase64,
@@ -356,14 +356,18 @@ export const POST = async (request: NextRequest) => {
       fileContentType: receiptFileContentType,
     });
 
+    // ── Kreditor-Konto: Fallback auf Env-Variable ──
+    const finalAccount = creditorAccount;
+    const finalAccountName = accountName;
+
     const payload: Record<string, unknown> = {
-      account: creditorAccount,
+      account: finalAccount,
       receiptNumber,
       isNet: false,
       totalGrossAmount: amount,
       receiptDate,
       dueDate,
-      accountName,
+      accountName: finalAccountName,
       description,
       refund: false,
       positions: [

@@ -35,6 +35,7 @@ import {
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Button from "../components/Button";
+import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
@@ -721,7 +722,7 @@ export default function BuchungenPage() {
                 hint="Bei Ausgaben: Zahlungsempfänger. Bei Einnahmen: Zahler an den Verein."
                 error={errors.senderOrReceiver?.message}
               >
-                <Input
+                <AutocompleteInput
                   placeholder="z. B. Amazon / Mitgliedsname"
                   {...register("senderOrReceiver", {
                     required: "Sender/Empfänger ist erforderlich.",

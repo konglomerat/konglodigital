@@ -399,7 +399,7 @@ export const POST = async (request: NextRequest) => {
     positions,
     doNotSendReceipt: !sendByMail,
     queueReceiptDocument: sendByMail,
-    tags: ["API TEST"],
+    tags: ["API"],
   };
 
   const response = await fetch(
