@@ -210,8 +210,19 @@ export const POST = async (request: NextRequest) => {
 			requiredEnv("CAMPAI_CREDITOR_ACCOUNT"),
 			10,
 		);
+		const expenseAccount = Number.parseInt(
+			process.env.CAMPAI_EXPENSE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
+			10,
+		);
 		const accountName = compactText(process.env.CAMPAI_ACCOUNT_NAME, "");
 		const defaultCostCenter1 = getValidDefaultCostCenter();
+
+		if (!Number.isInteger(expenseAccount) || expenseAccount <= 0) {
+			return NextResponse.json(
+				{ error: "Invalid CAMPAI_EXPENSE_ACCOUNT/CAMPAI_ACCOUNT" },
+				{ status: 500 },
+			);
+		}
 
 		if (!Number.isInteger(creditorAccount) || creditorAccount <= 0) {
 			return NextResponse.json(
@@ -228,29 +239,17 @@ export const POST = async (request: NextRequest) => {
 		const betreff = compactText(body.betreff);
 		const notiz = compactText(body.notiz);
 		const belegdatum = parseDate(body.belegdatum);
-		const antragstellerName = compactText(body.antragstellerName);
-		const antragstellerIban = compactText(body.antragstellerIban).replace(
-			/\s+/g,
-			"",
-		);
+		const bereitsBeglichen = body.bereitsBeglichen === true;
+		const empfaengerName = compactText(body.empfaengerName);
+		const empfaengerEmail = compactText(body.empfaengerEmail);
+		const clientCreditorAccount =
+			typeof body.creditorAccount === "number" && body.creditorAccount > 0
+				? body.creditorAccount
+				: null;
 
 		if (!betreff) {
 			return NextResponse.json(
 				{ error: "Bitte einen Betreff angeben." },
-				{ status: 400 },
-			);
-		}
-
-		if (!antragstellerName) {
-			return NextResponse.json(
-				{ error: "Bitte den Namen des Antragstellers angeben." },
-				{ status: 400 },
-			);
-		}
-
-		if (!antragstellerIban || !/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(antragstellerIban)) {
-			return NextResponse.json(
-				{ error: "Bitte eine gültige IBAN des Antragstellers angeben." },
 				{ status: 400 },
 			);
 		}
@@ -261,21 +260,20 @@ export const POST = async (request: NextRequest) => {
 
 		const positions = rawPositions
 			.map((position) => {
-				const account = parsePositiveInt(position.konto);
 				const positionAmount = parseEuroToCents(position.betragEuro);
 				const rawPositionCostCenter = parsePositiveInt(position.kostenstelle);
 				const positionCostCenter =
 					rawPositionCostCenter && isValidCampaiCostCenter1(rawPositionCostCenter)
 						? rawPositionCostCenter
 						: defaultCostCenter1;
-				if (!account || !positionAmount || !positionCostCenter) {
+				if (!positionAmount || !positionCostCenter) {
 					return null;
 				}
 
 				const positionDescription = compactText(position.beschreibung);
 
 				return {
-					account,
+					account: expenseAccount,
 					amount: positionAmount,
 					description: (positionDescription || betreff).slice(0, 140),
 					costCenter1: positionCostCenter,
@@ -290,7 +288,7 @@ export const POST = async (request: NextRequest) => {
 			return NextResponse.json(
 				{
 					error:
-						"Bitte mindestens eine gültige Position mit Konto, Betrag und Kostenstelle angeben.",
+						"Bitte mindestens eine gültige Position mit Betrag und Kostenstelle angeben.",
 				},
 				{ status: 400 },
 			);
@@ -361,25 +359,32 @@ export const POST = async (request: NextRequest) => {
 			.slice(0, 140);
 
 		const noteContent = [
-			`Bitte überweisen an: ${antragstellerName}`,
-			`IBAN: ${antragstellerIban}`,
+			empfaengerName ? `Empfänger: ${empfaengerName}` : "",
+			empfaengerEmail ? `E-Mail: ${empfaengerEmail}` : "",
+			bereitsBeglichen ? "Status: Rechnung bereits beglichen" : "Status: offen",
 			notiz ? `Notiz: ${notiz}` : "",
 		]
 			.filter(Boolean)
 			.join("\n");
 
+		// ── Kreditor-Konto: vom Client übergeben oder Fallback auf Env ──
+		const finalCreditorAccount = clientCreditorAccount ?? creditorAccount;
+		const finalAccountName = clientCreditorAccount
+			? (empfaengerName || accountName)
+			: accountName;
+
 		const payload: Record<string, unknown> = {
-			account: creditorAccount,
+			account: finalCreditorAccount,
 			receiptNumber,
 			isNet: false,
 			totalGrossAmount: totalAmountCents,
 			receiptDate: belegdatum,
 			dueDate: belegdatum,
-			accountName,
+			accountName: finalAccountName,
 			description,
 			refund: false,
 			positions,
-			tags: ["API TEST"],
+			tags: ["API"],
 			queueReceiptDocument: false,
 			electronic: false,
 			receiptFileId,
