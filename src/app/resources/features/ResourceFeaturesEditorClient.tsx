@@ -1164,7 +1164,8 @@ export default function ResourceFeaturesEditorClient({
     }
 
     const loadingResourceId = selectedResourceId;
-    const isResourceSwitch = lastLoadedResourceIdRef.current !== loadingResourceId;
+    const isResourceSwitch =
+      lastLoadedResourceIdRef.current !== loadingResourceId;
 
     setLoadingFeatures(true);
     setMessage(null);
@@ -1189,7 +1190,8 @@ export default function ResourceFeaturesEditorClient({
       const previousActiveId = activeFeatureIdRef.current;
       const nextActiveId = isResourceSwitch
         ? (normalized[0]?.id ?? null)
-        : previousActiveId && normalized.some((feature) => feature.id === previousActiveId)
+        : previousActiveId &&
+            normalized.some((feature) => feature.id === previousActiveId)
           ? previousActiveId
           : (normalized[0]?.id ?? null);
 

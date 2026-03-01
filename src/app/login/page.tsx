@@ -48,9 +48,7 @@ function LoginForm() {
       await response.json().catch(() => ({}));
       window.location.replace(getSafeRedirect());
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Unable to sign in.",
-      );
+      setError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
       setIsLoading(false);
     }
@@ -83,9 +81,7 @@ function LoginForm() {
       await response.json().catch(() => ({}));
       window.location.replace(getSafeRedirect());
     } catch (error) {
-      setPinError(
-        error instanceof Error ? error.message : "Invalid PIN.",
-      );
+      setPinError(error instanceof Error ? error.message : "Invalid PIN.");
     } finally {
       setIsPinLoading(false);
     }
