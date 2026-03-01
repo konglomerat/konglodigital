@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCube,
   faBoxOpen,
+  faChartPie,
   faFolderOpen,
   faCalendarCheck,
   faPrint,
@@ -57,7 +58,7 @@ export default async function RootLayout({
     "flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700";
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -152,14 +153,14 @@ export default async function RootLayout({
 
                       <p className={navSectionTitleClassName}>buchhaltung</p>
                       <ActiveNavLink
-                        href="/invoices/new"
+                        href="/invoices"
                         className={navLinkClassName}
                       >
                         <FontAwesomeIcon
                           icon={faFolderOpen}
                           className="h-4 w-4"
                         />
-                        Rechnung erstellen
+                        Rechnungen
                       </ActiveNavLink>
                       <ActiveNavLink
                         href="/reimbursement"
@@ -190,6 +191,16 @@ export default async function RootLayout({
                           className="h-4 w-4"
                         />
                         Beleg einbuchen
+                      </ActiveNavLink>
+                      <ActiveNavLink
+                        href="/budget"
+                        className={navLinkClassName}
+                      >
+                        <FontAwesomeIcon
+                          icon={faChartPie}
+                          className="h-4 w-4"
+                        />
+                        Budget Werkbereiche
                       </ActiveNavLink>
                     </nav>
                     <div className="border-t border-zinc-200 px-4 py-4">
@@ -282,9 +293,9 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung
               </p>
-              <ActiveNavLink href="/invoices/new" className={navItemClassName}>
+              <ActiveNavLink href="/invoices" className={navItemClassName}>
                 <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                Rechnung erstellen
+                Rechnungen
               </ActiveNavLink>
               <ActiveNavLink
                 href="/reimbursement"
@@ -300,6 +311,10 @@ export default async function RootLayout({
               <ActiveNavLink href="/buchungen" className={navItemClassName}>
                 <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
                 Beleg einbuchen
+              </ActiveNavLink>
+              <ActiveNavLink href="/budget" className={navItemClassName}>
+                <FontAwesomeIcon icon={faChartPie} className="h-4 w-4" />
+                Budget Werkbereiche
               </ActiveNavLink>
             </nav>
             {isAuthenticated ? (
