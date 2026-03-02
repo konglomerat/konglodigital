@@ -27,10 +27,7 @@ export const POST = async (request: NextRequest) => {
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
   const baseUrl = `https://cloud.campai.com/api/${organizationId}/${mandateId}`;
-  const endpoint =
-    process.env.CAMPAI_INVOICES_ENDPOINT ??
-    `${baseUrl}/finance/accounting/receipts/list`;
-  const trpcBearer = process.env.CAMPAI_TRPC_BEARER;
+  const endpoint = `${baseUrl}/finance/receipts/list`;
 
   const body = (await request.json().catch(() => ({}))) as Record<
     string,
@@ -41,48 +38,27 @@ export const POST = async (request: NextRequest) => {
     sort: body.sort ?? { receiptDate: "desc" },
     limit: body.limit ?? 50,
     offset: body.offset ?? 0,
-    returnCount: body.returnCount ?? false,
-    //searchTerm: body.searchTerm ?? "",
+    returnCount: body.returnCount ?? true,
+    searchTerm: body.searchTerm ?? undefined,
+    view: body.view ?? undefined,
+    invoiceType: "invoice",
+    account: body.account ?? undefined,
+    tags: body.tags ?? undefined,
     range: body.range ?? undefined,
     fromDate: body.fromDate ?? undefined,
     toDate: body.toDate ?? undefined,
-    accountFilter: body.accountFilter ?? undefined,
-    reversed: body.reversed ?? undefined,
-    canceled: body.canceled ?? undefined,
-    costCenters: body.costCenters ?? undefined,
+    userFilter: body.userFilter ?? undefined,
   };
 
-  const response = await fetch(
-    trpcBearer
-      ? "https://cloud.campai.com/trpc/finance.receipts.listReceipts?batch=1"
-      : endpoint,
-    {
-      method: "POST",
-      headers: trpcBearer
-        ? {
-            "Content-Type": "application/json",
-            authorization: `Bearer ${trpcBearer}`,
-          }
-        : {
-            "Content-Type": "application/json",
-            "X-API-Key": apiKey,
-          },
-      body: trpcBearer
-        ? JSON.stringify({
-            0: {
-              organizationId,
-              mandateId,
-              account: body.account,
-              sort: payload.sort,
-              offset: payload.offset,
-              limit: payload.limit,
-              returnCount: true,
-            },
-          })
-        : JSON.stringify(payload),
-      cache: "no-store",
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
     },
-  );
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     const errorBody = await response.text();

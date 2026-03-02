@@ -5,11 +5,14 @@ export type InvoicePayload = {
   receiptNumber?: string;
   title?: string;
   status?: string;
+  paymentStatus?: string;
   receiptDate?: string;
   dueDate?: string;
   totalNet?: number | null;
   totalGross?: number | null;
+  totalGrossAmount?: number | null;
   currency?: string;
+  accountName?: string;
   customerName?: string;
   customerNumber?: string;
 };
@@ -87,8 +90,17 @@ export const normalizeInvoice = (item: RawInvoice): InvoicePayload | null => {
   const status = normalizeString(
     item.receiptStatus ?? item.status ?? item.state ?? item.invoiceStatus,
   );
+  const paymentStatus = normalizeString(item.paymentStatus ?? item.paidStatus);
   const receiptDate = normalizeString(item.receiptDate ?? item.date);
   const dueDate = normalizeString(item.dueDate);
+  const totalGrossAmount = normalizeAmount(
+    item.totalGrossAmount ??
+      item.totalGross ??
+      item.grossAmount ??
+      item.totalAmount ??
+      item.amountGross ??
+      item.amount,
+  );
   const totalGross = normalizeAmount(
     item.totalGross ??
       item.grossAmount ??
@@ -108,6 +120,10 @@ export const normalizeInvoice = (item: RawInvoice): InvoicePayload | null => {
       item.accountNumber,
   );
   const customerName = normalizeCustomerName(item.address ?? item.customer);
+  const accountName = normalizeString(
+    item.accountName ??
+      (item.account as Record<string, unknown> | undefined)?.name,
+  );
 
   if (!id) {
     return null;
@@ -118,11 +134,14 @@ export const normalizeInvoice = (item: RawInvoice): InvoicePayload | null => {
     receiptNumber,
     title,
     status,
+    paymentStatus,
     receiptDate,
     dueDate,
     totalNet,
     totalGross,
+    totalGrossAmount,
     currency,
+    accountName,
     customerName,
     customerNumber,
   } satisfies InvoicePayload;

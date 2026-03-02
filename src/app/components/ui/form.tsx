@@ -56,6 +56,8 @@ type FormFieldProps = {
   error?: string;
   hint?: string;
   children: ReactNode;
+  className?: string;
+  labelClassName?: string;
 };
 
 export function FormField({
@@ -64,10 +66,17 @@ export function FormField({
   error,
   hint,
   children,
+  className,
+  labelClassName,
 }: FormFieldProps) {
   return (
-    <div className="space-y-2">
-      <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+    <div className={cn("space-y-2", className)}>
+      <label
+        className={cn(
+          "block text-xs font-semibold uppercase tracking-wide text-zinc-500",
+          labelClassName,
+        )}
+      >
         {label}
         {required ? <span className="ml-1 text-red-600">*</span> : null}
       </label>

@@ -733,14 +733,22 @@ export default function ReimbursementPage() {
 						</div>
 					</FormSection>
 
-					{result?.error ? (
-						<div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-							{result.error}
-						</div>
-					) : null}
-
 					<div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
 						<div className="flex flex-wrap items-center gap-3">
+							{result?.id ? (
+								<p className="text-sm text-emerald-700">
+									In Campai gespeichert: {result.id}
+								</p>
+							) : null}
+
+							{result?.uploadWarning ? (
+								<p className="text-sm text-amber-700">{result.uploadWarning}</p>
+							) : null}
+
+							{result?.error ? (
+								<p className="text-sm text-rose-700">{result.error}</p>
+							) : null}
+
 							<Button
 								type="button"
 								kind="secondary"
@@ -756,19 +764,10 @@ export default function ReimbursementPage() {
 								kind="primary"
 								icon={faCalendarCheck}
 								disabled={isSubmitting}
+								className="ml-auto"
 							>
 								{isSubmitting ? "Wird gesendet…" : "Rückerstattung absenden"}
 							</Button>
-
-							{result?.id ? (
-								<p className="text-sm text-emerald-700">
-									In Campai gespeichert: {result.id}
-								</p>
-							) : null}
-
-							{result?.uploadWarning ? (
-								<p className="text-sm text-amber-700">{result.uploadWarning}</p>
-							) : null}
 						</div>
 					</div>
 				</form>

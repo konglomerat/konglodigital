@@ -170,7 +170,7 @@ export default async function RootLayout({
                           icon={faFolderOpen}
                           className="h-4 w-4"
                         />
-                        Auslage rückerstatten
+                        Rückerstattung von Auslagen
                       </ActiveNavLink>
                       <ActiveNavLink
                         href="/eigenbeleg"
@@ -302,7 +302,7 @@ export default async function RootLayout({
                 className={navItemClassName}
               >
                 <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                Auslage rückerstatten
+                Rückerstattung von Auslagen
               </ActiveNavLink>
               <ActiveNavLink href="/eigenbeleg" className={navItemClassName}>
                 <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
