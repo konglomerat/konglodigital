@@ -41,7 +41,10 @@ export const POST = async (request: NextRequest) => {
     returnCount: body.returnCount ?? true,
     searchTerm: body.searchTerm ?? undefined,
     view: body.view ?? undefined,
-    invoiceType: "invoice",
+    invoiceType:
+      typeof body.invoiceType === "string" && body.invoiceType.trim()
+        ? body.invoiceType.trim()
+        : undefined,
     account: body.account ?? undefined,
     tags: body.tags ?? undefined,
     range: body.range ?? undefined,

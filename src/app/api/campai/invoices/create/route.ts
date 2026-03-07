@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  type CampaiPaymentMethodType,
+  isCampaiPaymentMethodType,
+} from "@/lib/campai-payment-methods";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
@@ -34,6 +38,28 @@ const parsePositiveInt = (value: unknown): number | null => {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
     const parsed = Number.parseInt(value, 10);
     return parsed > 0 ? parsed : null;
+  }
+
+  return null;
+};
+
+const normalizeCustomerNumber = (value: unknown): string | null => {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return String(value);
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return value.trim();
+  }
+
+  return null;
+};
+
+const normalizePaymentMethodType = (
+  value: unknown,
+): CampaiPaymentMethodType | null => {
+  if (isCampaiPaymentMethodType(value)) {
+    return value;
   }
 
   return null;
@@ -219,6 +245,7 @@ export const POST = async (request: NextRequest) => {
     isNet?: boolean;
     paid?: boolean;
     paymentMethod?: string;
+    customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
     dueDate?: string;
     deliveryDate?: string;
@@ -278,6 +305,10 @@ export const POST = async (request: NextRequest) => {
   const payloadReceiptDate = normalizeDate(body.invoiceDate) ?? receiptDate;
   const payloadDueDate = normalizeDate(body.dueDate) ?? dueDate;
   const payloadDeliveryDate = normalizeDate(body.deliveryDate);
+  const selectedCustomerNumber = Array.isArray(body.customerNumber)
+    ? normalizeCustomerNumber(body.customerNumber[0])
+    : normalizeCustomerNumber(body.customerNumber);
+  const paymentMethodType = normalizePaymentMethodType(body.paymentMethod);
 
   const selectedTaxRates = Array.from(
     new Set(
@@ -394,11 +425,14 @@ export const POST = async (request: NextRequest) => {
     accountName,
     receiptNumber: null,
     customerType: "debtor",
-    customerNumber: [],
+    customerNumber: selectedCustomerNumber ? [selectedCustomerNumber] : [],
     description: body.description ?? "",
     paid: body.paid === true,
-    paymentMethod:
-      typeof body.paymentMethod === "string" ? body.paymentMethod : undefined,
+    paymentMethod: paymentMethodType
+      ? {
+          type: paymentMethodType,
+        }
+      : undefined,
     note: body.note ?? "",
     discount: 0,
     discountType: "%",

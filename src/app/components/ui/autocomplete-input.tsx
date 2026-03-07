@@ -15,6 +15,7 @@ import { Input } from "./form";
 export type Suggestion = {
 	name: string;
 	account: number;
+	paymentMethodType?: string | null;
 };
 
 type AutocompleteInputProps = Omit<
@@ -33,6 +34,10 @@ type AutocompleteInputProps = Omit<
 	onCreateNew?: (name: string) => void;
 	/** Whether to show the "create new" option when no exact match is found */
 	showCreateOption?: boolean;
+	/** API path used for suggestions */
+	apiPath?: string;
+	/** Human-readable entity label used in the dropdown */
+	entityLabelSingular?: string;
 };
 
 export const AutocompleteInput = forwardRef<
@@ -47,6 +52,8 @@ export const AutocompleteInput = forwardRef<
 			onSelect,
 			onCreateNew,
 			showCreateOption = false,
+			apiPath = "/api/campai/creditors",
+			entityLabelSingular = "Kreditor",
 			...inputProps
 		},
 		ref,
@@ -83,7 +90,7 @@ export const AutocompleteInput = forwardRef<
 					const params = new URLSearchParams({ q: query });
 
 					const response = await fetch(
-						`/api/campai/creditors?${params.toString()}`,
+						`${apiPath}?${params.toString()}`,
 						{ signal: controller.signal },
 					);
 
@@ -114,7 +121,7 @@ export const AutocompleteInput = forwardRef<
 					setLoading(false);
 				}
 			},
-			[minChars],
+			[minChars, showCreateOption, apiPath],
 		);
 
 		const handleChange = useCallback(
@@ -267,7 +274,7 @@ export const AutocompleteInput = forwardRef<
 							>
 								<span className="font-medium">{suggestion.name}</span>
 								<span className="ml-2 text-xs text-zinc-400">
-									Kreditor #{suggestion.account}
+									{entityLabelSingular} #{suggestion.account}
 								</span>
 							</li>
 						))}
@@ -289,7 +296,7 @@ export const AutocompleteInput = forwardRef<
 								}}
 							>
 								<span className="font-medium">
-									+ Neuen Kreditor anlegen:
+									+ Neuen {entityLabelSingular} anlegen:
 								</span>{" "}
 								<span className="italic">
 									&ldquo;{queryText.trim()}&rdquo;
