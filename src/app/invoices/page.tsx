@@ -93,7 +93,11 @@ export default function InvoicesPage() {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sort: { receiptDate: "desc" }, limit: 100 }),
+            body: JSON.stringify({
+              sort: { receiptDate: "desc" },
+              limit: 100,
+              invoiceType: "invoice",
+            }),
           },
         );
 

@@ -31,7 +31,7 @@ function LoginForm() {
 
     if (!response.ok) {
       const body = (await response.json()) as { error?: string };
-      setError(body.error ?? "Unable to sign in.");
+      setError(body.error ?? "Anmeldung nicht möglich.");
       setIsLoading(false);
       return;
     }
@@ -43,9 +43,9 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Sign in</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Anmelden</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Use your Supabase credentials to access the dashboard.
+          Melde dich mit deinen Supabase-Zugangsdaten an.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
@@ -61,7 +61,7 @@ function LoginForm() {
           </div>
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Password
+              Passwort
             </label>
             <input
               name="password"
@@ -81,13 +81,13 @@ function LoginForm() {
             className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "Anmeldung läuft ..." : "Anmelden"}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-zinc-500">
-          New here?{" "}
+          Neu hier?{" "}
           <Link className="font-semibold text-blue-600" href="/register">
-            Create an account
+            Konto erstellen
           </Link>
         </p>
       </div>
@@ -101,8 +101,8 @@ export default function LoginPage() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
           <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <h1 className="text-2xl font-semibold text-zinc-900">Sign in</h1>
-            <p className="mt-2 text-sm text-zinc-500">Loading...</p>
+            <h1 className="text-2xl font-semibold text-zinc-900">Anmelden</h1>
+            <p className="mt-2 text-sm text-zinc-500">Lädt ...</p>
           </div>
         </div>
       }

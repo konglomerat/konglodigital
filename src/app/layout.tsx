@@ -81,7 +81,7 @@ export default async function RootLayout({
                 <ThemeToggle />
                 <details className="group">
                   <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
-                    Menu
+                    Menü
                     <span className="text-lg transition group-open:rotate-45">
                       +
                     </span>
@@ -93,14 +93,14 @@ export default async function RootLayout({
                       </p>
                       <ActiveNavLink href="/" className={navLinkClassName}>
                         <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
-                        3D Printing
+                        3D-Druck
                       </ActiveNavLink>
                       <ActiveNavLink
                         href="/printers/emptying"
                         className={navLinkClassName}
                       >
                         <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
-                        Printer Emptying
+                        Drucker entleeren
                       </ActiveNavLink>
                       <ActiveNavLink
                         href="/checkout"
@@ -110,10 +110,10 @@ export default async function RootLayout({
                           icon={faCartShopping}
                           className="h-4 w-4"
                         />
-                        Checkout
+                        Warenkorb
                       </ActiveNavLink>
 
-                      <p className={navSectionTitleClassName}>Administration</p>
+                      <p className={navSectionTitleClassName}>Self Service</p>
                       <ActiveNavLink
                         href="/monatsbeitrag"
                         className={navLinkClassName}
@@ -124,6 +124,17 @@ export default async function RootLayout({
                         />
                         Monatsbeitrag
                       </ActiveNavLink>
+                      {isAuthenticated ? (
+                        <ActiveNavLink
+                          href="/account"
+                          className={navLinkClassName}
+                        >
+                          <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
+                          Profil
+                        </ActiveNavLink>
+                      ) : null}
+
+                      <p className={navSectionTitleClassName}>Verein</p>
                       <ActiveNavLink
                         href="/resources"
                         className={navLinkClassName}
@@ -139,18 +150,8 @@ export default async function RootLayout({
                         className={navLinkClassName}
                       >
                         <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
-                        Bezahlung (Einkaufen)
+                        Produkte
                       </ActiveNavLink>
-                      {isAuthenticated ? (
-                        <ActiveNavLink
-                          href="/account"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
-                          Account
-                        </ActiveNavLink>
-                      ) : null}
-
                       <p className={navSectionTitleClassName}>buchhaltung</p>
                       <ActiveNavLink
                         href="/invoices"
@@ -215,7 +216,7 @@ export default async function RootLayout({
                               icon={faRightFromBracket}
                               className="h-4 w-4"
                             />
-                            Sign out
+                            Abmelden
                           </Button>
                         </form>
                       ) : (
@@ -228,7 +229,7 @@ export default async function RootLayout({
                             icon={faRightToBracket}
                             className="h-4 w-4"
                           />
-                          Sign in
+                          Anmelden
                         </Button>
                       )}
                     </div>
@@ -254,41 +255,45 @@ export default async function RootLayout({
               </p>
               <ActiveNavLink href="/" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
-                3D Printing
+                3D-Druck
               </ActiveNavLink>
               <ActiveNavLink
                 href="/printers/emptying"
                 className={navItemClassName}
               >
                 <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
-                Printer Emptying
+                Drucker entleeren
               </ActiveNavLink>
               <ActiveNavLink href="/checkout" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCartShopping} className="h-4 w-4" />
-                Checkout
+                Warenkorb
               </ActiveNavLink>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Administration
+                Self Service
               </p>
               <ActiveNavLink href="/monatsbeitrag" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
                 Monatsbeitrag
               </ActiveNavLink>
+              {isAuthenticated ? (
+                <ActiveNavLink href="/account" className={navItemClassName}>
+                  <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
+                  Profil
+                </ActiveNavLink>
+              ) : null}
+
+              <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Verein
+              </p>
               <ActiveNavLink href="/resources" className={navItemClassName}>
                 <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
                 Inventar
               </ActiveNavLink>
               <ActiveNavLink href="/products" className={navItemClassName}>
                 <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
-                Bezahlung (Einkaufen)
+                Produkte
               </ActiveNavLink>
-              {isAuthenticated ? (
-                <ActiveNavLink href="/account" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
-                  Account
-                </ActiveNavLink>
-              ) : null}
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung
@@ -329,7 +334,7 @@ export default async function RootLayout({
                       icon={faRightFromBracket}
                       className="h-4 w-4"
                     />
-                    Sign out
+                    Abmelden
                   </Button>
                 </form>
               </div>
@@ -340,7 +345,7 @@ export default async function RootLayout({
                 className={navButtonClassName}
               >
                 <FontAwesomeIcon icon={faRightToBracket} className="h-4 w-4" />
-                Sign in
+                Anmelden
               </Button>
             )}
           </aside>

@@ -15,7 +15,7 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
   if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+    throw new Error(data.error ?? "Anfrage fehlgeschlagen");
   }
   return data;
 };
@@ -61,7 +61,7 @@ export default function CampaiProductDetailPage({
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to load Campai product.",
+              : "Produkt konnte nicht geladen werden.",
           );
         }
       } finally {
@@ -134,10 +134,10 @@ export default function CampaiProductDetailPage({
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
-              Product details
+              Produktdetails
             </h1>
             <p className="mt-2 text-sm text-zinc-600">
-              View details and adjust quantity in the checkout cart.
+              Sieh dir Details an und passe die Menge im Warenkorb an.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export default function CampaiProductDetailPage({
               kind="secondary"
               className="px-4 py-2 text-xs"
             >
-              Back to products
+              Zurück zu den Produkten
             </Button>
             <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
               Dashboard
@@ -162,9 +162,9 @@ export default function CampaiProductDetailPage({
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           {loading ? (
-            <p className="text-sm text-zinc-500">Loading product...</p>
+            <p className="text-sm text-zinc-500">Produkt wird geladen ...</p>
           ) : !product ? (
-            <p className="text-sm text-zinc-500">Product not found.</p>
+            <p className="text-sm text-zinc-500">Produkt nicht gefunden.</p>
           ) : (
             <div className="flex flex-col gap-6">
               <div>
@@ -180,7 +180,7 @@ export default function CampaiProductDetailPage({
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Unit price
+                    Stückpreis
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-zinc-900">
                     €{(product.unitAmount / 100).toFixed(2)}
@@ -197,7 +197,7 @@ export default function CampaiProductDetailPage({
                     −
                   </Button>
                   <div className="text-sm text-zinc-600">
-                    In cart: {cartEntry?.quantity ?? 0}
+                    Im Warenkorb: {cartEntry?.quantity ?? 0}
                   </div>
                   <Button
                     type="button"
