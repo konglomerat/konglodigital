@@ -165,7 +165,7 @@ export default async function RootLayout({
                         isAuthenticated={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
-                        Monatsbeitrag
+                        Zugangskarte
                       </ProtectedNavItem>
                       <ProtectedNavItem
                         href="/account"
@@ -316,7 +316,7 @@ export default async function RootLayout({
                 isAuthenticated={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
-                Monatsbeitrag
+                Zugangskarte
               </ProtectedNavItem>
               <ProtectedNavItem
                 href="/account"
