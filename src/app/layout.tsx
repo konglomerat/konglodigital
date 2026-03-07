@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import ActiveNavLink from "./ActiveNavLink";
 import { Geist, Geist_Mono } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
+import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,6 +14,7 @@ import {
   faPrint,
   faCartShopping,
   faUser,
+  faLock,
   faRightFromBracket,
   faRightToBracket,
 } from "@fortawesome/free-solid-svg-icons";
@@ -40,6 +42,47 @@ export const metadata: Metadata = {
   description: "Dashboard, products, and checkout",
 };
 
+type ProtectedNavItemProps = {
+  href: string;
+  icon: IconProp;
+  children: React.ReactNode;
+  className: string;
+  isAuthenticated: boolean;
+  tooltip: string;
+};
+
+function ProtectedNavItem({
+  href,
+  icon,
+  children,
+  className,
+  isAuthenticated,
+  tooltip,
+}: ProtectedNavItemProps) {
+  if (isAuthenticated) {
+    return (
+      <ActiveNavLink href={href} className={className}>
+        <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+        {children}
+      </ActiveNavLink>
+    );
+  }
+
+  return (
+    <div
+      className={`${className} cursor-not-allowed select-none text-zinc-400 hover:text-zinc-400`}
+      aria-disabled="true"
+      title={tooltip}
+    >
+      <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+      <span>{children}</span>
+      <span className="ml-auto inline-flex items-center" title={tooltip}>
+        <FontAwesomeIcon icon={faLock} className="h-3 w-3" />
+      </span>
+    </div>
+  );
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -56,6 +99,7 @@ export default async function RootLayout({
     "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 first:pt-0";
   const navButtonClassName =
     "flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700";
+  const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -114,37 +158,35 @@ export default async function RootLayout({
                       </ActiveNavLink>
 
                       <p className={navSectionTitleClassName}>Self Service</p>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/monatsbeitrag"
                         className={navLinkClassName}
+                        icon={faCalendarCheck}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faCalendarCheck}
-                          className="h-4 w-4"
-                        />
                         Monatsbeitrag
-                      </ActiveNavLink>
-                      {isAuthenticated ? (
-                        <ActiveNavLink
-                          href="/account"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
-                          Profil
-                        </ActiveNavLink>
-                      ) : null}
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
+                        href="/account"
+                        className={navLinkClassName}
+                        icon={faUser}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
+                        Profil
+                      </ProtectedNavItem>
 
                       <p className={navSectionTitleClassName}>Verein</p>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/resources"
                         className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faFolderOpen}
-                          className="h-4 w-4"
-                        />
                         Inventar
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
                       <ActiveNavLink
                         href="/products"
                         className={navLinkClassName}
@@ -153,56 +195,51 @@ export default async function RootLayout({
                         Produkte
                       </ActiveNavLink>
                       <p className={navSectionTitleClassName}>buchhaltung</p>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/invoices"
                         className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faFolderOpen}
-                          className="h-4 w-4"
-                        />
                         Rechnungen
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/reimbursement"
                         className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faFolderOpen}
-                          className="h-4 w-4"
-                        />
                         Rückerstattung von Auslagen
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/eigenbeleg"
                         className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faFolderOpen}
-                          className="h-4 w-4"
-                        />
                         Eigenbeleg erstellen
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/buchungen"
                         className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faFolderOpen}
-                          className="h-4 w-4"
-                        />
                         Beleg einbuchen
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/budget"
                         className={navLinkClassName}
+                        icon={faChartPie}
+                        isAuthenticated={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faChartPie}
-                          className="h-4 w-4"
-                        />
                         Budget Werkbereiche
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
                     </nav>
                     <div className="border-t border-zinc-200 px-4 py-4">
                       {isAuthenticated ? (
@@ -272,24 +309,37 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Self Service
               </p>
-              <ActiveNavLink href="/monatsbeitrag" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/monatsbeitrag"
+                className={navItemClassName}
+                icon={faCalendarCheck}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Monatsbeitrag
-              </ActiveNavLink>
-              {isAuthenticated ? (
-                <ActiveNavLink href="/account" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
-                  Profil
-                </ActiveNavLink>
-              ) : null}
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/account"
+                className={navItemClassName}
+                icon={faUser}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
+                Profil
+              </ProtectedNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Verein
               </p>
-              <ActiveNavLink href="/resources" className={navItemClassName}>
-                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/resources"
+                className={navItemClassName}
+                icon={faFolderOpen}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Inventar
-              </ActiveNavLink>
+              </ProtectedNavItem>
               <ActiveNavLink href="/products" className={navItemClassName}>
                 <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
                 Produkte
@@ -298,29 +348,51 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung
               </p>
-              <ActiveNavLink href="/invoices" className={navItemClassName}>
-                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/invoices"
+                className={navItemClassName}
+                icon={faFolderOpen}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Rechnungen
-              </ActiveNavLink>
-              <ActiveNavLink
+              </ProtectedNavItem>
+              <ProtectedNavItem
                 href="/reimbursement"
                 className={navItemClassName}
+                icon={faFolderOpen}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
               >
-                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
                 Rückerstattung von Auslagen
-              </ActiveNavLink>
-              <ActiveNavLink href="/eigenbeleg" className={navItemClassName}>
-                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/eigenbeleg"
+                className={navItemClassName}
+                icon={faFolderOpen}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Eigenbeleg erstellen
-              </ActiveNavLink>
-              <ActiveNavLink href="/buchungen" className={navItemClassName}>
-                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/buchungen"
+                className={navItemClassName}
+                icon={faFolderOpen}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Beleg einbuchen
-              </ActiveNavLink>
-              <ActiveNavLink href="/budget" className={navItemClassName}>
-                <FontAwesomeIcon icon={faChartPie} className="h-4 w-4" />
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/budget"
+                className={navItemClassName}
+                icon={faChartPie}
+                isAuthenticated={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Budget Werkbereiche
-              </ActiveNavLink>
+              </ProtectedNavItem>
             </nav>
             {isAuthenticated ? (
               <div className="mt-auto">

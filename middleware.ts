@@ -1,6 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const protectedPagePrefixes = [
+  "/account",
+  "/monatsbeitrag",
+  "/resources",
+  "/invoices",
+  "/reimbursement",
+  "/eigenbeleg",
+  "/buchungen",
+  "/budget",
+];
+
+const requiresAuthentication = (pathname: string) => {
+  return protectedPagePrefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+};
+
 const isPublicPath = (pathname: string) => {
   return (
     pathname.startsWith("/api/") ||
@@ -13,6 +30,10 @@ const isPublicPath = (pathname: string) => {
 
 export async function middleware(request: NextRequest) {
   if (isPublicPath(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
+  if (!requiresAuthentication(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
