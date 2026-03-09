@@ -684,6 +684,11 @@ export default function NewSimpleInvoicePage() {
       return;
     }
 
+    if (!invoiceDate) {
+      setErrorMessage("Bitte ein Rechnungsdatum eintragen.");
+      return;
+    }
+
     if (!debtorAccount) {
       setErrorMessage("Bitte einen Debitor auswählen oder inline anlegen.");
       return;
@@ -713,6 +718,7 @@ export default function NewSimpleInvoicePage() {
             note,
             sendByMail,
             recipientEmail: recipientEmail.trim() || undefined,
+            debtorName: debtorName.trim(),
             customerNumber: debtorAccount,
             paid,
             paymentMethod: paymentMethod || undefined,
@@ -720,7 +726,7 @@ export default function NewSimpleInvoicePage() {
               paymentMethod === "sepaCreditTransfer"
                 ? selectedCashAccountId || undefined
                 : undefined,
-            invoiceDate: invoiceDate || undefined,
+            invoiceDate,
             dueDate: dueDate || undefined,
             deliveryDate: deliveryDate || undefined,
             isNet,
@@ -1321,9 +1327,10 @@ export default function NewSimpleInvoicePage() {
               <div className="hidden md:block" />
             )}
 
-            <FormField label="Rechnungsdatum">
+            <FormField label="Rechnungsdatum" required>
               <Input
                 type="date"
+                required
                 value={invoiceDate}
                 onChange={(event) => setInvoiceDate(event.target.value)}
               />

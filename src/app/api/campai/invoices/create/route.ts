@@ -309,6 +309,7 @@ export const POST = async (request: NextRequest) => {
     address?: AddressPayload;
     email?: string;
     recipientEmail?: string;
+    debtorName?: string;
     sendByMail?: boolean;
     title?: string;
     intro?: string;
@@ -345,14 +346,16 @@ export const POST = async (request: NextRequest) => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-  const account = Number.parseInt(requiredEnv("CAMPAI_ACCOUNT"), 10);
-  const accountName = process.env.CAMPAI_ACCOUNT_NAME ?? "";
+  const defaultPositionAccount = Number.parseInt(
+    process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
+    10,
+  );
   const dueDays = Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10);
   const defaultCostCenter1 = getValidDefaultCostCenter();
 
-  if (Number.isNaN(account)) {
+  if (Number.isNaN(defaultPositionAccount)) {
     return NextResponse.json(
-      { error: "Invalid CAMPAI_ACCOUNT" },
+      { error: "Invalid CAMPAI_INVOICE_ACCOUNT/CAMPAI_ACCOUNT" },
       { status: 500 },
     );
   }
@@ -376,14 +379,38 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const payloadReceiptDate = normalizeDate(body.invoiceDate) ?? receiptDate;
+  const payloadReceiptDate = normalizeDate(body.invoiceDate);
   const payloadDueDate = normalizeDate(body.dueDate) ?? dueDate;
   const payloadDeliveryDate = normalizeDate(body.deliveryDate);
+  if (!payloadReceiptDate) {
+    return NextResponse.json(
+      { error: "Missing or invalid invoice date." },
+      { status: 400 },
+    );
+  }
+
   const selectedCustomerNumber = Array.isArray(body.customerNumber)
     ? normalizeCustomerNumber(body.customerNumber[0])
     : normalizeCustomerNumber(body.customerNumber);
+  const debtorAccount = parsePositiveInt(selectedCustomerNumber);
+  const debtorName =
+    typeof body.debtorName === "string" ? body.debtorName.trim() : "";
   const paymentMethodType = normalizePaymentMethodType(body.paymentMethod);
   const paymentCashAccountId = normalizeObjectId(body.paymentCashAccountId);
+
+  if (!debtorAccount) {
+    return NextResponse.json(
+      { error: "Missing or invalid debtor account." },
+      { status: 400 },
+    );
+  }
+
+  if (!debtorName) {
+    return NextResponse.json(
+      { error: "Missing debtor name." },
+      { status: 400 },
+    );
+  }
 
   const selectedTaxRates = Array.from(
     new Set(
@@ -432,7 +459,7 @@ export const POST = async (request: NextRequest) => {
         unitAmount: position.unitAmount,
         discount: normalizeDiscount(position.discount),
         description: position.description,
-        account,
+        account: defaultPositionAccount,
         details: position.details ?? "",
         quantity: position.quantity,
         unit:
@@ -542,15 +569,15 @@ export const POST = async (request: NextRequest) => {
     intro:
       body.intro?.trim() ||
       "Für [text] erlauben wir Ihnen folgenden Betrag in Rechnung zu stellen",
-    account,
+    account: debtorAccount,
     isNet: body.isNet ?? true,
-    deliveryDateType: payloadDeliveryDate ? "delivery" : "service",
+    deliveryDateType: payloadDeliveryDate ? "delivery" : null,
     receiptDate: payloadReceiptDate,
     dueDate: payloadDueDate,
     deliveryDate: payloadDeliveryDate ?? undefined,
     email: recipientEmail,
     sendMethod: sendByMail ? "email" : "none",
-    accountName,
+    accountName: debtorName,
     receiptNumber: null,
     customerType: "debtor",
     customerNumber: selectedCustomerNumber ? [selectedCustomerNumber] : [],
@@ -565,6 +592,24 @@ export const POST = async (request: NextRequest) => {
     queueReceiptDocument: sendByMail,
     tags: ["API"],
   };
+
+  console.info("Campai invoice payload debug", {
+    account: payload.account,
+    accountName: payload.accountName,
+    customerType: payload.customerType,
+    customerNumber: payload.customerNumber,
+    defaultPositionAccount,
+    debtorAccount,
+    positions: payload.positions.map((position) => ({
+      description: position.description,
+      account: position.account,
+      unitAmount: position.unitAmount,
+      quantity: position.quantity,
+      costCenter1: position.costCenter1,
+      costCenter2: position.costCenter2,
+      taxCode: position.taxCode,
+    })),
+  });
 
   const response = await fetch(
     `https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/invoice`,

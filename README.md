@@ -69,6 +69,7 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 - CAMPAI_ORGANIZATION_ID
 - CAMPAI_MANDATE_ID
 - CAMPAI_ACCOUNT
+- CAMPAI_INVOICE_ACCOUNT (optional; Sachkonto for invoice positions, falls back to CAMPAI_ACCOUNT)
 - CAMPAI_COST_CENTER1
 - CAMPAI_ACCOUNT_NAME (optional)
 - CAMPAI_DUE_DAYS (optional, default 14)
