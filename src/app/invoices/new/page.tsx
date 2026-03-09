@@ -43,7 +43,7 @@ type InvoicePosition = {
   quantity: string;
   unitAmountEuro: string;
   taxCode: "" | "0" | "7" | "19";
-  costCenter1: string;
+  costCenter2: string;
   discountPercent: string;
 };
 
@@ -62,6 +62,7 @@ type PaymentMethodOption = {
 type BankConnectionOption = {
   value: string;
   label: string;
+  account?: string;
 };
 
 type InvoiceTaxCode = "" | "0" | "7" | "19";
@@ -102,7 +103,7 @@ const createPosition = (): InvoicePosition => ({
   quantity: "",
   unitAmountEuro: "",
   taxCode: "0",
-  costCenter1: "",
+  costCenter2: "",
   discountPercent: "",
 });
 
@@ -176,6 +177,14 @@ const getDefaultPaymentMethod = (items: PaymentMethodOption[]): PaymentMethod =>
   return preferred ?? items[0]?.value ?? "";
 };
 
+const DEFAULT_COST_CENTER2 = "50";
+const DEFAULT_TRANSFER_ACCOUNT = "17100";
+
+const getDefaultCostCenter2 = (items: CostCenterOption[]) => {
+  const preferred = items.find((item) => item.value === DEFAULT_COST_CENTER2);
+  return preferred?.value ?? items[0]?.value ?? "";
+};
+
 export default function NewSimpleInvoicePage() {
   const [intro, setIntro] = useState(invoiceSubjectPrefill);
   const [note, setNote] = useState("");
@@ -236,12 +245,12 @@ export default function NewSimpleInvoicePage() {
         setCostCentersError(null);
 
         if (items.length > 0) {
-          const firstValue = items[0].value;
+          const defaultValue = getDefaultCostCenter2(items);
           setPositions((prev) =>
             prev.map((position) =>
-              position.costCenter1
+              position.costCenter2
                 ? position
-                : { ...position, costCenter1: firstValue },
+                : { ...position, costCenter2: defaultValue },
             ),
           );
         }
@@ -366,6 +375,14 @@ export default function NewSimpleInvoicePage() {
             return current;
           }
 
+          const preferredAccount = items.find(
+            (item) => item.account === DEFAULT_TRANSFER_ACCOUNT,
+          );
+
+          if (preferredAccount) {
+            return preferredAccount.value;
+          }
+
           return items.length === 1 ? items[0].value : "";
         });
         setHasLoadedBankConnections(true);
@@ -404,7 +421,8 @@ export default function NewSimpleInvoicePage() {
           !description ||
           quantity === null ||
           unitAmount === null ||
-          !position.taxCode
+          !position.taxCode ||
+          !position.costCenter2
         ) {
           return null;
         }
@@ -414,7 +432,7 @@ export default function NewSimpleInvoicePage() {
           quantity,
           unitAmount,
           taxCode: position.taxCode,
-          costCenter1: position.costCenter1 || undefined,
+          costCenter2: position.costCenter2 || undefined,
           discount: parsePercent(position.discountPercent),
         };
       })
@@ -626,7 +644,7 @@ export default function NewSimpleInvoicePage() {
               : position.unitAmountEuro,
           taxCode:
             normalizeInvoiceTaxCode(suggestion.taxCode) || position.taxCode,
-          costCenter1: suggestion.costCenter1 || position.costCenter1,
+          costCenter2: suggestion.costCenter2 ?? position.costCenter2,
         };
       }),
     );
@@ -637,7 +655,7 @@ export default function NewSimpleInvoicePage() {
       ...prev,
       {
         ...createPosition(),
-        costCenter1: costCenters[0]?.value ?? "",
+        costCenter2: getDefaultCostCenter2(costCenters),
       },
     ]);
   };
@@ -739,7 +757,7 @@ export default function NewSimpleInvoicePage() {
     !costCentersLoading && (costCenters.length === 0 || Boolean(costCentersError));
 
   const fillWithTestData = () => {
-    const defaultCostCenter = costCenters[0]?.value ?? "";
+    const defaultCostCenter = getDefaultCostCenter2(costCenters);
     const defaultPaymentMethod = getDefaultPaymentMethod(paymentMethods);
     setIntro(invoiceSubjectPrefill);
     setNote("Bitte überweisen Sie den Betrag innerhalb von 14 Tagen.");
@@ -770,7 +788,7 @@ export default function NewSimpleInvoicePage() {
         quantity: "2",
         unitAmountEuro: "15,00",
         taxCode: "19",
-        costCenter1: defaultCostCenter,
+        costCenter2: defaultCostCenter,
         discountPercent: "",
       },
       {
@@ -780,7 +798,7 @@ export default function NewSimpleInvoicePage() {
         quantity: "1",
         unitAmountEuro: "8,50",
         taxCode: "19",
-        costCenter1: defaultCostCenter,
+        costCenter2: defaultCostCenter,
         discountPercent: "",
       },
     ]);
@@ -800,119 +818,6 @@ export default function NewSimpleInvoicePage() {
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        <FormSection
-          title="Rechnungsdaten"
-          icon={faFileInvoice}
-          description="Grunddaten, Datumsfelder und Zahlungsinformationen."
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField
-              label="Zahlungsart"
-              hint={
-                paymentMethodsError
-                  ? undefined
-                  : paymentMethodsLoading
-                    ? "Verfügbare Zahlungsarten werden geladen."
-                    : undefined
-              }
-              error={paymentMethodsError ?? undefined}
-            >
-              <Select
-                value={paymentMethod}
-                onChange={(event) =>
-                  setPaymentMethod(event.target.value as PaymentMethod)
-                }
-                disabled={paymentMethodsLoading || paymentMethods.length === 0}
-              >
-                <option value="">
-                  {paymentMethodsLoading
-                    ? "Zahlungsarten werden geladen"
-                    : paymentMethods.length === 0
-                      ? "Keine Zahlungsarten verfügbar"
-                      : "Bitte wählen"}
-                </option>
-                {paymentMethods.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            {paymentMethod === "sepaCreditTransfer" ? (
-              <FormField
-                label="Konto"
-                required
-                hint={
-                  bankConnectionsError
-                    ? undefined
-                    : bankConnectionsLoading
-                      ? "Konten werden geladen."
-                      : undefined
-                }
-                error={bankConnectionsError ?? undefined}
-              >
-                <Select
-                  value={selectedCashAccountId}
-                  onChange={(event) =>
-                    setSelectedCashAccountId(event.target.value)
-                  }
-                  disabled={
-                    bankConnectionsLoading || bankConnections.length === 0
-                  }
-                >
-                  <option value="">
-                    {bankConnectionsLoading
-                      ? "Konten werden geladen"
-                      : bankConnections.length === 0
-                        ? "Keine Konten verfügbar"
-                        : "Bitte Konto wählen"}
-                  </option>
-                  {bankConnections.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            ) : null}
-
-            <FormField label="Rechnungsdatum">
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(event) => setInvoiceDate(event.target.value)}
-              />
-            </FormField>
-            <FormField label="Fälligkeitsdatum">
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(event) => setDueDate(event.target.value)}
-              />
-            </FormField>
-
-            <FormField label="Lieferdatum">
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(event) => setDeliveryDate(event.target.value)}
-              />
-            </FormField>
-            <FormField label="Status">
-              <label className="inline-flex h-10 items-center gap-2 text-sm text-zinc-700">
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  onChange={(event) => setPaid(event.target.checked)}
-                />
-                Bezahlt
-              </label>
-            </FormField>
-
-          </div>
-        </FormSection>
-
         <FormSection
           title="Versand & Kunde"
           icon={faUser}
@@ -1083,7 +988,7 @@ export default function NewSimpleInvoicePage() {
         <FormSection
           title="Positionen"
           icon={faList}
-          description="Leistungspositionen inkl. Steuern, Rabatt und Kostenstelle."
+          description="Leistungspositionen inkl. Steuern, Rabatt und Bereich/Projekt."
         >
           <div className="mb-4">
             <FormField label="Rechnungsgegenstand" required>
@@ -1142,7 +1047,7 @@ export default function NewSimpleInvoicePage() {
                   </span>
                 </div>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Gesamtbetrag</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Kostenstelle</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Bereich/Projekt</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Aktion</p>
               </div>
 
@@ -1235,15 +1140,15 @@ export default function NewSimpleInvoicePage() {
                       </FormField>
 
                       <FormField
-                        label="Kostenstelle"
+                        label="Bereich/Projekt"
                         className="md:col-span-2 xl:col-span-1"
                         labelClassName="whitespace-nowrap xl:hidden"
                       >
                         <Select
-                          aria-label="Kostenstelle"
-                          value={position.costCenter1}
+                          aria-label="Bereich/Projekt"
+                          value={position.costCenter2}
                           onChange={(event) =>
-                            updatePosition(position.id, "costCenter1", event.target.value)
+                            updatePosition(position.id, "costCenter2", event.target.value)
                           }
                           disabled={costCentersLoading || costCenters.length === 0}
                         >
@@ -1333,6 +1238,120 @@ export default function NewSimpleInvoicePage() {
                   Bruttopreise
                 </button>
               </div>
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Rechnungsdaten"
+          icon={faFileInvoice}
+          description="Grunddaten, Datumsfelder und Zahlungsinformationen."
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField
+              label="Zahlungsart"
+              hint={
+                paymentMethodsError
+                  ? undefined
+                  : paymentMethodsLoading
+                    ? "Verfügbare Zahlungsarten werden geladen."
+                    : undefined
+              }
+              error={paymentMethodsError ?? undefined}
+            >
+              <Select
+                value={paymentMethod}
+                onChange={(event) =>
+                  setPaymentMethod(event.target.value as PaymentMethod)
+                }
+                disabled={paymentMethodsLoading || paymentMethods.length === 0}
+              >
+                <option value="">
+                  {paymentMethodsLoading
+                    ? "Zahlungsarten werden geladen"
+                    : paymentMethods.length === 0
+                      ? "Keine Zahlungsarten verfügbar"
+                      : "Bitte wählen"}
+                </option>
+                {paymentMethods.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            {paymentMethod === "sepaCreditTransfer" ? (
+              <FormField
+                label="Konto"
+                required
+                hint={
+                  bankConnectionsError
+                    ? undefined
+                    : bankConnectionsLoading
+                      ? "Konten werden geladen."
+                      : undefined
+                }
+                error={bankConnectionsError ?? undefined}
+              >
+                <Select
+                  value={selectedCashAccountId}
+                  onChange={(event) =>
+                    setSelectedCashAccountId(event.target.value)
+                  }
+                  disabled={
+                    bankConnectionsLoading || bankConnections.length === 0
+                  }
+                >
+                  <option value="">
+                    {bankConnectionsLoading
+                      ? "Konten werden geladen"
+                      : bankConnections.length === 0
+                        ? "Keine Konten verfügbar"
+                        : "Bitte Konto wählen"}
+                  </option>
+                  {bankConnections.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            ) : (
+              <div className="hidden md:block" />
+            )}
+
+            <FormField label="Rechnungsdatum">
+              <Input
+                type="date"
+                value={invoiceDate}
+                onChange={(event) => setInvoiceDate(event.target.value)}
+              />
+            </FormField>
+            <FormField label="Fälligkeitsdatum">
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Lieferdatum">
+              <Input
+                type="date"
+                value={deliveryDate}
+                onChange={(event) => setDeliveryDate(event.target.value)}
+              />
+            </FormField>
+            <FormField label="Status">
+              <label className="inline-flex h-10 items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={paid}
+                  onChange={(event) => setPaid(event.target.checked)}
+                />
+                Bezahlt
+              </label>
             </FormField>
           </div>
         </FormSection>

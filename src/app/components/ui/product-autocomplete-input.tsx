@@ -19,6 +19,7 @@ export type ProductSuggestion = {
   unitAmount?: number;
   taxCode?: "0" | "7" | "19" | null;
   costCenter1?: string | null;
+  costCenter2?: string | null;
 };
 
 type ProductAutocompleteInputProps = Omit<
@@ -50,6 +51,7 @@ type ProductListResponse = {
     unitAmount?: number;
     taxCode?: "0" | "7" | "19" | null;
     costCenter1?: string | null;
+    costCenter2?: string | null;
   }>;
 };
 
@@ -102,6 +104,7 @@ export const ProductAutocompleteInput = forwardRef<
           unitAmount: product.unitAmount,
           taxCode: product.taxCode ?? null,
           costCenter1: product.costCenter1 ?? null,
+          costCenter2: product.costCenter2 ?? null,
         }));
 
         setAllProducts(items);

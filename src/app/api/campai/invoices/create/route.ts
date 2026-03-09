@@ -24,7 +24,7 @@ type PositionPayload = {
   unitAmount: number;
   details?: string;
   taxCode?: string | null;
-  costCenter1?: string | null;
+  costCenter2?: string | null;
   discount?: number;
 };
 
@@ -421,13 +421,10 @@ export const POST = async (request: NextRequest) => {
 
   const positions = rawPositions
     .map((position) => {
-      const rawPositionCostCenter = parsePositiveInt(position.costCenter1);
-      const positionCostCenter =
-        rawPositionCostCenter && isValidCampaiCostCenter1(rawPositionCostCenter)
-          ? rawPositionCostCenter
-          : defaultCostCenter1;
+      const positionCostCenter1 = defaultCostCenter1;
+      const positionCostCenter2 = parsePositiveInt(position.costCenter2);
 
-      if (!positionCostCenter) {
+      if (!positionCostCenter1 || !positionCostCenter2) {
         return null;
       }
 
@@ -442,8 +439,8 @@ export const POST = async (request: NextRequest) => {
           typeof position.unit === "string" && position.unit.trim()
             ? position.unit.trim()
             : "",
-        costCenter1: positionCostCenter,
-        costCenter2: null,
+        costCenter1: positionCostCenter1,
+        costCenter2: positionCostCenter2,
         taxCode: normalizeTaxCode(position.taxCode, taxCodeByRate),
       };
     })
@@ -462,8 +459,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   const invalidRawCostCenter = rawPositions.find((position) => {
-    const parsed = parsePositiveInt(position.costCenter1);
-    return parsed !== null && !isValidCampaiCostCenter1(parsed);
+    return parsePositiveInt(position.costCenter2) === null;
   });
 
   const invalidCostCenter = positions.find(
@@ -474,8 +470,8 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json(
       {
         error: invalidRawCostCenter
-          ? "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein. Bitte Kostenstelle korrigieren oder CAMPAI_COST_CENTER1 als gültigen Fallback setzen."
-          : "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein.",
+          ? "Ungültige Kostenstelle. Bitte einen gültigen Werkbereich bzw. ein gültiges Projekt auswählen."
+          : "Ungültige Standard-Sphäre. CAMPAI_COST_CENTER1 muss mit 1, 2, 3, 4 oder 9 beginnen.",
       },
       { status: 400 },
     );

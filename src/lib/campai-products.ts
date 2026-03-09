@@ -10,7 +10,20 @@ export type ProductPayload = {
   unitAmount: number;
   taxCode?: "0" | "7" | "19" | null;
   costCenter1?: string;
+  costCenter2?: string;
   imageUrl?: string | null;
+};
+
+const normalizeCostCenter = (value: unknown): string | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+
+  if (typeof value === "string") {
+    return value || undefined;
+  }
+
+  return undefined;
 };
 
 const normalizeTaxCode = (
@@ -29,6 +42,14 @@ const normalizeTaxCode = (
       return normalized;
     }
 
+    const prefixedMatch = normalized
+      .toUpperCase()
+      .match(/^(?:[A-Z]{1,8})?(0|7|19)$/);
+
+    if (prefixedMatch) {
+      return prefixedMatch[1] as "0" | "7" | "19";
+    }
+
     const parsed = Number.parseFloat(normalized.replace(",", "."));
     if (parsed === 0 || parsed === 7 || parsed === 19) {
       return String(parsed) as "0" | "7" | "19";
@@ -39,6 +60,7 @@ const normalizeTaxCode = (
     const record = value as Record<string, unknown>;
     return (
       normalizeTaxCode(record.taxCode) ??
+      normalizeTaxCode(record.code) ??
       normalizeTaxCode(record.taxRate) ??
       normalizeTaxCode(record.vatRate) ??
       normalizeTaxCode(record.rate) ??
@@ -163,20 +185,24 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
     normalizeTaxCode(item.taxRate) ??
     normalizeTaxCode(item.vatRate) ??
     normalizeTaxCode(item.tax) ??
+    normalizeTaxCode(item.price) ??
     normalizeTaxCode(item.vat) ??
     null;
-  const rawCostCenter =
-    (item.costCenter1 as string | undefined) ??
-    (item.costCenter as string | undefined) ??
-    (item.defaultCostCenter as string | undefined) ??
-    (item.defaultCostCenter1 as string | undefined) ??
-    ((item.costCenterInfo as { code?: string } | undefined)?.code as
-      | string
-      | undefined);
-  const costCenter1 =
-    typeof rawCostCenter === "string" && rawCostCenter.trim()
-      ? rawCostCenter.trim()
-      : undefined;
+  const rawCostCenter1 =
+    item.costCenter1 ??
+    item.costCenter ??
+    item.defaultCostCenter ??
+    item.defaultCostCenter1 ??
+    (item.price as { costCenter1?: unknown } | undefined)?.costCenter1 ??
+    (item.price as { costCenter?: unknown } | undefined)?.costCenter ??
+    (item.costCenterInfo as { code?: unknown } | undefined)?.code;
+  const costCenter1 = normalizeCostCenter(rawCostCenter1);
+  const rawCostCenter2 =
+    item.costCenter2 ??
+    item.defaultCostCenter2 ??
+    (item.price as { costCenter2?: unknown } | undefined)?.costCenter2 ??
+    (item.costCenterInfo2 as { code?: unknown } | undefined)?.code;
+  const costCenter2 = normalizeCostCenter(rawCostCenter2);
   const imageUrl =
     extractImageUrl(item.image) ??
     extractImageUrl(item.imageUrl) ??
@@ -200,6 +226,7 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
     unitAmount,
     taxCode,
     costCenter1,
+    costCenter2,
     imageUrl,
   };
 };

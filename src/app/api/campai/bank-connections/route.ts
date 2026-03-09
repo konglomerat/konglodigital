@@ -6,6 +6,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 type BankConnectionOption = {
   value: string;
   label: string;
+  account?: string;
 };
 
 type CashAccountListResponse = {
@@ -78,6 +79,10 @@ const toOption = (
   return {
     value: item._id.trim(),
     label,
+    account:
+      typeof item.account === "number" && Number.isFinite(item.account)
+        ? String(item.account)
+        : undefined,
   };
 };
 

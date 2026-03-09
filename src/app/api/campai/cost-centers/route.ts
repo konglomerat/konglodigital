@@ -39,7 +39,21 @@ const normalizeNumericLike = (value: string | null): string | null => {
     return null;
   }
   const digitsOnly = value.replace(/\D+/g, "").trim();
-  return digitsOnly.length > 0 ? digitsOnly : null;
+  if (digitsOnly.length === 0) {
+    return null;
+  }
+
+  const normalized = String(Number.parseInt(digitsOnly, 10));
+  return normalized === "NaN" ? digitsOnly : normalized;
+};
+
+const normalizeDisplayName = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/^_+/, "").trim();
+  return normalized.length > 0 ? normalized : null;
 };
 
 const extractCostCenterArray = (payload: unknown): Record<string, unknown>[] => {
@@ -115,7 +129,7 @@ const normalizeCostCenter = (
   const normalizedValue =
     normalizedNumber ?? normalizeNumericLike(value) ?? value;
 
-  const label = [number, name].filter(Boolean).join(" · ") || value;
+  const label = normalizeDisplayName(name) ?? normalizedValue;
   return { value: normalizedValue, label };
 };
 
@@ -150,7 +164,7 @@ const fetchCostCenters = async (params: {
 
   const deduped = Array.from(
     new Map(list.map((entry) => [entry.value, entry])).values(),
-  );
+  ).sort((left, right) => left.label.localeCompare(right.label, "de"));
 
   if (deduped.length === 0) {
     throw new Error("No bookable cost centers found in mandate response.");

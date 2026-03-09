@@ -100,6 +100,7 @@ export const GET = async (request: NextRequest) => {
         unitAmount: product.unitAmount,
         taxCode: product.taxCode ?? null,
         costCenter1: product.costCenter1 ?? null,
+        costCenter2: product.costCenter2 ?? null,
       })),
     });
   }
