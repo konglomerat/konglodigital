@@ -18,8 +18,12 @@ import {
 import Button from "../../components/Button";
 import {
   AutocompleteInput,
-  type Suggestion,
+  type Suggestion as DebtorSuggestion,
 } from "../../components/ui/autocomplete-input";
+import {
+  ProductAutocompleteInput,
+  type ProductSuggestion,
+} from "../../components/ui/product-autocomplete-input";
 import {
   FormField,
   FormSection,
@@ -54,6 +58,8 @@ type PaymentMethodOption = {
   value: CampaiPaymentMethodType;
   label: string;
 };
+
+type InvoiceTaxCode = "" | "0" | "7" | "19";
 
 type DebtorDetails = {
   account?: number | null;
@@ -132,6 +138,22 @@ const parsePercent = (value: string) => {
     return 0;
   }
   return Math.max(0, Math.min(100, parsed));
+};
+
+const formatCentsForInput = (value?: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+
+  return (value / 100).toFixed(2).replace(".", ",");
+};
+
+const normalizeInvoiceTaxCode = (value: unknown): InvoiceTaxCode => {
+  if (value === "0" || value === "7" || value === "19") {
+    return value;
+  }
+
+  return "";
 };
 
 const getDefaultPaymentMethod = (items: PaymentMethodOption[]): PaymentMethod => {
@@ -335,7 +357,7 @@ export default function NewSimpleInvoicePage() {
     [validPositions],
   );
 
-  const handleDebtorSelect = async (suggestion: Suggestion) => {
+  const handleDebtorSelect = async (suggestion: DebtorSuggestion) => {
     setDebtorAccount(suggestion.account);
     setDebtorName(suggestion.name);
     setShowCreateDebtorPanel(false);
@@ -478,6 +500,33 @@ export default function NewSimpleInvoicePage() {
       prev.map((position) =>
         position.id === id ? { ...position, [field]: value } : position,
       ),
+    );
+  };
+
+  const handleProductSelect = (
+    positionId: string,
+    suggestion: ProductSuggestion,
+  ) => {
+    setPositions((prev) =>
+      prev.map((position) => {
+        if (position.id !== positionId) {
+          return position;
+        }
+
+        return {
+          ...position,
+          description: suggestion.name,
+          unit: suggestion.unit ?? position.unit,
+          quantity: position.quantity || "1",
+          unitAmountEuro:
+            typeof suggestion.unitAmount === "number"
+              ? formatCentsForInput(suggestion.unitAmount)
+              : position.unitAmountEuro,
+          taxCode:
+            normalizeInvoiceTaxCode(suggestion.taxCode) || position.taxCode,
+          costCenter1: suggestion.costCenter1 || position.costCenter1,
+        };
+      }),
     );
   };
 
@@ -910,8 +959,8 @@ export default function NewSimpleInvoicePage() {
 
           <div className="space-y-4">
             <div className="rounded-2xl border border-zinc-200 p-3">
-              <div className="mb-2 hidden grid-cols-[minmax(0,1fr)_86px_66px_110px_88px_120px_180px_96px] gap-2 px-1 md:grid">
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Beschreibung</p>
+              <div className="mb-2 hidden grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] gap-2 px-1 xl:grid">
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Name</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Einheit</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Menge</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Einzelbetrag €</p>
@@ -960,19 +1009,28 @@ export default function NewSimpleInvoicePage() {
                   return (
                     <div
                       key={position.id}
-                      className="grid gap-2 rounded-xl border border-zinc-200 p-2 md:grid-cols-[minmax(0,1fr)_86px_66px_110px_88px_120px_180px_96px] md:items-end"
+                      className="grid gap-3 rounded-xl border border-zinc-200 p-3 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end"
                     >
-                      <FormField label="Beschreibung" required labelClassName="whitespace-nowrap md:hidden">
-                        <Input
-                          aria-label="Beschreibung"
+                      <FormField
+                        label="Name"
+                        required
+                        className="md:col-span-2 xl:col-span-1"
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
+                        <ProductAutocompleteInput
+                          aria-label="Name"
                           value={position.description}
                           onChange={(event) =>
                             updatePosition(position.id, "description", event.target.value)
                           }
+                          onSelect={(suggestion) =>
+                            handleProductSelect(position.id, suggestion)
+                          }
+                          placeholder="Name oder Produkt"
                         />
                       </FormField>
 
-                      <FormField label="Einheit" labelClassName="whitespace-nowrap md:hidden">
+                      <FormField label="Einheit" labelClassName="whitespace-nowrap xl:hidden">
                         <Input
                           aria-label="Einheit"
                           value={position.unit}
@@ -983,7 +1041,7 @@ export default function NewSimpleInvoicePage() {
                         />
                       </FormField>
 
-                      <FormField label="Menge" required labelClassName="whitespace-nowrap md:hidden">
+                      <FormField label="Menge" required labelClassName="whitespace-nowrap xl:hidden">
                         <Input
                           aria-label="Menge"
                           value={position.quantity}
@@ -995,7 +1053,7 @@ export default function NewSimpleInvoicePage() {
                         />
                       </FormField>
 
-                      <FormField label="Einzelbetrag €" required labelClassName="whitespace-nowrap md:hidden">
+                      <FormField label="Einzelbetrag €" required labelClassName="whitespace-nowrap xl:hidden">
                         <Input
                           aria-label="Einzelbetrag in Euro"
                           value={position.unitAmountEuro}
@@ -1007,7 +1065,7 @@ export default function NewSimpleInvoicePage() {
                         />
                       </FormField>
 
-                      <FormField label="Steuer" labelClassName="whitespace-nowrap md:hidden">
+                      <FormField label="Steuer" labelClassName="whitespace-nowrap xl:hidden">
                         <Select
                           aria-label="Steuer"
                           value={position.taxCode}
@@ -1022,11 +1080,17 @@ export default function NewSimpleInvoicePage() {
                         </Select>
                       </FormField>
 
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900">
-                        {rowTotal === null ? "-" : `€${(rowTotal / 100).toFixed(2)}`}
-                      </div>
+                      <FormField label="Gesamtbetrag" labelClassName="whitespace-nowrap xl:hidden">
+                        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900">
+                          {rowTotal === null ? "-" : `€${(rowTotal / 100).toFixed(2)}`}
+                        </div>
+                      </FormField>
 
-                      <FormField label="Kostenstelle" labelClassName="whitespace-nowrap md:hidden">
+                      <FormField
+                        label="Kostenstelle"
+                        className="md:col-span-2 xl:col-span-1"
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <Select
                           aria-label="Kostenstelle"
                           value={position.costCenter1}
@@ -1046,16 +1110,21 @@ export default function NewSimpleInvoicePage() {
                         </Select>
                       </FormField>
 
-                      <button
-                        type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        aria-label="Position entfernen"
-                        title="Position entfernen"
-                        onClick={() => removePosition(position.id)}
-                        disabled={positions.length === 1}
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="space-y-2 xl:space-y-0">
+                        <p className="block text-xs font-semibold uppercase tracking-wide text-zinc-500 xl:hidden">
+                          Aktion
+                        </p>
+                        <button
+                          type="button"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 xl:self-end"
+                          aria-label="Position entfernen"
+                          title="Position entfernen"
+                          onClick={() => removePosition(position.id)}
+                          disabled={positions.length === 1}
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

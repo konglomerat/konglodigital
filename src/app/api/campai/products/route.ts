@@ -31,10 +31,19 @@ export const GET = async (request: NextRequest) => {
     process.env.CAMPAI_PRODUCTS_ENDPOINT ?? `${baseUrl}/finance/products/list`;
 
   const searchParams = request.nextUrl.searchParams;
+  const q = searchParams.get("q")?.trim() ?? "";
+  const suggest = searchParams.get("suggest") === "1";
   const limit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = Number.parseInt(searchParams.get("offset") ?? "0", 10);
-  const searchTerm = searchParams.get("searchTerm") ?? "";
+  const searchTerm = q || searchParams.get("searchTerm") || "";
   const debug = searchParams.get("debug") === "1";
+
+  if (q && q.length < 2 && suggest) {
+    return NextResponse.json({ suggestions: [] });
+  }
+
+  const effectiveLimit = q || suggest ? 15 : Number.isNaN(limit) ? 50 : limit;
+  const effectiveOffset = Number.isNaN(offset) ? 0 : offset;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -44,8 +53,8 @@ export const GET = async (request: NextRequest) => {
     },
     body: JSON.stringify({
       sort: {},
-      limit: Number.isNaN(limit) ? 50 : limit,
-      offset: Number.isNaN(offset) ? 0 : offset,
+      limit: effectiveLimit,
+      offset: effectiveOffset,
       returnCount: false,
       searchTerm,
     }),
@@ -69,12 +78,29 @@ export const GET = async (request: NextRequest) => {
       products,
       debug: {
         endpoint,
-        limit: Number.isNaN(limit) ? 50 : limit,
-        offset: Number.isNaN(offset) ? 0 : offset,
+        limit: effectiveLimit,
+        offset: effectiveOffset,
         searchTerm,
         raw: dataResponse,
         parsedCount: products.length,
       },
+    });
+  }
+
+  if (q || suggest) {
+    return NextResponse.json({
+      suggestions: products.map((product) => ({
+        id: product.id,
+        name: product.title,
+        subtitle: product.number
+          ? `Produkt #${product.number}${product.unit ? ` · ${product.unit}` : ""}`
+          : product.unit || undefined,
+        description: product.details,
+        unit: product.unit,
+        unitAmount: product.unitAmount,
+        taxCode: product.taxCode ?? null,
+        costCenter1: product.costCenter1 ?? null,
+      })),
     });
   }
 

@@ -8,7 +8,47 @@ export type ProductPayload = {
   stock?: number;
   details?: string;
   unitAmount: number;
+  taxCode?: "0" | "7" | "19" | null;
+  costCenter1?: string;
   imageUrl?: string | null;
+};
+
+const normalizeTaxCode = (
+  value: unknown,
+): ProductPayload["taxCode"] => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (value === 0 || value === 7 || value === 19) {
+      return String(value) as "0" | "7" | "19";
+    }
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().replace("%", "");
+    if (normalized === "0" || normalized === "7" || normalized === "19") {
+      return normalized;
+    }
+
+    const parsed = Number.parseFloat(normalized.replace(",", "."));
+    if (parsed === 0 || parsed === 7 || parsed === 19) {
+      return String(parsed) as "0" | "7" | "19";
+    }
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return (
+      normalizeTaxCode(record.taxCode) ??
+      normalizeTaxCode(record.taxRate) ??
+      normalizeTaxCode(record.vatRate) ??
+      normalizeTaxCode(record.rate) ??
+      normalizeTaxCode(record.value) ??
+      normalizeTaxCode(record.percent) ??
+      normalizeTaxCode(record.percentage)
+    );
+  }
+
+  return null;
 };
 
 const extractImageUrl = (value: unknown): string | null => {
@@ -118,6 +158,25 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
     (item.priceGross as { amount?: number } | undefined) ??
     (item.amount as { amount?: number } | undefined);
   const unitAmount = normalizeAmount(rawAmount);
+  const taxCode =
+    normalizeTaxCode(item.taxCode) ??
+    normalizeTaxCode(item.taxRate) ??
+    normalizeTaxCode(item.vatRate) ??
+    normalizeTaxCode(item.tax) ??
+    normalizeTaxCode(item.vat) ??
+    null;
+  const rawCostCenter =
+    (item.costCenter1 as string | undefined) ??
+    (item.costCenter as string | undefined) ??
+    (item.defaultCostCenter as string | undefined) ??
+    (item.defaultCostCenter1 as string | undefined) ??
+    ((item.costCenterInfo as { code?: string } | undefined)?.code as
+      | string
+      | undefined);
+  const costCenter1 =
+    typeof rawCostCenter === "string" && rawCostCenter.trim()
+      ? rawCostCenter.trim()
+      : undefined;
   const imageUrl =
     extractImageUrl(item.image) ??
     extractImageUrl(item.imageUrl) ??
@@ -131,7 +190,18 @@ export const normalizeProduct = (item: RawProduct): ProductPayload | null => {
     return null;
   }
 
-  return { id, title, number, unit, stock, details, unitAmount, imageUrl };
+  return {
+    id,
+    title,
+    number,
+    unit,
+    stock,
+    details,
+    unitAmount,
+    taxCode,
+    costCenter1,
+    imageUrl,
+  };
 };
 
 export const extractProducts = (payload: unknown): RawProduct[] => {

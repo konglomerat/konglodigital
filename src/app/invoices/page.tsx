@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { useMemo, useState } from "react";
+import {
+  faArrowsRotate,
+  faCloudArrowDown,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
 
@@ -80,56 +84,40 @@ const renderPaymentBadge = (paymentStatus?: string) => {
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoicePayload[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  const loadInvoices = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
 
-    const loadInvoices = async () => {
-      try {
-        const response = await fetchJson<{ invoices: InvoicePayload[] }>(
-          "/api/campai/invoices",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sort: { receiptDate: "desc" },
-              limit: 100,
-              invoiceType: "invoice",
-            }),
-          },
-        );
+      const response = await fetchJson<{ invoices: InvoicePayload[] }>(
+        "/api/campai/invoices",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sort: { receiptDate: "desc" },
+            limit: 100,
+            invoiceType: "invoice",
+          }),
+        },
+      );
 
-        if (!active) {
-          return;
-        }
-
-        setInvoices(response.invoices ?? []);
-        setErrorMessage(null);
-      } catch (error) {
-        if (!active) {
-          return;
-        }
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Rechnungen konnten nicht geladen werden.",
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadInvoices();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+      setInvoices(response.invoices ?? []);
+      setHasLoaded(true);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Rechnungen konnten nicht geladen werden.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sortedInvoices = useMemo(
     () =>
@@ -147,53 +135,82 @@ export default function InvoicesPage() {
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Rechnungen
         </h1>
-        <Button
-          href="/invoices/new"
-          kind="primary"
-          size="small"
-          icon={faPlus}
-        >
+        <Button href="/invoices/new" kind="primary" size="small" icon={faPlus}>
           Neue Rechnung erstellen
         </Button>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        {loading ? (
-          <p className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300">
-            Rechnungen werden geladen …
-          </p>
-        ) : errorMessage ? (
-          <p className="px-4 py-5 text-sm text-rose-600">{errorMessage}</p>
-        ) : sortedInvoices.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300">
-            Keine Rechnungen gefunden.
-          </p>
-        ) : (
-          <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-            <thead className="bg-zinc-50 dark:bg-zinc-900/80">
+        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
+          <thead className="bg-zinc-50 dark:bg-zinc-900/80">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Rechnungsnummer
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Datum
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Betrag
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Empfänger
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Payment Status
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Download
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {!hasLoaded ? (
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Rechnungsnummer
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Datum
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Betrag
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Empfänger
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Payment Status
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                  Download
-                </th>
+                <td colSpan={6} className="px-4 py-12">
+                  <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <Button
+                      kind="secondary"
+                      size="medium"
+                      icon={faCloudArrowDown}
+                      onClick={loadInvoices}
+                      disabled={loading}
+                      className="min-w-56"
+                    >
+                      {loading
+                        ? "Rechnungen werden geladen …"
+                        : "Rechnungen laden"}
+                    </Button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {sortedInvoices.map((invoice) => (
+            ) : errorMessage ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-sm text-rose-600">
+                  <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <span>{errorMessage}</span>
+                    <Button
+                      kind="secondary"
+                      size="small"
+                      icon={faArrowsRotate}
+                      onClick={loadInvoices}
+                    >
+                      Erneut laden
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ) : sortedInvoices.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300"
+                >
+                  Keine Rechnungen gefunden.
+                </td>
+              </tr>
+            ) : (
+              sortedInvoices.map((invoice) => (
                 <tr key={invoice.id}>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {invoice.receiptNumber || "-"}
@@ -221,10 +238,10 @@ export default function InvoicesPage() {
                     </Button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
