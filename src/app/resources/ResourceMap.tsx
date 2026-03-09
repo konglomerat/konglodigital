@@ -45,15 +45,16 @@ export default function ResourceMap({
     }
 
     let active = true;
-    const applyOverlay = (map: Map) =>
-      addIndoorOverlay({
+    const applyOverlay = (map: Map) => {
+      /*  addIndoorOverlay({
         map,
         token,
         tilesetId,
         sourceLayer,
         cacheRef: indoorLayerRef,
         onError: setMapboxError,
-      });
+      }); */
+    };
 
     const initMap = async () => {
       const mapboxgl = (await import("mapbox-gl")).default;

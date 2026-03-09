@@ -13,6 +13,7 @@ import {
   faMap,
   faRotateLeft,
   faSatellite,
+  faSpinner,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -134,10 +135,12 @@ const updateMapSource = (
 const toResourceFeatureCollection = ({
   resourceId,
   resourceName,
+  isDirty,
   features,
 }: {
   resourceId: string;
   resourceName: string;
+  isDirty: boolean;
   features: ResourceMapFeature[];
 }): GeoJSON.FeatureCollection<GeoJSON.Polygon> => ({
   type: "FeatureCollection",
@@ -147,6 +150,7 @@ const toResourceFeatureCollection = ({
       ...feature.properties,
       resourceId,
       resourceName,
+      isDirty,
     },
   })),
 });
@@ -154,10 +158,12 @@ const toResourceFeatureCollection = ({
 const toResourcePointFeatureCollection = ({
   resourceId,
   resourceName,
+  isDirty,
   features,
 }: {
   resourceId: string;
   resourceName: string;
+  isDirty: boolean;
   features: ResourceMapFeature[];
 }): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
   type: "FeatureCollection",
@@ -167,6 +173,7 @@ const toResourcePointFeatureCollection = ({
       ...feature.properties,
       resourceId,
       resourceName,
+      isDirty,
     },
   })),
 });
@@ -187,7 +194,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "circle",
       source: "resource-map-points-other",
       paint: {
-        "circle-color": "#71717a",
+        "circle-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#f59e0b",
+          "#71717a",
+        ],
         "circle-radius": 5,
         "circle-opacity": 0.85,
         "circle-stroke-color": "#ffffff",
@@ -211,7 +223,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "circle",
       source: "resource-map-points",
       paint: {
-        "circle-color": "#2563eb",
+        "circle-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#f59e0b",
+          "#2563eb",
+        ],
         "circle-radius": 6,
         "circle-opacity": 0.95,
         "circle-stroke-color": "#ffffff",
@@ -235,7 +252,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "fill",
       source: "resource-map-features-other",
       paint: {
-        "fill-color": "#52525b",
+        "fill-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#f59e0b",
+          "#52525b",
+        ],
         "fill-opacity": 0.18,
       },
     });
@@ -246,7 +268,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "line",
       source: "resource-map-features-other",
       paint: {
-        "line-color": "#3f3f46",
+        "line-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#d97706",
+          "#3f3f46",
+        ],
         "line-width": 1.5,
       },
       layout: {
@@ -292,7 +319,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "fill",
       source: "resource-map-features",
       paint: {
-        "fill-color": "#2563eb",
+        "fill-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#f59e0b",
+          "#2563eb",
+        ],
         "fill-opacity": 0.28,
       },
     });
@@ -303,7 +335,12 @@ const ensureSourcesAndLayers = (map: MapboxMap) => {
       type: "line",
       source: "resource-map-features",
       paint: {
-        "line-color": "#1d4ed8",
+        "line-color": [
+          "case",
+          ["==", ["get", "isDirty"], true],
+          "#d97706",
+          "#1d4ed8",
+        ],
         "line-width": 2,
       },
     });
@@ -588,7 +625,9 @@ export default function ResourceFeaturesEditorClient({
   const [resources, setResources] = useState<ResourceSummary[]>([]);
   const [selectedResourceId, setSelectedResourceId] =
     useState(initialResourceId);
-  const [mapFeatures, setMapFeatures] = useState<ResourceMapFeature[]>([]);
+  const [dirtyFeatureResourceIds, setDirtyFeatureResourceIds] = useState<
+    string[]
+  >([]);
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
   const [featureLayer, setFeatureLayer] = useState("default");
   const [featureCoordinatesJson, setFeatureCoordinatesJson] = useState("[]");
@@ -625,6 +664,7 @@ export default function ResourceFeaturesEditorClient({
     RelatedResourceSelectOption[]
   >([]);
   const [relatedResourceLoading, setRelatedResourceLoading] = useState(false);
+  const [isLocationDataLoading, setIsLocationDataLoading] = useState(false);
   const [saveAllPending, setSaveAllPending] = useState(false);
   const [generatingCover, setGeneratingCover] = useState(false);
   const [coverPrompt, setCoverPrompt] = useState(getDefaultCoverPrompt(""));
@@ -662,6 +702,9 @@ export default function ResourceFeaturesEditorClient({
   const activeFeatureRef = useRef<ResourceMapFeature | null>(null);
   const activeFeatureIdRef = useRef<string | null>(activeFeatureId);
   const selectedResourceIdRef = useRef<string>(selectedResourceId);
+  const resourcesRef = useRef<ResourceSummary[]>(resources);
+  const dirtyFeatureResourceIdsRef = useRef<string[]>(dirtyFeatureResourceIds);
+  const isLocationDataLoadingRef = useRef(false);
   const lastLoadedResourceIdRef = useRef<string>("");
   const hasAppliedInitialFeatureFitRef = useRef(false);
   const draggingVertexRef = useRef<{
@@ -669,16 +712,25 @@ export default function ResourceFeaturesEditorClient({
     index: number;
   } | null>(null);
 
+  const selectedResource = useMemo(
+    () =>
+      resources.find((resource) => resource.id === selectedResourceId) ?? null,
+    [resources, selectedResourceId],
+  );
+
+  const mapFeatures = useMemo(
+    () => selectedResource?.mapFeatures ?? [],
+    [selectedResource],
+  );
+
   const activeFeature = useMemo(
     () => mapFeatures.find((feature) => feature.id === activeFeatureId) ?? null,
     [activeFeatureId, mapFeatures],
   );
 
   const selectedResourceName = useMemo(
-    () =>
-      resources.find((resource) => resource.id === selectedResourceId)?.name ??
-      "Selected resource",
-    [resources, selectedResourceId],
+    () => selectedResource?.name ?? "Selected resource",
+    [selectedResource],
   );
 
   const selectedResourceFeatureCollection = useMemo(
@@ -686,9 +738,15 @@ export default function ResourceFeaturesEditorClient({
       toResourceFeatureCollection({
         resourceId: selectedResourceId,
         resourceName: selectedResourceName,
+        isDirty: dirtyFeatureResourceIds.includes(selectedResourceId),
         features: mapFeatures,
       }),
-    [mapFeatures, selectedResourceId, selectedResourceName],
+    [
+      dirtyFeatureResourceIds,
+      mapFeatures,
+      selectedResourceId,
+      selectedResourceName,
+    ],
   );
 
   const selectedResourcePointCollection = useMemo(
@@ -696,9 +754,15 @@ export default function ResourceFeaturesEditorClient({
       toResourcePointFeatureCollection({
         resourceId: selectedResourceId,
         resourceName: selectedResourceName,
+        isDirty: dirtyFeatureResourceIds.includes(selectedResourceId),
         features: mapFeatures,
       }),
-    [mapFeatures, selectedResourceId, selectedResourceName],
+    [
+      dirtyFeatureResourceIds,
+      mapFeatures,
+      selectedResourceId,
+      selectedResourceName,
+    ],
   );
 
   const otherResourcesFeatureCollection = useMemo<
@@ -713,11 +777,12 @@ export default function ResourceFeaturesEditorClient({
             toResourceFeatureCollection({
               resourceId: resource.id,
               resourceName: resource.name,
+              isDirty: dirtyFeatureResourceIds.includes(resource.id),
               features: resource.mapFeatures,
             }).features,
         ),
     }),
-    [resources, selectedResourceId],
+    [dirtyFeatureResourceIds, resources, selectedResourceId],
   );
 
   const otherResourcesPointCollection = useMemo<
@@ -732,11 +797,12 @@ export default function ResourceFeaturesEditorClient({
             toResourcePointFeatureCollection({
               resourceId: resource.id,
               resourceName: resource.name,
+              isDirty: dirtyFeatureResourceIds.includes(resource.id),
               features: resource.mapFeatures,
             }).features,
         ),
     }),
-    [resources, selectedResourceId],
+    [dirtyFeatureResourceIds, resources, selectedResourceId],
   );
 
   const resourceNameById = useMemo(
@@ -773,7 +839,57 @@ export default function ResourceFeaturesEditorClient({
     !saveAllPending &&
     !saving &&
     !resourceFormSaving &&
+    !isLocationDataLoading &&
     Boolean(selectedResourceId);
+
+  const handleLocationDataLoadingChange = useCallback((isLoading: boolean) => {
+    isLocationDataLoadingRef.current = isLoading;
+    setIsLocationDataLoading(isLoading);
+  }, []);
+
+  const markSelectedResourceFeaturesDirty = useCallback(() => {
+    if (!selectedResourceId) {
+      return;
+    }
+    if (!dirtyFeatureResourceIdsRef.current.includes(selectedResourceId)) {
+      dirtyFeatureResourceIdsRef.current = [
+        ...dirtyFeatureResourceIdsRef.current,
+        selectedResourceId,
+      ];
+    }
+    setDirtyFeatureResourceIds((previous) => {
+      if (previous.includes(selectedResourceId)) {
+        return previous;
+      }
+      return [...previous, selectedResourceId];
+    });
+  }, [selectedResourceId]);
+
+  const updateSelectedResourceFeatures = useCallback(
+    (updater: (previous: ResourceMapFeature[]) => ResourceMapFeature[]) => {
+      if (!selectedResourceId) {
+        return;
+      }
+      setResources((previous) => {
+        const nextResources = previous.map((resource) =>
+          resource.id === selectedResourceId
+            ? {
+                ...resource,
+                mapFeatures: updater(resource.mapFeatures),
+              }
+            : resource,
+        );
+        resourcesRef.current = nextResources;
+        return nextResources;
+      });
+      markSelectedResourceFeaturesDirty();
+    },
+    [markSelectedResourceFeaturesDirty, selectedResourceId],
+  );
+
+  const updateSelectedResourceFeaturesRef = useRef(
+    updateSelectedResourceFeatures,
+  );
 
   useEffect(() => {
     if (!activeFeature) {
@@ -806,6 +922,22 @@ export default function ResourceFeaturesEditorClient({
   }, [selectedResourceId]);
 
   useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
+
+  useEffect(() => {
+    dirtyFeatureResourceIdsRef.current = dirtyFeatureResourceIds;
+  }, [dirtyFeatureResourceIds]);
+
+  useEffect(() => {
+    isLocationDataLoadingRef.current = isLocationDataLoading;
+  }, [isLocationDataLoading]);
+
+  useEffect(() => {
+    updateSelectedResourceFeaturesRef.current = updateSelectedResourceFeatures;
+  }, [updateSelectedResourceFeatures]);
+
+  useEffect(() => {
     if (!hasFixedResource || !resourceId) {
       return;
     }
@@ -822,7 +954,7 @@ export default function ResourceFeaturesEditorClient({
       setErrorMessage(null);
       try {
         const response = await fetch(
-          "/api/campai/resources?limit=500&offset=0",
+          "/api/campai/resources?limit=1500&offset=0",
         );
         const payload = (await response.json()) as ResourcesListResponse & {
           error?: string;
@@ -891,7 +1023,7 @@ export default function ResourceFeaturesEditorClient({
       setRelatedResourceLoading(true);
       try {
         const response = await fetch(
-          "/api/campai/resources?limit=500&offset=0",
+          "/api/campai/resources?limit=1500&offset=0",
         );
         const payload = (await response.json()) as ResourcesListResponse & {
           error?: string;
@@ -1157,7 +1289,6 @@ export default function ResourceFeaturesEditorClient({
 
   const refreshFeatures = useCallback(async () => {
     if (!selectedResourceId) {
-      setMapFeatures([]);
       setActiveFeatureId(null);
       lastLoadedResourceIdRef.current = "";
       return;
@@ -1185,7 +1316,25 @@ export default function ResourceFeaturesEditorClient({
       const normalized = normalizeResourceMapFeatures(
         payload.mapFeatures ?? [],
       );
-      setMapFeatures(normalized);
+      if (dirtyFeatureResourceIdsRef.current.includes(loadingResourceId)) {
+        return;
+      }
+
+      setResources((previous) => {
+        const nextResources = previous.map((resource) =>
+          resource.id === loadingResourceId
+            ? {
+                ...resource,
+                mapFeatures: normalized,
+              }
+            : resource,
+        );
+        resourcesRef.current = nextResources;
+        return nextResources;
+      });
+      setDirtyFeatureResourceIds((previous) =>
+        previous.filter((id) => id !== loadingResourceId),
+      );
 
       const previousActiveId = activeFeatureIdRef.current;
       const nextActiveId = isResourceSwitch
@@ -1220,8 +1369,41 @@ export default function ResourceFeaturesEditorClient({
   }, [selectedResourceId]);
 
   useEffect(() => {
-    void refreshFeatures();
-  }, [refreshFeatures]);
+    if (!selectedResourceId) {
+      setActiveFeatureId(null);
+      setDraftPoints([]);
+      setIsDrawing(false);
+      return;
+    }
+
+    if (!dirtyFeatureResourceIdsRef.current.includes(selectedResourceId)) {
+      void refreshFeatures();
+    }
+
+    const selectedFeatures =
+      resourcesRef.current.find(
+        (resource) => resource.id === selectedResourceId,
+      )?.mapFeatures ?? [];
+
+    setActiveFeatureId(selectedFeatures[0]?.id ?? null);
+    setDraftPoints([]);
+    setIsDrawing(false);
+
+    if (mapRef.current && !hasAppliedInitialFeatureFitRef.current) {
+      fitToFeatureBounds(mapRef.current, selectedFeatures);
+      hasAppliedInitialFeatureFitRef.current = true;
+    }
+  }, [refreshFeatures, selectedResourceId]);
+
+  useEffect(() => {
+    if (
+      activeFeatureId &&
+      mapFeatures.some((feature) => feature.id === activeFeatureId)
+    ) {
+      return;
+    }
+    setActiveFeatureId(mapFeatures[0]?.id ?? null);
+  }, [activeFeatureId, mapFeatures]);
 
   useEffect(() => {
     isDrawingRef.current = isDrawing;
@@ -1276,14 +1458,15 @@ export default function ResourceFeaturesEditorClient({
 
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-        const applyOverlay = () =>
-          addIndoorOverlay({
+        const applyOverlay = () => {
+          /* addIndoorOverlay({
             map,
             token,
             tilesetId: DEFAULT_INDOOR_TILESET_ID,
             cacheRef: indoorLayerRef,
             onError: setMapboxError,
-          });
+          }); */
+        };
 
         map.on("load", () => {
           ensureSourcesAndLayers(map);
@@ -1332,7 +1515,7 @@ export default function ResourceFeaturesEditorClient({
             event.lngLat.lng,
             event.lngLat.lat,
           ];
-          setMapFeatures((previous) =>
+          updateSelectedResourceFeaturesRef.current((previous) =>
             previous.map((feature) => {
               if (feature.id !== draggingVertex.featureId) {
                 return feature;
@@ -1394,7 +1577,10 @@ export default function ResourceFeaturesEditorClient({
               ]);
               if (normalizedPoint.length > 0) {
                 const created = normalizedPoint[0];
-                setMapFeatures((previous) => [...previous, created]);
+                updateSelectedResourceFeaturesRef.current((previous) => [
+                  ...previous,
+                  created,
+                ]);
                 setActiveFeatureId(created.id);
                 setMessage("Point added. Save to persist.");
                 setErrorMessage(null);
@@ -1427,7 +1613,7 @@ export default function ResourceFeaturesEditorClient({
             if (!Number.isInteger(index)) {
               return;
             }
-            setMapFeatures((previous) =>
+            updateSelectedResourceFeaturesRef.current((previous) =>
               previous.map((feature) => {
                 if (feature.id !== selectedFeature.id) {
                   return feature;
@@ -1465,7 +1651,7 @@ export default function ResourceFeaturesEditorClient({
             if (!Number.isInteger(insertAfter)) {
               return;
             }
-            setMapFeatures((previous) =>
+            updateSelectedResourceFeaturesRef.current((previous) =>
               previous.map((feature) => {
                 if (feature.id !== selectedFeature.id) {
                   return feature;
@@ -1621,9 +1807,10 @@ export default function ResourceFeaturesEditorClient({
   }, []);
 
   const handleSaveFeatures = useCallback(async () => {
-    if (!selectedResourceId) {
-      setErrorMessage("Choose a resource first.");
-      return false;
+    if (dirtyFeatureResourceIds.length === 0) {
+      setMessage("No map feature changes to save.");
+      setErrorMessage(null);
+      return true;
     }
 
     setSaving(true);
@@ -1631,25 +1818,65 @@ export default function ResourceFeaturesEditorClient({
     setErrorMessage(null);
 
     try {
-      const response = await fetch(
-        `/api/campai/resources/${selectedResourceId}/features`,
-        {
-          method: "PUT",
-          headers: {
-            "content-type": "application/json",
+      const updates = new Map<string, ResourceMapFeature[]>();
+
+      for (const resourceIdToSave of dirtyFeatureResourceIds) {
+        const resource = resources.find(
+          (entry) => entry.id === resourceIdToSave,
+        );
+        if (!resource) {
+          continue;
+        }
+
+        const response = await fetch(
+          `/api/campai/resources/${resourceIdToSave}/features`,
+          {
+            method: "PUT",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ mapFeatures: resource.mapFeatures }),
           },
-          body: JSON.stringify({ mapFeatures }),
-        },
-      );
-      const payload = (await response.json()) as {
-        mapFeatures?: unknown;
-        error?: string;
-      };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Unable to save map features.");
+        );
+        const payload = (await response.json()) as {
+          mapFeatures?: unknown;
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(
+            payload.error ??
+              `Unable to save map features for ${resource.name}.`,
+          );
+        }
+
+        updates.set(
+          resourceIdToSave,
+          normalizeResourceMapFeatures(payload.mapFeatures ?? []),
+        );
       }
-      setMapFeatures(normalizeResourceMapFeatures(payload.mapFeatures ?? []));
-      setMessage("Map features saved.");
+
+      setResources((previous) =>
+        previous.map((resource) => {
+          const nextFeatures = updates.get(resource.id);
+          if (!nextFeatures) {
+            return resource;
+          }
+          return {
+            ...resource,
+            mapFeatures: nextFeatures,
+          };
+        }),
+      );
+      setDirtyFeatureResourceIds((previous) =>
+        previous.filter((id) => !updates.has(id)),
+      );
+
+      const savedCount = updates.size;
+      setMessage(
+        savedCount === 1
+          ? "Map features saved for 1 resource."
+          : `Map features saved for ${savedCount} resources.`,
+      );
       return true;
     } catch (error) {
       setErrorMessage(
@@ -1659,7 +1886,7 @@ export default function ResourceFeaturesEditorClient({
     } finally {
       setSaving(false);
     }
-  }, [mapFeatures, selectedResourceId]);
+  }, [dirtyFeatureResourceIds, resources]);
 
   const handleFinishPolygon = useCallback(() => {
     if (drawingGeometryType !== "Polygon") {
@@ -1685,13 +1912,18 @@ export default function ResourceFeaturesEditorClient({
     }
 
     const created = normalized[0];
-    setMapFeatures((previous) => [...previous, created]);
+    updateSelectedResourceFeatures((previous) => [...previous, created]);
     setActiveFeatureId(created.id);
     setDraftPoints([]);
     setIsDrawing(false);
     setMessage("Polygon added. Save to persist.");
     setErrorMessage(null);
-  }, [drawingGeometryType, draftPoints, featureLayer]);
+  }, [
+    drawingGeometryType,
+    draftPoints,
+    featureLayer,
+    updateSelectedResourceFeatures,
+  ]);
 
   const handleApplyFeatureEdit = () => {
     if (!activeFeature) {
@@ -1730,7 +1962,7 @@ export default function ResourceFeaturesEditorClient({
       return;
     }
 
-    setMapFeatures((previous) =>
+    updateSelectedResourceFeatures((previous) =>
       previous.map((feature) =>
         feature.id === activeFeature.id ? normalized[0] : feature,
       ),
@@ -1743,7 +1975,7 @@ export default function ResourceFeaturesEditorClient({
     if (!activeFeatureId) {
       return;
     }
-    setMapFeatures((previous) =>
+    updateSelectedResourceFeatures((previous) =>
       previous.filter((feature) => feature.id !== activeFeatureId),
     );
     setActiveFeatureId(null);
@@ -1782,6 +2014,12 @@ export default function ResourceFeaturesEditorClient({
       setResourceFormError("Choose a resource first.");
       return;
     }
+    if (isLocationDataLoadingRef.current || isLocationDataLoading) {
+      setResourceFormError(
+        "Wait until image location data has finished loading before saving.",
+      );
+      return;
+    }
 
     setSaveAllPending(true);
     setResourceFormMessage(null);
@@ -1816,6 +2054,7 @@ export default function ResourceFeaturesEditorClient({
     handleResourceFormSubmit,
     handleSaveFeatures,
     handleSubmit,
+    isLocationDataLoading,
     selectedResourceId,
   ]);
 
@@ -1938,6 +2177,12 @@ export default function ResourceFeaturesEditorClient({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {isLocationDataLoading ? (
+            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+              <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+              Loading location data...
+            </span>
+          ) : null}
           {!embedded ? (
             <Button
               href={
@@ -1960,7 +2205,9 @@ export default function ResourceFeaturesEditorClient({
           >
             {saveAllPending || saving || resourceFormSaving
               ? "Saving..."
-              : "Save all"}
+              : isLocationDataLoading
+                ? "Loading location data..."
+                : "Save all"}
           </Button>
         </div>
       </header>
@@ -1974,6 +2221,15 @@ export default function ResourceFeaturesEditorClient({
       {message ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
           {message}
+        </section>
+      ) : null}
+
+      {isLocationDataLoading ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+          <span className="inline-flex items-center gap-2">
+            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+            Image metadata is being processed. Saving is temporarily disabled.
+          </span>
         </section>
       ) : null}
 
@@ -2326,6 +2582,7 @@ export default function ResourceFeaturesEditorClient({
                 setValue={setValue}
                 setImageFiles={setImageFiles}
                 setImageFileMeta={setImageFileMeta}
+                onImageProcessingChange={handleLocationDataLoadingChange}
                 imagePreviews={imagePreviews}
                 imageMeta={imageMeta}
                 onRemoveImage={handleRemoveImage}
