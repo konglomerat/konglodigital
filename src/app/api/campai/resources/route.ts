@@ -282,6 +282,7 @@ const readResourcePayload = async (request: NextRequest) => {
       categoryIds: String(formData.get("categoryIds") ?? ""),
       attachable: String(formData.get("attachable") ?? "0") === "1",
       imageFiles: images,
+      mapFeatures: null,
       maxImageWidth:
         typeof maxImageWidth === "number" && Number.isFinite(maxImageWidth)
           ? maxImageWidth
@@ -300,6 +301,7 @@ const readResourcePayload = async (request: NextRequest) => {
     attachable?: boolean;
     imageUrl?: string | null;
     imageUrls?: string[] | null;
+    mapFeatures?: unknown;
   };
   return {
     name: body.name ?? "",
@@ -320,6 +322,7 @@ const readResourcePayload = async (request: NextRequest) => {
     imageFiles: [] as File[],
     imageUrl: body.imageUrl ?? null,
     imageUrls: body.imageUrls ?? null,
+    mapFeatures: normalizeResourceMapFeatures(body.mapFeatures ?? null),
     maxImageWidth: undefined as number | undefined,
   };
 };
@@ -743,6 +746,21 @@ export const POST = async (request: NextRequest) => {
     payload.imageFiles.length > 0
       ? await extractGpsFromFile(payload.imageFiles[0])
       : null;
+  const fallbackGpsPointFeature =
+    gpsData?.latitude != null && gpsData?.longitude != null
+      ? [
+          {
+            id: "gps-point",
+            layer: "location",
+            geometryType: "Point" as const,
+            point: [gpsData.longitude, gpsData.latitude] as [number, number],
+          },
+        ]
+      : null;
+  const mapFeatures =
+    payload.mapFeatures && payload.mapFeatures.length > 0
+      ? payload.mapFeatures
+      : fallbackGpsPointFeature;
   if (payload.imageFiles.length > 0) {
     const maxImageWidth = payload.maxImageWidth ?? 2000;
     const uploadedUrls: string[] = [];
@@ -810,17 +828,7 @@ export const POST = async (request: NextRequest) => {
       attachable: payload.attachable,
       image: imageUrl,
       images: imageUrls,
-      map_features:
-        gpsData?.latitude != null && gpsData?.longitude != null
-          ? [
-              {
-                id: "gps-point",
-                layer: "location",
-                geometryType: "Point",
-                point: [gpsData.longitude, gpsData.latitude],
-              },
-            ]
-          : null,
+      map_features: mapFeatures,
       gps_altitude: gpsData?.altitude ?? null,
       owner_id: data.user.id,
     })

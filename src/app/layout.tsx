@@ -118,6 +118,26 @@ export default async function RootLayout({
                         Monatsbeitrag
                       </ActiveNavLink>
                       <ActiveNavLink
+                        href="/eigenbeleg"
+                        className={navLinkClassName}
+                      >
+                        <FontAwesomeIcon
+                          icon={faFolderOpen}
+                          className="h-4 w-4"
+                        />
+                        Eigenbeleg
+                      </ActiveNavLink>
+                      <ActiveNavLink
+                        href="/buchungen"
+                        className={navLinkClassName}
+                      >
+                        <FontAwesomeIcon
+                          icon={faFolderOpen}
+                          className="h-4 w-4"
+                        />
+                        Buchungen
+                      </ActiveNavLink>
+                      <ActiveNavLink
                         href="/calendar"
                         className={navLinkClassName}
                       >
@@ -215,6 +235,14 @@ export default async function RootLayout({
               <ActiveNavLink href="/monatsbeitrag" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
                 Monatsbeitrag
+              </ActiveNavLink>
+              <ActiveNavLink href="/eigenbeleg" className={navItemClassName}>
+                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+                Eigenbeleg
+              </ActiveNavLink>
+              <ActiveNavLink href="/buchungen" className={navItemClassName}>
+                <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+                Buchungen
               </ActiveNavLink>
               <ActiveNavLink href="/calendar" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />

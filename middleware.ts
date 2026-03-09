@@ -1,10 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+import {
+  PIN_COOKIE_NAME,
+  PIN_COOKIE_VALUE,
+  isSafeMethod,
+} from "@/lib/pin-access";
+
 const isPublicPath = (pathname: string) => {
   return (
     pathname.startsWith("/api/") ||
     pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/api/auth/pin") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
@@ -46,6 +54,13 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
 
   if (!data.user) {
+    const hasViewerPin =
+      request.cookies.get(PIN_COOKIE_NAME)?.value === PIN_COOKIE_VALUE;
+
+    if (hasViewerPin && isSafeMethod(request.method)) {
+      return response;
+    }
+
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname);

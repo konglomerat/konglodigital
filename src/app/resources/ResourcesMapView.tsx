@@ -7,7 +7,6 @@ import {
   DEFAULT_INDOOR_TILESET_ID,
   MAPBOX_STYLE,
   MAPBOX_SATELLITE_STYLE,
-  addIndoorOverlay,
 } from "./mapbox-basemap";
 import {
   getPointFeatures,
@@ -355,14 +354,15 @@ export default function ResourcesMapView({
 
     let active = true;
 
-    const applyOverlay = (map: Map) =>
-      addIndoorOverlay({
+    const applyOverlay = (map: Map) => {
+      /* addIndoorOverlay({
         map,
         token,
         tilesetId: indoorTileset,
         cacheRef: indoorLayerRef,
         onError: setMapboxError,
-      });
+      });  */
+    };
 
     const applyResourceFeatureLayers = (map: Map) => {
       if (!map.isStyleLoaded()) {

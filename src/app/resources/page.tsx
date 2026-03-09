@@ -189,7 +189,7 @@ const loadResourcesFromDb = async () => {
       .select("*", { count: "exact" })
       .order("priority", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .range(0, 499);
+      .range(0, 1499);
 
     if (error) {
       return {

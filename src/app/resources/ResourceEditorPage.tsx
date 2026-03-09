@@ -127,7 +127,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       setRelatedResourceOptionsLoading(true);
       try {
         const data = await fetchJson<{ resources: Resource[] }>(
-          "/api/campai/resources?limit=500&offset=0",
+          "/api/campai/resources?limit=1500&offset=0",
         );
         if (!active) {
           return;
@@ -220,13 +220,10 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       const data = await fetchJson<{
         resource?: Resource & { prettyTitle?: string | null };
         id?: string;
-      }>(
-        "/api/campai/resources",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      }>("/api/campai/resources", {
+        method: "POST",
+        body: formData,
+      });
       setFormMessage("Resource created.");
       if (data.id) {
         router.push(

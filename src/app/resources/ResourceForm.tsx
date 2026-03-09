@@ -58,6 +58,7 @@ type ResourceFormProps = {
   relatedResourceLoading?: boolean;
   showSubmitButton?: boolean;
   priorityInput?: "select" | "stars";
+  onImageProcessingChange?: (isProcessing: boolean) => void;
 };
 
 const styles = {
@@ -115,6 +116,7 @@ export default function ResourceForm({
   relatedResourceLoading = false,
   showSubmitButton = true,
   priorityInput = "select",
+  onImageProcessingChange,
 }: ResourceFormProps) {
   const themeStyles = styles[theme];
   const helpText = fileHelpText ?? "Choose one or more images (JPG/PNG/WebP).";
@@ -122,6 +124,7 @@ export default function ResourceForm({
   const selectedRelatedResourceIds = watch("relatedResourceIds") ?? "";
   const selectedPriority = watch("priority") ?? "3";
   const [previewOrder, setPreviewOrder] = useState<number[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
 
   const relatedResourceValue = useMemo(() => {
     const idList = selectedRelatedResourceIds
@@ -362,19 +365,30 @@ export default function ResourceForm({
             if (files.length === 0) {
               return;
             }
-            const resized = await Promise.all(
-              files.map((file) => resizeImage(file, resizeWidth)),
-            );
-            const gpsMeta = await Promise.all(
-              files.map((file) => getImageGps(file)),
-            );
-            console.log("ResourceForm: gpsMeta extracted", gpsMeta);
-            setImageFiles((previous) => [...previous, ...resized]);
-            setImageFileMeta((previous) => [...previous, ...gpsMeta]);
-            event.target.value = "";
+            setIsProcessingImages(true);
+            onImageProcessingChange?.(true);
+            try {
+              const resized = await Promise.all(
+                files.map((file) => resizeImage(file, resizeWidth)),
+              );
+              const gpsMeta = await Promise.all(
+                files.map((file) => getImageGps(file)),
+              );
+              console.log("ResourceForm: gpsMeta extracted", gpsMeta);
+              setImageFiles((previous) => [...previous, ...resized]);
+              setImageFileMeta((previous) => [...previous, ...gpsMeta]);
+            } finally {
+              setIsProcessingImages(false);
+              onImageProcessingChange?.(false);
+              event.target.value = "";
+            }
           }}
+          disabled={isProcessingImages}
           className={themeStyles.fileInput}
         />
+        {isProcessingImages ? (
+          <p className={themeStyles.fileHelp}>Loading image location data…</p>
+        ) : null}
         {fileHelpText ? (
           <p className={themeStyles.fileHelp}>{helpText}</p>
         ) : null}
@@ -446,9 +460,13 @@ export default function ResourceForm({
             kind="primary"
             size="large"
             icon={submitIcon}
-            disabled={saving}
+            disabled={saving || isProcessingImages}
           >
-            {saving ? "Saving..." : submitLabel}
+            {isProcessingImages
+              ? "Loading location data..."
+              : saving
+                ? "Saving..."
+                : submitLabel}
           </Button>
         </div>
       ) : null}

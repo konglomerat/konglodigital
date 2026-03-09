@@ -43,7 +43,8 @@ export const slugifyResourceTitle = (
 export const buildResourcePath = (resource: {
   id: string;
   prettyTitle?: string | null;
-}) => `/resources/${resource.prettyTitle?.trim() ? resource.prettyTitle : resource.id}`;
+}) =>
+  `/resources/${resource.prettyTitle?.trim() ? resource.prettyTitle : resource.id}`;
 
 const findAvailablePrettyTitle = async (
   supabase: SupabaseLike,
@@ -54,9 +55,14 @@ const findAvailablePrettyTitle = async (
     const candidate =
       index === 0 ? basePrettyTitle : `${basePrettyTitle}-${index + 1}`;
 
-    const resourcePrettyTitlesQuery = supabase.from("resource_pretty_titles") as {
+    const resourcePrettyTitlesQuery = supabase.from(
+      "resource_pretty_titles",
+    ) as {
       select: (columns: string) => {
-        eq: (column: string, value: unknown) => {
+        eq: (
+          column: string,
+          value: unknown,
+        ) => {
           maybeSingle: () => Promise<{
             data: { resource_id?: string } | null;
             error: SupabaseError;
@@ -96,8 +102,14 @@ export const ensureResourcePrettyTitle = async (
 
   const unsetCurrentQuery = supabase.from("resource_pretty_titles") as {
     update: (payload: { is_current: boolean }) => {
-      eq: (column: string, value: unknown) => {
-        neq: (column: string, value: unknown) => Promise<{ error: SupabaseError }>;
+      eq: (
+        column: string,
+        value: unknown,
+      ) => {
+        neq: (
+          column: string,
+          value: unknown,
+        ) => Promise<{ error: SupabaseError }>;
       };
     };
   };
@@ -164,7 +176,10 @@ export const resolveResourceIdByPrettyTitle = async (
 ) => {
   const query = supabase.from("resource_pretty_titles") as {
     select: (columns: string) => {
-      eq: (column: string, value: unknown) => {
+      eq: (
+        column: string,
+        value: unknown,
+      ) => {
         maybeSingle: () => Promise<{
           data: { resource_id?: string; is_current?: boolean } | null;
           error: SupabaseError;
