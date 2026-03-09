@@ -59,6 +59,11 @@ type PaymentMethodOption = {
   label: string;
 };
 
+type BankConnectionOption = {
+  value: string;
+  label: string;
+};
+
 type InvoiceTaxCode = "" | "0" | "7" | "19";
 
 type DebtorDetails = {
@@ -96,7 +101,7 @@ const createPosition = (): InvoicePosition => ({
   unit: "",
   quantity: "",
   unitAmountEuro: "",
-  taxCode: "",
+  taxCode: "0",
   costCenter1: "",
   discountPercent: "",
 });
@@ -153,7 +158,15 @@ const normalizeInvoiceTaxCode = (value: unknown): InvoiceTaxCode => {
     return value;
   }
 
-  return "";
+  return "0";
+};
+
+const getTaxRatePercent = (value: InvoiceTaxCode) => {
+  if (value === "7" || value === "19") {
+    return Number(value);
+  }
+
+  return 0;
 };
 
 const getDefaultPaymentMethod = (items: PaymentMethodOption[]): PaymentMethod => {
@@ -178,6 +191,11 @@ export default function NewSimpleInvoicePage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
   const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
+  const [bankConnections, setBankConnections] = useState<BankConnectionOption[]>([]);
+  const [selectedCashAccountId, setSelectedCashAccountId] = useState("");
+  const [bankConnectionsLoading, setBankConnectionsLoading] = useState(false);
+  const [bankConnectionsError, setBankConnectionsError] = useState<string | null>(null);
+  const [hasLoadedBankConnections, setHasLoadedBankConnections] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -318,6 +336,64 @@ export default function NewSimpleInvoicePage() {
     };
   }, [showTaxHint]);
 
+  useEffect(() => {
+    if (paymentMethod !== "sepaCreditTransfer" || hasLoadedBankConnections) {
+      return;
+    }
+
+    let active = true;
+
+    const loadBankConnections = async () => {
+      try {
+        setBankConnectionsLoading(true);
+        const response = await fetchJson<{
+          bankConnections: BankConnectionOption[];
+        }>("/api/campai/bank-connections");
+
+        if (!active) {
+          return;
+        }
+
+        const items = response.bankConnections ?? [];
+        setBankConnections(items);
+        setBankConnectionsError(
+          items.length === 0
+            ? "Es wurden keine Konten in Campai gefunden."
+            : null,
+        );
+        setSelectedCashAccountId((current) => {
+          if (current && items.some((item) => item.value === current)) {
+            return current;
+          }
+
+          return items.length === 1 ? items[0].value : "";
+        });
+        setHasLoadedBankConnections(true);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setBankConnections([]);
+        setBankConnectionsError(
+          error instanceof Error
+            ? error.message
+            : "Konten konnten nicht geladen werden.",
+        );
+      } finally {
+        if (active) {
+          setBankConnectionsLoading(false);
+        }
+      }
+    };
+
+    loadBankConnections();
+
+    return () => {
+      active = false;
+    };
+  }, [hasLoadedBankConnections, paymentMethod]);
+
   const validPositions = useMemo(() => {
     return positions
       .map((position) => {
@@ -347,15 +423,41 @@ export default function NewSimpleInvoicePage() {
       );
   }, [positions]);
 
-  const totalCents = useMemo(
-    () =>
-      validPositions.reduce(
-        (sum, position) =>
-          sum + Math.round(position.quantity * position.unitAmount),
-        0,
-      ),
-    [validPositions],
-  );
+  const totals = useMemo(() => {
+    return validPositions.reduce(
+      (sum, position) => {
+        const lineAmountCents = Math.round(position.quantity * position.unitAmount);
+        const taxRate = getTaxRatePercent(position.taxCode);
+
+        if (isNet) {
+          const taxCents = Math.round((lineAmountCents * taxRate) / 100);
+          sum.enteredTotalCents += lineAmountCents;
+          sum.netTotalCents += lineAmountCents;
+          sum.taxTotalCents += taxCents;
+          sum.grossTotalCents += lineAmountCents + taxCents;
+          return sum;
+        }
+
+        const taxCents =
+          taxRate > 0
+            ? Math.round((lineAmountCents * taxRate) / (100 + taxRate))
+            : 0;
+        const netCents = lineAmountCents - taxCents;
+
+        sum.enteredTotalCents += lineAmountCents;
+        sum.netTotalCents += netCents;
+        sum.taxTotalCents += taxCents;
+        sum.grossTotalCents += lineAmountCents;
+        return sum;
+      },
+      {
+        enteredTotalCents: 0,
+        netTotalCents: 0,
+        taxTotalCents: 0,
+        grossTotalCents: 0,
+      },
+    );
+  }, [isNet, validPositions]);
 
   const handleDebtorSelect = async (suggestion: DebtorSuggestion) => {
     setDebtorAccount(suggestion.account);
@@ -569,6 +671,11 @@ export default function NewSimpleInvoicePage() {
       return;
     }
 
+    if (paymentMethod === "sepaCreditTransfer" && !selectedCashAccountId) {
+      setErrorMessage("Bitte ein Konto für Überweisung auswählen.");
+      return;
+    }
+
     if (validPositions.length === 0) {
       setErrorMessage(
         "Bitte mindestens eine gültige Position mit Beschreibung, Menge und Einzelpreis anlegen.",
@@ -591,6 +698,10 @@ export default function NewSimpleInvoicePage() {
             customerNumber: debtorAccount,
             paid,
             paymentMethod: paymentMethod || undefined,
+            paymentCashAccountId:
+              paymentMethod === "sepaCreditTransfer"
+                ? selectedCashAccountId || undefined
+                : undefined,
             invoiceDate: invoiceDate || undefined,
             dueDate: dueDate || undefined,
             deliveryDate: deliveryDate || undefined,
@@ -727,6 +838,44 @@ export default function NewSimpleInvoicePage() {
                 ))}
               </Select>
             </FormField>
+
+            {paymentMethod === "sepaCreditTransfer" ? (
+              <FormField
+                label="Konto"
+                required
+                hint={
+                  bankConnectionsError
+                    ? undefined
+                    : bankConnectionsLoading
+                      ? "Konten werden geladen."
+                      : undefined
+                }
+                error={bankConnectionsError ?? undefined}
+              >
+                <Select
+                  value={selectedCashAccountId}
+                  onChange={(event) =>
+                    setSelectedCashAccountId(event.target.value)
+                  }
+                  disabled={
+                    bankConnectionsLoading || bankConnections.length === 0
+                  }
+                >
+                  <option value="">
+                    {bankConnectionsLoading
+                      ? "Konten werden geladen"
+                      : bankConnections.length === 0
+                        ? "Keine Konten verfügbar"
+                        : "Bitte Konto wählen"}
+                  </option>
+                  {bankConnections.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            ) : null}
 
             <FormField label="Rechnungsdatum">
               <Input
@@ -1001,7 +1150,7 @@ export default function NewSimpleInvoicePage() {
                 {positions.map((position) => {
                   const rowQuantity = parseQuantity(position.quantity);
                   const rowUnitAmount = parseEuroToCents(position.unitAmountEuro);
-                  const rowTotal =
+                  const rowEnteredTotal =
                     rowQuantity !== null && rowUnitAmount !== null
                       ? Math.round(rowQuantity * rowUnitAmount)
                       : null;
@@ -1073,7 +1222,6 @@ export default function NewSimpleInvoicePage() {
                             updatePosition(position.id, "taxCode", event.target.value)
                           }
                         >
-                          <option value="">-</option>
                           <option value="0">0%</option>
                           <option value="7">7%</option>
                           <option value="19">19%</option>
@@ -1082,7 +1230,7 @@ export default function NewSimpleInvoicePage() {
 
                       <FormField label="Gesamtbetrag" labelClassName="whitespace-nowrap xl:hidden">
                         <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900">
-                          {rowTotal === null ? "-" : `€${(rowTotal / 100).toFixed(2)}`}
+                          {rowEnteredTotal === null ? "-" : `€${(rowEnteredTotal / 100).toFixed(2)}`}
                         </div>
                       </FormField>
 
@@ -1136,11 +1284,25 @@ export default function NewSimpleInvoicePage() {
             </Button>
 
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-zinc-700">Gesamtbetrag</span>
-                <span className="text-lg font-semibold text-zinc-900">
-                  €{(totalCents / 100).toFixed(2)}
-                </span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 text-sm text-zinc-700">
+                  <span>{isNet ? "Nettosumme" : "Bruttosumme"}</span>
+                  <span className="font-medium text-zinc-900">
+                    €{(totals.enteredTotalCents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm text-zinc-700">
+                  <span>{isNet ? "MwSt." : "Enthaltene MwSt."}</span>
+                  <span className="font-medium text-zinc-900">
+                    €{(totals.taxTotalCents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-zinc-700">Gesamtbetrag</span>
+                  <span className="text-lg font-semibold text-zinc-900">
+                    €{(totals.grossTotalCents / 100).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -1157,7 +1319,7 @@ export default function NewSimpleInvoicePage() {
                       : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
-                  Netto
+                  Nettopreise
                 </button>
                 <button
                   type="button"
@@ -1168,7 +1330,7 @@ export default function NewSimpleInvoicePage() {
                       : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
-                  Brutto
+                  Bruttopreise
                 </button>
               </div>
             </FormField>
@@ -1201,7 +1363,10 @@ export default function NewSimpleInvoicePage() {
               Gültige Positionen: <span className="font-semibold text-zinc-900">{validPositions.length}</span>
             </p>
             <p className="text-sm text-zinc-700">
-              Gesamtbetrag: <span className="font-semibold text-zinc-900">€{(totalCents / 100).toFixed(2)}</span>
+              MwSt.: <span className="font-semibold text-zinc-900">€{(totals.taxTotalCents / 100).toFixed(2)}</span>
+            </p>
+            <p className="text-sm text-zinc-700">
+              Gesamtbetrag: <span className="font-semibold text-zinc-900">€{(totals.grossTotalCents / 100).toFixed(2)}</span>
             </p>
 
             <Button

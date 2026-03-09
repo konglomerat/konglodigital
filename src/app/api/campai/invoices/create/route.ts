@@ -28,6 +28,18 @@ type PositionPayload = {
   discount?: number;
 };
 
+type CashAccountListResponse = {
+  cashAccounts?: Array<{
+    _id?: string;
+    archivedAt?: string | null;
+    source?: string;
+    finApiConnection?: {
+      connectionId?: number;
+      hasSepaCreditTransfer?: boolean;
+    } | null;
+  }>;
+};
+
 type TaxRateChoice = "0" | "7" | "19";
 
 const parsePositiveInt = (value: unknown): number | null => {
@@ -204,6 +216,10 @@ const normalizeTaxCode = (
 ): string | null => {
   const selectedRate = parseTaxRateChoice(value);
   if (selectedRate) {
+    if (selectedRate === "0") {
+      return null;
+    }
+
     return taxCodeByRate.get(selectedRate) ?? null;
   }
 
@@ -225,6 +241,63 @@ const requiredEnv = (name: string) => {
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
+const normalizeObjectId = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const createSepaReferenceId = () =>
+  String(Date.now() % 10_000_000).padStart(7, "0");
+
+const isAvailableCashAccount = async (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  cashAccountId: string;
+}) => {
+  const { apiKey, organizationId, mandateId, cashAccountId } = params;
+
+  const response = await fetch(
+    `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/cash/accounts/list`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        limit: 100,
+        offset: 0,
+        returnCount: false,
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Campai-Konten konnten nicht geladen werden.");
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | CashAccountListResponse
+    | null;
+
+  const accounts = Array.isArray(payload?.cashAccounts) ? payload.cashAccounts : [];
+
+  return accounts.some(
+    (account) =>
+      typeof account._id === "string" &&
+      account._id.trim() === cashAccountId &&
+      !account.archivedAt &&
+      (account.finApiConnection?.hasSepaCreditTransfer === true ||
+        account.source === "bank"),
+  );
+};
+
 export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
@@ -245,6 +318,7 @@ export const POST = async (request: NextRequest) => {
     isNet?: boolean;
     paid?: boolean;
     paymentMethod?: string;
+    paymentCashAccountId?: string;
     customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
     dueDate?: string;
@@ -309,12 +383,15 @@ export const POST = async (request: NextRequest) => {
     ? normalizeCustomerNumber(body.customerNumber[0])
     : normalizeCustomerNumber(body.customerNumber);
   const paymentMethodType = normalizePaymentMethodType(body.paymentMethod);
+  const paymentCashAccountId = normalizeObjectId(body.paymentCashAccountId);
 
   const selectedTaxRates = Array.from(
     new Set(
       rawPositions
         .map((position) => parseTaxRateChoice(position.taxCode))
-        .filter((value): value is TaxRateChoice => Boolean(value)),
+        .filter(
+          (value): value is TaxRateChoice => Boolean(value) && value !== "0",
+        ),
     ),
   );
 
@@ -404,6 +481,61 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
+  let paymentMethodPayload:
+    | {
+        type: CampaiPaymentMethodType;
+        sepaCreditTransfer?: {
+          cashAccount: string;
+          referenceId: string;
+          epcQRData: string;
+          sepaMsgId: null;
+        };
+      }
+    | undefined;
+
+  if (paymentMethodType === "sepaCreditTransfer") {
+    if (!paymentCashAccountId) {
+      return NextResponse.json(
+        {
+          error:
+            "Bitte ein Konto für Überweisung auswählen.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const hasCashAccount = await isAvailableCashAccount({
+      apiKey,
+      organizationId,
+      mandateId,
+      cashAccountId: paymentCashAccountId,
+    });
+
+    if (!hasCashAccount) {
+      return NextResponse.json(
+        {
+          error:
+            "Für das ausgewählte Konto konnte kein passendes Campai-Bankkonto gefunden werden.",
+        },
+        { status: 400 },
+      );
+    }
+
+    paymentMethodPayload = {
+      type: paymentMethodType,
+      sepaCreditTransfer: {
+        cashAccount: paymentCashAccountId,
+        referenceId: createSepaReferenceId(),
+        epcQRData: "",
+        sepaMsgId: null,
+      },
+    };
+  } else if (paymentMethodType) {
+    paymentMethodPayload = {
+      type: paymentMethodType,
+    };
+  }
+
   const payload = {
     draft: false,
     address: {
@@ -428,11 +560,7 @@ export const POST = async (request: NextRequest) => {
     customerNumber: selectedCustomerNumber ? [selectedCustomerNumber] : [],
     description: body.description ?? "",
     paid: body.paid === true,
-    paymentMethod: paymentMethodType
-      ? {
-          type: paymentMethodType,
-        }
-      : undefined,
+    paymentMethod: paymentMethodPayload,
     note: body.note ?? "",
     discount: 0,
     discountType: "%",
