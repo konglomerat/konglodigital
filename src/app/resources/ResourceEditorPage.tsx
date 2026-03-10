@@ -127,7 +127,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       setRelatedResourceOptionsLoading(true);
       try {
         const data = await fetchJson<{ resources: Resource[] }>(
-          "/api/campai/resources?limit=500&offset=0",
+          "/api/campai/resources?limit=1500&offset=0",
         );
         if (!active) {
           return;

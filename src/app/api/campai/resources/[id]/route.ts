@@ -332,6 +332,22 @@ const readResourcePayload = async (request: NextRequest) => {
 const sanitizeFileName = (value: string) =>
   value.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
 
+const normalizeImageUrls = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(
+    (entry): entry is string => typeof entry === "string" && entry.length > 0,
+  );
+};
+
+const imageUrlListsEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((value, index) => value === b[index]);
+};
+
 type GpsData = {
   latitude: number | null;
   longitude: number | null;
@@ -713,7 +729,7 @@ export const PUT = async (
   const { data: existingResource, error: existingResourceError } =
     await supabase
       .from("resources")
-      .select("owner_id, map_features")
+      .select("owner_id, map_features, image, images")
       .eq("id", params.id)
       .maybeSingle();
 
@@ -770,8 +786,46 @@ export const PUT = async (
   let description = payload.description?.trim() ?? "";
   let name = payload.name.trim();
   let tags = payload.tags ? splitList(payload.tags) : [];
+  const existingImageUrl =
+    typeof existingResource.image === "string" ? existingResource.image : null;
+  const existingImageUrlsRaw = normalizeImageUrls(existingResource.images);
+  const existingImageUrls =
+    existingImageUrlsRaw.length > 0
+      ? existingImageUrlsRaw
+      : existingImageUrl
+        ? [existingImageUrl]
+        : [];
+
+  const hasExplicitImageUrl = payload.imageUrl !== undefined;
+  const hasExplicitImageUrls = payload.imageUrls !== undefined;
+  const nextImageUrls = Array.isArray(payload.imageUrls)
+    ? payload.imageUrls.filter(
+        (entry): entry is string =>
+          typeof entry === "string" && entry.length > 0,
+      )
+    : null;
+
+  const imageUrlChanged =
+    hasExplicitImageUrl && (payload.imageUrl ?? null) !== existingImageUrl;
+  const imageUrlsChanged = hasExplicitImageUrls
+    ? payload.imageUrls === null
+      ? existingImageUrls.length > 0
+      : !imageUrlListsEqual(nextImageUrls ?? [], existingImageUrls)
+    : false;
+
   let imageUpdated =
-    payload.imageUrl !== undefined || payload.imageUrls !== undefined;
+    payload.imageFiles.length > 0 || imageUrlChanged || imageUrlsChanged;
+
+  if (
+    imageUpdated &&
+    payload.imageFiles.length === 0 &&
+    !hasExplicitImageUrl &&
+    hasExplicitImageUrls
+  ) {
+    imageUrls = payload.imageUrls;
+    imageUrl = Array.isArray(imageUrls) ? (imageUrls[0] ?? null) : null;
+  }
+
   let gpsData: GpsData | null = null;
   if (payload.imageFiles.length > 0) {
     const baseImages = payload.imageUrls ?? [];

@@ -59,6 +59,7 @@ type FormFieldProps = {
   className?: string;
   labelClassName?: string;
 };
+} & HTMLAttributes<HTMLDivElement>;
 
 export function FormField({
   label,
@@ -67,16 +68,11 @@ export function FormField({
   hint,
   children,
   className,
-  labelClassName,
+  ...props
 }: FormFieldProps) {
   return (
-    <div className={cn("space-y-2", className)}>
-      <label
-        className={cn(
-          "block text-xs font-semibold uppercase tracking-wide text-zinc-500",
-          labelClassName,
-        )}
-      >
+    <div className={cn("space-y-2", className)} {...props}>
+      <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
         {label}
         {required ? <span className="ml-1 text-red-600">*</span> : null}
       </label>
