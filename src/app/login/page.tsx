@@ -45,9 +45,16 @@ function LoginForm() {
         return;
       }
 
-    if (!response.ok) {
-      const body = (await response.json()) as { error?: string };
-      setError(body.error ?? "Anmeldung nicht möglich.");
+      if (!response.ok) {
+        const body = (await response.json()) as { error?: string };
+        setError(body.error ?? "Anmeldung nicht möglich.");
+        setIsLoading(false);
+      }
+      window.location.replace(getSafeRedirect());
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Anmeldung nicht möglich.",
+      );
       setIsLoading(false);
     }
   };

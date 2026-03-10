@@ -58,7 +58,6 @@ type FormFieldProps = {
   children: ReactNode;
   className?: string;
   labelClassName?: string;
-};
 } & HTMLAttributes<HTMLDivElement>;
 
 export function FormField({
