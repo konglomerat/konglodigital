@@ -24,6 +24,7 @@ import { signOut } from "./actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
 import ThemeToggle from "./components/ThemeToggle";
+import AutoCloseMenuDetails from "./components/AutoCloseMenuDetails";
 
 config.autoAddCss = false;
 
@@ -115,7 +116,7 @@ export default async function RootLayout({
       >
         <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
           <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
+            <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
               <div className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900">
                 Konglo
                 <br />
@@ -123,14 +124,18 @@ export default async function RootLayout({
               </div>
               <div className="flex items-center gap-3">
                 <ThemeToggle />
-                <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
-                    Menü
-                    <span className="text-lg transition group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <div className="mt-3 rounded-2xl border border-zinc-200 bg-white shadow-lg">
+                <AutoCloseMenuDetails
+                  className="group"
+                  summary={
+                    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                      Menü
+                      <span className="text-lg transition group-open:rotate-45">
+                        +
+                      </span>
+                    </summary>
+                  }
+                >
+                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto border border-zinc-200 bg-white shadow-lg">
                     <nav className="flex flex-col px-2 py-2">
                       <p className={navSectionTitleClassName}>
                         Digital Fabrication
@@ -271,11 +276,11 @@ export default async function RootLayout({
                       )}
                     </div>
                   </div>
-                </details>
+                </AutoCloseMenuDetails>
               </div>
             </div>
           </header>
-          <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
+          <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
             <div className="space-y-3">
               <div>
                 <div className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900">
@@ -286,7 +291,7 @@ export default async function RootLayout({
               </div>
               <ThemeToggle />
             </div>
-            <nav className="-mx-6 mt-6 flex flex-1 flex-col">
+            <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
               <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Digital Fabrication
               </p>
