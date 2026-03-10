@@ -35,6 +35,7 @@ import {
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Button from "../components/Button";
+import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
@@ -721,7 +722,7 @@ export default function BuchungenPage() {
                 hint="Bei Ausgaben: Zahlungsempfänger. Bei Einnahmen: Zahler an den Verein."
                 error={errors.senderOrReceiver?.message}
               >
-                <Input
+                <AutocompleteInput
                   placeholder="z. B. Amazon / Mitgliedsname"
                   {...register("senderOrReceiver", {
                     required: "Sender/Empfänger ist erforderlich.",
@@ -1027,24 +1028,6 @@ export default function BuchungenPage() {
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                kind="secondary"
-                onClick={handleLoadTestData}
-              >
-                Testdaten laden
-              </Button>
-              <Button
-                type="submit"
-                kind="primary"
-                icon={faCalendarCheck}
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Wird gespeichert…"
-                  : "Buchung speichern & PDF erstellen"}
-              </Button>
-
               {submittedAt ? (
                 <p className="text-sm text-emerald-700">
                   Formular lokal erfasst: {submittedAt}
@@ -1061,6 +1044,25 @@ export default function BuchungenPage() {
               {storeResult?.error ? (
                 <p className="text-sm text-rose-700">{storeResult.error}</p>
               ) : null}
+
+              <Button
+                type="button"
+                kind="secondary"
+                onClick={handleLoadTestData}
+              >
+                Testdaten laden
+              </Button>
+              <Button
+                type="submit"
+                kind="primary"
+                icon={faCalendarCheck}
+                disabled={isSubmitting}
+                className="ml-auto"
+              >
+                {isSubmitting
+                  ? "Wird gespeichert…"
+                  : "Buchung speichern & PDF erstellen"}
+              </Button>
             </div>
           </div>
         </form>

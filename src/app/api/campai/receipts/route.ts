@@ -131,9 +131,9 @@ const uploadViaStorageUploadUrl = async (params: {
     return null;
   }
 
-  const normalizedFileBytes = Uint8Array.from(fileBytes);
-
-  const fileBlob = new Blob([normalizedFileBytes], {
+  const normalizedBytes = new Uint8Array(fileBytes);
+  const fileArrayBuffer = normalizedBytes.buffer;
+  const fileBlob = new Blob([fileArrayBuffer], {
     type: fileContentType || "application/octet-stream",
   });
 
@@ -330,10 +330,7 @@ export const POST = async (request: NextRequest) => {
       .join(" | ")
       .slice(0, 140);
 
-    const tags = [
-      compactText(body.senderProject),
-      compactText(body.receiverProject),
-    ].filter(Boolean);
+    const tags = ["API"];
 
     const receiptFileBase64 = compactText(
       body.receiptFileBase64 ?? body.pdfBase64,
@@ -359,14 +356,18 @@ export const POST = async (request: NextRequest) => {
       fileContentType: receiptFileContentType,
     });
 
+    // ── Kreditor-Konto: Fallback auf Env-Variable ──
+    const finalAccount = creditorAccount;
+    const finalAccountName = accountName;
+
     const payload: Record<string, unknown> = {
-      account: creditorAccount,
+      account: finalAccount,
       receiptNumber,
       isNet: false,
       totalGrossAmount: amount,
       receiptDate,
       dueDate,
-      accountName,
+      accountName: finalAccountName,
       description,
       refund: false,
       positions: [

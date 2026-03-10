@@ -17,7 +17,7 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
   if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+    throw new Error(data.error ?? "Anfrage fehlgeschlagen");
   }
   return data;
 };
@@ -58,7 +58,7 @@ export default function CampaiProductsPage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to load Einkaufen.",
+              : "Produkte konnten nicht geladen werden.",
           );
         }
       } finally {
@@ -123,16 +123,16 @@ export default function CampaiProductsPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Einkaufen</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Produkte</h1>
             <p className="mt-2 text-sm text-zinc-600">
-              Browse products and add them to the checkout cart.
+              Durchsuche Produkte und lege sie in den Warenkorb.
             </p>
           </div>
           <Link
             href="/"
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
           >
-            Back to dashboard
+            Zurück zum Dashboard
           </Link>
         </header>
 
@@ -145,20 +145,20 @@ export default function CampaiProductsPage() {
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">Products</h2>
+              <h2 className="text-lg font-semibold text-zinc-900">Produkte</h2>
               <p className="text-sm text-zinc-500">
-                {loading ? "Loading..." : `${products.length} items`}
+                {loading ? "Lädt ..." : `${products.length} Artikel`}
               </p>
             </div>
             <div className="text-xs text-zinc-500">
-              In cart: {cartProducts.length}
+              Im Warenkorb: {cartProducts.length}
             </div>
           </div>
 
           {loading ? (
-            <p className="mt-4 text-sm text-zinc-500">Loading products...</p>
+            <p className="mt-4 text-sm text-zinc-500">Produkte werden geladen ...</p>
           ) : products.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">No products found.</p>
+            <p className="mt-4 text-sm text-zinc-500">Keine Produkte gefunden.</p>
           ) : (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {products.map((product) => {
@@ -188,7 +188,7 @@ export default function CampaiProductsPage() {
                       <div className="flex items-center gap-2">
                         {inCart ? (
                           <span className="text-xs text-blue-600">
-                            In cart × {inCart.quantity ?? 1}
+                            Im Warenkorb × {inCart.quantity ?? 1}
                           </span>
                         ) : null}
                         {inCart ? (
@@ -216,7 +216,7 @@ export default function CampaiProductsPage() {
                         href={`/products/${product.id}`}
                         className="text-xs font-semibold text-zinc-500 hover:text-zinc-800"
                       >
-                        View details
+                        Details ansehen
                       </Link>
                     </div>
                   </article>

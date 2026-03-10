@@ -4,51 +4,140 @@ import { useEffect, useMemo, useState } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../components/Button";
 
-type MembershipPlanId = "full" | "quarter" | "none";
+type AccessCardPlanId = "none" | "quarter" | "full";
 
-type MembershipPlan = {
-  id: MembershipPlanId;
+type AccessCardPlan = {
+  id: AccessCardPlanId;
   title: string;
   description: string;
   priceLabel: string;
 };
 
-const membershipPlans: MembershipPlan[] = [
-  {
-    id: "full",
-    title: "Uneingeschränkter Zugang",
-    description:
-      "uneingeschränkter Zugang zu allen Werkstattbereichen + Nutzung von Geräten und Maschinen",
-    priceLabel: "30 €",
-  },
+type AccessCardOptionId = "none" | "subscription" | "ten-visit";
+type SubscriptionPlanId = Exclude<AccessCardPlanId, "none">;
+
+type SubmittedChange = {
+  requestedPlan: AccessCardPlanId;
+  requestedAt: string;
+};
+
+const ACCESS_CARD_STORAGE_KEY = "zugangskarte-current-plan";
+const ACCESS_CARD_CHANGE_STORAGE_KEY = "zugangskarte-submitted-change";
+
+const accessCardPlans: Array<AccessCardPlan & { id: SubscriptionPlanId }> = [
   {
     id: "quarter",
-    title: "15 Tage im Quartal",
+    title: "Abokarte – 15 Zugänge im Quartal",
     description:
-      "Zugang an 15 verschiedenen Tagen innerhalb eines Quartals + Nutzung von Geräten und Maschinen",
-    priceLabel: "15 €",
+      "15 € pro Monat. Für Mitglieder, die bis zu 15 Zugänge pro Quartal benötigen.",
+    priceLabel: "15 € / Monat",
   },
   {
-    id: "none",
-    title: "No Zugangskarte",
-    description: "Kein Monatsbeitrag ausgewählt",
-    priceLabel: "—",
+    id: "full",
+    title: "Abokarte – 24/7 Zugang",
+    description:
+      "30 € pro Monat. Rund-um-die-Uhr-Zugang zu den Werkstattbereichen.",
+    priceLabel: "30 € / Monat",
   },
 ];
+
+const accessCardOptions = [
+  {
+    id: "none",
+    title: "Keine Zugangskarte",
+    description: "Kein laufendes Abo",
+  },
+  {
+    id: "subscription",
+    title: "Abokarte",
+    description: "Monatliche Zahlung",
+  },
+  {
+    id: "ten-visit",
+    title: "10er Karte",
+    description: "Einmalzahlung",
+  },
+] as const satisfies ReadonlyArray<{
+  id: AccessCardOptionId;
+  title: string;
+  description: string;
+}>;
 
 const tenVisitCard = {
   id: "ten-visit-card",
   title: "10er Karte",
   unitAmount: 5000,
   details:
-    "Zugang an 10 Tagen innerhalb von 12 Monaten + Nutzung von Geräten und Maschinen",
+    "Einmalzahlung für 10 Zugänge innerhalb von 12 Monaten.",
+};
+
+const formatPlanName = (planId: AccessCardPlanId) => {
+  return accessCardPlans.find((plan) => plan.id === planId)?.title ?? "—";
 };
 
 export default function MonatsbeitragPage() {
-  const [selectedPlan, setSelectedPlan] = useState<MembershipPlanId>("full");
+  const [currentPlan, setCurrentPlan] = useState<AccessCardPlanId>("none");
+  const [draftPlan, setDraftPlan] = useState<AccessCardPlanId>("none");
+  const [selectedOption, setSelectedOption] = useState<AccessCardOptionId>("none");
+  const [subscriptionPlanDraft, setSubscriptionPlanDraft] =
+    useState<SubscriptionPlanId>("quarter");
+  const [submittedChange, setSubmittedChange] = useState<SubmittedChange | null>(
+    null,
+  );
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [cartProducts, setCartProductsState] = useState<CartProduct[]>(() =>
     getCartProducts(),
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedPlan = window.localStorage.getItem(ACCESS_CARD_STORAGE_KEY);
+    if (
+      storedPlan === "none" ||
+      storedPlan === "quarter" ||
+      storedPlan === "full"
+    ) {
+      setCurrentPlan(storedPlan);
+      setDraftPlan(storedPlan);
+      if (storedPlan === "quarter" || storedPlan === "full") {
+        setSubscriptionPlanDraft(storedPlan);
+        setSelectedOption("subscription");
+      } else {
+        setSelectedOption("none");
+      }
+    }
+
+    const storedChange = window.localStorage.getItem(
+      ACCESS_CARD_CHANGE_STORAGE_KEY,
+    );
+    if (storedChange) {
+      try {
+        const parsed = JSON.parse(storedChange) as SubmittedChange;
+        if (
+          parsed.requestedPlan === "none" ||
+          parsed.requestedPlan === "quarter" ||
+          parsed.requestedPlan === "full"
+        ) {
+          setSubmittedChange(parsed);
+          setDraftPlan(parsed.requestedPlan);
+          if (
+            parsed.requestedPlan === "quarter" ||
+            parsed.requestedPlan === "full"
+          ) {
+            setSubscriptionPlanDraft(parsed.requestedPlan);
+            setSelectedOption("subscription");
+          } else {
+            setSelectedOption("none");
+          }
+        }
+      } catch {
+        window.localStorage.removeItem(ACCESS_CARD_CHANGE_STORAGE_KEY);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setCartProducts(cartProducts);
@@ -97,10 +186,46 @@ export default function MonatsbeitragPage() {
     });
   };
 
-  const selectedPlanInfo = membershipPlans.find(
-    (plan) => plan.id === selectedPlan,
+  const currentPlanInfo = accessCardPlans.find(
+    (plan) => plan.id === currentPlan,
   );
+  const draftPlanInfo = accessCardPlans.find((plan) => plan.id === draftPlan);
   const tenVisitInCart = cartLookup.get(tenVisitCard.id);
+  const hasUnsavedSubscriptionChange =
+    selectedOption === "subscription" && draftPlan !== currentPlan;
+
+  const handleSelectOption = (option: AccessCardOptionId) => {
+    setSelectedOption(option);
+    setSaveStatus(null);
+
+    if (option === "none") {
+      return;
+    }
+
+    if (option === "subscription") {
+      setDraftPlan(subscriptionPlanDraft);
+    }
+  };
+
+  const handleSubmitSubscriptionChange = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const change: SubmittedChange = {
+      requestedPlan: draftPlan,
+      requestedAt: new Date().toISOString(),
+    };
+
+    window.localStorage.setItem(
+      ACCESS_CARD_CHANGE_STORAGE_KEY,
+      JSON.stringify(change),
+    );
+    setSubmittedChange(change);
+    setSaveStatus(
+      `Deine Änderung auf „${formatPlanName(draftPlan)}“ wurde gespeichert und wird erst ab dem nächsten Monat wirksam.`,
+    );
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -108,10 +233,13 @@ export default function MonatsbeitragPage() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
-              Monatsbeitrag & Zugangskarte
+              Zugangskarte
             </h1>
             <p className="mt-2 text-sm text-zinc-600">
-              Wähle deinen Monatsbeitrag und buche eine 10er Karte.
+              Du hast genau drei Optionen: keine Zugangskarte, eine Abokarte oder eine 10er Karte.
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              Aktuell aktiv: {currentPlan === "none" ? "Keine Zugangskarte" : (currentPlanInfo?.title ?? "—")}
             </p>
           </div>
           <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
@@ -120,53 +248,34 @@ export default function MonatsbeitragPage() {
         </header>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900">
-                Monatsbeitrag wählen
-              </h2>
-              <p className="text-sm text-zinc-500">
-                Aktuelle Auswahl: {selectedPlanInfo?.title ?? "—"}
-              </p>
-            </div>
-            <div className="text-xs text-zinc-500">
-              Monatlich: {selectedPlanInfo?.priceLabel ?? "—"}
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {membershipPlans.map((plan) => (
+          <div className="grid gap-4 md:grid-cols-3">
+            {accessCardOptions.map((option) => (
               <label
-                key={plan.id}
-                className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl p-4 text-sm transition ${
-                  selectedPlan === plan.id ? " bg-blue-600" : " bg-zinc-100"
+                key={option.id}
+                className={`flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
+                  selectedOption === option.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
                 }`}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900">
-                        {plan.title}
-                      </p>
-                      <p className="mt-2 text-xs text-zinc-100">
-                        {plan.description}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-zinc-900 whitespace-nowrap">
-                      {plan.priceLabel}
-                    </span>
-                  </div>
+                  <p className="text-base font-semibold text-zinc-900">
+                    {option.title}
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    {option.description}
+                  </p>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-500">
-                    {selectedPlan === plan.id ? "Ausgewählt" : "Auswählen"}
+                    {selectedOption === option.id ? "Ausgewählt" : "Auswählen"}
                   </span>
                   <input
                     type="radio"
-                    name="membership-plan"
-                    value={plan.id}
-                    checked={selectedPlan === plan.id}
-                    onChange={() => setSelectedPlan(plan.id)}
+                    name="access-card-option"
+                    value={option.id}
+                    checked={selectedOption === option.id}
+                    onChange={() => handleSelectOption(option.id)}
                     className="h-4 w-4 rounded-md accent-blue-600"
                   />
                 </div>
@@ -175,17 +284,102 @@ export default function MonatsbeitragPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        {selectedOption === "subscription" ? (
+          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-900">
+                Abokarte auswählen
+              </h2>
+              <p className="text-sm text-zinc-500">
+                Wähle aus wieviele Zugänge du pro Monat benötigst. Du kannst deine Auswahl jederzeit ändern, die Änderung wird aber immer erst ab dem nächsten Monat wirksam.
+              </p>
+            </div>
+            <div className="text-xs text-zinc-500">
+              Ausgewählt: {draftPlanInfo?.priceLabel ?? "—"}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {accessCardPlans.map((plan) => (
+              <label
+                key={plan.id}
+                className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
+                  draftPlan === plan.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-900">
+                        {plan.title}
+                      </p>
+                      <p className="mt-2 text-xs text-zinc-600">
+                        {plan.description}
+                      </p>
+                    </div>
+                    <span className="whitespace-nowrap text-sm font-semibold text-zinc-900">
+                      {plan.priceLabel}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">
+                    {draftPlan === plan.id ? "Zur Bestätigung markiert" : "Auswählen"}
+                  </span>
+                  <input
+                    type="radio"
+                    name="access-card-plan"
+                    value={plan.id}
+                    checked={draftPlan === plan.id}
+                    onChange={() => {
+                      setSubscriptionPlanDraft(plan.id);
+                      setSelectedOption("subscription");
+                      setDraftPlan(plan.id);
+                      setSaveStatus(null);
+                    }}
+                    className="h-4 w-4 rounded-md accent-blue-600"
+                  />
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {submittedChange ? (
+              <p className="text-sm text-amber-700">
+                Bereits eingereicht: {formatPlanName(submittedChange.requestedPlan)} – wirksam ab nächstem Monat.
+              </p>
+            ) : null}
+            {saveStatus ? <p className="text-sm text-emerald-700">{saveStatus}</p> : null}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                kind="primary"
+                onClick={handleSubmitSubscriptionChange}
+                disabled={!hasUnsavedSubscriptionChange}
+              >
+                Abokarte buchen
+              </Button>
+            </div>
+          </div>
+          </section>
+        ) : null}
+
+        {selectedOption === "ten-visit" ? (
+          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-zinc-900">
-                10er Karte
+                10er Karte buchen
               </h2>
               <p className="mt-2 text-sm text-zinc-500">
                 {tenVisitCard.details}
               </p>
             </div>
-            <div className="text-xs text-zinc-500">50 €</div>
+            <div className="text-xs text-zinc-500">Einmalzahlung: 50 €</div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -214,7 +408,8 @@ export default function MonatsbeitragPage() {
               </Button>
             </div>
           </div>
-        </section>
+          </section>
+        ) : null}
       </main>
     </div>
   );

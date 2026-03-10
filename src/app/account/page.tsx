@@ -11,7 +11,21 @@ type AccountUser = {
   metadata: Record<string, unknown>;
 };
 
-const CAMPAI_DEBTOR_NUMBER = "100226";
+type DebtorSuggestion = {
+  account: number;
+  name: string;
+};
+
+const normalizeComparableName = (value?: string | null) => {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .trim()
+    .toLocaleLowerCase("de-DE")
+    .replace(/\s+/g, " ");
+};
 
 const formatDate = (value?: string) => {
   if (!value) {
@@ -47,7 +61,7 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
   if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+    throw new Error(data.error ?? "Anfrage fehlgeschlagen");
   }
   return data;
 };
@@ -75,6 +89,18 @@ export default function AccountPage() {
   const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
   const [campaiError, setCampaiError] = useState<string | null>(null);
   const [campaiDebug, setCampaiDebug] = useState<unknown>(null);
+  const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
+
+  const fullName = useMemo(() => {
+    const first = typeof user?.metadata.first_name === "string"
+      ? user.metadata.first_name.trim()
+      : "";
+    const last = typeof user?.metadata.last_name === "string"
+      ? user.metadata.last_name.trim()
+      : "";
+
+    return [first, last].filter(Boolean).join(" ");
+  }, [user]);
 
   useEffect(() => {
     let active = true;
@@ -115,8 +141,9 @@ export default function AccountPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !fullName) {
       setCampaiInvoices([]);
+      setDebtorAccount(null);
       return;
     }
 
@@ -124,6 +151,29 @@ export default function AccountPage() {
     const loadInvoices = async () => {
       setCampaiError(null);
       try {
+        const debtorResponse = await fetchJson<{
+          suggestions: DebtorSuggestion[];
+        }>(`/api/campai/debtors?q=${encodeURIComponent(fullName)}`);
+
+        if (!active) {
+          return;
+        }
+
+        const matchingDebtor = (debtorResponse.suggestions ?? []).find(
+          (debtor) =>
+            normalizeComparableName(debtor.name) ===
+            normalizeComparableName(fullName),
+        );
+
+        if (!matchingDebtor) {
+          setDebtorAccount(null);
+          setCampaiInvoices([]);
+          setCampaiDebug(null);
+          return;
+        }
+
+        setDebtorAccount(matchingDebtor.account);
+
         const data = await fetchJson<{
           invoices: InvoicePayload[];
           debug?: unknown;
@@ -134,6 +184,7 @@ export default function AccountPage() {
             sort: { receiptDate: "desc" },
             limit: 100,
             offset: 0,
+            account: matchingDebtor.account,
             debug,
           }),
         });
@@ -144,10 +195,11 @@ export default function AccountPage() {
         setCampaiDebug(data.debug ?? null);
       } catch (fetchError) {
         if (active) {
+          setDebtorAccount(null);
           setCampaiError(
             fetchError instanceof Error
               ? fetchError.message
-              : "Unable to load Campai invoices.",
+              : "Campai-Belege konnten nicht geladen werden.",
           );
         }
       }
@@ -158,7 +210,7 @@ export default function AccountPage() {
     return () => {
       active = false;
     };
-  }, [user, debug]);
+  }, [user, fullName, debug]);
 
   const handleProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -170,12 +222,12 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firstName, lastName }),
       });
-      setProfileStatus("Profile saved.");
+      setProfileStatus("Profil gespeichert.");
     } catch (submitError) {
       setProfileError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to save profile.",
+          : "Profil konnte nicht gespeichert werden.",
       );
     }
   };
@@ -190,14 +242,14 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, passwordConfirm }),
       });
-      setPasswordStatus("Password updated.");
+      setPasswordStatus("Passwort aktualisiert.");
       setPassword("");
       setPasswordConfirm("");
     } catch (submitError) {
       setPasswordError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to update password.",
+          : "Passwort konnte nicht aktualisiert werden.",
       );
     }
   };
@@ -205,9 +257,9 @@ export default function AccountPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Account</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Konto</h1>
         <p className="text-sm text-zinc-600">
-          Update your profile details and password.
+          Verwalte deine Profildaten und dein Passwort.
         </p>
       </header>
 
@@ -219,42 +271,42 @@ export default function AccountPage() {
 
       {status ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {message ? decodeURIComponent(message) : "Saved."}
+          {message ? decodeURIComponent(message) : "Gespeichert."}
         </section>
       ) : null}
 
       {loadingUser ? (
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-zinc-500">Loading account...</p>
+          <p className="text-sm text-zinc-500">Konto wird geladen ...</p>
         </section>
       ) : !user ? (
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-900">
-            Sign in required
+            Anmeldung erforderlich
           </h2>
           <p className="mt-2 text-sm text-zinc-600">
-            Please sign in to manage your account settings.
+            Bitte melde dich an, um deine Kontoeinstellungen zu verwalten.
           </p>
           <Button
             href="/login?redirectedFrom=/account"
             kind="primary"
             className="mt-4 px-4 py-2 text-sm"
           >
-            Sign in
+            Anmelden
           </Button>
         </section>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Profile</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">Profil</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Keep your name up to date.
+              Halte deinen Namen aktuell.
             </p>
             <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    First name
+                    Vorname
                   </label>
                   <input
                     name="firstName"
@@ -267,7 +319,7 @@ export default function AccountPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    Last name
+                    Nachname
                   </label>
                   <input
                     name="lastName"
@@ -295,7 +347,7 @@ export default function AccountPage() {
                 kind="primary"
                 className="w-full px-4 py-2 text-sm"
               >
-                Save profile
+                Profil speichern
               </Button>
               {profileError ? (
                 <p className="text-sm text-rose-600">{profileError}</p>
@@ -307,14 +359,14 @@ export default function AccountPage() {
           </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Password</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">Passwort</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Choose a new password at least 8 characters long.
+              Wähle ein neues Passwort mit mindestens 8 Zeichen.
             </p>
             <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                  New password
+                  Neues Passwort
                 </label>
                 <input
                   name="password"
@@ -328,7 +380,7 @@ export default function AccountPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                  Confirm password
+                  Passwort bestätigen
                 </label>
                 <input
                   name="passwordConfirm"
@@ -345,7 +397,7 @@ export default function AccountPage() {
                 kind="primary"
                 className="w-full px-4 py-2 text-sm"
               >
-                Update password
+                Passwort aktualisieren
               </Button>
               {passwordError ? (
                 <p className="text-sm text-rose-600">{passwordError}</p>
@@ -360,21 +412,36 @@ export default function AccountPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900">
-                  Campai invoices
+                  Meine Belege
                 </h2>
                 <p className="text-sm text-zinc-500">
-                  Debtor {CAMPAI_DEBTOR_NUMBER}
+                  {debtorAccount
+                    ? `Debitor: ${fullName} · Konto ${debtorAccount}`
+                    : fullName
+                      ? `Debitor: ${fullName}`
+                    : "Kein Name im Profil hinterlegt"}
                 </p>
               </div>
               <p className="text-xs font-semibold text-zinc-500">
-                {campaiInvoices.length} invoices
+                {campaiInvoices.length} Belege
               </p>
             </div>
 
             {campaiError ? (
               <p className="mt-4 text-sm text-rose-600">{campaiError}</p>
+            ) : !fullName ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                Im Profil muss ein Vor- und Nachname hinterlegt sein, damit die
+                passenden Debitor-Rechnungen angezeigt werden können.
+              </p>
+            ) : !debtorAccount ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                Kein passender Debitor mit dem Namen {fullName} gefunden.
+              </p>
             ) : campaiInvoices.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">No invoices found.</p>
+              <p className="mt-4 text-sm text-zinc-500">
+                Keine Belege für Debitor-Konto {debtorAccount} gefunden.
+              </p>
             ) : (
               <div className="mt-4 grid gap-3">
                 {campaiInvoices.map((invoice) => {
@@ -386,16 +453,16 @@ export default function AccountPage() {
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-zinc-900">
-                          {invoice.receiptNumber ?? "Invoice"}
+                          {invoice.receiptNumber ?? "Beleg"}
                           {invoice.title ? ` · ${invoice.title}` : ""}
                         </p>
                         <p className="text-xs text-zinc-500">
                           {invoice.customerName
                             ? `${invoice.customerName} · `
                             : ""}
-                          Issued {formatDate(invoice.receiptDate)}
+                          Ausgestellt {formatDate(invoice.receiptDate)}
                           {invoice.dueDate
-                            ? ` · Due ${formatDate(invoice.dueDate)}`
+                            ? ` · Fällig ${formatDate(invoice.dueDate)}`
                             : ""}
                         </p>
                       </div>
@@ -408,6 +475,14 @@ export default function AccountPage() {
                         <span className="font-semibold text-zinc-900">
                           {formatAmount(total, invoice.currency)}
                         </span>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            window.location.href = `/api/campai/invoices/${invoice.id}/download`;
+                          }}
+                        >
+                          Herunterladen
+                        </Button>
                       </div>
                     </article>
                   );

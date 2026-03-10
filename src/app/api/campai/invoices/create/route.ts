@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  type CampaiPaymentMethodType,
+  isCampaiPaymentMethodType,
+} from "@/lib/campai-payment-methods";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
@@ -15,12 +19,25 @@ type AddressPayload = {
 
 type PositionPayload = {
   description: string;
+  unit?: string;
   quantity: number;
   unitAmount: number;
   details?: string;
   taxCode?: string | null;
-  costCenter1?: string | null;
+  costCenter2?: string | null;
   discount?: number;
+};
+
+type CashAccountListResponse = {
+  cashAccounts?: Array<{
+    _id?: string;
+    archivedAt?: string | null;
+    source?: string;
+    finApiConnection?: {
+      connectionId?: number;
+      hasSepaCreditTransfer?: boolean;
+    } | null;
+  }>;
 };
 
 type TaxRateChoice = "0" | "7" | "19";
@@ -33,6 +50,28 @@ const parsePositiveInt = (value: unknown): number | null => {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
     const parsed = Number.parseInt(value, 10);
     return parsed > 0 ? parsed : null;
+  }
+
+  return null;
+};
+
+const normalizeCustomerNumber = (value: unknown): string | null => {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return String(value);
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return value.trim();
+  }
+
+  return null;
+};
+
+const normalizePaymentMethodType = (
+  value: unknown,
+): CampaiPaymentMethodType | null => {
+  if (isCampaiPaymentMethodType(value)) {
+    return value;
   }
 
   return null;
@@ -177,6 +216,10 @@ const normalizeTaxCode = (
 ): string | null => {
   const selectedRate = parseTaxRateChoice(value);
   if (selectedRate) {
+    if (selectedRate === "0") {
+      return null;
+    }
+
     return taxCodeByRate.get(selectedRate) ?? null;
   }
 
@@ -198,6 +241,63 @@ const requiredEnv = (name: string) => {
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
+const normalizeObjectId = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const createSepaReferenceId = () =>
+  String(Date.now() % 10_000_000).padStart(7, "0");
+
+const isAvailableCashAccount = async (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  cashAccountId: string;
+}) => {
+  const { apiKey, organizationId, mandateId, cashAccountId } = params;
+
+  const response = await fetch(
+    `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/cash/accounts/list`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        limit: 100,
+        offset: 0,
+        returnCount: false,
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Campai-Konten konnten nicht geladen werden.");
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | CashAccountListResponse
+    | null;
+
+  const accounts = Array.isArray(payload?.cashAccounts) ? payload.cashAccounts : [];
+
+  return accounts.some(
+    (account) =>
+      typeof account._id === "string" &&
+      account._id.trim() === cashAccountId &&
+      !account.archivedAt &&
+      (account.finApiConnection?.hasSepaCreditTransfer === true ||
+        account.source === "bank"),
+  );
+};
+
 export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
@@ -209,6 +309,7 @@ export const POST = async (request: NextRequest) => {
     address?: AddressPayload;
     email?: string;
     recipientEmail?: string;
+    debtorName?: string;
     sendByMail?: boolean;
     title?: string;
     intro?: string;
@@ -218,6 +319,8 @@ export const POST = async (request: NextRequest) => {
     isNet?: boolean;
     paid?: boolean;
     paymentMethod?: string;
+    paymentCashAccountId?: string;
+    customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
     dueDate?: string;
     deliveryDate?: string;
@@ -243,14 +346,16 @@ export const POST = async (request: NextRequest) => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-  const account = Number.parseInt(requiredEnv("CAMPAI_ACCOUNT"), 10);
-  const accountName = process.env.CAMPAI_ACCOUNT_NAME ?? "";
+  const defaultPositionAccount = Number.parseInt(
+    process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
+    10,
+  );
   const dueDays = Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10);
   const defaultCostCenter1 = getValidDefaultCostCenter();
 
-  if (Number.isNaN(account)) {
+  if (Number.isNaN(defaultPositionAccount)) {
     return NextResponse.json(
-      { error: "Invalid CAMPAI_ACCOUNT" },
+      { error: "Invalid CAMPAI_INVOICE_ACCOUNT/CAMPAI_ACCOUNT" },
       { status: 500 },
     );
   }
@@ -274,15 +379,46 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const payloadReceiptDate = normalizeDate(body.invoiceDate) ?? receiptDate;
+  const payloadReceiptDate = normalizeDate(body.invoiceDate);
   const payloadDueDate = normalizeDate(body.dueDate) ?? dueDate;
   const payloadDeliveryDate = normalizeDate(body.deliveryDate);
+  if (!payloadReceiptDate) {
+    return NextResponse.json(
+      { error: "Missing or invalid invoice date." },
+      { status: 400 },
+    );
+  }
+
+  const selectedCustomerNumber = Array.isArray(body.customerNumber)
+    ? normalizeCustomerNumber(body.customerNumber[0])
+    : normalizeCustomerNumber(body.customerNumber);
+  const debtorAccount = parsePositiveInt(selectedCustomerNumber);
+  const debtorName =
+    typeof body.debtorName === "string" ? body.debtorName.trim() : "";
+  const paymentMethodType = normalizePaymentMethodType(body.paymentMethod);
+  const paymentCashAccountId = normalizeObjectId(body.paymentCashAccountId);
+
+  if (!debtorAccount) {
+    return NextResponse.json(
+      { error: "Missing or invalid debtor account." },
+      { status: 400 },
+    );
+  }
+
+  if (!debtorName) {
+    return NextResponse.json(
+      { error: "Missing debtor name." },
+      { status: 400 },
+    );
+  }
 
   const selectedTaxRates = Array.from(
     new Set(
       rawPositions
         .map((position) => parseTaxRateChoice(position.taxCode))
-        .filter((value): value is TaxRateChoice => Boolean(value)),
+        .filter(
+          (value): value is TaxRateChoice => Boolean(value) && value !== "0",
+        ),
     ),
   );
 
@@ -312,13 +448,10 @@ export const POST = async (request: NextRequest) => {
 
   const positions = rawPositions
     .map((position) => {
-      const rawPositionCostCenter = parsePositiveInt(position.costCenter1);
-      const positionCostCenter =
-        rawPositionCostCenter && isValidCampaiCostCenter1(rawPositionCostCenter)
-          ? rawPositionCostCenter
-          : defaultCostCenter1;
+      const positionCostCenter1 = defaultCostCenter1;
+      const positionCostCenter2 = parsePositiveInt(position.costCenter2);
 
-      if (!positionCostCenter) {
+      if (!positionCostCenter1 || !positionCostCenter2) {
         return null;
       }
 
@@ -326,12 +459,15 @@ export const POST = async (request: NextRequest) => {
         unitAmount: position.unitAmount,
         discount: normalizeDiscount(position.discount),
         description: position.description,
-        account,
+        account: defaultPositionAccount,
         details: position.details ?? "",
         quantity: position.quantity,
-        unit: "",
-        costCenter1: positionCostCenter,
-        costCenter2: null,
+        unit:
+          typeof position.unit === "string" && position.unit.trim()
+            ? position.unit.trim()
+            : "",
+        costCenter1: positionCostCenter1,
+        costCenter2: positionCostCenter2,
         taxCode: normalizeTaxCode(position.taxCode, taxCodeByRate),
       };
     })
@@ -350,8 +486,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   const invalidRawCostCenter = rawPositions.find((position) => {
-    const parsed = parsePositiveInt(position.costCenter1);
-    return parsed !== null && !isValidCampaiCostCenter1(parsed);
+    return parsePositiveInt(position.costCenter2) === null;
   });
 
   const invalidCostCenter = positions.find(
@@ -362,37 +497,93 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json(
       {
         error: invalidRawCostCenter
-          ? "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein. Bitte Kostenstelle korrigieren oder CAMPAI_COST_CENTER1 als gültigen Fallback setzen."
-          : "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein.",
+          ? "Ungültige Kostenstelle. Bitte einen gültigen Werkbereich bzw. ein gültiges Projekt auswählen."
+          : "Ungültige Standard-Sphäre. CAMPAI_COST_CENTER1 muss mit 1, 2, 3, 4 oder 9 beginnen.",
       },
       { status: 400 },
     );
   }
 
+  let paymentMethodPayload:
+    | {
+        type: CampaiPaymentMethodType;
+        sepaCreditTransfer?: {
+          cashAccount: string;
+          referenceId: string;
+          epcQRData: string;
+          sepaMsgId: null;
+        };
+      }
+    | undefined;
+
+  if (paymentMethodType === "sepaCreditTransfer") {
+    if (!paymentCashAccountId) {
+      return NextResponse.json(
+        {
+          error:
+            "Bitte ein Konto für Überweisung auswählen.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const hasCashAccount = await isAvailableCashAccount({
+      apiKey,
+      organizationId,
+      mandateId,
+      cashAccountId: paymentCashAccountId,
+    });
+
+    if (!hasCashAccount) {
+      return NextResponse.json(
+        {
+          error:
+            "Für das ausgewählte Konto konnte kein passendes Campai-Bankkonto gefunden werden.",
+        },
+        { status: 400 },
+      );
+    }
+
+    paymentMethodPayload = {
+      type: paymentMethodType,
+      sepaCreditTransfer: {
+        cashAccount: paymentCashAccountId,
+        referenceId: createSepaReferenceId(),
+        epcQRData: "",
+        sepaMsgId: null,
+      },
+    };
+  } else if (paymentMethodType) {
+    paymentMethodPayload = {
+      type: paymentMethodType,
+    };
+  }
+
   const payload = {
-    draft: true,
+    draft: false,
     address: {
       ...body.address,
       country: String(body.address.country),
     },
-    title: body.title ?? "3D Print Angebot",
-    intro: body.intro ?? "Vielen Dank für deinen Druckauftrag.",
-    account,
+    title: body.title?.trim() || "Rechnung",
+    intro:
+      body.intro?.trim() ||
+      "Für [text] erlauben wir Ihnen folgenden Betrag in Rechnung zu stellen",
+    account: debtorAccount,
     isNet: body.isNet ?? true,
+    deliveryDateType: payloadDeliveryDate ? "delivery" : null,
     receiptDate: payloadReceiptDate,
     dueDate: payloadDueDate,
     deliveryDate: payloadDeliveryDate ?? undefined,
     email: recipientEmail,
     sendMethod: sendByMail ? "email" : "none",
-    accountName,
+    accountName: debtorName,
     receiptNumber: null,
     customerType: "debtor",
-    customerNumber: [],
+    customerNumber: selectedCustomerNumber ? [selectedCustomerNumber] : [],
     description: body.description ?? "",
-    offerStatus: body.paid ? "paid" : "open",
     paid: body.paid === true,
-    paymentMethod:
-      typeof body.paymentMethod === "string" ? body.paymentMethod : undefined,
+    paymentMethod: paymentMethodPayload,
     note: body.note ?? "",
     discount: 0,
     discountType: "%",
@@ -402,8 +593,26 @@ export const POST = async (request: NextRequest) => {
     tags: ["API"],
   };
 
+  console.info("Campai invoice payload debug", {
+    account: payload.account,
+    accountName: payload.accountName,
+    customerType: payload.customerType,
+    customerNumber: payload.customerNumber,
+    defaultPositionAccount,
+    debtorAccount,
+    positions: payload.positions.map((position) => ({
+      description: position.description,
+      account: position.account,
+      unitAmount: position.unitAmount,
+      quantity: position.quantity,
+      costCenter1: position.costCenter1,
+      costCenter2: position.costCenter2,
+      taxCode: position.taxCode,
+    })),
+  });
+
   const response = await fetch(
-    `https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/offer`,
+    `https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/invoice`,
     {
       method: "POST",
       headers: {

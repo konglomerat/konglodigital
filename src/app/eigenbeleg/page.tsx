@@ -116,100 +116,375 @@ function normalizeValue(value?: string) {
   return trimmed.length > 0 ? trimmed : "-";
 }
 
-function createEigenbelegPdf(values: FormValues) {
-  const document = new jsPDF({ unit: "mm", format: "a4" });
-  const pageHeight = document.internal.pageSize.getHeight();
-  const leftMargin = 15;
-  const rightMargin = 15;
-  const maxWidth =
-    document.internal.pageSize.getWidth() - leftMargin - rightMargin;
-  let cursorY = 16;
+function generateBelegnummer(date: string) {
+  const d = date ? new Date(date) : new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mi = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return `EGB${yy}${mm}${dd}${hh}${mi}${ss}`;
+}
 
-  const writeHeading = (text: string) => {
-    if (cursorY > pageHeight - 15) {
-      document.addPage();
-      cursorY = 16;
-    }
+function formatAmount(value?: string) {
+  if (!value || !value.trim()) return null;
+  const normalized = value.trim().replace(",", ".");
+  const num = Number.parseFloat(normalized);
+  if (Number.isNaN(num)) return value.trim();
+  return num.toLocaleString("de-DE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
-    document.setFont("helvetica", "bold");
-    document.setFontSize(12);
-    document.text(text, leftMargin, cursorY);
-    cursorY += 7;
-  };
+function buildSenderLine(values: FormValues) {
+  const parts = [values.senderName];
+  if (values.senderAccount?.trim()) parts.push(`– ${values.senderAccount.trim()} –`);
+  if (values.senderArea?.trim()) parts.push(`– ${values.senderArea.trim()} –`);
+  if (values.senderProject?.trim()) parts.push(values.senderProject.trim());
+  if (values.senderSplit?.trim()) parts.push(`(${values.senderSplit.trim()})`);
+  return parts.join(" ");
+}
 
-  const writeLine = (label: string, value: string) => {
-    if (cursorY > pageHeight - 15) {
-      document.addPage();
-      cursorY = 16;
-    }
+function buildReceiverLine(values: FormValues) {
+  const parts = [values.receiverName];
+  if (values.receiverAccount?.trim()) parts.push(`– ${values.receiverAccount.trim()} –`);
+  if (values.receiverArea?.trim()) parts.push(`– ${values.receiverArea.trim()} –`);
+  if (values.receiverProject?.trim()) parts.push(values.receiverProject.trim());
+  if (values.receiverSplit?.trim()) parts.push(`(${values.receiverSplit.trim()})`);
+  return parts.join(" ");
+}
 
-    document.setFont("helvetica", "bold");
-    document.setFontSize(10);
-    document.text(`${label}:`, leftMargin, cursorY);
+async function loadLogoAsDataUrl(): Promise<string | null> {
+  try {
+    const response = await fetch("/konglodigital-logo.svg");
+    const svgText = await response.text();
+    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
 
-    document.setFont("helvetica", "normal");
-    const wrappedValue = document.splitTextToSize(value, maxWidth);
-    document.text(wrappedValue, leftMargin + 40, cursorY);
-    cursorY += Math.max(wrappedValue.length * 5, 6);
-  };
-
-  document.setFont("helvetica", "bold");
-  document.setFontSize(16);
-  document.text("Eigenbeleg", leftMargin, cursorY);
-  cursorY += 8;
-
-  document.setFont("helvetica", "normal");
-  document.setFontSize(10);
-  document.text(
-    `Erstellt am: ${new Date().toLocaleString("de-DE")}`,
-    leftMargin,
-    cursorY,
-  );
-  cursorY += 9;
-
-  writeHeading("Kontaktdaten");
-  writeLine("E-Mail-Adresse", normalizeValue(values.email));
-
-  writeHeading("Belegangaben");
-  writeLine("Grund des Eigenbelegs", normalizeValue(values.reason));
-  if (values.reason === "Sonstiges") {
-    writeLine("Sonstiger Grund", normalizeValue(values.reasonOther));
+    return new Promise((resolve) => {
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = 2;
+        canvas.width = img.naturalWidth * scale;
+        canvas.height = img.naturalHeight * scale;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+        URL.revokeObjectURL(url);
+        resolve(dataUrl);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    });
+  } catch {
+    return null;
   }
-  writeLine("Anlass", normalizeValue(values.occasion));
-  writeLine("Verweis auf Dokument", normalizeValue(values.documentReference));
-  writeLine("Datum der Transaktion", getFormattedDate(values.transactionDate));
-  writeLine("Nachweis-Datei", normalizeValue(values.evidence?.item(0)?.name));
+}
 
-  writeHeading("Aufwendung gesamt");
-  writeLine("Einnahme Verein", normalizeValue(values.income));
-  writeLine("Ausgabe Verein", normalizeValue(values.expense));
-  writeLine("Umbuchung", normalizeValue(values.transferAmount));
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
 
-  writeHeading("Sender [S]");
-  writeLine("Name", normalizeValue(values.senderName));
-  writeLine("Zusatzangaben", normalizeValue(values.senderAdditional));
-  writeLine("Konto/Kasse", normalizeValue(values.senderAccount));
-  writeLine("Bereich", normalizeValue(values.senderArea));
-  writeLine("Projekt", normalizeValue(values.senderProject));
-  writeLine("Aufteilung", normalizeValue(values.senderSplit));
+const fontCache = new Map<string, string>();
 
-  writeHeading("Empfaenger [E]");
-  writeLine("Name", normalizeValue(values.receiverName));
-  writeLine("Zusatzangaben", normalizeValue(values.receiverAdditional));
-  writeLine("Konto/Kasse", normalizeValue(values.receiverAccount));
-  writeLine("Bereich", normalizeValue(values.receiverArea));
-  writeLine("Projekt", normalizeValue(values.receiverProject));
-  writeLine("Aufteilung", normalizeValue(values.receiverSplit));
+async function loadFontAsBase64(url: string): Promise<string> {
+  if (fontCache.has(url)) return fontCache.get(url)!;
+  const response = await fetch(url);
+  const buffer = await response.arrayBuffer();
+  const base64 = arrayBufferToBase64(buffer);
+  fontCache.set(url, base64);
+  return base64;
+}
 
-  writeHeading("Status & Notizen");
-  writeLine("Rechnung beglichen", normalizeValue(values.invoiceStatus));
-  writeLine("Notizen", normalizeValue(values.notes));
+async function registerFiraSansFonts(doc: jsPDF) {
+  const fonts = [
+    { file: "FiraSans-Regular.ttf", family: "FiraSans", style: "normal" },
+    { file: "FiraSans-Bold.ttf", family: "FiraSans", style: "bold" },
+    { file: "FiraSans-ExtraBold.ttf", family: "FiraSansExtraBold", style: "bold" },
+    { file: "FiraSansCondensed-Regular.ttf", family: "FiraSansCondensed", style: "normal" },
+    { file: "FiraSansCondensed-Bold.ttf", family: "FiraSansCondensed", style: "bold" },
+  ];
+
+  await Promise.all(
+    fonts.map(async ({ file, family, style }) => {
+      const base64 = await loadFontAsBase64(`/fonts/${file}`);
+      doc.addFileToVFS(file, base64);
+      doc.addFont(file, family, style);
+    }),
+  );
+}
+
+async function createEigenbelegPdf(values: FormValues) {
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: "a5",
+  });
+
+  // ── Register Fira Sans fonts ──
+  await registerFiraSansFonts(doc);
+
+  const pageW = doc.internal.pageSize.getWidth(); // ~210
+  const pageH = doc.internal.pageSize.getHeight(); // ~148
+  const margin = 16;
+  const contentW = pageW - margin * 2; // ~178
+  const leftColW = contentW * 0.634; // ~113 – matches template 326.2/514.4
+  const rightColX = margin + leftColW + 3;
+  const rightColW = contentW - leftColW - 3; // ~62
+  const belegnummer = generateBelegnummer(values.transactionDate);
+
+  // ── colours (from template HTML) ──
+  const dark: [number, number, number] = [34, 34, 34]; // #222222
+  const dashColor: [number, number, number] = [67, 67, 67]; // #434343
+  const muted: [number, number, number] = [102, 102, 102]; // #666666
+
+  // ── helper: dashed separator line ──
+  const drawDashedLine = (yPos: number, x1 = margin, x2 = margin + leftColW) => {
+    doc.setDrawColor(...dashColor);
+    doc.setLineWidth(0.5);
+    const dashLen = 2;
+    const gapLen = 1.5;
+    let x = x1;
+    while (x < x2) {
+      const end = Math.min(x + dashLen, x2);
+      doc.line(x, yPos, end, yPos);
+      x = end + gapLen;
+    }
+  };
+
+  // ── Row 1: Title "Eigenbeleg" (right-aligned in left column) ──
+  let y = margin + 3;
+  doc.setFont("FiraSansExtraBold", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(...dark);
+  doc.text("Eigenbeleg", margin + leftColW, y, { align: "right" });
+
+  // ── Logo (top-right, spanning rows 1+2) ──
+  const logoDataUrl = await loadLogoAsDataUrl();
+  const logoW = 55;
+  const logoH = 18;
+  if (logoDataUrl) {
+    doc.addImage(
+      logoDataUrl,
+      "PNG",
+      pageW - margin - logoW,
+      margin - 2,
+      logoW,
+      logoH,
+    );
+  }
+
+  // ── Dashed line below title ──
+  y += 3;
+  drawDashedLine(y);
+
+  // ── Row 2: Beleg für / Von / An ──
+  y += 6;
+  const reasonText =
+    values.reason === "Sonstiges" && values.reasonOther?.trim()
+      ? values.reasonOther.trim()
+      : values.reason;
+  doc.setFont("FiraSans", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...dark);
+  doc.text(`Beleg für: ${reasonText.toUpperCase()}`, margin, y);
+
+  // Von:
+  y += 8;
+  doc.setFont("FiraSansCondensed", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...dark);
+  doc.text("Von:", margin, y);
+  doc.setFont("FiraSansCondensed", "normal");
+  doc.setFontSize(10);
+  const senderText = buildSenderLine(values);
+  const senderLines = doc.splitTextToSize(senderText, leftColW - 18);
+  doc.text(senderLines, margin + 14, y);
+  y += senderLines.length * 4.5 + 2;
+
+  // An:
+  doc.setFont("FiraSansCondensed", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...dark);
+  doc.text("An:", margin, y);
+  doc.setFont("FiraSansCondensed", "normal");
+  doc.setFontSize(10);
+  const receiverText = buildReceiverLine(values);
+  const receiverLines = doc.splitTextToSize(receiverText, leftColW - 18);
+  doc.text(receiverLines, margin + 14, y);
+  y += receiverLines.length * 4.5 + 4;
+
+  // ── Row 3: Anlass (left) | Gesamtbetrag + Datum (right) ──
+  const row3Y = y + 2;
+
+  // -- Left: Anlass --
+  let leftY = row3Y;
+  doc.setFont("FiraSansExtraBold", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...dark);
+  doc.text("Anlass:", margin, leftY);
+  leftY += 6;
+
+  doc.setFont("FiraSansCondensed", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...dark);
+  const occasionLines = doc.splitTextToSize(
+    normalizeValue(values.occasion),
+    leftColW - 2,
+  );
+  doc.text(occasionLines, margin, leftY);
+  leftY += occasionLines.length * 4.5 + 3;
+
+  // -- Verweis --
+  if (values.documentReference?.trim()) {
+    doc.setFont("FiraSans", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...dark);
+    doc.text("– Verweis –", margin, leftY);
+    leftY += 4.5;
+
+    doc.setFont("FiraSansCondensed", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...dark);
+    const refLines = doc.splitTextToSize(
+      values.documentReference.trim(),
+      leftColW - 2,
+    );
+    doc.text(refLines, margin, leftY);
+    leftY += refLines.length * 4 + 2;
+  }
+
+  // additional amounts info
+  const incomeFormatted = formatAmount(values.income);
+  const expenseFormatted = formatAmount(values.expense);
+  const transferFormatted = formatAmount(values.transferAmount);
+
+  const secondaryParts: string[] = [];
+  if (incomeFormatted) secondaryParts.push(`Einnahme: ${incomeFormatted} €`);
+  if (expenseFormatted) secondaryParts.push(`Ausgabe: ${expenseFormatted} €`);
+  if (transferFormatted) secondaryParts.push(`Umbuchung: ${transferFormatted} €`);
+
+  if (secondaryParts.length > 1) {
+    leftY += 2;
+    doc.setFont("FiraSans", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(secondaryParts.join("  |  "), margin, leftY);
+    leftY += 4;
+  }
+
+  // status
+  if (values.invoiceStatus) {
+    doc.setFont("FiraSans", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(
+      `Status: ${values.invoiceStatus === "bezahlt" ? "bezahlt" : "offen"}`,
+      margin,
+      leftY,
+    );
+    leftY += 4;
+  }
+
+  // notes
+  if (values.notes?.trim()) {
+    leftY += 1;
+    doc.setFont("FiraSans", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    const noteLines = doc.splitTextToSize(values.notes.trim(), leftColW - 2);
+    doc.text(noteLines, margin, leftY);
+  }
+
+  // -- Right: Gesamtbetrag + Transaktionsdatum --
+  let rightY = row3Y;
+  const primaryAmount =
+    transferFormatted ?? expenseFormatted ?? incomeFormatted ?? "-";
+
+  doc.setFont("FiraSans", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...dark);
+  doc.text("Gesamtbetrag", rightColX, rightY);
+  rightY += 5.5;
+
+  doc.setFont("FiraSans", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(...dark);
+  doc.text(`${primaryAmount} EURO`, rightColX, rightY);
+  rightY += 9;
+
+  doc.setFont("FiraSans", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...dark);
+  doc.text("Transaktionsdatum", rightColX, rightY);
+  rightY += 5.5;
+
+  doc.setFont("FiraSans", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(...dark);
+  doc.text(getFormattedDate(values.transactionDate), rightColX, rightY);
+
+  // ── Footer row: Belegnummer | Datum + Seite ──
+  const footerRowY = pageH - margin - 14;
+  const creationDate = new Date().toLocaleDateString("de-DE");
+
+  // Belegnummer
+  doc.setFont("FiraSansExtraBold", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...dark);
+  doc.text("Belegnummer:", margin, footerRowY);
+  doc.setFont("FiraSans", "normal");
+  doc.setFontSize(9);
+  doc.text(` ${belegnummer}`, margin + 25, footerRowY);
+
+  // Datum + Seite (right-aligned)
+  doc.setFont("FiraSansExtraBold", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...dark);
+  doc.text("Datum:", pageW - margin - 32, footerRowY);
+  doc.text("Seite:", pageW - margin - 32, footerRowY + 4.5);
+
+  doc.setFont("FiraSans", "normal");
+  doc.setFontSize(9);
+  doc.text(creationDate, pageW - margin - 14, footerRowY);
+  doc.text("1/1", pageW - margin - 14, footerRowY + 4.5);
+
+  // ── Organisation line at very bottom ──
+  const orgY = pageH - margin - 1;
+  doc.setFont("FiraSans", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text(
+    "Konglomerat e.V. | Jagdweg 1–3, 01159 Dresden | vorstand@konglomerat.org",
+    margin,
+    orgY,
+  );
 
   const fileDate =
     values.transactionDate || new Date().toISOString().slice(0, 10);
   const fileName = `eigenbeleg-${fileDate}.pdf`;
-  const bytes = new Uint8Array(document.output("arraybuffer"));
-  document.save(fileName);
+  const bytes = new Uint8Array(doc.output("arraybuffer"));
+  doc.save(fileName);
   return { fileName, bytes };
 }
 
@@ -382,7 +657,7 @@ export default function EigenbelegPage() {
 
     clearErrors("reasonOther");
     const { fileName: generatedPdfFileName, bytes: generatedPdfBytes } =
-      createEigenbelegPdf(values);
+      await createEigenbelegPdf(values);
 
     const evidenceFile = values.evidence?.item(0) ?? null;
     const attachment = await buildAttachmentForCampai({
@@ -809,24 +1084,6 @@ export default function EigenbelegPage() {
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                kind="secondary"
-                icon={faFolderOpen}
-                onClick={handleLoadTestData}
-              >
-                Testdaten laden
-              </Button>
-              <Button
-                type="submit"
-                kind="primary"
-                icon={faCalendarCheck}
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Wird gespeichert…"
-                  : "Speichern & PDF erstellen"}
-              </Button>
               {submittedAt ? (
                 <p className="text-sm text-emerald-700">
                   Formular lokal erfasst: {submittedAt}
@@ -843,6 +1100,26 @@ export default function EigenbelegPage() {
               {storeResult?.error ? (
                 <p className="text-sm text-rose-700">{storeResult.error}</p>
               ) : null}
+
+              <Button
+                type="button"
+                kind="secondary"
+                icon={faFolderOpen}
+                onClick={handleLoadTestData}
+              >
+                Testdaten laden
+              </Button>
+              <Button
+                type="submit"
+                kind="primary"
+                icon={faCalendarCheck}
+                disabled={isSubmitting}
+                className="ml-auto"
+              >
+                {isSubmitting
+                  ? "Wird gespeichert…"
+                  : "Speichern & PDF erstellen"}
+              </Button>
             </div>
           </div>
         </form>
