@@ -93,7 +93,7 @@ export default async function RootLayout({
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
   const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-3.5 text-sm font-medium transition last:border-b-0";
+    "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-2.5 text-sm font-medium transition last:border-b-0";
   const navLinkClassName =
     "group flex items-center gap-3 border-b border-zinc-200/15 bg-transparent px-2 py-2.5 text-sm font-medium text-zinc-700 transition hover:text-zinc-900";
   const navSectionTitleClassName =
@@ -135,7 +135,7 @@ export default async function RootLayout({
                     </summary>
                   }
                 >
-                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto border border-zinc-200 bg-white shadow-lg">
+                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
                     <nav className="flex flex-col px-2 py-2">
                       <p className={navSectionTitleClassName}>
                         Digital Fabrication
