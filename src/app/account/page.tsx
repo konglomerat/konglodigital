@@ -11,20 +11,17 @@ type AccountUser = {
   metadata: Record<string, unknown>;
 };
 
-type DebtorSuggestion = {
-  account: number;
-  name: string;
-};
-
-const normalizeComparableName = (value?: string | null) => {
-  if (!value) {
-    return "";
+const parseDebtorAccount = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
   }
 
-  return value
-    .trim()
-    .toLocaleLowerCase("de-DE")
-    .replace(/\s+/g, " ");
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 };
 
 const formatDate = (value?: string) => {
@@ -102,6 +99,20 @@ export default function AccountPage() {
     return [first, last].filter(Boolean).join(" ");
   }, [user]);
 
+  const campaiName = useMemo(() => {
+    const linkedName =
+      typeof user?.metadata.campai_name === "string"
+        ? user.metadata.campai_name.trim()
+        : "";
+
+    return linkedName || fullName;
+  }, [fullName, user]);
+
+  const linkedDebtorAccount = useMemo(
+    () => parseDebtorAccount(user?.metadata.campai_debtor_account),
+    [user],
+  );
+
   useEffect(() => {
     let active = true;
     const loadUser = async () => {
@@ -141,9 +152,10 @@ export default function AccountPage() {
   }, []);
 
   useEffect(() => {
-    if (!user || !fullName) {
+    if (!user || linkedDebtorAccount === null) {
       setCampaiInvoices([]);
       setDebtorAccount(null);
+      setCampaiDebug(null);
       return;
     }
 
@@ -151,28 +163,7 @@ export default function AccountPage() {
     const loadInvoices = async () => {
       setCampaiError(null);
       try {
-        const debtorResponse = await fetchJson<{
-          suggestions: DebtorSuggestion[];
-        }>(`/api/campai/debtors?q=${encodeURIComponent(fullName)}`);
-
-        if (!active) {
-          return;
-        }
-
-        const matchingDebtor = (debtorResponse.suggestions ?? []).find(
-          (debtor) =>
-            normalizeComparableName(debtor.name) ===
-            normalizeComparableName(fullName),
-        );
-
-        if (!matchingDebtor) {
-          setDebtorAccount(null);
-          setCampaiInvoices([]);
-          setCampaiDebug(null);
-          return;
-        }
-
-        setDebtorAccount(matchingDebtor.account);
+        setDebtorAccount(linkedDebtorAccount);
 
         const data = await fetchJson<{
           invoices: InvoicePayload[];
@@ -184,7 +175,7 @@ export default function AccountPage() {
             sort: { receiptDate: "desc" },
             limit: 100,
             offset: 0,
-            account: matchingDebtor.account,
+            account: linkedDebtorAccount,
             debug,
           }),
         });
@@ -196,6 +187,7 @@ export default function AccountPage() {
       } catch (fetchError) {
         if (active) {
           setDebtorAccount(null);
+          setCampaiInvoices([]);
           setCampaiError(
             fetchError instanceof Error
               ? fetchError.message
@@ -210,7 +202,7 @@ export default function AccountPage() {
     return () => {
       active = false;
     };
-  }, [user, fullName, debug]);
+  }, [user, linkedDebtorAccount, debug]);
 
   const handleProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -416,10 +408,10 @@ export default function AccountPage() {
                 </h2>
                 <p className="text-sm text-zinc-500">
                   {debtorAccount
-                    ? `Debitor: ${fullName} · Konto ${debtorAccount}`
-                    : fullName
-                      ? `Debitor: ${fullName}`
-                    : "Kein Name im Profil hinterlegt"}
+                    ? `Debitor: ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
+                    : campaiName
+                      ? `Debitor: ${campaiName}`
+                      : "Kein Campai-Debitor im Profil hinterlegt"}
                 </p>
               </div>
               <p className="text-xs font-semibold text-zinc-500">
@@ -429,14 +421,9 @@ export default function AccountPage() {
 
             {campaiError ? (
               <p className="mt-4 text-sm text-rose-600">{campaiError}</p>
-            ) : !fullName ? (
+            ) : linkedDebtorAccount === null ? (
               <p className="mt-4 text-sm text-zinc-500">
-                Im Profil muss ein Vor- und Nachname hinterlegt sein, damit die
-                passenden Debitor-Rechnungen angezeigt werden können.
-              </p>
-            ) : !debtorAccount ? (
-              <p className="mt-4 text-sm text-zinc-500">
-                Kein passender Debitor mit dem Namen {fullName} gefunden.
+                Dein Konto ist noch nicht mit einem Campai-Debitor verknpft.
               </p>
             ) : campaiInvoices.length === 0 ? (
               <p className="mt-4 text-sm text-zinc-500">

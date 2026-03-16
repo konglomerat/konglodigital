@@ -1,0 +1,301 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
+
+import Button from "../../components/Button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+const supabase = createSupabaseBrowserClient();
+
+type RegistrationProfile = {
+  firstName: string;
+  lastName: string;
+  memberNumber: string;
+};
+
+const getRegistrationProfile = async (
+  user: User | null,
+): Promise<RegistrationProfile | null> => {
+  if (!user) {
+    return null;
+  }
+
+  const firstName =
+    typeof user.user_metadata?.first_name === "string"
+      ? user.user_metadata.first_name.trim()
+      : "";
+  const lastName =
+    typeof user.user_metadata?.last_name === "string"
+      ? user.user_metadata.last_name.trim()
+      : "";
+
+  if (!firstName || !lastName) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("member_profiles")
+    .select("campai_member_number")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const memberNumber =
+    typeof data?.campai_member_number === "string"
+      ? data.campai_member_number.trim()
+      : "";
+
+  if (!firstName || !lastName || !memberNumber) {
+    return null;
+  }
+
+  return { firstName, lastName, memberNumber };
+};
+
+export default function RegisterCompletePage() {
+  const searchParams = useSearchParams();
+  const [profile, setProfile] = useState<RegistrationProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUser = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      const code = searchParams.get("code");
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError && isMounted) {
+          setError("Der Registrierungslink ist ungueltig oder abgelaufen.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (userError) {
+        setError("Der Registrierungslink konnte nicht geladen werden.");
+        setIsLoading(false);
+        return;
+      }
+
+      let nextProfile: RegistrationProfile | null = null;
+
+      try {
+        nextProfile = await getRegistrationProfile(user);
+      } catch {
+        setError("Der Registrierungslink konnte nicht geladen werden.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!nextProfile) {
+        setError("Dieser Registrierungslink ist ungueltig, unvollstaendig oder bereits abgelaufen.");
+        setIsLoading(false);
+        return;
+      }
+
+      setProfile(nextProfile);
+      setIsLoading(false);
+    };
+
+    void loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      void (async () => {
+        if (!isMounted) {
+          return;
+        }
+
+        try {
+          const nextProfile = await getRegistrationProfile(session?.user ?? null);
+          if (nextProfile) {
+            setProfile(nextProfile);
+            setError(null);
+            setIsLoading(false);
+          }
+        } catch {
+          setError("Der Registrierungslink konnte nicht geladen werden.");
+          setIsLoading(false);
+        }
+      })();
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [searchParams]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setError(null);
+    setSuccess(null);
+    setIsSaving(true);
+
+    const formData = new FormData(form);
+    const password = String(formData.get("password") ?? "").trim();
+    const passwordConfirmation = String(formData.get("passwordConfirmation") ?? "").trim();
+
+    if (password.length < 8) {
+      setError("Bitte verwende ein Passwort mit mindestens 8 Zeichen.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setError("Die Passwoerter stimmen nicht ueberein.");
+      setIsSaving(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+
+    if (updateError) {
+      setError(updateError.message);
+      setIsSaving(false);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setSuccess("Dein Passwort wurde gespeichert. Du kannst dich jetzt anmelden.");
+    setIsSaving(false);
+    form.reset();
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
+      <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-zinc-900">Registrierung abschliessen</h1>
+        <p className="mt-2 text-sm text-zinc-500">
+          Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem Mitgliedskonto.
+        </p>
+
+        {isLoading ? (
+          <p className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            Registrierungslink wird geladen ...
+          </p>
+        ) : null}
+
+        {profile ? (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Vorname
+                </label>
+                <input
+                  value={profile.firstName}
+                  disabled
+                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Nachname
+                </label>
+                <input
+                  value={profile.lastName}
+                  disabled
+                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Mitgliedsnummer
+              </label>
+              <input
+                value={profile.memberNumber}
+                disabled
+                className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Passwort
+              </label>
+              <input
+                name="password"
+                type="password"
+                minLength={8}
+                required
+                className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Passwort wiederholen
+              </label>
+              <input
+                name="passwordConfirmation"
+                type="password"
+                minLength={8}
+                required
+                className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              />
+            </div>
+
+            {error ? (
+              <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </p>
+            ) : null}
+
+            {success ? (
+              <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <p>{success}</p>
+                <Link className="font-semibold underline" href="/login">
+                  Zur Anmeldung
+                </Link>
+              </div>
+            ) : null}
+
+            <Button
+              type="submit"
+              kind="primary"
+              className="w-full px-4 py-2 text-sm"
+              disabled={isSaving}
+            >
+              {isSaving ? "Passwort wird gespeichert ..." : "Registrierung abschliessen"}
+            </Button>
+          </form>
+        ) : null}
+
+        {!isLoading && !profile && error ? (
+          <div className="mt-6 space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <p>{error}</p>
+            <Link className="font-semibold underline" href="/register">
+              Neue Registrierung starten
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

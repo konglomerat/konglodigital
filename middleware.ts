@@ -9,6 +9,7 @@ import {
 
 const protectedPagePrefixes = [
   "/account",
+  "/admin",
   "/monatsbeitrag",
   "/resources",
   "/invoices",
