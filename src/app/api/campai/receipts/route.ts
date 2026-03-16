@@ -62,6 +62,13 @@ const resolveCostCenter = (
   );
 };
 
+const parseBookingType = (value: unknown): "ausgabe" | "einnahme" | null => {
+  if (value === "ausgabe" || value === "einnahme") {
+    return value;
+  }
+  return null;
+};
+
 const toIsoDate = (value: unknown): string => {
   if (typeof value !== "string" || !value.trim()) {
     return new Date().toISOString().slice(0, 10);
@@ -255,6 +262,12 @@ export const POST = async (request: NextRequest) => {
       requiredEnv("CAMPAI_CREDITOR_ACCOUNT"),
       10,
     );
+    const revenueAccount = Number.parseInt(
+      process.env.CAMPAI_REVENUE_ACCOUNT ??
+        process.env.CAMPAI_INCOME_ACCOUNT ??
+        requiredEnv("CAMPAI_ACCOUNT"),
+      10,
+    );
     const expenseAccount = Number.parseInt(
       process.env.CAMPAI_EXPENSE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
       10,
@@ -272,6 +285,16 @@ export const POST = async (request: NextRequest) => {
     if (!Number.isInteger(expenseAccount) || expenseAccount <= 0) {
       return NextResponse.json(
         { error: "Invalid CAMPAI_EXPENSE_ACCOUNT/CAMPAI_ACCOUNT" },
+        { status: 500 },
+      );
+    }
+
+    if (!Number.isInteger(revenueAccount) || revenueAccount <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid CAMPAI_REVENUE_ACCOUNT/CAMPAI_INCOME_ACCOUNT/CAMPAI_ACCOUNT",
+        },
         { status: 500 },
       );
     }
@@ -296,6 +319,14 @@ export const POST = async (request: NextRequest) => {
     const transferAmount = parseAmountToCents(body.transferAmount);
     const incomeAmount = parseAmountToCents(body.income);
     const amount = expenseAmount || transferAmount || incomeAmount;
+    const bookingType =
+      parseBookingType(body.bookingType) ??
+      (incomeAmount > 0 && expenseAmount === 0 && transferAmount === 0
+        ? "einnahme"
+        : "ausgabe");
+    const isRevenueReceipt = bookingType === "einnahme";
+    const counterpartyAccount = parsePositiveInt(body.counterpartyAccount);
+    const costCenter2 = parsePositiveInt(body.costCenter2);
 
     if (amount <= 0) {
       return NextResponse.json(
@@ -307,11 +338,27 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
+    if (!counterpartyAccount) {
+      return NextResponse.json(
+        {
+          error:
+            isRevenueReceipt
+              ? "Bitte einen gültigen Debitor auswählen."
+              : "Bitte einen gültigen Kreditor auswählen.",
+        },
+        { status: 400 },
+      );
+    }
+
     const reason = compactText(body.reason, "Eigenbeleg");
     const occasion = compactText(body.occasion, "Eigenbeleg");
     const notes = compactText(body.notes);
     const senderName = compactText(body.senderName);
     const receiverName = compactText(body.receiverName);
+    const counterpartyName = compactText(
+      body.counterpartyName,
+      isRevenueReceipt ? senderName : receiverName,
+    );
     const receiptDate = toIsoDate(body.transactionDate);
     const dueDate = receiptDate;
     const timeStamp = new Date()
@@ -356,9 +403,32 @@ export const POST = async (request: NextRequest) => {
       fileContentType: receiptFileContentType,
     });
 
-    // ── Kreditor-Konto: Fallback auf Env-Variable ──
-    const finalAccount = creditorAccount;
-    const finalAccountName = accountName;
+    if (receiptFileBase64 && !receiptFileId) {
+      return NextResponse.json(
+        {
+          error:
+            uploadWarning ??
+            "Datei-Upload zu Campai fehlgeschlagen. Beleg wurde nicht erstellt.",
+        },
+        { status: 502 },
+      );
+    }
+
+    const fallbackCounterpartyAccount = isRevenueReceipt ? null : creditorAccount;
+    const finalAccount = counterpartyAccount ?? fallbackCounterpartyAccount;
+    const finalAccountName = counterpartyName || accountName;
+
+    if (!finalAccount) {
+      return NextResponse.json(
+        {
+          error:
+            "Kein gültiges Gegenkonto für den Campai-Beleg verfügbar.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const positionAccount = isRevenueReceipt ? revenueAccount : expenseAccount;
 
     const payload: Record<string, unknown> = {
       account: finalAccount,
@@ -372,11 +442,11 @@ export const POST = async (request: NextRequest) => {
       refund: false,
       positions: [
         {
-          account: expenseAccount,
+          account: positionAccount,
           amount,
           description: occasion.slice(0, 140),
           costCenter1,
-          costCenter2: null,
+          costCenter2,
           taxCode: null,
         },
       ],
@@ -390,22 +460,30 @@ export const POST = async (request: NextRequest) => {
       payload.receiptFileName = receiptFileName;
     }
 
-    const response = await fetch(`${baseUrl}/receipts/expense`, {
+    const response = await fetch(
+      `${baseUrl}/receipts/${isRevenueReceipt ? "revenue" : "expense"}`,
+      {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": apiKey,
       },
       body: JSON.stringify(payload),
-    });
+      },
+    );
 
     if (!response.ok) {
       const errorBody = await response.text();
       const normalized = errorBody.toLowerCase();
       const accountHint =
-        normalized.includes("kreditor") ||
-        normalized.includes("valides kreditoren-konto")
-          ? "Campai erwartet ein gültiges Kreditoren-Konto. Setze CAMPAI_CREDITOR_ACCOUNT auf ein vorhandenes Kreditorenkonto und CAMPAI_EXPENSE_ACCOUNT (oder CAMPAI_ACCOUNT) auf das Aufwandskonto."
+        !isRevenueReceipt &&
+        (normalized.includes("kreditor") ||
+          normalized.includes("valides kreditoren-konto"))
+          ? "Campai erwartet ein gültiges Kreditoren-Konto. Wähle einen vorhandenen Kreditor aus oder setze CAMPAI_CREDITOR_ACCOUNT auf ein gültiges Fallback-Konto."
+          : isRevenueReceipt &&
+              (normalized.includes("debitor") ||
+                normalized.includes("valides debitoren-konto"))
+            ? "Campai erwartet ein gültiges Debitoren-Konto. Wähle einen vorhandenen Debitor aus."
           : undefined;
       return NextResponse.json(
         {
