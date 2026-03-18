@@ -99,6 +99,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       />
     );
@@ -118,6 +119,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           "min-h-24 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       />
     );
@@ -137,6 +139,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       >
         {children}
@@ -162,6 +165,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             "h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30",
             className,
           )}
+          autoComplete={props.autoComplete ?? "off"}
           {...props}
         />
         <span>{label}</span>

@@ -54,13 +54,18 @@ export default function RegisterPage() {
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label
+              htmlFor="register-email"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+            >
               Email
             </label>
             <input
+              id="register-email"
               name="email"
               type="email"
               required
+              autoComplete="email"
               className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
             />
             <p className="text-xs text-zinc-500">

@@ -203,60 +203,85 @@ export default function RegisterCompletePage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label
+                  htmlFor="register-complete-first-name"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                >
                   Vorname
                 </label>
                 <input
+                  id="register-complete-first-name"
                   value={profile.firstName}
                   disabled
+                  autoComplete="off"
                   className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label
+                  htmlFor="register-complete-last-name"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                >
                   Nachname
                 </label>
                 <input
+                  id="register-complete-last-name"
                   value={profile.lastName}
                   disabled
+                  autoComplete="off"
                   className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <label
+                htmlFor="register-complete-member-number"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+              >
                 Mitgliedsnummer
               </label>
               <input
+                id="register-complete-member-number"
                 value={profile.memberNumber}
                 disabled
+                autoComplete="off"
                 className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <label
+                htmlFor="register-complete-password"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+              >
                 Passwort
               </label>
               <input
+                id="register-complete-password"
                 name="password"
                 type="password"
                 minLength={8}
                 required
+                autoComplete="new-password"
                 className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <label
+                htmlFor="register-complete-password-confirmation"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+              >
                 Passwort wiederholen
               </label>
               <input
+                id="register-complete-password-confirmation"
                 name="passwordConfirmation"
                 type="password"
                 minLength={8}
                 required
+                autoComplete="new-password"
                 className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
               />
             </div>

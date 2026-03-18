@@ -38,6 +38,8 @@ const toStringValue = (value: unknown): string | null => {
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
+const CAMP_AI_MEMBER_PAGE_SIZE = 100;
+
 const toInteger = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.trunc(value);
@@ -255,7 +257,7 @@ const fetchCampaiMemberContactsPage = async (params: {
         types: ["member"],
         returnCount: true,
         segments: ["members"],
-        limit: params.limit ?? 20,
+        limit: params.limit ?? CAMP_AI_MEMBER_PAGE_SIZE,
         offset: params.offset ?? 0,
         ...(params.searchTerm ? { searchTerm: params.searchTerm } : {}),
       }),
@@ -331,21 +333,34 @@ export const getCampaiActiveMemberContactByEmail = async (email: string) => {
     return null;
   }
 
-  const { contacts } = await fetchCampaiMemberContactsPage({
-    searchTerm: normalizedEmail,
-    limit: 100,
-    offset: 0,
-  });
+  for (let offset = 0; offset < 4000; offset += CAMP_AI_MEMBER_PAGE_SIZE) {
+    const { contacts, totalCount } = await fetchCampaiMemberContactsPage({
+      limit: CAMP_AI_MEMBER_PAGE_SIZE,
+      offset,
+    });
 
-  return (
-    contacts.find(
+    const match = contacts.find(
       (contact) =>
         contact.email === normalizedEmail &&
         contact.segments.some(
           (segment) => segment.trim().toLowerCase() === "members",
         ),
-    ) ?? null
-  );
+    );
+
+    if (match) {
+      return match;
+    }
+
+    if (contacts.length < CAMP_AI_MEMBER_PAGE_SIZE) {
+      return null;
+    }
+
+    if (typeof totalCount === "number" && offset + CAMP_AI_MEMBER_PAGE_SIZE >= totalCount) {
+      return null;
+    }
+  }
+
+  return null;
 };
 
 export const getCampaiMemberContactById = async (contactId: string) => {
@@ -354,7 +369,7 @@ export const getCampaiMemberContactById = async (contactId: string) => {
     return null;
   }
 
-  const pageSize = 100;
+  const pageSize = CAMP_AI_MEMBER_PAGE_SIZE;
 
   for (let offset = 0; offset < 4000; offset += pageSize) {
     const { contacts, totalCount } = await fetchCampaiMemberContactsPage({

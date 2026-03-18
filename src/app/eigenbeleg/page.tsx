@@ -1195,14 +1195,15 @@ export default function EigenbelegPage() {
             }
           >
             <div className="space-y-5">
-              <input type="hidden" {...register("bookingType")} />
+              <input type="hidden" autoComplete="off" {...register("bookingType")} />
               <input
                 type="hidden"
+                autoComplete="off"
                 {...register("counterpartyName", {
                   required: `${counterpartyEntityLabel} ist erforderlich.`,
                 })}
               />
-              <input type="hidden" {...register("counterpartyAccount")} />
+              <input type="hidden" autoComplete="off" {...register("counterpartyAccount")} />
 
               <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
                 <button
@@ -1488,6 +1489,7 @@ export default function EigenbelegPage() {
                       <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
                         <input
                           type="checkbox"
+                          autoComplete="off"
                           checked={debtorSendByMail}
                           onChange={(event) =>
                             setDebtorSendByMail(event.target.checked)
