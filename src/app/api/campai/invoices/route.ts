@@ -7,6 +7,21 @@ import {
   normalizeInvoice,
   type InvoicePayload,
 } from "@/lib/campai-invoices";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import { userCanAccessModule } from "@/lib/roles";
+
+const parseDebtorAccount = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -33,6 +48,21 @@ export const POST = async (request: NextRequest) => {
     string,
     unknown
   >;
+  const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+  const linkedDebtorAccount = memberProfile?.campaiDebtorAccount ?? null;
+  const canAccessInvoices = await userCanAccessModule(supabase, data.user, "invoices");
+  const requestedAccount = parseDebtorAccount(body.account);
+
+  if (!canAccessInvoices) {
+    if (linkedDebtorAccount === null || requestedAccount === null) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (requestedAccount !== linkedDebtorAccount) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const debug = body.debug === true;
   const payload = {
     sort: body.sort ?? { receiptDate: "desc" },

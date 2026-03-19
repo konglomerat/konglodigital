@@ -5,6 +5,7 @@ import {
   type CampaiPaymentMethodType,
   isCampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
+import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
@@ -303,6 +304,10 @@ export const POST = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await request.json()) as {

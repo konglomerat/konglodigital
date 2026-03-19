@@ -67,11 +67,17 @@ export function FormField({
   hint,
   children,
   className,
+  labelClassName,
   ...props
 }: FormFieldProps) {
   return (
     <div className={cn("space-y-2", className)} {...props}>
-      <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <label
+        className={cn(
+          "block text-xs font-semibold uppercase tracking-wide text-zinc-500",
+          labelClassName,
+        )}
+      >
         {label}
         {required ? <span className="ml-1 text-red-600">*</span> : null}
       </label>
@@ -90,9 +96,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30",
+          "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       />
     );
@@ -109,9 +116,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         ref={ref}
         className={cn(
-          "min-h-24 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30",
+          "min-h-24 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       />
     );
@@ -128,9 +136,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30",
+          "w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500 disabled:shadow-none",
           className,
         )}
+        autoComplete={props.autoComplete ?? "off"}
         {...props}
       >
         {children}
@@ -156,6 +165,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             "h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30",
             className,
           )}
+          autoComplete={props.autoComplete ?? "off"}
           {...props}
         />
         <span>{label}</span>

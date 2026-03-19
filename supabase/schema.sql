@@ -196,6 +196,200 @@ set is_current = resource_pretty_titles.pretty_title = resources.pretty_title
 from public.resources as resources
 where resources.id = resource_pretty_titles.resource_id;
 
+create table if not exists public.member_profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  campai_contact_id text,
+  campai_member_number text,
+  campai_debtor_account integer,
+  campai_segments text[] not null default '{}'::text[],
+  campai_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.member_profiles add column if not exists campai_contact_id text;
+alter table public.member_profiles add column if not exists campai_member_number text;
+alter table public.member_profiles add column if not exists campai_debtor_account integer;
+alter table public.member_profiles add column if not exists campai_segments text[] not null default '{}'::text[];
+alter table public.member_profiles add column if not exists campai_name text;
+alter table public.member_profiles add column if not exists updated_at timestamptz not null default now();
+
+create unique index if not exists member_profiles_campai_contact_id_key
+  on public.member_profiles (campai_contact_id)
+  where campai_contact_id is not null;
+create unique index if not exists member_profiles_campai_member_number_key
+  on public.member_profiles (campai_member_number)
+  where campai_member_number is not null;
+
+alter table public.member_profiles enable row level security;
+
+drop policy if exists "Users can read own member profile" on public.member_profiles;
+
+create policy "Users can read own member profile"
+on public.member_profiles
+for select
+using (auth.uid() = user_id);
+
+create table if not exists public.user_access (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  role text not null default 'member',
+  rights text[] not null default '{}'::text[],
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint user_access_role_check check (role in ('admin', 'accounting', 'member'))
+);
+
+alter table public.user_access add column if not exists role text not null default 'member';
+alter table public.user_access add column if not exists rights text[] not null default '{}'::text[];
+alter table public.user_access add column if not exists updated_at timestamptz not null default now();
+
+alter table public.user_access enable row level security;
+
+drop policy if exists "Users can read own access" on public.user_access;
+
+create policy "Users can read own access"
+on public.user_access
+for select
+using (auth.uid() = user_id);
+
+with normalized_member_profiles as (
+  select
+    users.id as user_id,
+    nullif(btrim(users.raw_user_meta_data ->> 'campai_contact_id'), '') as campai_contact_id,
+    nullif(btrim(users.raw_user_meta_data ->> 'campai_member_number'), '') as campai_member_number,
+    case
+      when nullif(btrim(users.raw_user_meta_data ->> 'campai_debtor_account'), '') is null then null
+      else (users.raw_user_meta_data ->> 'campai_debtor_account')::integer
+    end as campai_debtor_account,
+    case
+      when jsonb_typeof(users.raw_user_meta_data -> 'campai_segments') = 'array' then array(
+        select jsonb_array_elements_text(users.raw_user_meta_data -> 'campai_segments')
+      )
+      when jsonb_typeof(users.raw_user_meta_data -> 'campai_segments') = 'string' then array[
+        users.raw_user_meta_data ->> 'campai_segments'
+      ]
+      else '{}'::text[]
+    end as campai_segments,
+    nullif(btrim(users.raw_user_meta_data ->> 'campai_name'), '') as campai_name
+  from auth.users as users
+)
+insert into public.member_profiles (
+  user_id,
+  campai_contact_id,
+  campai_member_number,
+  campai_debtor_account,
+  campai_segments,
+  campai_name
+)
+select
+  user_id,
+  campai_contact_id,
+  campai_member_number,
+  campai_debtor_account,
+  campai_segments,
+  campai_name
+from normalized_member_profiles
+where campai_contact_id is not null
+  or campai_member_number is not null
+  or campai_debtor_account is not null
+  or array_length(campai_segments, 1) is not null
+  or campai_name is not null
+on conflict (user_id)
+do update set
+  campai_contact_id = excluded.campai_contact_id,
+  campai_member_number = excluded.campai_member_number,
+  campai_debtor_account = excluded.campai_debtor_account,
+  campai_segments = excluded.campai_segments,
+  campai_name = excluded.campai_name,
+  updated_at = now();
+
+with normalized_user_access as (
+  select
+    users.id as user_id,
+    case
+      when lower(btrim(coalesce(users.raw_app_meta_data ->> 'role', users.raw_user_meta_data ->> 'role', 'member'))) in ('admin', 'accounting', 'member')
+        then lower(btrim(coalesce(users.raw_app_meta_data ->> 'role', users.raw_user_meta_data ->> 'role', 'member')))
+      else 'member'
+    end as role,
+    coalesce(
+      array(
+        select distinct right_value
+        from (
+          select nullif(btrim(jsonb_array_elements_text(
+            case
+              when jsonb_typeof(users.raw_app_meta_data -> 'rights') = 'array'
+                then users.raw_app_meta_data -> 'rights'
+              when jsonb_typeof(users.raw_app_meta_data -> 'rights') = 'string'
+                then jsonb_build_array(users.raw_app_meta_data -> 'rights')
+              else '[]'::jsonb
+            end
+          )), '') as right_value
+          union all
+          select nullif(btrim(jsonb_array_elements_text(
+            case
+              when jsonb_typeof(users.raw_user_meta_data -> 'rights') = 'array'
+                then users.raw_user_meta_data -> 'rights'
+              when jsonb_typeof(users.raw_user_meta_data -> 'rights') = 'string'
+                then jsonb_build_array(users.raw_user_meta_data -> 'rights')
+              else '[]'::jsonb
+            end
+          )), '') as right_value
+        ) as normalized_rights
+        where right_value is not null
+      ),
+      '{}'::text[]
+    ) as rights
+  from auth.users as users
+)
+insert into public.user_access (user_id, role, rights)
+select user_id, role, rights
+from normalized_user_access
+on conflict (user_id)
+do update set
+  role = excluded.role,
+  rights = excluded.rights,
+  updated_at = now();
+
+update auth.users as users
+set raw_app_meta_data =
+  coalesce(users.raw_app_meta_data, '{}'::jsonb)
+  || jsonb_build_object(
+    'rights', to_jsonb(access.rights)
+  )
+from public.user_access as access
+where access.user_id = users.id;
+
+create or replace function public.has_right(required_right text)
+returns boolean
+language sql
+stable
+as $$
+  select exists (
+    select 1
+    from (
+      select unnest(
+        coalesce(
+          (select rights from public.user_access where user_id = auth.uid()),
+          '{}'::text[]
+        )
+      ) as right_value
+      union all
+      select jsonb_array_elements_text(
+        case
+          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'array'
+            then auth.jwt() -> 'app_metadata' -> 'rights'
+          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'string'
+            then jsonb_build_array(auth.jwt() -> 'app_metadata' -> 'rights')
+          else '[]'::jsonb
+        end
+      )
+    ) as rights
+    where right_value = required_right
+  );
+$$;
+
+drop table if exists public.registration_invites;
+
 with resource_pretty_migration_base as (
   select
     id as resource_id,

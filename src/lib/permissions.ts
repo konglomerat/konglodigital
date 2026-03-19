@@ -1,7 +1,6 @@
 type UserLike = {
   id?: string;
   app_metadata?: Record<string, unknown>;
-  user_metadata?: Record<string, unknown>;
 };
 
 const parseRights = (value: unknown): string[] => {
@@ -25,6 +24,5 @@ export const hasRight = (user: UserLike | null | undefined, right: string) => {
     return false;
   }
   const appRights = parseRights(user.app_metadata?.rights);
-  const userRights = parseRights(user.user_metadata?.rights);
-  return new Set([...appRights, ...userRights]).has(right);
+  return new Set(appRights).has(right);
 };

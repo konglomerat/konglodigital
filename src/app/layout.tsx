@@ -21,6 +21,7 @@ import {
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 import { signOut } from "./actions";
+import { getUserRole, roleCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
 import ThemeToggle from "./components/ThemeToggle";
@@ -48,7 +49,7 @@ type ProtectedNavItemProps = {
   icon: IconProp;
   children: React.ReactNode;
   className: string;
-  isAuthenticated: boolean;
+  isAccessible: boolean;
   tooltip: string;
 };
 
@@ -57,10 +58,10 @@ function ProtectedNavItem({
   icon,
   children,
   className,
-  isAuthenticated,
+  isAccessible,
   tooltip,
 }: ProtectedNavItemProps) {
-  if (isAuthenticated) {
+  if (isAccessible) {
     return (
       <ActiveNavLink href={href} className={className}>
         <FontAwesomeIcon icon={icon} className="h-4 w-4" />
@@ -92,6 +93,10 @@ export default async function RootLayout({
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
+  const userRole = await getUserRole(supabase, userData.user);
+  const canAccessAdmin = isAuthenticated && roleCanAccessModule(userRole, "admin");
+  const canAccessInvoices =
+    isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
     "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-2.5 text-sm font-medium transition last:border-b-0";
   const navLinkClassName =
@@ -167,7 +172,7 @@ export default async function RootLayout({
                         href="/monatsbeitrag"
                         className={navLinkClassName}
                         icon={faCalendarCheck}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Zugangskarte
@@ -176,7 +181,7 @@ export default async function RootLayout({
                         href="/account"
                         className={navLinkClassName}
                         icon={faUser}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Profil
@@ -187,7 +192,7 @@ export default async function RootLayout({
                         href="/resources"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Inventar
@@ -204,8 +209,8 @@ export default async function RootLayout({
                         href="/invoices"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAuthenticated={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
+                        isAccessible={canAccessInvoices}
+                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
                       >
                         Rechnungen
                       </ProtectedNavItem>
@@ -213,7 +218,7 @@ export default async function RootLayout({
                         href="/reimbursement"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Rückerstattung von Auslagen
@@ -222,7 +227,7 @@ export default async function RootLayout({
                         href="/eigenbeleg"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Eigenbeleg erstellen
@@ -231,7 +236,7 @@ export default async function RootLayout({
                         href="/buchungen"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Beleg einbuchen
@@ -240,7 +245,7 @@ export default async function RootLayout({
                         href="/budget"
                         className={navLinkClassName}
                         icon={faChartPie}
-                        isAuthenticated={isAuthenticated}
+                        isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
                         Budget Werkbereiche
@@ -248,19 +253,31 @@ export default async function RootLayout({
                     </nav>
                     <div className="border-t border-zinc-200 px-4 py-4">
                       {isAuthenticated ? (
-                        <form action={signOut}>
-                          <Button
-                            type="submit"
-                            kind="primary"
-                            className={navButtonClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faRightFromBracket}
-                              className="h-4 w-4"
-                            />
-                            Abmelden
-                          </Button>
-                        </form>
+                        <div className="space-y-3">
+                          {canAccessAdmin ? (
+                            <Button
+                              href="/admin/users"
+                              kind="secondary"
+                              className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                            >
+                              <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                              Admin
+                            </Button>
+                          ) : null}
+                          <form action={signOut}>
+                            <Button
+                              type="submit"
+                              kind="primary"
+                              className={navButtonClassName}
+                            >
+                              <FontAwesomeIcon
+                                icon={faRightFromBracket}
+                                className="h-4 w-4"
+                              />
+                              Abmelden
+                            </Button>
+                          </form>
+                        </div>
                       ) : (
                         <Button
                           href="/login"
@@ -318,7 +335,7 @@ export default async function RootLayout({
                 href="/monatsbeitrag"
                 className={navItemClassName}
                 icon={faCalendarCheck}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Zugangskarte
@@ -327,7 +344,7 @@ export default async function RootLayout({
                 href="/account"
                 className={navItemClassName}
                 icon={faUser}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Profil
@@ -340,7 +357,7 @@ export default async function RootLayout({
                 href="/resources"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Inventar
@@ -357,8 +374,8 @@ export default async function RootLayout({
                 href="/invoices"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAuthenticated={isAuthenticated}
-                tooltip={membersOnlyTooltip}
+                isAccessible={canAccessInvoices}
+                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
               >
                 Rechnungen
               </ProtectedNavItem>
@@ -366,7 +383,7 @@ export default async function RootLayout({
                 href="/reimbursement"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Rückerstattung von Auslagen
@@ -375,7 +392,7 @@ export default async function RootLayout({
                 href="/eigenbeleg"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Eigenbeleg erstellen
@@ -384,7 +401,7 @@ export default async function RootLayout({
                 href="/buchungen"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Beleg einbuchen
@@ -393,14 +410,24 @@ export default async function RootLayout({
                 href="/budget"
                 className={navItemClassName}
                 icon={faChartPie}
-                isAuthenticated={isAuthenticated}
+                isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
                 Budget Werkbereiche
               </ProtectedNavItem>
             </nav>
             {isAuthenticated ? (
-              <div className="mt-auto">
+              <div className="mt-auto space-y-3">
+                {canAccessAdmin ? (
+                  <Button
+                    href="/admin/users"
+                    kind="secondary"
+                    className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                  >
+                    <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                    Admin
+                  </Button>
+                ) : null}
                 <form action={signOut}>
                   <Button
                     type="submit"
