@@ -164,3 +164,16 @@ input[type="search"]::-webkit-search-cancel-button {
   text-decoration: none;
   padding: 1em;
 }
+
+.multiply {
+  mix-blend-mode: multiply;
+}
+
+.negative-multiply {
+  filter: none;
+}
+
+.dark .negative-multiply {
+  filter: invert(1);
+  mix-blend-mode: difference;
+}

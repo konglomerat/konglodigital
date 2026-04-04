@@ -260,7 +260,9 @@ const main = async () => {
     process.exit(1);
   }
 
-  console.log("\nComparison passed: source and target appear aligned for checked metrics.");
+  console.log(
+    "\nComparison passed: source and target appear aligned for checked metrics.",
+  );
 };
 
 main().catch((error) => {

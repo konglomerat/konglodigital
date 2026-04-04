@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isMissingRelationError } from "@/lib/supabase-errors";
 
 export type MemberProfileInput = {
   campai_contact_id: string | null;
@@ -110,6 +111,10 @@ export const getMemberProfileByUserId = async (
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "member_profiles")) {
+      return null;
+    }
+
     throw error;
   }
 

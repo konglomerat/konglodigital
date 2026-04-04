@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import ActiveNavLink from "./ActiveNavLink";
 import { Geist, Geist_Mono } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
@@ -122,11 +123,14 @@ export default async function RootLayout({
         <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
           <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
             <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
-              <div className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900">
+              <Link
+                href="/"
+                className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+              >
                 Konglo
                 <br />
                 digital
-              </div>
+              </Link>
               <div className="flex items-center gap-3">
                 <ThemeToggle />
                 <AutoCloseMenuDetails
@@ -300,11 +304,14 @@ export default async function RootLayout({
           <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
             <div className="space-y-3">
               <div>
-                <div className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900">
+                <Link
+                  href="/"
+                  className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                >
                   Konglo
                   <br />
                   digital
-                </div>
+                </Link>
               </div>
               <ThemeToggle />
             </div>

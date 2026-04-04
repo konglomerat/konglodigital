@@ -155,8 +155,16 @@ const main = async () => {
   console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
   console.log(`Overwrite existing: ${options.overwrite ? "yes" : "no"}`);
 
-  const sourceFiles = await listAllFiles(source.storage, options.bucket, options.prefix);
-  const targetFiles = await listAllFiles(target.storage, options.bucket, options.prefix);
+  const sourceFiles = await listAllFiles(
+    source.storage,
+    options.bucket,
+    options.prefix,
+  );
+  const targetFiles = await listAllFiles(
+    target.storage,
+    options.bucket,
+    options.prefix,
+  );
   const targetSet = new Set(targetFiles);
 
   let copied = 0;
