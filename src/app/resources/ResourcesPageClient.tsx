@@ -44,6 +44,14 @@ type ResourcesPageClientProps = {
   initialErrorMessage: string | null;
 };
 
+type ResourcesListResponse = {
+  resources?: Resource[];
+  count?: number;
+  error?: string;
+};
+
+const RESOURCES_PAGE_SIZE = 100;
+
 const highlightText = (text: string, term: string): ReactNode => {
   const normalizedTerm = term.trim();
   if (!normalizedTerm) {
@@ -361,10 +369,13 @@ export default function ResourcesPageClient({
   );
   const [hasMapVisibilitySnapshot, setHasMapVisibilitySnapshot] =
     useState(false);
+  const [resources, setResources] = useState<Resource[]>(initialResources);
+  const [count, setCount] = useState<number | null>(initialCount);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    initialErrorMessage,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
   const normalizedSearchTerm = searchTerm.trim();
-  const resources = initialResources;
-  const count = initialCount;
-  const errorMessage = initialErrorMessage;
   const loading = false;
   const resourceTypes = useMemo(
     () =>
@@ -894,6 +905,57 @@ export default function ResourcesPageClient({
     [],
   );
 
+  const canLoadMore = count === null || resources.length < count;
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !canLoadMore) {
+      return;
+    }
+
+    setLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/campai/resources?limit=${RESOURCES_PAGE_SIZE}&offset=${resources.length}`,
+        {
+          cache: "no-store",
+        },
+      );
+      const payload = (await response.json()) as ResourcesListResponse;
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to load more resources.");
+      }
+
+      const incomingResources = Array.isArray(payload.resources)
+        ? payload.resources
+        : [];
+
+      setResources((previous) => {
+        const seenIds = new Set(previous.map((resource) => resource.id));
+        const dedupedIncoming = incomingResources.filter((resource) => {
+          if (seenIds.has(resource.id)) {
+            return false;
+          }
+          seenIds.add(resource.id);
+          return true;
+        });
+        return [...previous, ...dedupedIncoming];
+      });
+
+      if (typeof payload.count === "number") {
+        setCount(payload.count);
+      }
+      setErrorMessage(null);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message || "Unable to load more resources."
+          : "Unable to load more resources.",
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [canLoadMore, loadingMore, resources.length]);
+
   return (
     <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -1072,17 +1134,32 @@ export default function ResourcesPageClient({
             ) : visibleResources.length === 0 ? (
               <p className="text-sm text-zinc-500">No resources found.</p>
             ) : (
-              <div className="grid gap-5 md:grid-cols-2">
-                {visibleResources.map((resource) => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    normalizedSearchTerm={normalizedSearchTerm}
-                    onHover={setHoveredResourceId}
-                    onNavigate={() => persistOverviewState(window.scrollY)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-5 md:grid-cols-2">
+                  {visibleResources.map((resource) => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      normalizedSearchTerm={normalizedSearchTerm}
+                      onHover={setHoveredResourceId}
+                      onNavigate={() => persistOverviewState(window.scrollY)}
+                    />
+                  ))}
+                </div>
+
+                {canLoadMore ? (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingMore ? "Loading more..." : "Load more"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
             {loading ? (
               <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm">

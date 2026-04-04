@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { isMissingRelationError } from "@/lib/supabase-errors";
 
 export const USER_ROLES = ["admin", "accounting", "member"] as const;
 
@@ -30,7 +31,7 @@ export const normalizeUserRole = (value: unknown): UserRole => {
 
 export const getUserRole = async (
   client: SupabaseClient,
-  user: Pick<User, "id"> | null | undefined,
+  user: (Pick<User, "id"> & { app_metadata?: User["app_metadata"] }) | null | undefined,
 ): Promise<UserRole> => {
   if (!user) {
     return "member";
@@ -43,6 +44,10 @@ export const getUserRole = async (
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "user_access")) {
+      return normalizeUserRole(user.app_metadata?.role);
+    }
+
     throw error;
   }
 

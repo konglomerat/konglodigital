@@ -144,6 +144,8 @@ The PNG-to-JPG script uses:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_RESOURCES_BUCKET` (optional; defaults to `resources`)
+- `SUPABASE_STORAGE_OBJECT_PUBLIC_BASE_URL` (optional; override public object URL base for self-hosted setups)
+- `SUPABASE_STORAGE_RENDER_PUBLIC_BASE_URL` (optional; override public render URL base for self-hosted setups)
 
 Example usage:
 
@@ -151,6 +153,48 @@ Example usage:
 - Execute migration: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs`
 - Only inside a folder: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs --prefix=uploads/2026`
 - Skip DB updates: `node --env-file=.env.local scripts/convert-supabase-png-to-jpg.mjs --skip-db`
+
+### Supabase cutover smoke check
+
+Use this after pointing env vars to your new self-hosted instance:
+
+- `npm run supabase:smoke`
+
+The check verifies:
+
+- service-role auth admin access
+- database access to `resources`
+- storage access to `SUPABASE_RESOURCES_BUCKET`
+
+### Supabase source->target migration helpers
+
+Use these scripts to migrate and verify during cutover from hosted Supabase to self-hosted Supabase.
+
+Required env vars:
+
+- `SOURCE_SUPABASE_URL`
+- `SOURCE_SUPABASE_SERVICE_ROLE_KEY`
+- `TARGET_SUPABASE_URL`
+- `TARGET_SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_RESOURCES_BUCKET` (optional; defaults to `resources`)
+
+Compare source and target parity:
+
+- `npm run supabase:compare`
+- Custom tables: `npm run supabase:compare -- --tables=resources,resource_links`
+
+Sync storage bucket files from source to target:
+
+- Dry run: `npm run supabase:storage-sync -- --dry-run`
+- Execute (copy only missing): `npm run supabase:storage-sync`
+- Execute and overwrite existing files: `npm run supabase:storage-sync -- --overwrite`
+- Restrict to a prefix: `npm run supabase:storage-sync -- --prefix=uploads/2026`
+
+Sync database tables from source to target:
+
+- Dry run: `npm run supabase:table-sync -- --tables=resources --dry-run`
+- Execute: `npm run supabase:table-sync -- --tables=resources`
+- Multiple tables: `npm run supabase:table-sync -- --tables=resources,print_job_descriptions`
 
 ## Deployment
 

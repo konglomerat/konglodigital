@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "deploy": "vercel --prod",
-    "storage:png-to-jpg": "node scripts/convert-supabase-png-to-jpg.mjs"
+    "storage:png-to-jpg": "node scripts/convert-supabase-png-to-jpg.mjs",
+    "supabase:smoke": "node scripts/supabase-cutover-smoke.mjs",
+    "supabase:compare": "node scripts/supabase-cutover-compare.mjs",
+    "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
+    "supabase:table-sync": "node scripts/supabase-table-sync.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
