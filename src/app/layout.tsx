@@ -17,6 +17,7 @@ import {
   faLock,
   faRightFromBracket,
   faRightToBracket,
+  faLayerGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
@@ -85,6 +86,32 @@ function ProtectedNavItem({
   );
 }
 
+type ComingSoonNavItemProps = {
+  icon: IconProp;
+  children: React.ReactNode;
+  className: string;
+};
+
+function ComingSoonNavItem({
+  icon,
+  children,
+  className,
+}: ComingSoonNavItemProps) {
+  return (
+    <div
+      className={`${className} cursor-not-allowed select-none text-zinc-400 hover:text-zinc-400`}
+      aria-disabled="true"
+      title="Coming soon"
+    >
+      <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+      <span>{children}</span>
+      <span className="ml-auto whitespace-nowrap rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+        Coming soon
+      </span>
+    </div>
+  );
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -98,9 +125,9 @@ export default async function RootLayout({
   const canAccessInvoices =
     isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-3.5 text-sm font-medium transition last:border-b-0";
+    "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-2.5 text-sm font-medium transition last:border-b-0";
   const navLinkClassName =
-    "group flex items-center gap-3 border-b border-zinc-200/15 bg-transparent px-2 py-2.5 text-sm font-medium text-zinc-700 transition hover:text-zinc-900";
+    "group flex items-center gap-3 border-b border-zinc-200/15 bg-transparent px-2 py-2 text-sm font-medium text-zinc-700 transition hover:text-zinc-900";
   const navSectionTitleClassName =
     "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 first:pt-0";
   const navButtonClassName =
@@ -166,6 +193,12 @@ export default async function RootLayout({
                         />
                         Warenkorb
                       </ActiveNavLink>
+                      <ComingSoonNavItem
+                        className={navLinkClassName}
+                        icon={faChartPie}
+                      >
+                        Laser
+                      </ComingSoonNavItem>
 
                       <p className={navSectionTitleClassName}>Self Service</p>
                       <ProtectedNavItem
@@ -204,6 +237,28 @@ export default async function RootLayout({
                         <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
                         Produkte
                       </ActiveNavLink>
+                      <ComingSoonNavItem
+                        className={navLinkClassName}
+                        icon={faUser}
+                      >
+                        Ehrenamtsbonus
+                      </ComingSoonNavItem>
+                      <p className={navSectionTitleClassName}>Holzwerkstatt</p>
+                      <ProtectedNavItem
+                        href="/materialbestellung"
+                        className={navLinkClassName}
+                        icon={faLayerGroup}
+                        isAccessible={canAccessInvoices}
+                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                      >
+                        Materialbestellung
+                      </ProtectedNavItem>
+                      <ComingSoonNavItem
+                        className={navLinkClassName}
+                        icon={faLayerGroup}
+                      >
+                        Lagerplatz
+                      </ComingSoonNavItem>
                       <p className={navSectionTitleClassName}>buchhaltung</p>
                       <ProtectedNavItem
                         href="/invoices"
@@ -327,6 +382,12 @@ export default async function RootLayout({
                 <FontAwesomeIcon icon={faCartShopping} className="h-4 w-4" />
                 Warenkorb
               </ActiveNavLink>
+              <ComingSoonNavItem
+                className={navItemClassName}
+                icon={faChartPie}
+              >
+                Laser
+              </ComingSoonNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Self Service
@@ -366,6 +427,31 @@ export default async function RootLayout({
                 <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
                 Produkte
               </ActiveNavLink>
+              <ComingSoonNavItem
+                className={navItemClassName}
+                icon={faUser}
+              >
+                Ehrenamtsbonus
+              </ComingSoonNavItem>
+
+              <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Holzwerkstatt
+              </p>
+              <ProtectedNavItem
+                href="/materialbestellung"
+                className={navItemClassName}
+                icon={faLayerGroup}
+                isAccessible={canAccessInvoices}
+                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+              >
+                Materialbestellung
+              </ProtectedNavItem>
+              <ComingSoonNavItem
+                className={navItemClassName}
+                icon={faLayerGroup}
+              >
+                Lagerplatz
+              </ComingSoonNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung

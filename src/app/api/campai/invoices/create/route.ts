@@ -96,14 +96,26 @@ const normalizeDate = (value: unknown): string | null => {
     return null;
   }
   const trimmed = value.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return null;
+
+  const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDateMatch) {
+    const normalized = `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : normalized;
   }
+
+  const germanDateMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (germanDateMatch) {
+    const normalized = `${germanDateMatch[3]}-${germanDateMatch[2].padStart(2, "0")}-${germanDateMatch[1].padStart(2, "0")}`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : normalized;
+  }
+
   const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  return trimmed;
+  return date.toISOString().slice(0, 10);
 };
 
 const normalizeDiscount = (value: unknown) => {
@@ -325,6 +337,7 @@ export const POST = async (request: NextRequest) => {
     paid?: boolean;
     paymentMethod?: string;
     paymentCashAccountId?: string;
+    positionAccount?: string | number;
     customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
     dueDate?: string;
@@ -351,10 +364,13 @@ export const POST = async (request: NextRequest) => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-  const defaultPositionAccount = Number.parseInt(
-    process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
-    10,
-  );
+  const requestedPositionAccount = parsePositiveInt(body.positionAccount);
+  const defaultPositionAccount =
+    requestedPositionAccount ??
+    Number.parseInt(
+      process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
+      10,
+    );
   const dueDays = Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10);
   const defaultCostCenter1 = getValidDefaultCostCenter();
 
@@ -365,7 +381,6 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const receiptDate = formatDate(new Date());
   const dueDate = formatDate(
     new Date(Date.now() + Math.max(1, dueDays) * 86400000),
   );
@@ -427,7 +442,7 @@ export const POST = async (request: NextRequest) => {
     ),
   );
 
-  let taxCodeByRate = resolveTaxCodeOverrides();
+  const taxCodeByRate = resolveTaxCodeOverrides();
   if (selectedTaxRates.length > 0) {
     const resolvedFromCampai = await resolveCampaiTaxCodesByRate({
       apiKey,
