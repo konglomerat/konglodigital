@@ -26,10 +26,24 @@ export default function PasswordResetCompletePage() {
       setError(null);
 
       const code = searchParams.get("code");
+      const tokenHash =
+        searchParams.get("token_hash") ?? searchParams.get("token");
+      const type = searchParams.get("type");
+
       if (code) {
         const { error: exchangeError } =
           await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError && isMounted) {
+          setError("Der Reset-Link ist ungueltig oder abgelaufen.");
+          setIsLoading(false);
+          return;
+        }
+      } else if (tokenHash && type === "recovery") {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+        if (verifyError && isMounted) {
           setError("Der Reset-Link ist ungueltig oder abgelaufen.");
           setIsLoading(false);
           return;
