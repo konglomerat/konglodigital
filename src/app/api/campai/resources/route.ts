@@ -498,10 +498,7 @@ const resizeImageBuffer = async (file: File, maxWidth: number) => {
   }
 };
 
-const describeImage = async (
-  files: File[],
-  imageUrls?: string[] | null,
-) => {
+const describeImage = async (files: File[], imageUrls?: string[] | null) => {
   return describeInventoryImages({ files, imageUrls });
 };
 
