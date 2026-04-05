@@ -95,7 +95,8 @@ export default async function RootLayout({
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
   const userRole = await getUserRole(supabase, userData.user);
-  const canAccessAdmin = isAuthenticated && roleCanAccessModule(userRole, "admin");
+  const canAccessAdmin =
+    isAuthenticated && roleCanAccessModule(userRole, "admin");
   const canAccessInvoices =
     isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
@@ -264,7 +265,10 @@ export default async function RootLayout({
                               kind="secondary"
                               className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
                             >
-                              <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                              <FontAwesomeIcon
+                                icon={faLock}
+                                className="h-4 w-4"
+                              />
                               Admin
                             </Button>
                           ) : null}

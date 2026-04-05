@@ -8,6 +8,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { hasRight } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
+import { describeInventoryImages } from "@/lib/openai-vision";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getPointFeatures,
@@ -498,49 +499,10 @@ const resizeImageBuffer = async (file: File, maxWidth: number) => {
 };
 
 const describeImage = async (
-  request: NextRequest,
   files: File[],
   imageUrls?: string[] | null,
 ) => {
-  const hasFiles = files.length > 0;
-  const hasUrls = Array.isArray(imageUrls) && imageUrls.length > 0;
-  if (!hasFiles && !hasUrls) {
-    throw new Error("No images provided for vision.");
-  }
-  const body = hasFiles
-    ? (() => {
-        const formData = new FormData();
-        files.slice(0, 3).forEach((file) => {
-          formData.append("images", file, file.name);
-        });
-        return formData;
-      })()
-    : JSON.stringify({ imageUrls: imageUrls?.slice(0, 3) ?? [] });
-
-  const response = await fetch(`${request.nextUrl.origin}/api/openai/vision`, {
-    method: "POST",
-    body,
-    headers: {
-      cookie: request.headers.get("cookie") ?? "",
-      ...(hasFiles ? {} : { "content-type": "application/json" }),
-    },
-  });
-  const data = (await response.json()) as {
-    description?: string;
-    title?: string;
-    tags?: string[];
-    error?: string;
-  };
-  if (!response.ok || !data.description) {
-    throw new Error(data.error ?? "OpenAI vision failed.");
-  }
-  return {
-    description: data.description,
-    title: data.title,
-    tags: Array.isArray(data.tags)
-      ? data.tags.filter((tag) => typeof tag === "string")
-      : undefined,
-  };
+  return describeInventoryImages({ files, imageUrls });
 };
 
 const uploadResourceImage = async (
@@ -789,7 +751,7 @@ export const POST = async (request: NextRequest) => {
     payload.imageFiles.length > 0 ||
     (Array.isArray(imageUrls) && imageUrls.length > 0)
   ) {
-    const vision = await describeImage(request, payload.imageFiles, imageUrls);
+    const vision = await describeImage(payload.imageFiles, imageUrls);
     description = vision.description;
     if (!name && vision.title) {
       name = vision.title.trim();

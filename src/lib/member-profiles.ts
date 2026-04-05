@@ -68,7 +68,9 @@ const normalizeSegments = (value: unknown) => {
   );
 };
 
-const mapMemberProfileRow = (row: Record<string, unknown>): MemberProfile | null => {
+const mapMemberProfileRow = (
+  row: Record<string, unknown>,
+): MemberProfile | null => {
   const userId = normalizeText(row.user_id);
   if (!userId) {
     return null;
@@ -103,7 +105,7 @@ export const memberProfileToMetadata = (profile: MemberProfile | null) => {
 export const getMemberProfileByUserId = async (
   client: SupabaseClient,
   userId: string,
-) : Promise<MemberProfile | null> => {
+): Promise<MemberProfile | null> => {
   const { data, error } = await client
     .from("member_profiles")
     .select(SELECT_FIELDS)
@@ -128,7 +130,7 @@ export const getMemberProfileByUserId = async (
 export const listMemberProfilesByUserIds = async (
   client: SupabaseClient,
   userIds: string[],
-) : Promise<Map<string, MemberProfile>> => {
+): Promise<Map<string, MemberProfile>> => {
   if (userIds.length === 0) {
     return new Map<string, MemberProfile>();
   }
@@ -144,7 +146,9 @@ export const listMemberProfilesByUserIds = async (
 
   return new Map(
     (data ?? [])
-      .map((row) => mapMemberProfileRow(row as unknown as Record<string, unknown>))
+      .map((row) =>
+        mapMemberProfileRow(row as unknown as Record<string, unknown>),
+      )
       .filter((row): row is MemberProfile => Boolean(row))
       .map((row) => [row.userId, row]),
   );
@@ -154,7 +158,7 @@ export const upsertMemberProfile = async (
   client: SupabaseClient,
   userId: string,
   profile: MemberProfileInput,
-) : Promise<MemberProfile> => {
+): Promise<MemberProfile> => {
   const { data, error } = await client
     .from("member_profiles")
     .upsert(
@@ -176,7 +180,9 @@ export const upsertMemberProfile = async (
     throw error;
   }
 
-  const mapped = mapMemberProfileRow(data as unknown as Record<string, unknown>);
+  const mapped = mapMemberProfileRow(
+    data as unknown as Record<string, unknown>,
+  );
   if (!mapped) {
     throw new Error("Member profile could not be mapped after upsert.");
   }
