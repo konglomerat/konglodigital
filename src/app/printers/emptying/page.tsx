@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "../../components/Button";
@@ -137,6 +138,14 @@ export default function PrinterEmptyingPage() {
           Every minute we check if a print has finished. When a printer is done,
           it is marked as needing to be emptied until you confirm it.
         </p>
+        <div>
+          <Link
+            href="/printers/access-codes"
+            className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Zur Unterseite Zugangscodes
+          </Link>
+        </div>
         {lastChecked ? (
           <p className="text-xs text-zinc-400">
             Last checked: {formatUpdated(lastChecked)}

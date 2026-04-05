@@ -13,6 +13,7 @@ import {
   faFolderOpen,
   faCalendarCheck,
   faPrint,
+  faKey,
   faCartShopping,
   faUser,
   faLock,
@@ -150,7 +151,10 @@ export default async function RootLayout({
                       <p className={navSectionTitleClassName}>
                         Digital Fabrication
                       </p>
-                      <ActiveNavLink href="/" className={navLinkClassName}>
+                      <ActiveNavLink
+                        href="/printers"
+                        className={navLinkClassName}
+                      >
                         <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
                         3D-Druck
                       </ActiveNavLink>
@@ -161,6 +165,15 @@ export default async function RootLayout({
                         <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                         Drucker entleeren
                       </ActiveNavLink>
+                      <ProtectedNavItem
+                        href="/printers/access-codes"
+                        className={navLinkClassName}
+                        icon={faKey}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
+                        Drucker Zugangscodes
+                      </ProtectedNavItem>
                       <ActiveNavLink
                         href="/checkout"
                         className={navLinkClassName}
@@ -323,7 +336,7 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Digital Fabrication
               </p>
-              <ActiveNavLink href="/" className={navItemClassName}>
+              <ActiveNavLink href="/printers" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
                 3D-Druck
               </ActiveNavLink>
@@ -334,6 +347,15 @@ export default async function RootLayout({
                 <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                 Drucker entleeren
               </ActiveNavLink>
+              <ProtectedNavItem
+                href="/printers/access-codes"
+                className={navItemClassName}
+                icon={faKey}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
+                Drucker Zugangscodes
+              </ProtectedNavItem>
               <ActiveNavLink href="/checkout" className={navItemClassName}>
                 <FontAwesomeIcon icon={faCartShopping} className="h-4 w-4" />
                 Warenkorb
