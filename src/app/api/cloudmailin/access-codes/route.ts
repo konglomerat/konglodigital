@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 const readConfiguredToken = () => {
   const value = process.env.CLOUDMAILIN_ACCESS_CODES_TOKEN?.trim();
   if (!value) {
-    throw new Error("Missing CLOUDMAILIN_ACCESS_CODES_TOKEN environment variable.");
+    throw new Error(
+      "Missing CLOUDMAILIN_ACCESS_CODES_TOKEN environment variable.",
+    );
   }
   return value;
 };
@@ -103,7 +105,10 @@ export const POST = async (request: NextRequest) => {
 
     const payload = await readPayload(request);
     if (!payload) {
-      return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON payload." },
+        { status: 400 },
+      );
     }
 
     const parsed = parseCloudMailinPayload(payload, {
@@ -112,12 +117,18 @@ export const POST = async (request: NextRequest) => {
 
     const allowedSender = normalize(process.env.CLOUDMAILIN_ALLOWED_FROM);
     if (allowedSender && !normalize(parsed.sender).includes(allowedSender)) {
-      return NextResponse.json({ ok: true, ignored: "sender" }, { status: 202 });
+      return NextResponse.json(
+        { ok: true, ignored: "sender" },
+        { status: 202 },
+      );
     }
 
     const allowedSubject = normalize(process.env.CLOUDMAILIN_ALLOWED_SUBJECT);
     if (allowedSubject && !normalize(parsed.subject).includes(allowedSubject)) {
-      return NextResponse.json({ ok: true, ignored: "subject" }, { status: 202 });
+      return NextResponse.json(
+        { ok: true, ignored: "subject" },
+        { status: 202 },
+      );
     }
 
     const supabase = createSupabaseAdminClient();
@@ -137,7 +148,8 @@ export const POST = async (request: NextRequest) => {
 
     return NextResponse.json({ ok: true, hasCode: Boolean(parsed.accessCode) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process webhook.";
+    const message =
+      error instanceof Error ? error.message : "Unable to process webhook.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 };

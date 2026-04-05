@@ -91,11 +91,8 @@ export const parseCloudMailinPayload = (
   const bodyMatch = body?.match(matcher)?.[0] ?? null;
 
   const accessCode = subjectMatch ?? bodyMatch;
-  const extractedFrom: CloudMailinAccessCodeEntry["extractedFrom"] = subjectMatch
-    ? "subject"
-    : bodyMatch
-      ? "body"
-      : "none";
+  const extractedFrom: CloudMailinAccessCodeEntry["extractedFrom"] =
+    subjectMatch ? "subject" : bodyMatch ? "body" : "none";
 
   return {
     sender,

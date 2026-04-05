@@ -11,7 +11,5 @@ export default async function PrinterAccessCodesPage() {
     redirect("/login?redirectedFrom=/printers/access-codes");
   }
 
-  return (
-    <PrinterAccessCodesClient />
-  );
+  return <PrinterAccessCodesClient />;
 }

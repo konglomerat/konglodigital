@@ -16,7 +16,9 @@ type AccessCodeEntry = {
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
-  const data = (await response.json().catch(() => ({}))) as { error?: string } & T;
+  const data = (await response.json().catch(() => ({}))) as {
+    error?: string;
+  } & T;
   if (!response.ok) {
     throw new Error(data.error ?? "Anfrage fehlgeschlagen.");
   }
@@ -85,7 +87,9 @@ export default function PrinterAccessCodesClient() {
           >
             Zurueck zu Druckerstatus
           </Link>
-          {lastUpdatedAt ? <span>Zuletzt aktualisiert: {formatDateTime(lastUpdatedAt)}</span> : null}
+          {lastUpdatedAt ? (
+            <span>Zuletzt aktualisiert: {formatDateTime(lastUpdatedAt)}</span>
+          ) : null}
         </div>
       </header>
 
@@ -124,10 +128,18 @@ export default function PrinterAccessCodesClient() {
               <tbody className="divide-y divide-zinc-100 bg-white">
                 {entries.map((entry) => (
                   <tr key={entry.id} className="align-top">
-                    <td className="px-4 py-4 text-zinc-700">{formatDateTime(entry.created_at)}</td>
-                    <td className="px-4 py-4 text-zinc-700">{entry.sender ?? "-"}</td>
-                    <td className="px-4 py-4 text-zinc-700">{entry.recipient ?? "-"}</td>
-                    <td className="px-4 py-4 text-zinc-700">{entry.subject ?? "-"}</td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {formatDateTime(entry.created_at)}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {entry.sender ?? "-"}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {entry.recipient ?? "-"}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {entry.subject ?? "-"}
+                    </td>
                     <td className="px-4 py-4">
                       {entry.access_code ? (
                         <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -137,7 +149,9 @@ export default function PrinterAccessCodesClient() {
                         <span className="text-zinc-400">Kein Treffer</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-zinc-700">{entry.extracted_from}</td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {entry.extracted_from}
+                    </td>
                   </tr>
                 ))}
               </tbody>
