@@ -2,7 +2,10 @@
 
 import { useState, type InputHTMLAttributes } from "react";
 
-type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+type PasswordInputProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type"
+> & {
   showLabel?: string;
   hideLabel?: string;
 };

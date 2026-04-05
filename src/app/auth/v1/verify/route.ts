@@ -29,7 +29,10 @@ export const GET = async (request: NextRequest) => {
         hasRedirectTo = true;
         try {
           const redirectToUrl = new URL(value);
-          if (linkType === "invite" && redirectToUrl.origin === supabaseOrigin) {
+          if (
+            linkType === "invite" &&
+            redirectToUrl.origin === supabaseOrigin
+          ) {
             target.searchParams.append(key, inviteFallbackRedirect || value);
             continue;
           }

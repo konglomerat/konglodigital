@@ -90,12 +90,14 @@ export default function AccountPage() {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
 
   const fullName = useMemo(() => {
-    const first = typeof user?.metadata.first_name === "string"
-      ? user.metadata.first_name.trim()
-      : "";
-    const last = typeof user?.metadata.last_name === "string"
-      ? user.metadata.last_name.trim()
-      : "";
+    const first =
+      typeof user?.metadata.first_name === "string"
+        ? user.metadata.first_name.trim()
+        : "";
+    const last =
+      typeof user?.metadata.last_name === "string"
+        ? user.metadata.last_name.trim()
+        : "";
 
     return [first, last].filter(Boolean).join(" ");
   }, [user]);

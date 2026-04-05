@@ -67,7 +67,8 @@ export const POST = async (request: NextRequest) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const linkedContact = await getCampaiActiveMemberContactByEmail(normalizedEmail);
+  const linkedContact =
+    await getCampaiActiveMemberContactByEmail(normalizedEmail);
 
   if (
     !linkedContact ||
@@ -91,7 +92,10 @@ export const POST = async (request: NextRequest) => {
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     request.url;
   const redirectTo = new URL("/register/complete", publicBaseUrl).toString();
-  const existingUser = await findExistingUserByEmail(adminClient, normalizedEmail);
+  const existingUser = await findExistingUserByEmail(
+    adminClient,
+    normalizedEmail,
+  );
 
   if (existingUser) {
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
@@ -110,7 +114,10 @@ export const POST = async (request: NextRequest) => {
 
     await upsertMemberProfile(adminClient, existingUser.id, memberProfile);
 
-    const existingAccess = await getUserAccessByUserId(adminClient, existingUser.id);
+    const existingAccess = await getUserAccessByUserId(
+      adminClient,
+      existingUser.id,
+    );
     const nextAccess =
       existingAccess ??
       (await upsertUserAccess(adminClient, {
@@ -132,20 +139,19 @@ export const POST = async (request: NextRequest) => {
     return withSupabaseCookies(NextResponse.json({ ok: true }), response);
   }
 
-  const { data: inviteData, error } = await adminClient.auth.admin.inviteUserByEmail(
-    normalizedEmail,
-    {
+  const { data: inviteData, error } =
+    await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: userMetadata,
       redirectTo,
-    },
-  );
+    });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   const invitedUser =
-    inviteData.user ?? (await findExistingUserByEmail(adminClient, normalizedEmail));
+    inviteData.user ??
+    (await findExistingUserByEmail(adminClient, normalizedEmail));
 
   if (!invitedUser) {
     return NextResponse.json(

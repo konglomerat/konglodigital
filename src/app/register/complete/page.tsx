@@ -76,7 +76,8 @@ export default function RegisterCompletePage() {
 
       const code = searchParams.get("code");
       if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError && isMounted) {
           setError("Der Registrierungslink ist ungueltig oder abgelaufen.");
           setIsLoading(false);
@@ -110,7 +111,9 @@ export default function RegisterCompletePage() {
       }
 
       if (!nextProfile) {
-        setError("Dieser Registrierungslink ist ungueltig, unvollstaendig oder bereits abgelaufen.");
+        setError(
+          "Dieser Registrierungslink ist ungueltig, unvollstaendig oder bereits abgelaufen.",
+        );
         setIsLoading(false);
         return;
       }
@@ -130,7 +133,9 @@ export default function RegisterCompletePage() {
         }
 
         try {
-          const nextProfile = await getRegistrationProfile(session?.user ?? null);
+          const nextProfile = await getRegistrationProfile(
+            session?.user ?? null,
+          );
           if (nextProfile) {
             setProfile(nextProfile);
             setError(null);
@@ -158,7 +163,9 @@ export default function RegisterCompletePage() {
 
     const formData = new FormData(form);
     const password = String(formData.get("password") ?? "").trim();
-    const passwordConfirmation = String(formData.get("passwordConfirmation") ?? "").trim();
+    const passwordConfirmation = String(
+      formData.get("passwordConfirmation") ?? "",
+    ).trim();
 
     if (password.length < 8) {
       setError("Bitte verwende ein Passwort mit mindestens 8 Zeichen.");
@@ -181,7 +188,9 @@ export default function RegisterCompletePage() {
     }
 
     await supabase.auth.signOut();
-    setSuccess("Dein Passwort wurde gespeichert. Du kannst dich jetzt anmelden.");
+    setSuccess(
+      "Dein Passwort wurde gespeichert. Du kannst dich jetzt anmelden.",
+    );
     setIsSaving(false);
     form.reset();
   };
@@ -189,9 +198,12 @@ export default function RegisterCompletePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Registrierung abschliessen</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">
+          Registrierung abschliessen
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem Mitgliedskonto.
+          Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem
+          Mitgliedskonto.
         </p>
 
         {isLoading ? (
@@ -310,7 +322,9 @@ export default function RegisterCompletePage() {
               className="w-full px-4 py-2 text-sm"
               disabled={isSaving}
             >
-              {isSaving ? "Passwort wird gespeichert ..." : "Registrierung abschliessen"}
+              {isSaving
+                ? "Passwort wird gespeichert ..."
+                : "Registrierung abschliessen"}
             </Button>
           </form>
         ) : null}
