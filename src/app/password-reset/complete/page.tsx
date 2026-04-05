@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import Button from "../../components/Button";
+import PasswordInput from "../../components/PasswordInput";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const supabase = createSupabaseBrowserClient();
@@ -142,13 +143,14 @@ export default function PasswordResetCompletePage() {
               >
                 Neues Passwort
               </label>
-              <input
+              <PasswordInput
                 id="password-reset-complete-password"
                 name="password"
-                type="password"
                 minLength={8}
                 required
                 autoComplete="new-password"
+                showLabel="Anzeigen"
+                hideLabel="Ausblenden"
                 className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
               />
             </div>
@@ -160,13 +162,14 @@ export default function PasswordResetCompletePage() {
               >
                 Passwort wiederholen
               </label>
-              <input
+              <PasswordInput
                 id="password-reset-complete-password-confirmation"
                 name="passwordConfirmation"
-                type="password"
                 minLength={8}
                 required
                 autoComplete="new-password"
+                showLabel="Anzeigen"
+                hideLabel="Ausblenden"
                 className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
               />
             </div>

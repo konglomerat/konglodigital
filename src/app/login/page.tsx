@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Suspense, useState } from "react";
 
 import Button from "../components/Button";
+import PasswordInput from "../components/PasswordInput";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,7 @@ function LoginForm() {
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-zinc-900">Anmelden</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Melde dich mit deinen Supabase-Zugangsdaten an.
+          Melde dich mit deinen Zugangsdaten an.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
@@ -115,10 +116,11 @@ function LoginForm() {
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
               Passwort
             </label>
-            <input
+            <PasswordInput
               name="password"
-              type="password"
               required
+              showLabel="Anzeigen"
+              hideLabel="Ausblenden"
               className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
             />
           </div>
@@ -146,24 +148,26 @@ function LoginForm() {
         </form>
         <div className="mt-6 border-t border-zinc-200 pt-6">
           <p className="text-sm font-semibold text-zinc-900">
-            View-only access
+            Nur-Lese-Zugriff
           </p>
           <p className="mt-1 text-sm text-zinc-500">
-            Enter the 4-digit PIN to browse content without edit permissions.
+            Gib die 4-stellige PIN ein, um Inhalte ohne Bearbeitungsrechte
+            anzusehen.
           </p>
           <form onSubmit={handlePinSubmit} className="mt-4 space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
                 PIN
               </label>
-              <input
+              <PasswordInput
                 name="pin"
-                type="password"
                 // inputMode="numeric"
                 //pattern="\\d{4}"
                 maxLength={4}
                 minLength={4}
                 required
+                showLabel="Anzeigen"
+                hideLabel="Ausblenden"
                 className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
               />
             </div>

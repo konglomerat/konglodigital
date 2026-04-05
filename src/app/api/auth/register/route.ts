@@ -86,7 +86,11 @@ export const POST = async (request: NextRequest) => {
     last_name: splitName.lastName,
   };
   const memberProfile = buildCampaiProfileData(linkedContact);
-  const redirectTo = new URL("/register/complete", request.url).toString();
+  const publicBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    request.url;
+  const redirectTo = new URL("/register/complete", publicBaseUrl).toString();
   const existingUser = await findExistingUserByEmail(adminClient, normalizedEmail);
 
   if (existingUser) {

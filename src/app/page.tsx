@@ -68,7 +68,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
       <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
-        <div>
+        <div className="order-2 md:order-1">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-700">
             Willkommen
           </p>
@@ -77,7 +77,7 @@ export default function Home() {
             <br />
             digital
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-600 md:text-base">
+          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-600 md:text-base">
             Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.
           </p>
 
@@ -91,14 +91,14 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-[620px] md:max-w-none">
+        <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
           <Image
             src={heroHelloImage}
             alt="Willkommensgrafik"
             priority
             className="h-auto w-full object-cover multiply negative-multiply md:hidden"
           />
-          <div className="relative md:-my-6 md:block lg:-my-10">
+          <div className="relative hidden md:-my-6 md:block lg:-my-10">
             <video
               autoPlay
               muted

@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCube,
   faBoxOpen,
+  faCalendarDays,
   faChartPie,
   faFolderOpen,
   faCalendarCheck,
@@ -243,6 +244,7 @@ export default async function RootLayout({
                       </ProtectedNavItem>
 
                       <p className={navSectionTitleClassName}>Verein</p>
+
                       <ProtectedNavItem
                         href="/resources"
                         className={navLinkClassName}
@@ -252,6 +254,16 @@ export default async function RootLayout({
                       >
                         Inventar
                       </ProtectedNavItem>
+                      <ActiveNavLink
+                        href="/calendar"
+                        className={navLinkClassName}
+                      >
+                        <FontAwesomeIcon
+                          icon={faCalendarDays}
+                          className="h-4 w-4"
+                        />
+                        Kalender
+                      </ActiveNavLink>
                       <ActiveNavLink
                         href="/products"
                         className={navLinkClassName}
@@ -423,6 +435,10 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Verein
               </p>
+              <ActiveNavLink href="/calendar" className={navItemClassName}>
+                <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                Kalender
+              </ActiveNavLink>
               <ProtectedNavItem
                 href="/resources"
                 className={navItemClassName}
