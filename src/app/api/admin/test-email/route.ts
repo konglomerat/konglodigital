@@ -26,9 +26,12 @@ export const POST = async (request: NextRequest) => {
     }
 
     const redirectTo = new URL("/register/complete", request.url).toString();
-    const { error } = await supabase.auth.resetPasswordForEmail(TEST_RECIPIENT, {
-      redirectTo,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      TEST_RECIPIENT,
+      {
+        redirectTo,
+      },
+    );
 
     if (error) {
       throw error;

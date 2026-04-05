@@ -123,7 +123,10 @@ function LoginForm() {
             />
           </div>
           <p className="text-right text-sm text-zinc-500">
-            <Link className="font-semibold text-blue-600" href="/password-reset">
+            <Link
+              className="font-semibold text-blue-600"
+              href="/password-reset"
+            >
               Passwort vergessen?
             </Link>
           </p>

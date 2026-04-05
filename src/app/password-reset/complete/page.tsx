@@ -26,7 +26,8 @@ export default function PasswordResetCompletePage() {
 
       const code = searchParams.get("code");
       if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError && isMounted) {
           setError("Der Reset-Link ist ungueltig oder abgelaufen.");
           setIsLoading(false);
@@ -84,7 +85,9 @@ export default function PasswordResetCompletePage() {
 
     const formData = new FormData(form);
     const password = String(formData.get("password") ?? "").trim();
-    const passwordConfirmation = String(formData.get("passwordConfirmation") ?? "").trim();
+    const passwordConfirmation = String(
+      formData.get("passwordConfirmation") ?? "",
+    ).trim();
 
     if (password.length < 8) {
       setError("Bitte verwende ein Passwort mit mindestens 8 Zeichen.");
@@ -107,7 +110,9 @@ export default function PasswordResetCompletePage() {
     }
 
     await supabase.auth.signOut();
-    setSuccess("Dein Passwort wurde gespeichert. Du kannst dich jetzt anmelden.");
+    setSuccess(
+      "Dein Passwort wurde gespeichert. Du kannst dich jetzt anmelden.",
+    );
     setIsSaving(false);
     form.reset();
   };
@@ -115,7 +120,9 @@ export default function PasswordResetCompletePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Neues Passwort setzen</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">
+          Neues Passwort setzen
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
           Vergib jetzt ein neues Passwort fuer dein Konto.
         </p>
@@ -185,7 +192,9 @@ export default function PasswordResetCompletePage() {
               className="w-full px-4 py-2 text-sm"
               disabled={isSaving}
             >
-              {isSaving ? "Passwort wird gespeichert ..." : "Neues Passwort speichern"}
+              {isSaving
+                ? "Passwort wird gespeichert ..."
+                : "Neues Passwort speichern"}
             </Button>
           </form>
         ) : null}

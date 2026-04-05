@@ -29,7 +29,9 @@ export default function PasswordResetPage() {
     });
 
     if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
       setError(body.error ?? "Passwort-Reset konnte nicht gestartet werden.");
       setIsLoading(false);
       return;
@@ -45,9 +47,12 @@ export default function PasswordResetPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Passwort zuruecksetzen</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">
+          Passwort zuruecksetzen
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Gib deine Mailadresse ein. Wir senden dir einen Link, mit dem du ein neues Passwort setzen kannst.
+          Gib deine Mailadresse ein. Wir senden dir einen Link, mit dem du ein
+          neues Passwort setzen kannst.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

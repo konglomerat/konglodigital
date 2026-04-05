@@ -22,11 +22,18 @@ const buildSupabaseErrorMessage = (error: unknown) => {
       error_description?: unknown;
     };
 
-    if (typeof maybeError.error_description === "string" && maybeError.error_description.trim()) {
+    if (
+      typeof maybeError.error_description === "string" &&
+      maybeError.error_description.trim()
+    ) {
       return maybeError.error_description.trim();
     }
 
-    if (typeof maybeError.message === "string" && maybeError.message.trim() && maybeError.message !== "{}") {
+    if (
+      typeof maybeError.message === "string" &&
+      maybeError.message.trim() &&
+      maybeError.message !== "{}"
+    ) {
       return maybeError.message.trim();
     }
 
@@ -57,7 +64,8 @@ export const POST = async (request: NextRequest) => {
     email?: string;
   };
 
-  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
 
   if (!normalizedEmail) {
     return NextResponse.json(
@@ -70,7 +78,10 @@ export const POST = async (request: NextRequest) => {
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     request.url;
-  const redirectTo = new URL("/password-reset/complete", publicBaseUrl).toString();
+  const redirectTo = new URL(
+    "/password-reset/complete",
+    publicBaseUrl,
+  ).toString();
   const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
     redirectTo,
   });
