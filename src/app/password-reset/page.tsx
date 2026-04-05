@@ -4,8 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 
 import Button from "../components/Button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export const dynamic = "force-dynamic";
+
+const supabase = createSupabaseBrowserClient();
 
 export default function PasswordResetPage() {
   const [error, setError] = useState<string | null>(null);
@@ -22,17 +25,18 @@ export default function PasswordResetPage() {
     const formData = new FormData(form);
     const email = String(formData.get("email") ?? "").trim();
 
-    const response = await fetch("/api/auth/password-reset", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    const redirectTo = new URL(
+      "/password-reset/complete",
+      window.location.origin,
+    ).toString();
 
-    if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setError(body.error ?? "Passwort-Reset konnte nicht gestartet werden.");
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo },
+    );
+
+    if (resetError) {
+      setError(resetError.message || "Passwort-Reset konnte nicht gestartet werden.");
       setIsLoading(false);
       return;
     }

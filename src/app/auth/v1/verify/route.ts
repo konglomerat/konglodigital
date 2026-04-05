@@ -9,15 +9,61 @@ const requiredEnv = (name: string) => {
   return value;
 };
 
+const isLocalhostHost = (hostname: string) => {
+  const normalized = hostname.trim().toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1"
+  );
+};
+
+const resolvePublicBaseUrl = (request: NextRequest) => {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "";
+
+  const requestOrigin = request.nextUrl.origin;
+  if (!configuredBaseUrl) {
+    return requestOrigin;
+  }
+
+  try {
+    const configuredUrl = new URL(configuredBaseUrl);
+    const requestUrl = new URL(requestOrigin);
+
+    if (
+      isLocalhostHost(configuredUrl.hostname) &&
+      !isLocalhostHost(requestUrl.hostname)
+    ) {
+      return requestOrigin;
+    }
+
+    return configuredUrl.toString();
+  } catch {
+    return requestOrigin;
+  }
+};
+
 export const GET = async (request: NextRequest) => {
   try {
     const supabaseUrl = requiredEnv("SUPABASE_URL").replace(/\/$/, "");
     const supabaseOrigin = new URL(supabaseUrl).origin;
-    const publicBaseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      "";
+    const publicBaseUrl = resolvePublicBaseUrl(request);
+    const publicOrigin = new URL(publicBaseUrl);
     const linkType = request.nextUrl.searchParams.get("type") ?? "";
+    const token = request.nextUrl.searchParams.get("token");
+    const tokenHash = request.nextUrl.searchParams.get("token_hash") ?? token;
+
+    if (linkType === "recovery" && tokenHash) {
+      const resetTarget = new URL("/password-reset/complete", publicBaseUrl);
+      resetTarget.searchParams.set("type", "recovery");
+      resetTarget.searchParams.set("token_hash", tokenHash);
+
+      return NextResponse.redirect(resetTarget, { status: 302 });
+    }
+
     const inviteFallbackRedirect = publicBaseUrl
       ? new URL("/register/complete", publicBaseUrl).toString()
       : "";
@@ -37,8 +83,17 @@ export const GET = async (request: NextRequest) => {
             continue;
           }
 
+          if (
+            isLocalhostHost(redirectToUrl.hostname) &&
+            !isLocalhostHost(publicOrigin.hostname)
+          ) {
+            redirectToUrl.protocol = publicOrigin.protocol;
+            redirectToUrl.host = publicOrigin.host;
+            target.searchParams.append(key, redirectToUrl.toString());
+            continue;
+          }
+
           if (redirectToUrl.origin === supabaseOrigin) {
-            const publicOrigin = new URL(publicBaseUrl);
             redirectToUrl.protocol = publicOrigin.protocol;
             redirectToUrl.host = publicOrigin.host;
             target.searchParams.append(key, redirectToUrl.toString());

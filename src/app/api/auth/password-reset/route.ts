@@ -58,6 +58,43 @@ const buildSupabaseErrorMessage = (error: unknown) => {
   return "Passwort-Reset konnte nicht gestartet werden.";
 };
 
+const isLocalhostHost = (hostname: string) => {
+  const normalized = hostname.trim().toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1"
+  );
+};
+
+const resolvePublicBaseUrl = (request: NextRequest) => {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "";
+
+  const requestOrigin = request.nextUrl.origin;
+  if (!configuredBaseUrl) {
+    return requestOrigin;
+  }
+
+  try {
+    const configuredUrl = new URL(configuredBaseUrl);
+    const requestUrl = new URL(requestOrigin);
+
+    if (
+      isLocalhostHost(configuredUrl.hostname) &&
+      !isLocalhostHost(requestUrl.hostname)
+    ) {
+      return requestOrigin;
+    }
+
+    return configuredUrl.toString();
+  } catch {
+    return requestOrigin;
+  }
+};
+
 export const POST = async (request: NextRequest) => {
   const { supabase, response } = createSupabaseRouteClient(request);
   const { email } = (await request.json()) as {
@@ -74,10 +111,7 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const publicBaseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    request.url;
+  const publicBaseUrl = resolvePublicBaseUrl(request);
   const redirectTo = new URL(
     "/password-reset/complete",
     publicBaseUrl,
