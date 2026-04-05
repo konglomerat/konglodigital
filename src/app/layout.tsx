@@ -133,8 +133,7 @@ export default async function RootLayout({
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
   const userRole = await getUserRole(supabase, userData.user);
-  const canAccessAdmin =
-    isAuthenticated && roleCanAccessModule(userRole, "admin");
+  const canAccessAdmin = isAuthenticated && userRole === "admin";
   const canAccessInvoices =
     isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
@@ -189,20 +188,24 @@ export default async function RootLayout({
                       <p className={navSectionTitleClassName}>
                         Digital Fabrication
                       </p>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/printers"
                         className={navLinkClassName}
+                        icon={faCube}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
                         3D-Druck
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/printers/emptying"
                         className={navLinkClassName}
+                        icon={faPrint}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                         Drucker entleeren
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
                       <ProtectedNavItem
                         href="/printers/access-codes"
                         className={navLinkClassName}
@@ -212,16 +215,15 @@ export default async function RootLayout({
                       >
                         Drucker Zugangscodes
                       </ProtectedNavItem>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/checkout"
                         className={navLinkClassName}
+                        icon={faCartShopping}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faCartShopping}
-                          className="h-4 w-4"
-                        />
                         Warenkorb
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
 
                       <p className={navSectionTitleClassName}>Self Service</p>
                       <ProtectedNavItem
@@ -264,13 +266,15 @@ export default async function RootLayout({
                         />
                         Kalender
                       </ActiveNavLink>
-                      <ActiveNavLink
+                      <ProtectedNavItem
                         href="/products"
                         className={navLinkClassName}
+                        icon={faBoxOpen}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
                         Produkte
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
                       <p className={navSectionTitleClassName}>buchhaltung</p>
                       <ProtectedNavItem
                         href="/invoices"
@@ -385,17 +389,24 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Digital Fabrication
               </p>
-              <ActiveNavLink href="/printers" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/printers"
+                className={navItemClassName}
+                icon={faCube}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 3D-Druck
-              </ActiveNavLink>
-              <ActiveNavLink
+              </ProtectedNavItem>
+              <ProtectedNavItem
                 href="/printers/emptying"
                 className={navItemClassName}
+                icon={faPrint}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
               >
-                <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                 Drucker entleeren
-              </ActiveNavLink>
+              </ProtectedNavItem>
               <ProtectedNavItem
                 href="/printers/access-codes"
                 className={navItemClassName}
@@ -405,10 +416,15 @@ export default async function RootLayout({
               >
                 Drucker Zugangscodes
               </ProtectedNavItem>
-              <ActiveNavLink href="/checkout" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCartShopping} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/checkout"
+                className={navItemClassName}
+                icon={faCartShopping}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Warenkorb
-              </ActiveNavLink>
+              </ProtectedNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Self Service
@@ -448,10 +464,15 @@ export default async function RootLayout({
               >
                 Inventar
               </ProtectedNavItem>
-              <ActiveNavLink href="/products" className={navItemClassName}>
-                <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/products"
+                className={navItemClassName}
+                icon={faBoxOpen}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Produkte
-              </ActiveNavLink>
+              </ProtectedNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung

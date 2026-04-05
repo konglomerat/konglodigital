@@ -39,6 +39,11 @@ type CostCenterOption = {
 	label: string;
 };
 
+type AccountUser = {
+	email: string;
+	metadata: Record<string, unknown>;
+};
+
 type FormValues = {
 	betreff: string;
 	belegdatum: string;
@@ -66,6 +71,32 @@ const bytesToBase64 = (bytes: Uint8Array) => {
 		binary += String.fromCharCode(...chunk);
 	}
 	return btoa(binary);
+};
+
+const readMetadataText = (metadata: Record<string, unknown>, key: string) => {
+	const value = metadata[key];
+	return typeof value === "string" ? value.trim() : "";
+};
+
+const buildRecipientNameFromUser = (user: AccountUser) => {
+	const campaiName = readMetadataText(user.metadata, "campai_name");
+	if (campaiName) {
+		return campaiName;
+	}
+
+	const fullName = readMetadataText(user.metadata, "full_name");
+	if (fullName) {
+		return fullName;
+	}
+
+	const name = readMetadataText(user.metadata, "name");
+	if (name) {
+		return name;
+	}
+
+	const firstName = readMetadataText(user.metadata, "first_name");
+	const lastName = readMetadataText(user.metadata, "last_name");
+	return [firstName, lastName].filter(Boolean).join(" ");
 };
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
@@ -108,6 +139,10 @@ export default function ReimbursementPage() {
 	const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
 	const [costCentersLoading, setCostCentersLoading] = useState(true);
 	const [costCentersError, setCostCentersError] = useState<string | null>(null);
+	const [accountAutofill, setAccountAutofill] = useState<{
+		name: string;
+		email: string;
+	}>({ name: "", email: "" });
 	const [result, setResult] = useState<{
 		id?: string | null;
 		uploadWarning?: string;
@@ -215,6 +250,42 @@ export default function ReimbursementPage() {
 	useEffect(() => {
 		let active = true;
 
+		const loadAccountDefaults = async () => {
+			try {
+				const response = await fetchJson<{ user: AccountUser }>("/api/account/me");
+
+				if (!active) {
+					return;
+				}
+
+				const user = response.user;
+				const recipientName = buildRecipientNameFromUser(user);
+				const recipientEmail = user.email?.trim() ?? "";
+
+				setAccountAutofill({ name: recipientName, email: recipientEmail });
+
+				if (!getValues("empfaengerName") && recipientName) {
+					setValue("empfaengerName", recipientName, {
+						shouldDirty: false,
+						shouldTouch: false,
+						shouldValidate: false,
+					});
+				}
+
+				if (!getValues("empfaengerEmail") && recipientEmail) {
+					setValue("empfaengerEmail", recipientEmail, {
+						shouldDirty: false,
+						shouldTouch: false,
+						shouldValidate: false,
+					});
+				}
+			} catch {
+				if (active) {
+					setAccountAutofill({ name: "", email: "" });
+				}
+			}
+		};
+
 		const loadCostCenters = async () => {
 			try {
 				setCostCentersLoading(true);
@@ -259,6 +330,7 @@ export default function ReimbursementPage() {
 			}
 		};
 
+		loadAccountDefaults();
 		loadCostCenters();
 
 		return () => {
@@ -320,8 +392,8 @@ export default function ReimbursementPage() {
 			reset({
 				betreff: "",
 				belegdatum: "",
-				empfaengerName: "",
-				empfaengerEmail: "",
+				empfaengerName: accountAutofill.name,
+				empfaengerEmail: accountAutofill.email,
 				notiz: "",
 				belegDatei: undefined,
 			});
@@ -717,10 +789,30 @@ export default function ReimbursementPage() {
 								label="Ist die Rechnung bereits beglichen?"
 								required
 							>
-								<Select {...register("rechnungStatus")}>
-									<option value="offen">offen</option>
-									<option value="bezahlt">bezahlt</option>
-								</Select>
+								<div
+									role="radiogroup"
+									aria-label="Ist die Rechnung bereits beglichen?"
+									className="flex flex-wrap gap-4"
+								>
+									<label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+										<Input
+											type="radio"
+											value="offen"
+											className="h-4 w-4 accent-blue-600"
+											{...register("rechnungStatus")}
+										/>
+										<span>offen</span>
+									</label>
+									<label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+										<Input
+											type="radio"
+											value="bezahlt"
+											className="h-4 w-4 accent-blue-600"
+											{...register("rechnungStatus")}
+										/>
+										<span>bezahlt</span>
+									</label>
+								</div>
 							</FormField>
 
 							<FormField

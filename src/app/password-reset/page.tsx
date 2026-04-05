@@ -36,7 +36,9 @@ export default function PasswordResetPage() {
     );
 
     if (resetError) {
-      setError(resetError.message || "Passwort-Reset konnte nicht gestartet werden.");
+      setError(
+        resetError.message || "Passwort-Reset konnte nicht gestartet werden.",
+      );
       setIsLoading(false);
       return;
     }
