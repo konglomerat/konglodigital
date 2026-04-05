@@ -56,6 +56,9 @@ export default function AdminUsersClient() {
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [savingRoleForId, setSavingRoleForId] = useState<string | null>(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailError, setTestEmailError] = useState<string | null>(null);
+  const [testEmailSuccess, setTestEmailSuccess] = useState<string | null>(null);
 
   const loadProfiles = useCallback(async () => {
     setIsLoadingProfiles(true);
@@ -112,6 +115,28 @@ export default function AdminUsersClient() {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    setIsSendingTestEmail(true);
+    setTestEmailError(null);
+    setTestEmailSuccess(null);
+
+    try {
+      await fetchJson<{ ok: true; recipient: string }>("/api/admin/test-email", {
+        method: "POST",
+      });
+
+      setTestEmailSuccess("Test-E-Mail wurde an robert@wirewire.de angestossen.");
+    } catch (error) {
+      setTestEmailError(
+        error instanceof Error
+          ? error.message
+          : "Test-E-Mail konnte nicht gesendet werden.",
+      );
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -121,6 +146,31 @@ export default function AdminUsersClient() {
         <p className="text-sm text-zinc-600">
           Verwalte registrierte Benutzerprofile und ihre Rollen. Die Registrierung selbst läuft wieder direkt über Supabase-Mail links mit Mitgliedsabgleich.
         </p>
+        <div className="pt-2">
+          <Button
+            type="button"
+            kind="secondary"
+            className="px-4 py-2 text-sm"
+            disabled={isSendingTestEmail}
+            onClick={() => {
+              void handleSendTestEmail();
+            }}
+          >
+            {isSendingTestEmail
+              ? "Sende Test-E-Mail ..."
+              : "Test-E-Mail an robert@wirewire.de senden"}
+          </Button>
+        </div>
+        {testEmailError ? (
+          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+            {testEmailError}
+          </div>
+        ) : null}
+        {testEmailSuccess ? (
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm">
+            {testEmailSuccess}
+          </div>
+        ) : null}
       </header>
 
       <section className="space-y-3">
