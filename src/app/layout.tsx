@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ActiveNavLink from "./ActiveNavLink";
+import heroHelloImage from "./hero-hello.jpg";
 import { Geist, Geist_Mono } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -42,9 +43,43 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteTitle = "Konglomerat Digitale Werkstätten";
+const siteDescription =
+  "Zwischen Werkbank, Warenkorb und Vereinschaos: alles an einem Ort.";
+const publicBaseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+  process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Konglomerat Digitale Werkstätten",
-  description: "Dashboard, products, and checkout",
+  metadataBase: new URL(publicBaseUrl),
+  title: siteTitle,
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: siteTitle,
+    description: siteDescription,
+    siteName: siteTitle,
+    locale: "de_DE",
+    images: [
+      {
+        url: heroHelloImage.src,
+        width: heroHelloImage.width,
+        height: heroHelloImage.height,
+        alt: "Konglo Digital Startseite",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: [heroHelloImage.src],
+  },
 };
 
 type ProtectedNavItemProps = {
