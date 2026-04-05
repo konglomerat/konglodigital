@@ -174,6 +174,14 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .dark .negative-multiply {
+  filter: invert(1) saturate(1.7);
+  mix-blend-mode: lighten;
+}
+
+.invert-in-dark {
+  filter: none;
+}
+
+.dark .invert-in-dark {
   filter: invert(1);
-  mix-blend-mode: difference;
 }

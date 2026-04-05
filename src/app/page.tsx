@@ -104,7 +104,7 @@ export default function Home() {
               muted
               playsInline
               loop
-              className="h-auto w-full object-cover"
+              className="h-auto w-full object-cover invert-in-dark"
             >
               <source src="/heroanimation.mp4" type="video/mp4" />
             </video>
@@ -182,27 +182,6 @@ export default function Home() {
               </Link>
             );
           })}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
-          So funktioniert es
-        </h2>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {workflowSteps.map((step) => (
-            <article
-              key={step.title}
-              className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
-            >
-              <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-zinc-800">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                {step.text}
-              </p>
-            </article>
-          ))}
         </div>
       </section>
     </main>
