@@ -28,6 +28,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoCloseMenuDetails from "./components/AutoCloseMenuDetails";
+import ChatwootWidget from "./components/ChatwootWidget";
 
 config.autoAddCss = false;
 
@@ -122,6 +123,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ChatwootWidget />
         <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
           <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
             <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
