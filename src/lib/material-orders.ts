@@ -30,10 +30,16 @@ export type MaterialOrderEditableParticipant = {
   creating: boolean;
 };
 
+export type MaterialOrderDueDays = "7" | "10" | "14" | "30";
+
+export type MaterialOrderInvoiceSendMode = "none" | "email";
+
 export type MaterialOrderDraft = {
   supplierName: string;
   supplierInvoiceNumber: string;
   supplierInvoiceDate: string;
+  dueDays: MaterialOrderDueDays;
+  invoiceSendMode: MaterialOrderInvoiceSendMode;
   shippingAmountEuro: string;
   shippingMode: "equal" | "byValue" | "manual";
   globalTaxRate: "0" | "7" | "19";
@@ -201,6 +207,17 @@ export const normalizeMaterialOrderDraft = (value: unknown): MaterialOrderDraft 
       typeof typed.supplierInvoiceDate === "string"
         ? typed.supplierInvoiceDate.trim()
         : "",
+    dueDays:
+      typed.dueDays === "7" ||
+      typed.dueDays === "10" ||
+      typed.dueDays === "14" ||
+      typed.dueDays === "30"
+        ? typed.dueDays
+        : "30",
+    invoiceSendMode:
+      typed.invoiceSendMode === "email" || typed.invoiceSendMode === "none"
+        ? typed.invoiceSendMode
+        : "none",
     shippingAmountEuro:
       typeof typed.shippingAmountEuro === "string" ? typed.shippingAmountEuro : "0,00",
     shippingMode:

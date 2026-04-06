@@ -18,8 +18,10 @@ import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import { FormField, FormSection, Input, Select } from "../components/ui/form";
 import {
   type MaterialOrderDraft,
+  type MaterialOrderDueDays,
   type MaterialOrderEditableParticipant,
   type MaterialOrderEditablePosition,
+  type MaterialOrderInvoiceSendMode,
   type MaterialOrderSummary,
 } from "@/lib/material-orders";
 import { normalizeInvoiceDateString, type MaterialInvoiceParseResult } from "@/lib/material-invoice";
@@ -81,6 +83,20 @@ const parseNumberInput = (value: string) => {
 };
 
 const toInputEuro = (value: number) => roundCurrency(value).toFixed(2).replace(".", ",");
+
+const calculateDueDate = (invoiceDate: string, dueDays: MaterialOrderDueDays) => {
+  if (!invoiceDate) {
+    return "";
+  }
+
+  const parsedDate = new Date(`${invoiceDate}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  parsedDate.setDate(parsedDate.getDate() + Number(dueDays));
+  return parsedDate.toISOString().slice(0, 10);
+};
 
 const formatStoredDate = (value: string) => {
   if (!value) {
@@ -214,6 +230,8 @@ const buildDraft = (params: {
   supplierName: string;
   supplierInvoiceNumber: string;
   supplierInvoiceDate: string;
+  dueDays: MaterialOrderDueDays;
+  invoiceSendMode: MaterialOrderInvoiceSendMode;
   shippingAmountEuro: string;
   shippingMode: ShippingMode;
   globalTaxRate: TaxRate;
@@ -223,6 +241,8 @@ const buildDraft = (params: {
   supplierName: params.supplierName,
   supplierInvoiceNumber: params.supplierInvoiceNumber,
   supplierInvoiceDate: params.supplierInvoiceDate,
+  dueDays: params.dueDays,
+  invoiceSendMode: params.invoiceSendMode,
   shippingAmountEuro: params.shippingAmountEuro,
   shippingMode: params.shippingMode,
   globalTaxRate: params.globalTaxRate,
@@ -249,6 +269,8 @@ export default function MaterialInvoicesPage({
   const [supplierName, setSupplierName] = useState("");
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
+  const [dueDays, setDueDays] = useState<MaterialOrderDueDays>("30");
+  const [invoiceSendMode, setInvoiceSendMode] = useState<MaterialOrderInvoiceSendMode>("none");
   const [shippingAmountEuro, setShippingAmountEuro] = useState("0,00");
   const [shippingMode, setShippingMode] = useState<ShippingMode>("equal");
   const [globalTaxRate, setGlobalTaxRate] = useState<TaxRate>("19");
@@ -338,6 +360,8 @@ export default function MaterialInvoicesPage({
     setSupplierName("");
     setSupplierInvoiceNumber("");
     setSupplierInvoiceDate("");
+    setDueDays("30");
+    setInvoiceSendMode("none");
     setShippingAmountEuro("0,00");
     setShippingMode("equal");
     setGlobalTaxRate("19");
@@ -405,6 +429,8 @@ export default function MaterialInvoicesPage({
         supplierName,
         supplierInvoiceNumber,
         supplierInvoiceDate,
+        dueDays,
+        invoiceSendMode,
         shippingAmountEuro,
         shippingMode,
         globalTaxRate,
@@ -455,6 +481,8 @@ export default function MaterialInvoicesPage({
       setSupplierName(data.draft.supplierName);
       setSupplierInvoiceNumber(data.draft.supplierInvoiceNumber);
       setSupplierInvoiceDate(data.draft.supplierInvoiceDate);
+      setDueDays(data.draft.dueDays);
+      setInvoiceSendMode(data.draft.invoiceSendMode);
       setShippingAmountEuro(data.draft.shippingAmountEuro);
       setShippingMode(data.draft.shippingMode);
       setGlobalTaxRate(data.draft.globalTaxRate);
@@ -580,6 +608,14 @@ export default function MaterialInvoicesPage({
       return;
     }
 
+    if (invoiceSendMode === "email" && !participant.debtorEmail.trim()) {
+      updateParticipant(participantId, (current) => ({
+        ...current,
+        createError: "Für Versand per Mail wird eine E-Mail-Adresse benötigt.",
+      }));
+      return;
+    }
+
     updateParticipant(participantId, (current) => ({
       ...current,
       creating: true,
@@ -589,6 +625,7 @@ export default function MaterialInvoicesPage({
 
     try {
       const shippingShare = shippingByParticipant.get(participant.id) ?? 0;
+      const dueDate = calculateDueDate(supplierInvoiceDate, dueDays);
       const body = {
         debtorName: participant.debtorName,
         customerNumber: participant.debtorAccount,
@@ -606,6 +643,7 @@ export default function MaterialInvoicesPage({
         paymentCashAccountId: selectedCashAccountId,
         positionAccount: 12000,
         invoiceDate: supplierInvoiceDate,
+        dueDate: dueDate || undefined,
         deliveryDate: supplierInvoiceDate,
         title: "Rechnung",
         intro: `Materialbestellung aus Sammelrechnung ${supplierInvoiceNumber || ""}`.trim(),
@@ -613,7 +651,7 @@ export default function MaterialInvoicesPage({
         note: `Besteller: ${participant.name}`,
         isNet: true,
         paid: false,
-        sendByMail: false,
+        sendByMail: invoiceSendMode === "email",
         positions: [
           ...participant.positions.map((position) => ({
             description: position.description,
@@ -759,6 +797,28 @@ export default function MaterialInvoicesPage({
                   value={supplierInvoiceDate}
                   onChange={(event) => setSupplierInvoiceDate(event.target.value)}
                 />
+              </FormField>
+              <FormField label="Faelligkeit">
+                <Select
+                  value={dueDays}
+                  onChange={(event) => setDueDays(event.target.value as MaterialOrderDueDays)}
+                >
+                  <option value="7">7 Tage ab Rechnungsdatum</option>
+                  <option value="10">10 Tage ab Rechnungsdatum</option>
+                  <option value="14">14 Tage ab Rechnungsdatum</option>
+                  <option value="30">30 Tage ab Rechnungsdatum</option>
+                </Select>
+              </FormField>
+              <FormField label="Rechnungsversand">
+                <Select
+                  value={invoiceSendMode}
+                  onChange={(event) =>
+                    setInvoiceSendMode(event.target.value as MaterialOrderInvoiceSendMode)
+                  }
+                >
+                  <option value="none">Kein Versand</option>
+                  <option value="email">Versand per Mail</option>
+                </Select>
               </FormField>
               <FormField label="Lieferkosten gesamt in EUR">
                 <Input
