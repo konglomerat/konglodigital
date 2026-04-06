@@ -323,6 +323,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   const body = (await request.json()) as {
+    invoiceId?: string;
     address?: AddressPayload;
     email?: string;
     recipientEmail?: string;
@@ -424,6 +425,15 @@ export const POST = async (request: NextRequest) => {
   const payloadReceiptDate = normalizeDate(body.invoiceDate);
   const payloadDueDate = normalizeDate(body.dueDate) ?? dueDate;
   const payloadDeliveryDate = normalizeDate(body.deliveryDate);
+  const existingInvoiceId = normalizeObjectId(body.invoiceId);
+
+  if (body.invoiceId !== undefined && !existingInvoiceId) {
+    return NextResponse.json(
+      { error: "Ungueltige bestehende Campai-Rechnungs-ID." },
+      { status: 400 },
+    );
+  }
+
   if (!payloadReceiptDate) {
     return NextResponse.json(
       { error: "Missing or invalid invoice date." },
@@ -636,6 +646,7 @@ export const POST = async (request: NextRequest) => {
   };
 
   console.info("Campai invoice payload debug", {
+    existingInvoiceId,
     account: payload.account,
     accountName: payload.accountName,
     customerType: payload.customerType,
@@ -653,26 +664,40 @@ export const POST = async (request: NextRequest) => {
     })),
   });
 
-  const response = await fetch(
-    `https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/invoice`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify(payload),
+  const baseUrl = `https://cloud.campai.com/api/${organizationId}/${mandateId}`;
+  const endpoint = existingInvoiceId
+    ? `${baseUrl}/receipts/invoice/${existingInvoiceId}`
+    : `${baseUrl}/receipts/invoice`;
+  const method = "POST";
+
+  const response = await fetch(endpoint, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
     },
-  );
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     const errorBody = await response.text();
     return NextResponse.json(
-      { error: errorBody || "Campai request failed." },
+      {
+        error:
+          errorBody ||
+          (existingInvoiceId
+            ? "Campai request failed while updating invoice."
+            : "Campai request failed while creating invoice."),
+      },
       { status: response.status },
     );
   }
 
-  const dataResponse = (await response.json()) as { _id?: string };
-  return NextResponse.json({ id: dataResponse._id ?? null });
+  const dataResponse = (await response.json().catch(() => null)) as
+    | { _id?: string; id?: string }
+    | null;
+
+  return NextResponse.json({
+    id: dataResponse?._id ?? dataResponse?.id ?? existingInvoiceId ?? null,
+  });
 };

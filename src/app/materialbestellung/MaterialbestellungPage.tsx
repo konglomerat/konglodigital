@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   faFileArrowUp,
-  faFloppyDisk,
+  faFilePdf,
   faPlus,
   faRightLeft,
   faRotate,
@@ -59,6 +59,7 @@ const DEFAULT_COST_CENTER1 = "4";
 const HOLZ_COST_CENTER2 = "57";
 const DEFAULT_TRANSFER_ACCOUNT = "17100";
 const SHIPPING_UNIT = "St";
+const AUTO_SAVE_DELAY_MS = 3000;
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
@@ -291,6 +292,8 @@ export default function MaterialInvoicesPage({
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isCreatingAll, setIsCreatingAll] = useState(false);
+  const lastSavedDraftRef = useRef<string | null>(null);
+  const autoSaveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -362,7 +365,147 @@ export default function MaterialInvoicesPage({
     [participants, shippingByParticipant],
   );
 
+  const autoSaveDraft = useMemo(
+    () =>
+      participants.length > 0
+        ? buildDraft({
+            supplierName,
+            supplierInvoiceNumber,
+            supplierInvoiceDate,
+            dueDays,
+            invoiceSendMode,
+            shippingAmountEuro,
+            shippingMode,
+            globalTaxRate,
+            issues,
+            participants,
+          })
+        : null,
+    [
+      dueDays,
+      globalTaxRate,
+      invoiceSendMode,
+      issues,
+      participants,
+      shippingAmountEuro,
+      shippingMode,
+      supplierInvoiceDate,
+      supplierInvoiceNumber,
+      supplierName,
+    ],
+  );
+
+  const autoSaveSignature = useMemo(
+    () => (autoSaveDraft ? JSON.stringify(autoSaveDraft) : null),
+    [autoSaveDraft],
+  );
+
+  const hasUnsavedChanges = Boolean(
+    autoSaveSignature && autoSaveSignature !== lastSavedDraftRef.current,
+  );
+
+  const clearPendingAutoSave = () => {
+    if (autoSaveTimeoutRef.current !== null) {
+      window.clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+  };
+
+  const persistDraft = async (draft: MaterialOrderDraft, signature: string) => {
+    try {
+      clearPendingAutoSave();
+      setSavingDraft(true);
+      setSaveError(null);
+
+      const data = await fetchJson<{ id: string }>(
+        "/api/materialbestellung/orders",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: currentOrderId ?? undefined,
+            draft,
+          }),
+        },
+      );
+
+      lastSavedDraftRef.current = signature;
+      setCurrentOrderId(data.id);
+      setSaveMessage("Automatisch gespeichert.");
+    } catch (error) {
+      setSaveMessage(null);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Materialbestellung konnte nicht gespeichert werden.",
+      );
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      setSaveMessage(null);
+    }
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!autoSaveDraft || !autoSaveSignature || savingDraft || isParsing) {
+      return;
+    }
+
+    if (autoSaveSignature === lastSavedDraftRef.current) {
+      return;
+    }
+
+    clearPendingAutoSave();
+    autoSaveTimeoutRef.current = window.setTimeout(() => {
+      autoSaveTimeoutRef.current = null;
+      void persistDraft(autoSaveDraft, autoSaveSignature);
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => {
+      clearPendingAutoSave();
+    };
+  }, [autoSaveDraft, autoSaveSignature, isParsing, savingDraft]);
+
+  useEffect(
+    () => () => {
+      clearPendingAutoSave();
+    },
+    [],
+  );
+
+  const flushAutoSave = () => {
+    if (!autoSaveDraft || !autoSaveSignature || savingDraft || isParsing) {
+      return;
+    }
+
+    if (autoSaveSignature === lastSavedDraftRef.current) {
+      return;
+    }
+
+    void persistDraft(autoSaveDraft, autoSaveSignature);
+  };
+
+  const handleEditorBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
+    const target = event.target;
+
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    if (target instanceof HTMLInputElement && target.type === "file") {
+      return;
+    }
+
+    flushAutoSave();
+  };
+
   const resetEditor = () => {
+    clearPendingAutoSave();
+    lastSavedDraftRef.current = null;
     setCurrentOrderId(null);
     setParticipants([]);
     setSupplierName("");
@@ -386,6 +529,7 @@ export default function MaterialInvoicesPage({
     }
 
     try {
+      clearPendingAutoSave();
       setIsParsing(true);
       setParseError(null);
       setSaveError(null);
@@ -403,6 +547,7 @@ export default function MaterialInvoicesPage({
       );
 
       const parsed = data.parsed;
+      lastSavedDraftRef.current = null;
       setCurrentOrderId(null);
       setSupplierName(parsed.supplierName);
       setSupplierInvoiceNumber(parsed.supplierInvoiceNumber);
@@ -422,57 +567,9 @@ export default function MaterialInvoicesPage({
     }
   };
 
-  const saveDraft = async () => {
-    if (participants.length === 0) {
-      setSaveError("Es gibt noch keine aufgeteilte Materialbestellung zum Speichern.");
-      return;
-    }
-
-    try {
-      setSavingDraft(true);
-      setSaveError(null);
-      setSaveMessage(null);
-
-      const draft = buildDraft({
-        supplierName,
-        supplierInvoiceNumber,
-        supplierInvoiceDate,
-        dueDays,
-        invoiceSendMode,
-        shippingAmountEuro,
-        shippingMode,
-        globalTaxRate,
-        issues,
-        participants,
-      });
-
-      const data = await fetchJson<{ id: string }>(
-        "/api/materialbestellung/orders",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: currentOrderId ?? undefined,
-            draft,
-          }),
-        },
-      );
-
-      setCurrentOrderId(data.id);
-      setSaveMessage("Materialbestellung gespeichert.");
-    } catch (error) {
-      setSaveError(
-        error instanceof Error
-          ? error.message
-          : "Materialbestellung konnte nicht gespeichert werden.",
-      );
-    } finally {
-      setSavingDraft(false);
-    }
-  };
-
   const openSavedOrder = async (orderId: string) => {
     try {
+      clearPendingAutoSave();
       setSaveError(null);
       setSaveMessage(null);
 
@@ -485,6 +582,28 @@ export default function MaterialInvoicesPage({
         throw new Error("Gespeicherte Materialbestellung konnte nicht geladen werden.");
       }
 
+      const normalizedParticipants = data.draft.participants.map((participant) => ({
+        ...participant,
+        shippingDescription: participant.shippingDescription ?? "Anteilige Lieferkosten",
+        createError: null,
+        creating: false,
+      }));
+
+      lastSavedDraftRef.current = JSON.stringify(
+        buildDraft({
+          supplierName: data.draft.supplierName,
+          supplierInvoiceNumber: data.draft.supplierInvoiceNumber,
+          supplierInvoiceDate: data.draft.supplierInvoiceDate,
+          dueDays: data.draft.dueDays,
+          invoiceSendMode: data.draft.invoiceSendMode,
+          shippingAmountEuro: data.draft.shippingAmountEuro,
+          shippingMode: data.draft.shippingMode,
+          globalTaxRate: data.draft.globalTaxRate,
+          issues: data.draft.issues,
+          participants: normalizedParticipants,
+        }),
+      );
+
       setCurrentOrderId(orderId);
       setSupplierName(data.draft.supplierName);
       setSupplierInvoiceNumber(data.draft.supplierInvoiceNumber);
@@ -495,14 +614,7 @@ export default function MaterialInvoicesPage({
       setShippingMode(data.draft.shippingMode);
       setGlobalTaxRate(data.draft.globalTaxRate);
       setIssues(data.draft.issues);
-      setParticipants(
-        data.draft.participants.map((participant) => ({
-          ...participant,
-          shippingDescription: participant.shippingDescription ?? "Anteilige Lieferkosten",
-          createError: null,
-          creating: false,
-        })),
-      );
+      setParticipants(normalizedParticipants);
     } catch (error) {
       setSaveError(
         error instanceof Error
@@ -628,7 +740,7 @@ export default function MaterialInvoicesPage({
       ...current,
       creating: true,
       createError: null,
-      invoiceId: null,
+      invoiceId: current.invoiceId,
     }));
 
     try {
@@ -636,6 +748,7 @@ export default function MaterialInvoicesPage({
       const invoiceCreationDate = getTodayDateString();
       const dueDate = calculateDueDate(invoiceCreationDate, dueDays);
       const body = {
+        invoiceId: participant.invoiceId ?? undefined,
         debtorName: participant.debtorName,
         customerNumber: participant.debtorAccount,
         address: {
@@ -701,8 +814,11 @@ export default function MaterialInvoicesPage({
       updateParticipant(participantId, (current) => ({
         ...current,
         creating: false,
-        invoiceId: data.id ?? null,
-        createError: data.id ? null : "Campai hat keine Rechnungs-ID zurueckgegeben.",
+        invoiceId: data.id ?? current.invoiceId ?? null,
+        createError:
+          data.id || current.invoiceId
+            ? null
+            : "Campai hat keine Rechnungs-ID zurueckgegeben.",
       }));
     } catch (error) {
       updateParticipant(participantId, (current) => ({
@@ -786,7 +902,7 @@ export default function MaterialInvoicesPage({
         ) : null}
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6" onBlurCapture={handleEditorBlurCapture}>
           <FormSection
             title="Rechnungsdaten"
             description="Globale Rechnungsdaten für diese Materialbestellung."
@@ -875,8 +991,6 @@ export default function MaterialInvoicesPage({
               </FormField>
             </div>
 
-            {saveError ? <p className="text-sm text-rose-600">{saveError}</p> : null}
-            {saveMessage ? <p className="text-sm text-emerald-700">{saveMessage}</p> : null}
             {bankConnectionsError ? (
               <p className="text-sm text-rose-600">{bankConnectionsError}</p>
             ) : null}
@@ -909,7 +1023,7 @@ export default function MaterialInvoicesPage({
                   key={participant.id}
                   className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto">
                     <Input
                       value={participant.name}
                       onChange={(event) =>
@@ -918,11 +1032,16 @@ export default function MaterialInvoicesPage({
                           name: event.target.value,
                         }))
                       }
-                      className="max-w-sm"
+                      className="max-w-sm flex-none"
                     />
                     <span className="whitespace-nowrap rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                       KI-Zuordnung: {participant.confidence}
                     </span>
+                    {participant.invoiceId ? (
+                      <p className="ml-auto whitespace-nowrap text-sm text-emerald-700 dark:text-emerald-300">
+                        In Campai erstellt ✓
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
@@ -1181,13 +1300,27 @@ export default function MaterialInvoicesPage({
                       Person entfernen
                     </Button>
                     <div className="flex items-center gap-3">
-                      {participant.invoiceId ? (
-                        <p className="text-sm text-emerald-700">
-                          In Campai erstellt: {participant.invoiceId}
-                        </p>
-                      ) : null}
                       {participant.createError ? (
                         <p className="text-sm text-rose-600">{participant.createError}</p>
+                      ) : null}
+                      {participant.invoiceId ? (
+                        <Button
+                          kind="secondary"
+                          size="small"
+                          icon={faFilePdf}
+                          className="h-8 w-8 px-0"
+                          title="PDF anzeigen"
+                          aria-label="PDF anzeigen"
+                          onClick={() => {
+                            window.open(
+                              `/api/campai/invoices/${participant.invoiceId}/download`,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }}
+                        >
+                          <span className="sr-only">PDF anzeigen</span>
+                        </Button>
                       ) : null}
                       <Button
                         kind="outline"
@@ -1196,7 +1329,13 @@ export default function MaterialInvoicesPage({
                         onClick={() => void createInvoiceForParticipant(participant.id)}
                         disabled={participant.creating}
                       >
-                        {participant.creating ? "Erstelle..." : "Teilrechnung erzeugen"}
+                        {participant.creating
+                          ? participant.invoiceId
+                            ? "Aktualisiere..."
+                            : "Erstelle..."
+                          : participant.invoiceId
+                            ? "Teilrechnung aktualisieren"
+                            : "Teilrechnung erzeugen"}
                       </Button>
                     </div>
                   </div>
@@ -1218,16 +1357,28 @@ export default function MaterialInvoicesPage({
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
             Brutto gesamt: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{euroFormatter.format(bruttoTotal)}</span>
           </p>
-          <Button
-            kind="secondary"
-            size="small"
-            icon={faFloppyDisk}
-            onClick={() => void saveDraft()}
-            disabled={savingDraft || participants.length === 0}
-            className="ml-auto"
-          >
-            {savingDraft ? "Speichert…" : "Speichern"}
-          </Button>
+          {participants.length > 0 ? (
+            <p
+              className={`ml-auto text-sm ${
+                saveError
+                  ? "text-rose-600"
+                  : savingDraft
+                    ? "text-amber-700 dark:text-amber-400"
+                    : hasUnsavedChanges
+                      ? "text-zinc-600 dark:text-zinc-300"
+                    : "text-emerald-700"
+              }`}
+              aria-live="polite"
+            >
+              {saveError
+                ? saveError
+                : savingDraft
+                  ? "Speichert Änderungen…"
+                  : hasUnsavedChanges
+                    ? "Noch nicht gespeichert"
+                    : saveMessage ?? "Alle Änderungen gespeichert"}
+            </p>
+          ) : null}
           {participants.length > 0 ? (
             <Button
               kind="primary"
