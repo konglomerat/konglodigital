@@ -189,7 +189,7 @@ const loadResourcesFromDb = async () => {
       .select("*", { count: "exact" })
       .order("priority", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .range(0, 1499);
+      .range(0, 99);
 
     if (error) {
       return {
@@ -230,7 +230,7 @@ const loadResourcesFromDb = async () => {
 
 const getCachedResources = unstable_cache(
   loadResourcesFromDb,
-  ["resources-list"],
+  ["resources-list-v3"],
   {
     revalidate: 60 * 60 * 24 * 7,
     tags: ["resources"],

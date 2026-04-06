@@ -1,832 +1,273 @@
-"use client";
-/* eslint-disable @next/next/no-img-element */
-
-import { useEffect, useState } from "react";
-import { type PrinterStatus } from "@/lib/bambu";
-import Button from "./components/Button";
+import Link from "next/link";
+import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  getCartJobs,
-  getCartProducts,
-  setCartJobs,
-  setCartProducts,
-  type CartProduct,
-} from "@/lib/cart";
+  faCircleCheck,
+  faEnvelope,
+  faUserPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import Button from "./components/Button";
+import heroHelloImage from "./hero-hello.jpg";
+import inventoryImage from "./inventory.jpg";
+import inventoryBwImage from "./inventory-bw.jpg";
+import calendarImage from "./calendar.jpg";
+import calendarBwImage from "./calendar-bw.jpg";
+import print3dImage from "./3dprint.jpg";
+import print3dBwImage from "./3dprint-bw.jpg";
 
-const statusStyles: Record<PrinterStatus, string> = {
-  idle: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  printing: "bg-blue-50 text-blue-700 ring-blue-200",
-  paused: "bg-amber-50 text-amber-700 ring-amber-200",
-  offline: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  error: "bg-rose-50 text-rose-700 ring-rose-200",
+type QuickAction = {
+  href: string;
+  title: string;
+  description: string;
 };
 
-const statusLabels: Record<PrinterStatus, string> = {
-  idle: "Idle",
-  printing: "Printing",
-  paused: "Paused",
-  offline: "Offline",
-  error: "Error",
-};
-
-const formatUpdated = (iso: string) =>
-  new Date(iso).toLocaleString("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-
-const formatDuration = (seconds?: number) => {
-  if (!seconds || seconds <= 0) {
-    return "-";
-  }
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-};
-
-const parseDateMs = (value?: string) => {
-  if (!value) {
-    return undefined;
-  }
-  const time = Date.parse(value);
-  return Number.isNaN(time) ? undefined : time;
-};
-
-const getJobStatusLabel = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized === "2" || normalized === "success") {
-    return "Success";
-  }
-  if (normalized === "1" || normalized === "printing") {
-    return "Printing";
-  }
-  if (
-    ["3", "4", "failed", "error", "canceled", "cancelled", "aborted"].includes(
-      normalized,
-    )
-  ) {
-    return "Failed";
-  }
-  return status;
-};
-
-const estimatePrintedWeight = (
-  weightGrams?: number,
-  durationSeconds?: number,
-  startTime?: string,
-  endTime?: string,
-  status?: string,
-) => {
-  if (!weightGrams) {
-    return undefined;
-  }
-
-  const statusLabel = status ? getJobStatusLabel(status) : "";
-  const isFailed = statusLabel === "Failed";
-  if (!isFailed) {
-    return weightGrams;
-  }
-
-  const startMs = parseDateMs(startTime);
-  const endMs = parseDateMs(endTime);
-  const actualSeconds =
-    startMs && endMs && endMs > startMs
-      ? Math.max(0, Math.round((endMs - startMs) / 1000))
-      : undefined;
-  const expectedSeconds = durationSeconds ?? undefined;
-
-  if (!actualSeconds || !expectedSeconds || expectedSeconds <= 0) {
-    return Math.max(0, Math.round(weightGrams * 0.5));
-  }
-
-  const ratio = Math.min(1, Math.max(0, actualSeconds / expectedSeconds));
-  return Math.max(0, Math.round(weightGrams * ratio));
-};
-
-const formatPriceRange = (weightGrams?: number) => {
-  if (!weightGrams) {
-    return "-";
-  }
-
-  const priceLow = (weightGrams / 100) * 3;
-  const priceHigh = (weightGrams / 100) * 5;
-  return `€${priceLow.toFixed(2)}–€${priceHigh.toFixed(2)}`;
-};
-
-const printerImages: Array<{
-  match: (name: string) => boolean;
-  url: string;
-  alt: string;
-}> = [
+const quickActions: QuickAction[] = [
   {
-    match: (name) => /p1s\s*mit\s*ams|p1s\s*combo|p1s\s*with\s*ams/i.test(name),
-    url: "https://www.polyfab3d.de/8677-pdt_540/starter-pack-bambu-lab-p1s-combo-mit-ams.jpg",
-    alt: "Bambu Lab P1S Combo with AMS",
+    href: "/checkout",
+    title: "Zum Warenkorb",
+    description: "Direkt zu offenen Druckjobs und Produkten.",
   },
   {
-    match: (name) => /p1s\s*ohne\s*ams/i.test(name),
-    url: "https://www.polyfab3d.de/9157-pdt_540/bambu-lab-ps1.jpg",
-    alt: "Bambu Lab P1S",
+    href: "/resources",
+    title: "Inventar ansehen",
+    description: "Werkzeuge, Materialien und Standorte durchsuchen.",
   },
   {
-    match: (name) => /h2d\s*mit\s*ams|h2d\s*combo/i.test(name),
-    url: "https://www.polyfab3d.de/12526-pdt_540/bambu-lab-h2d-combo.jpg",
-    alt: "Bambu Lab H2D Combo with AMS",
+    href: "/calendar",
+    title: "Kalender öffnen",
+    description: "Termine, Workshops und Belegungen prüfen.",
+  },
+  /*
+  {
+    href: "/products",
+    title: "Produkte finden",
+    description: "Materialien und Services schnell auswählen.",
   },
   {
-    match: (name) => /a1\s*mini/i.test(name),
-    url: "https://www.polyfab3d.de/14537-pdt_540/bambu-lab-a1-mini.jpg",
-    alt: "Bambu Lab A1 Mini",
+    href: "/account",
+    title: "Mein Profil",
+    description: "Persönliche Daten und Einstellungen verwalten.",
+  },
+  {
+    href: "/invoices",
+    title: "Rechnungen",
+    description: "Rechnungen und Abrechnungen an einem Ort.",
+  },*/
+];
+
+const workflowSteps = [
+  {
+    title: "1. Entdecken",
+    text: "Finde Werkzeuge, freie Termine und passende Produkte.",
+  },
+  {
+    title: "2. Nutzen",
+    text: "Starte deinen Prozess mit wenigen Klicks und klaren Wegen.",
+  },
+  {
+    title: "3. Verwalten",
+    text: "Behalte Käufe, Beiträge und Unterlagen im Blick.",
   },
 ];
 
-const getPrinterImage = (name: string) =>
-  printerImages.find((entry) => entry.match(name));
-
-export const dynamic = "force-dynamic";
-
-type Printer = {
-  id: string;
-  name: string;
-  model: string;
-  serial: string;
-  status: PrinterStatus;
-  progress: number;
-  jobName?: string;
-  updatedAt: string;
-};
-
-type Job = {
-  id: string;
-  title: string;
-  status: string;
-  deviceId?: string;
-  startTime?: string;
-  endTime?: string;
-  durationSeconds?: number;
-  weightGrams?: number;
-  mode?: string;
-  imageUrl?: string;
-};
-
-type DescriptionEntry = {
-  description: string;
-  ownerId: string | null;
-};
-
-const fetchJson = async <T,>(url: string, init?: RequestInit) => {
-  const response = await fetch(url, init);
-  const data = (await response.json()) as { error?: string } & T;
-  if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
-  }
-  return data;
-};
-
-export default function Home() {
-  const [printers, setPrinters] = useState<Printer[]>([]);
-  const [printersLoading, setPrintersLoading] = useState(true);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [descriptions, setDescriptions] = useState<
-    Record<string, DescriptionEntry>
-  >({});
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [jobsError, setJobsError] = useState<string | null>(null);
-  const [descriptionsError, setDescriptionsError] = useState<string | null>(
-    null,
-  );
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveErrorJobId, setSaveErrorJobId] = useState<string | null>(null);
-  const [savingJobId, setSavingJobId] = useState<string | null>(null);
-  const [unclaimingJobId, setUnclaimingJobId] = useState<string | null>(null);
-  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
-  const [cartJobIds, setCartJobIds] = useState<string[]>([]);
-  const [cartProducts, setCartProductsState] = useState<CartProduct[]>([]);
-  const [cartLoaded, setCartLoaded] = useState(false);
-  const [claimMessage, setClaimMessage] = useState<string | null>(null);
-  const [cartMessage, setCartMessage] = useState<string | null>(null);
-
-  const loadDescriptions = async (jobIds: string[]) => {
-    if (jobIds.length === 0) {
-      setDescriptions({});
-      return;
-    }
-    const params = new URLSearchParams({ jobIds: jobIds.join(",") });
-    const data = await fetchJson<{
-      descriptions: Record<string, DescriptionEntry>;
-      currentUserId: string;
-    }>(`/api/descriptions?${params.toString()}`);
-    setDescriptions(data.descriptions ?? {});
-    setCurrentUserId(data.currentUserId ?? null);
-  };
-
-  useEffect(() => {
-    let active = true;
-
-    const loadPrinters = async () => {
-      if (active) {
-        setPrintersLoading(true);
-      }
-      try {
-        const data = await fetchJson<{ printers: Printer[] }>(
-          "/api/bambu/printers",
-        );
-        if (active) {
-          setPrinters(data.printers ?? []);
-        }
-      } catch (error) {
-        if (active) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to fetch printers from BambuLab cloud.",
-          );
-        }
-      } finally {
-        if (active) {
-          setPrintersLoading(false);
-        }
-      }
-    };
-
-    const loadJobs = async () => {
-      try {
-        const data = await fetchJson<{ jobs: Job[] }>("/api/bambu/jobs");
-        if (active) {
-          setJobs(data.jobs ?? []);
-        }
-      } catch (error) {
-        if (active) {
-          setJobsError(
-            error instanceof Error
-              ? error.message
-              : "Unable to fetch print jobs from BambuLab cloud.",
-          );
-        }
-      }
-    };
-
-    loadPrinters();
-    loadJobs();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    setCartJobIds(getCartJobs());
-    setCartProductsState(getCartProducts());
-    setCartLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!cartLoaded) {
-      return;
-    }
-    setCartJobs(cartJobIds);
-  }, [cartJobIds, cartLoaded]);
-
-  useEffect(() => {
-    if (!cartLoaded) {
-      return;
-    }
-    setCartProducts(cartProducts);
-  }, [cartProducts, cartLoaded]);
-
-  useEffect(() => {
-    if (jobs.length === 0) {
-      return;
-    }
-
-    loadDescriptions(jobs.map((job) => job.id)).catch((error) => {
-      setDescriptionsError(
-        error instanceof Error
-          ? error.message
-          : "Unable to load descriptions from Supabase.",
-      );
-    });
-  }, [jobs]);
-
-  const handleSaveDescription = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-    setSaveError(null);
-    setSaveErrorJobId(null);
-
-    const formData = new FormData(event.currentTarget);
-    const jobId = String(formData.get("jobId") ?? "");
-    const description = String(formData.get("description") ?? "");
-
-    setSavingJobId(jobId);
-    try {
-      await fetchJson<{ ok: boolean }>("/api/descriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, description }),
-      });
-      await loadDescriptions(jobs.map((job) => job.id));
-    } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : "Unable to save description.",
-      );
-      setSaveErrorJobId(jobId);
-    } finally {
-      setSavingJobId(null);
-    }
-  };
-
-  const handleToggleJob = (jobId: string) => {
-    setSelectedJobIds((prev) =>
-      prev.includes(jobId)
-        ? prev.filter((id) => id !== jobId)
-        : [...prev, jobId],
-    );
-  };
-
-  const handleToggleAll = () => {
-    if (selectedJobIds.length === jobs.length) {
-      setSelectedJobIds([]);
-    } else {
-      setSelectedJobIds(jobs.map((job) => job.id));
-    }
-  };
-
-  const handleToggleCartJob = (jobId: string) => {
-    setCartJobIds((prev) =>
-      prev.includes(jobId)
-        ? prev.filter((id) => id !== jobId)
-        : [...prev, jobId],
-    );
-  };
-
-  const handleAddSelectedToCart = () => {
-    setCartMessage(null);
-    if (selectedJobIds.length === 0) {
-      return;
-    }
-
-    const ownedSelected = selectedJobIds.filter((jobId) => {
-      const ownerId = descriptions[jobId]?.ownerId ?? null;
-      return ownerId && ownerId === currentUserId;
-    });
-
-    const skippedCount = selectedJobIds.length - ownedSelected.length;
-    if (ownedSelected.length === 0) {
-      setCartMessage("Only claimed prints can be added to checkout.");
-      return;
-    }
-
-    setCartJobIds((prev) => {
-      const next = new Set(prev);
-      ownedSelected.forEach((jobId) => next.add(jobId));
-      return Array.from(next);
-    });
-
-    setCartMessage(
-      `Added ${ownedSelected.length} print(s) to checkout.` +
-        (skippedCount > 0 ? ` ${skippedCount} skipped.` : ""),
-    );
-  };
-
-  const handleClaimSelected = async () => {
-    setClaimMessage(null);
-    if (selectedJobIds.length === 0) {
-      return;
-    }
-    try {
-      const data = await fetchJson<{
-        claimed: string[];
-        skipped: { jobId: string; reason: string }[];
-      }>("/api/descriptions/claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobIds: selectedJobIds }),
-      });
-      await loadDescriptions(jobs.map((job) => job.id));
-      const claimedCount = data.claimed.length;
-      const skippedCount = data.skipped.length;
-      setClaimMessage(
-        `Claimed ${claimedCount} print(s). ${
-          skippedCount > 0 ? `${skippedCount} skipped.` : ""
-        }`,
-      );
-    } catch (error) {
-      setClaimMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to claim selected prints.",
-      );
-    }
-  };
-
-  const handleUnclaimJob = async (jobId: string) => {
-    setClaimMessage(null);
-    setUnclaimingJobId(jobId);
-    try {
-      await fetchJson<{ ok: boolean }>("/api/descriptions/unclaim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
-      });
-      setCartJobIds((prev) => prev.filter((id) => id !== jobId));
-      await loadDescriptions(jobs.map((job) => job.id));
-      setClaimMessage("Unclaimed 1 print.");
-    } catch (error) {
-      setClaimMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to unclaim this print.",
-      );
-    } finally {
-      setUnclaimingJobId(null);
-    }
-  };
+export default async function Home() {
+  const supabase = await createSupabaseServerClient({ readOnly: true });
+  const { data: userData } = await supabase.auth.getUser();
+  const isAuthenticated = Boolean(userData.user);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                3D Printer Dashboard
-              </h1>
-            </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
+        <div className="order-2 md:order-1">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-700">
+            Willkommen
+          </p>
+          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 md:text-5xl">
+            Konglo
+            <br />
+            digital
+          </h1>
+          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-600 md:text-base">
+            Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button href="/resources" kind="primary" size="medium">
+              Zum Inventar
+            </Button>
+            <Button href="/calendar" kind="secondary" size="medium">
+              Termine ansehen
+            </Button>
           </div>
-        </header>
+        </div>
 
-        {errorMessage ? (
-          <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-            <p className="font-semibold">Cloud connection failed</p>
-            <p className="mt-2">{errorMessage}</p>
-            <p className="mt-2">
-              Ensure your BambuLab credentials and access token are configured
-              in .env.local.
-            </p>
-          </section>
-        ) : null}
+        <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
+          <Image
+            src={heroHelloImage}
+            alt="Willkommensgrafik"
+            priority
+            className="h-auto w-full object-cover multiply negative-multiply md:hidden"
+          />
+          <div className="relative hidden md:-my-6 md:block lg:-my-10">
+            <video
+              autoPlay
+              muted
+              playsInline
+              loop
+              className="h-auto w-full object-cover invert-in-dark"
+            >
+              <source src="/heroanimation.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_30px_10px_#fafafa,inset_0_30px_52px_#fafafa] dark:shadow-[inset_0_0_20px_10px_#09090b,inset_0_20px_72px_#09090b]" />
+          </div>
+        </div>
+      </section>
 
-        <section className="grid gap-6 md:grid-cols-2">
-          {printersLoading
-            ? Array.from({ length: 2 }).map((_, index) => (
-                <article
-                  key={`printer-skeleton-${index}`}
-                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-xl border border-zinc-200 bg-zinc-100 animate-pulse" />
-                      <div className="space-y-2">
-                        <div className="h-4 w-40 rounded-full bg-zinc-100 animate-pulse" />
-                        <div className="h-3 w-32 rounded-full bg-zinc-100 animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="h-6 w-20 rounded-full bg-zinc-100 animate-pulse" />
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-zinc-600">
-                      <span className="h-3 w-24 rounded-full bg-zinc-100 animate-pulse" />
-                      <span className="h-3 w-10 rounded-full bg-zinc-100 animate-pulse" />
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                      <div className="h-full w-2/3 rounded-full bg-zinc-200 animate-pulse" />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="h-3 w-52 rounded-full bg-zinc-100 animate-pulse" />
-                      <div className="h-3 w-36 rounded-full bg-zinc-100 animate-pulse" />
-                    </div>
-                  </div>
-                </article>
-              ))
-            : printers.map((printer) => (
-                <article
-                  key={printer.id}
-                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-4">
-                      {getPrinterImage(printer.name) ? (
-                        <img
-                          src={getPrinterImage(printer.name)?.url}
-                          alt={getPrinterImage(printer.name)?.alt}
-                          className="h-16 w-16 rounded-xl border border-zinc-200 object-cover"
-                        />
-                      ) : null}
-                      <div>
-                        <h2 className="text-lg font-semibold text-zinc-900">
-                          {printer.name}
-                        </h2>
-                        <p className="text-sm text-zinc-500">
-                          {printer.model} • {printer.serial}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                        statusStyles[printer.status]
-                      }`}
-                    >
-                      {statusLabels[printer.status]}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-zinc-600">
-                      <span>Job progress</span>
-                      <span className="font-medium text-zinc-900">
-                        {printer.progress}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                      <div
-                        className="h-full rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
-                        style={{ width: `${printer.progress}%` }}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 text-sm text-zinc-600">
-                      <span>
-                        Current job: {printer.jobName ?? "No active job"}
-                      </span>
-                      <span>
-                        Last update: {formatUpdated(printer.updatedAt)}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-        </section>
-
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-zinc-900">
-                Recent print jobs
+      {!isAuthenticated ? (
+        <section className="rounded-2xl bg-blue-700 p-5 shadow-sm ring-1 ring-blue-600 md:p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">
+            Neu hier? So funktioniert die Registrierung
+          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <article>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+                <FontAwesomeIcon icon={faUserPlus} className="h-4 w-4" />
+                <span>Wer kann sich registrieren?</span>
               </h3>
-              <p className="text-sm text-zinc-500">{jobs.length} jobs</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={handleToggleAll} kind="secondary">
-                {selectedJobIds.length === jobs.length
-                  ? "Clear selection"
-                  : "Select all"}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleClaimSelected}
-                kind="primary"
-                className="px-3 py-2 text-xs"
-                disabled={selectedJobIds.length === 0}
-              >
-                Claim selected
-              </Button>
-              <Button
-                type="button"
-                onClick={handleAddSelectedToCart}
-                kind="secondary"
-                className="px-3 py-2 text-xs"
-                disabled={selectedJobIds.length === 0}
-              >
-                Add selected to checkout
-              </Button>
-              <Button
-                href="/checkout"
-                kind="secondary"
-                className="px-3 py-2 text-xs"
-              >
-                Checkout ({cartJobIds.length + cartProducts.length})
-              </Button>
-            </div>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+                Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage
+                auch andere Personen.
+              </p>
+            </article>
+
+            <article>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+                <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
+                <span>Automatische Freischaltung</span>
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+                Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich
+                beim Konglomerat angemeldet hast.
+              </p>
+            </article>
+
+            <article>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+                <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
+                <span>Wenn es nicht klappt</span>
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+                Schreib uns an{" "}
+                <a
+                  href="mailto:vorstand@konglomerat.org"
+                  className="font-medium text-cyan-100 underline underline-offset-2 hover:text-white dark:text-blue-300 dark:hover:text-blue-200"
+                >
+                  vorstand@konglomerat.org
+                </a>
+                , wenn du eine andere E-Mail-Adresse nutzen möchtest.
+              </p>
+            </article>
           </div>
 
-          {claimMessage ? (
-            <p className="mt-4 text-sm text-zinc-600">{claimMessage}</p>
-          ) : null}
+          <div className="mt-5">
+            <Button
+              href="/register"
+              kind="primary"
+              size="large"
+              className="w-full bg-blue-500 px-8 py-3 text-base font-bold shadow-lg shadow-blue-900/25 hover:!bg-[#3777ec]"
+            >
+              Jetzt registrieren
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
-          {cartMessage ? (
-            <p className="mt-2 text-sm text-zinc-600">{cartMessage}</p>
-          ) : null}
+      <section>
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
+              Schnellzugriff
+            </h2>
+          </div>
+        </div>
 
-          {jobsError ? (
-            <p className="mt-4 text-sm text-rose-600">{jobsError}</p>
-          ) : descriptionsError ? (
-            <p className="mt-4 text-sm text-rose-600">{descriptionsError}</p>
-          ) : jobs.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">No jobs found.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex flex-col gap-2 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
-                >
-                  {(() => {
-                    const estimatedWeight = estimatePrintedWeight(
-                      job.weightGrams,
-                      job.durationSeconds,
-                      job.startTime,
-                      job.endTime,
-                      job.status,
-                    );
-                    const priceRange = formatPriceRange(estimatedWeight);
-                    const statusLabel = getJobStatusLabel(job.status);
-                    const descriptionEntry = descriptions[job.id] ?? null;
-                    const description = descriptionEntry?.description ?? "";
-                    const ownerId = descriptionEntry?.ownerId ?? null;
-                    const canEdit =
-                      !!currentUserId &&
-                      (ownerId === null ||
-                        ownerId === "" ||
-                        ownerId === currentUserId);
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {quickActions.map((action) => {
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                {action.href === "/checkout" ? (
+                  <div className="relative">
+                    <Image
+                      src={print3dBwImage}
+                      alt="3D-Druck"
+                      className="h-auto w-full multiply negative-multiply"
+                    />
+                    <Image
+                      src={print3dImage}
+                      alt="3D-Druck"
+                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                    />
+                  </div>
+                ) : action.href === "/resources" ? (
+                  <div className="relative">
+                    <Image
+                      src={inventoryBwImage}
+                      alt="Inventar"
+                      className="h-auto w-full multiply negative-multiply"
+                    />
+                    <Image
+                      src={inventoryImage}
+                      alt="Inventar"
+                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                    />
+                  </div>
+                ) : action.href === "/calendar" ? (
+                  <div className="relative">
+                    <Image
+                      src={calendarBwImage}
+                      alt="Kalender"
+                      className="h-auto w-full multiply negative-multiply"
+                    />
+                    <Image
+                      src={calendarImage}
+                      alt="Kalender"
+                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                    />
+                  </div>
+                ) : null}
 
-                    const isSelected = selectedJobIds.includes(job.id);
-                    const isOwnedByUser = ownerId === currentUserId;
-                    const isInCart = cartJobIds.includes(job.id);
-
-                    return (
-                      <>
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="flex items-stretch gap-4">
-                            <div className="w-28 shrink-0 self-start aspect-square">
-                              {job.imageUrl ? (
-                                <img
-                                  src={job.imageUrl}
-                                  alt={`${job.title} preview`}
-                                  className="h-full w-full rounded-2xl border border-zinc-200 object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white text-[10px] font-semibold uppercase text-zinc-400">
-                                  No image
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-xs text-zinc-500">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleToggleJob(job.id)}
-                                  className="h-4 w-4 rounded-md border-zinc-300"
-                                />
-                                Select
-                              </label>
-                              <div>
-                                <p className="text-sm font-semibold text-zinc-900">
-                                  {job.title}
-                                </p>
-                                <p className="text-xs text-zinc-500">
-                                  Status: {statusLabel}
-                                  {job.mode ? ` • ${job.mode}` : ""}
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
-                                <span>Device: {job.deviceId ?? "-"}</span>
-                                <span>
-                                  Start:{" "}
-                                  {job.startTime
-                                    ? formatUpdated(job.startTime)
-                                    : "-"}
-                                </span>
-                                <span>
-                                  End:{" "}
-                                  {job.endTime
-                                    ? formatUpdated(job.endTime)
-                                    : "-"}
-                                </span>
-                                <span>
-                                  Weight:{" "}
-                                  {job.weightGrams
-                                    ? `${job.weightGrams}g`
-                                    : "-"}
-                                </span>
-                              </div>
-                              <form
-                                onSubmit={handleSaveDescription}
-                                className="flex flex-col gap-2"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="jobId"
-                                  value={job.id}
-                                />
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                                  Description
-                                </label>
-                                {ownerId ? (
-                                  <p className="text-xs text-zinc-400">
-                                    Owner:{" "}
-                                    {ownerId === currentUserId
-                                      ? "You"
-                                      : ownerId}
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-emerald-600">
-                                    Unclaimed — save to claim this print.
-                                  </p>
-                                )}
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <input
-                                    name="description"
-                                    defaultValue={description}
-                                    placeholder="Add a short description"
-                                    maxLength={160}
-                                    className="flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm"
-                                    disabled={!canEdit}
-                                  />
-                                  <Button
-                                    type="submit"
-                                    kind="secondary"
-                                    disabled={!canEdit}
-                                  >
-                                    {savingJobId === job.id
-                                      ? "Saving..."
-                                      : ownerId
-                                        ? "Update"
-                                        : "Claim & Save"}
-                                  </Button>
-                                </div>
-                                {saveError && saveErrorJobId === job.id ? (
-                                  <p className="text-xs text-rose-500">
-                                    {saveError}
-                                  </p>
-                                ) : null}
-                                {!canEdit ? (
-                                  <p className="text-xs text-rose-500">
-                                    You can view this description, but only the
-                                    owner can edit it.
-                                  </p>
-                                ) : null}
-                              </form>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 self-start">
-                              <div className="flex items-center gap-3">
-                                <div className="text-xs text-zinc-500">
-                                  Duration:{" "}
-                                  {formatDuration(job.durationSeconds)}
-                                </div>
-                                <div className="rounded-full bg-zinc-900 px-3 py-1 text-sm font-semibold text-white">
-                                  {priceRange}
-                                </div>
-                              </div>
-                              {isOwnedByUser ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    onClick={() => handleToggleCartJob(job.id)}
-                                    kind={
-                                      isInCart
-                                        ? "danger-secondary"
-                                        : "secondary"
-                                    }
-                                    className={
-                                      isInCart
-                                        ? "px-3 py-1 text-xs"
-                                        : "border-blue-200 px-3 py-1 text-xs text-blue-700"
-                                    }
-                                  >
-                                    {isInCart
-                                      ? "Remove from checkout"
-                                      : "Add to checkout"}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    onClick={() => handleUnclaimJob(job.id)}
-                                    kind="secondary"
-                                    className="px-3 py-1 text-xs"
-                                    disabled={unclaimingJobId === job.id}
-                                  >
-                                    {unclaimingJobId === job.id
-                                      ? "Unclaiming..."
-                                      : "Unclaim"}
-                                  </Button>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+                <div className="px-5 pb-4">
+                  <h3 className="text-base font-semibold text-blue-600 group-hover:text-blue-700">
+                    {action.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+                    {action.description}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
-        <section className="rounded-3xl border border-dashed border-zinc-300 bg-white/60 p-6 text-sm text-zinc-600">
-          <h3 className="text-base font-semibold text-zinc-900">Next steps</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Set BambuLab cloud credentials in .env.local.</li>
-            <li>Consider polling or caching if you have many printers.</li>
-            <li>Store printer metadata in a database for history tracking.</li>
-          </ul>
-        </section>
-      </main>
-    </div>
+      <section className="pt-2">
+        <p className="mb-1 text-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
+          Mit ❤️ im Ehrenamt entwickelt
+        </p>
+        <a
+          href="https://konglomerat.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-blue-700 underline underline-offset-4 transition hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          konglomerat.org
+        </a>
+      </section>
+    </main>
   );
 }

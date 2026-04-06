@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { type InvoicePayload } from "@/lib/campai-invoices";
 import Button from "../components/Button";
+import PasswordInput from "../components/PasswordInput";
 
 type AccountUser = {
   email: string;
@@ -89,12 +90,14 @@ export default function AccountPage() {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
 
   const fullName = useMemo(() => {
-    const first = typeof user?.metadata.first_name === "string"
-      ? user.metadata.first_name.trim()
-      : "";
-    const last = typeof user?.metadata.last_name === "string"
-      ? user.metadata.last_name.trim()
-      : "";
+    const first =
+      typeof user?.metadata.first_name === "string"
+        ? user.metadata.first_name.trim()
+        : "";
+    const last =
+      typeof user?.metadata.last_name === "string"
+        ? user.metadata.last_name.trim()
+        : "";
 
     return [first, last].filter(Boolean).join(" ");
   }, [user]);
@@ -360,13 +363,14 @@ export default function AccountPage() {
                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
                   Neues Passwort
                 </label>
-                <input
+                <PasswordInput
                   name="password"
-                  type="password"
                   required
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  showLabel="Anzeigen"
+                  hideLabel="Ausblenden"
                   className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
                 />
               </div>
@@ -374,13 +378,14 @@ export default function AccountPage() {
                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
                   Passwort bestätigen
                 </label>
-                <input
+                <PasswordInput
                   name="passwordConfirm"
-                  type="password"
                   required
                   minLength={8}
                   value={passwordConfirm}
                   onChange={(event) => setPasswordConfirm(event.target.value)}
+                  showLabel="Anzeigen"
+                  hideLabel="Ausblenden"
                   className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
                 />
               </div>

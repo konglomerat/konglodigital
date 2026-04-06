@@ -1,6 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faBoxOpen,
+  faCalendarDays,
+  faClock,
+  faCube,
+  faCubesStacked,
+  faGear,
+  faGraduationCap,
+  faHammer,
+  faLayerGroup,
+  faPercent,
+  faWarehouse,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
@@ -11,6 +26,103 @@ type CampaiProduct = {
   title: string;
   details?: string;
   unitAmount: number;
+};
+
+type ProductVisual = {
+  icon: IconProp;
+  accentClassName: string;
+};
+
+const defaultProductVisual: ProductVisual = {
+  icon: faCube,
+  accentClassName: "bg-slate-100 text-slate-600 ring-slate-200",
+};
+
+const productVisualLookup: Record<string, ProductVisual> = {
+  "3d druck - arbeitszeit": {
+    icon: faClock,
+    accentClassName: "bg-sky-100 text-sky-700 ring-sky-200",
+  },
+  "3d druck - materialkosten (petg)": {
+    icon: faCubesStacked,
+    accentClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+  },
+  "3d druck - nutzungsgebuhr je buildplate": {
+    icon: faLayerGroup,
+    accentClassName: "bg-indigo-100 text-indigo-700 ring-indigo-200",
+  },
+  "cnc arbeitszeit": {
+    icon: faHammer,
+    accentClassName: "bg-amber-100 text-amber-800 ring-amber-200",
+  },
+  "cnc maschinenlaufzeit": {
+    icon: faGear,
+    accentClassName: "bg-zinc-200 text-zinc-700 ring-zinc-300",
+  },
+  "maschinenlaufzeit cnc (ermassigt)": {
+    icon: faGear,
+    accentClassName: "bg-zinc-200 text-zinc-700 ring-zinc-300",
+  },
+  "hw materialbestellung": {
+    icon: faBoxOpen,
+    accentClassName: "bg-orange-100 text-orange-700 ring-orange-200",
+  },
+  "overhead verein": {
+    icon: faPercent,
+    accentClassName: "bg-rose-100 text-rose-700 ring-rose-200",
+  },
+  "teilnahme an cnc-workshop": {
+    icon: faGraduationCap,
+    accentClassName: "bg-violet-100 text-violet-700 ring-violet-200",
+  },
+};
+
+const normalizeProductTitle = (title: string) =>
+  title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("de-DE");
+
+const getProductVisual = (title: string): ProductVisual => {
+  const normalizedTitle = normalizeProductTitle(title);
+  const exactMatch = productVisualLookup[normalizedTitle];
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  if (normalizedTitle.startsWith("hw lagermiete")) {
+    return {
+      icon: faWarehouse,
+      accentClassName: "bg-stone-100 text-stone-700 ring-stone-200",
+    };
+  }
+
+  if (normalizedTitle.startsWith("keinkalender")) {
+    if (normalizedTitle.includes("supporter")) {
+      return {
+        icon: faCalendarDays,
+        accentClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+      };
+    }
+
+    if (normalizedTitle.includes("reduced")) {
+      return {
+        icon: faCalendarDays,
+        accentClassName: "bg-amber-100 text-amber-800 ring-amber-200",
+      };
+    }
+
+    return {
+      icon: faCalendarDays,
+      accentClassName: "bg-sky-100 text-sky-700 ring-sky-200",
+    };
+  }
+
+  return defaultProductVisual;
 };
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
@@ -156,68 +268,84 @@ export default function CampaiProductsPage() {
           </div>
 
           {loading ? (
-            <p className="mt-4 text-sm text-zinc-500">Produkte werden geladen ...</p>
+            <p className="mt-4 text-sm text-zinc-500">
+              Produkte werden geladen ...
+            </p>
           ) : products.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">Keine Produkte gefunden.</p>
+            <p className="mt-4 text-sm text-zinc-500">
+              Keine Produkte gefunden.
+            </p>
           ) : (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {products.map((product) => {
                 const inCart = cartLookup.get(product.id);
+                const productVisual = getProductVisual(product.title);
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full flex-col justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
+                    className="flex h-full gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
                   >
-                    <div>
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="text-sm font-semibold text-zinc-900 hover:underline"
-                      >
-                        {product.title}
-                      </Link>
-                      {product.details ? (
-                        <p className="mt-2 text-xs text-zinc-500">
-                          {product.details}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-zinc-900">
-                        €{(product.unitAmount / 100).toFixed(2)}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {inCart ? (
-                          <span className="text-xs text-blue-600">
-                            Im Warenkorb × {inCart.quantity ?? 1}
-                          </span>
+                    <span
+                      className={`flex h-16 w-16 shrink-0 items-center justify-center self-start rounded-2xl ring-1 ${productVisual.accentClassName}`}
+                      aria-hidden="true"
+                    >
+                      <FontAwesomeIcon
+                        icon={productVisual.icon}
+                        className="h-7 w-7"
+                      />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="text-sm font-semibold text-zinc-900 hover:underline"
+                        >
+                          {product.title}
+                        </Link>
+                        {product.details ? (
+                          <p className="mt-2 text-xs text-zinc-500">
+                            {product.details}
+                          </p>
                         ) : null}
-                        {inCart ? (
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-zinc-900">
+                          €{(product.unitAmount / 100).toFixed(2)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {inCart ? (
+                            <span className="text-xs text-blue-600">
+                              Im Warenkorb × {inCart.quantity ?? 1}
+                            </span>
+                          ) : null}
+                          {inCart ? (
+                            <Button
+                              type="button"
+                              onClick={() => handleDecreaseProduct(product.id)}
+                              kind="secondary"
+                              className="px-3 py-1 text-xs"
+                            >
+                              −
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
-                            onClick={() => handleDecreaseProduct(product.id)}
+                            onClick={() => handleAddProduct(product)}
                             kind="secondary"
-                            className="px-3 py-1 text-xs"
+                            className="border-blue-200 px-3 py-1 text-xs text-blue-700"
                           >
-                            −
+                            +
                           </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          onClick={() => handleAddProduct(product)}
-                          kind="secondary"
-                          className="border-blue-200 px-3 py-1 text-xs text-blue-700"
-                        >
-                          +
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="text-xs font-semibold text-zinc-500 hover:text-zinc-800"
-                      >
-                        Details ansehen
-                      </Link>
+                      <div className="flex justify-end">
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="text-xs font-semibold text-zinc-500 hover:text-zinc-800"
+                        >
+                          Details ansehen
+                        </Link>
+                      </div>
                     </div>
                   </article>
                 );

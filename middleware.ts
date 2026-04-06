@@ -7,6 +7,8 @@ import {
   isSafeMethod,
 } from "@/lib/pin-access";
 
+const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
 const protectedPagePrefixes = [
   "/account",
   "/admin",
@@ -42,9 +44,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!requiresAuthentication(request.nextUrl.pathname)) {
-    return NextResponse.next();
-  }
+  const needsAuthentication = requiresAuthentication(request.nextUrl.pathname);
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -60,6 +60,9 @@ export async function middleware(request: NextRequest) {
   });
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
+    },
     cookies: {
       get(name) {
         return request.cookies.get(name)?.value;
@@ -75,7 +78,7 @@ export async function middleware(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
 
-  if (!data.user) {
+  if (!data.user && needsAuthentication) {
     const hasViewerPin =
       request.cookies.get(PIN_COOKIE_NAME)?.value === PIN_COOKIE_VALUE;
 

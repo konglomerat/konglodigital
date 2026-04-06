@@ -288,6 +288,23 @@ on public.user_access
 for select
 using (auth.uid() = user_id);
 
+create table if not exists public.access_code_inbox (
+  id uuid primary key default gen_random_uuid(),
+  sender text,
+  recipient text,
+  subject text,
+  access_code text,
+  extracted_from text not null default 'none',
+  body_preview text,
+  raw_payload jsonb,
+  created_at timestamptz not null default now(),
+  constraint access_code_inbox_extracted_from_check
+    check (extracted_from in ('subject', 'body', 'none'))
+);
+
+create index if not exists access_code_inbox_created_at_idx
+  on public.access_code_inbox (created_at desc);
+
 with normalized_member_profiles as (
   select
     users.id as user_id,

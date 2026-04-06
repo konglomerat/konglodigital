@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { normalizeUserRole, type UserRole } from "@/lib/roles";
+import { isMissingRelationError } from "@/lib/supabase-errors";
 
 export type UserAccess = {
   userId: string;
@@ -77,6 +78,10 @@ export const getUserAccessByUserId = async (
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "user_access")) {
+      return null;
+    }
+
     throw error;
   }
 
@@ -101,6 +106,10 @@ export const listUserAccessByUserIds = async (
     .in("user_id", userIds);
 
   if (error) {
+    if (isMissingRelationError(error, "user_access")) {
+      return new Map<string, UserAccess>();
+    }
+
     throw error;
   }
 
@@ -135,6 +144,17 @@ export const upsertUserAccess = async (
     .single();
 
   if (error) {
+    if (isMissingRelationError(error, "user_access")) {
+      const now = new Date().toISOString();
+      return {
+        userId: params.userId,
+        role: normalizeUserRole(params.role),
+        rights: parseRights(params.rights),
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
     throw error;
   }
 

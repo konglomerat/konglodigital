@@ -43,7 +43,9 @@ const formatDateTime = (value: string | null) => {
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
-  const data = (await response.json().catch(() => ({}))) as { error?: string } & T;
+  const data = (await response.json().catch(() => ({}))) as {
+    error?: string;
+  } & T;
   if (!response.ok) {
     throw new Error(data.error ?? "Anfrage fehlgeschlagen.");
   }
@@ -56,17 +58,24 @@ export default function AdminUsersClient() {
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [savingRoleForId, setSavingRoleForId] = useState<string | null>(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailError, setTestEmailError] = useState<string | null>(null);
+  const [testEmailSuccess, setTestEmailSuccess] = useState<string | null>(null);
 
   const loadProfiles = useCallback(async () => {
     setIsLoadingProfiles(true);
     setProfileListError(null);
 
     try {
-      const data = await fetchJson<{ profiles: ActiveProfile[] }>("/api/admin/users");
+      const data = await fetchJson<{ profiles: ActiveProfile[] }>(
+        "/api/admin/users",
+      );
       setProfiles(data.profiles ?? []);
     } catch (error) {
       setProfileListError(
-        error instanceof Error ? error.message : "Profile konnten nicht geladen werden.",
+        error instanceof Error
+          ? error.message
+          : "Profile konnten nicht geladen werden.",
       );
     } finally {
       setIsLoadingProfiles(false);
@@ -105,10 +114,39 @@ export default function AdminUsersClient() {
       );
     } catch (error) {
       setRoleError(
-        error instanceof Error ? error.message : "Rolle konnte nicht gespeichert werden.",
+        error instanceof Error
+          ? error.message
+          : "Rolle konnte nicht gespeichert werden.",
       );
     } finally {
       setSavingRoleForId(null);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setIsSendingTestEmail(true);
+    setTestEmailError(null);
+    setTestEmailSuccess(null);
+
+    try {
+      await fetchJson<{ ok: true; recipient: string }>(
+        "/api/admin/test-email",
+        {
+          method: "POST",
+        },
+      );
+
+      setTestEmailSuccess(
+        "Test-E-Mail wurde an robert@wirewire.de angestossen.",
+      );
+    } catch (error) {
+      setTestEmailError(
+        error instanceof Error
+          ? error.message
+          : "Test-E-Mail konnte nicht gesendet werden.",
+      );
+    } finally {
+      setIsSendingTestEmail(false);
     }
   };
 
@@ -119,14 +157,43 @@ export default function AdminUsersClient() {
           Admin: Benutzer
         </h1>
         <p className="text-sm text-zinc-600">
-          Verwalte registrierte Benutzerprofile und ihre Rollen. Die Registrierung selbst läuft wieder direkt über Supabase-Mail links mit Mitgliedsabgleich.
+          Verwalte registrierte Benutzerprofile und ihre Rollen. Die
+          Registrierung selbst läuft wieder direkt über Supabase-Mail links mit
+          Mitgliedsabgleich.
         </p>
+        <div className="pt-2">
+          <Button
+            type="button"
+            kind="secondary"
+            className="px-4 py-2 text-sm"
+            disabled={isSendingTestEmail}
+            onClick={() => {
+              void handleSendTestEmail();
+            }}
+          >
+            {isSendingTestEmail
+              ? "Sende Test-E-Mail ..."
+              : "Test-E-Mail an robert@wirewire.de senden"}
+          </Button>
+        </div>
+        {testEmailError ? (
+          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+            {testEmailError}
+          </div>
+        ) : null}
+        {testEmailSuccess ? (
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm">
+            {testEmailSuccess}
+          </div>
+        ) : null}
       </header>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-900">Aktive Profile</h2>
+            <h2 className="text-xl font-semibold text-zinc-900">
+              Aktive Profile
+            </h2>
             <p className="text-sm text-zinc-500">
               Hier siehst du alle registrierten und aktiven Benutzerprofile.
             </p>
@@ -181,14 +248,17 @@ export default function AdminUsersClient() {
                     const fallbackName = [profile.firstName, profile.lastName]
                       .filter(Boolean)
                       .join(" ");
-                    const displayName = profile.campaiName || fallbackName || profile.email;
+                    const displayName =
+                      profile.campaiName || fallbackName || profile.email;
                     const hasCampaiLink = Boolean(profile.campaiContactId);
 
                     return (
                       <tr key={profile.id} className="align-top">
                         <td className="px-4 py-4">
                           <div className="space-y-1">
-                            <p className="font-semibold text-zinc-900">{displayName}</p>
+                            <p className="font-semibold text-zinc-900">
+                              {displayName}
+                            </p>
                             <p className="text-zinc-600">{profile.email}</p>
                             {profile.campaiContactId ? (
                               <p className="text-xs text-zinc-500">
@@ -205,7 +275,9 @@ export default function AdminUsersClient() {
                                 : "bg-zinc-100 text-zinc-700"
                             }`}
                           >
-                            {hasCampaiLink ? "Mit Campai verknuepft" : "Ohne Campai-Link"}
+                            {hasCampaiLink
+                              ? "Mit Campai verknuepft"
+                              : "Ohne Campai-Link"}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-zinc-700">
@@ -215,7 +287,10 @@ export default function AdminUsersClient() {
                           {profile.campaiDebtorAccount ?? "—"}
                         </td>
                         <td className="px-4 py-4 text-zinc-700">
-                          <label className="sr-only" htmlFor={`role-${profile.id}`}>
+                          <label
+                            className="sr-only"
+                            htmlFor={`role-${profile.id}`}
+                          >
                             Rolle fuer {displayName}
                           </label>
                           <select
@@ -223,13 +298,17 @@ export default function AdminUsersClient() {
                             value={profile.role}
                             disabled={savingRoleForId === profile.id}
                             onChange={(event) => {
-                              const nextRole = event.target.value as ActiveProfile["role"];
+                              const nextRole = event.target
+                                .value as ActiveProfile["role"];
                               void handleRoleChange(profile.id, nextRole);
                             }}
                             className="min-w-36 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-zinc-100"
                           >
                             {ROLE_OPTIONS.map((roleOption) => (
-                              <option key={roleOption.value} value={roleOption.value}>
+                              <option
+                                key={roleOption.value}
+                                value={roleOption.value}
+                              >
                                 {roleOption.label}
                               </option>
                             ))}

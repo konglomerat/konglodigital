@@ -164,3 +164,24 @@ input[type="search"]::-webkit-search-cancel-button {
   text-decoration: none;
   padding: 1em;
 }
+
+.multiply {
+  mix-blend-mode: multiply;
+}
+
+.negative-multiply {
+  filter: none;
+}
+
+.dark .negative-multiply {
+  filter: invert(1) saturate(1.7);
+  mix-blend-mode: lighten;
+}
+
+.invert-in-dark {
+  filter: none;
+}
+
+.dark .invert-in-dark {
+  filter: invert(1);
+}

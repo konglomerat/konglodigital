@@ -12,6 +12,16 @@ const requiredEnv = (name) => {
   return value;
 };
 
+const optionalEnv = (name) => {
+  const value = process.env[name];
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const parseArgs = () => {
   const args = process.argv.slice(2);
   const options = {
@@ -125,9 +135,42 @@ const listAllFiles = async (storage, bucket, prefix = "") => {
 
 const toJpgPath = (filePath) => filePath.replace(/\.png$/i, ".jpg");
 
-const buildPathVariants = (origin, bucket, sourcePath, targetPath) => {
-  const objectBase = `${origin}/storage/v1/object/public/${bucket}/`;
-  const renderBase = `${origin}/storage/v1/render/image/public/${bucket}/`;
+const normalizeBaseUrl = (value, envName) => {
+  try {
+    const parsed = new URL(value);
+    const pathname = parsed.pathname.replace(/\/+$/g, "");
+    return `${parsed.origin}${pathname}/`;
+  } catch {
+    throw new Error(`${envName} must be a valid URL.`);
+  }
+};
+
+const resolveStorageBases = ({ origin, bucket }) => {
+  const objectBaseFromEnv = optionalEnv(
+    "SUPABASE_STORAGE_OBJECT_PUBLIC_BASE_URL",
+  );
+  const renderBaseFromEnv = optionalEnv(
+    "SUPABASE_STORAGE_RENDER_PUBLIC_BASE_URL",
+  );
+
+  return {
+    objectBase: objectBaseFromEnv
+      ? normalizeBaseUrl(
+          objectBaseFromEnv,
+          "SUPABASE_STORAGE_OBJECT_PUBLIC_BASE_URL",
+        )
+      : `${origin}/storage/v1/object/public/${bucket}/`,
+    renderBase: renderBaseFromEnv
+      ? normalizeBaseUrl(
+          renderBaseFromEnv,
+          "SUPABASE_STORAGE_RENDER_PUBLIC_BASE_URL",
+        )
+      : `${origin}/storage/v1/render/image/public/${bucket}/`,
+  };
+};
+
+const buildPathVariants = (bases, bucket, sourcePath, targetPath) => {
+  const { objectBase, renderBase } = bases;
 
   return new Map([
     [sourcePath, targetPath],
@@ -292,12 +335,18 @@ const main = async () => {
   const supabase = createSupabaseAdminClient();
   const storage = supabase.storage;
   const supabaseOrigin = new URL(requiredEnv("SUPABASE_URL")).origin;
+  const storageBases = resolveStorageBases({
+    origin: supabaseOrigin,
+    bucket: options.bucket,
+  });
 
   console.log(`Bucket: ${options.bucket}`);
   console.log(`Prefix: ${options.prefix || "/"}`);
   console.log(`Quality: ${options.quality}`);
   console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
   console.log(`Update DB refs: ${options.skipDb ? "no" : "yes"}`);
+  console.log(`Object base URL: ${storageBases.objectBase}`);
+  console.log(`Render base URL: ${storageBases.renderBase}`);
 
   const allFiles = await listAllFiles(storage, options.bucket, options.prefix);
   const pngFiles = allFiles.filter(
@@ -308,7 +357,7 @@ const main = async () => {
   for (const sourcePath of pngFiles) {
     const targetPath = toJpgPath(sourcePath);
     for (const [source, target] of buildPathVariants(
-      supabaseOrigin,
+      storageBases,
       options.bucket,
       sourcePath,
       targetPath,

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import ActiveNavLink from "./ActiveNavLink";
+import heroHelloImage from "./hero-hello.jpg";
 import { Geist, Geist_Mono } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -8,10 +10,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCube,
   faBoxOpen,
+  faCalendarDays,
   faChartPie,
   faFolderOpen,
   faCalendarCheck,
   faPrint,
+  faKey,
   faCartShopping,
   faUser,
   faLock,
@@ -27,6 +31,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoCloseMenuDetails from "./components/AutoCloseMenuDetails";
+import ChatwootWidget from "./components/ChatwootWidget";
 
 config.autoAddCss = false;
 
@@ -40,9 +45,43 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteTitle = "Konglomerat Digitale Werkstätten";
+const siteDescription =
+  "Zwischen Werkbank, Warenkorb und Vereinschaos: alles an einem Ort.";
+const publicBaseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+  process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Konglomerat Digitale Werkstätten",
-  description: "Dashboard, products, and checkout",
+  metadataBase: new URL(publicBaseUrl),
+  title: siteTitle,
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: siteTitle,
+    description: siteDescription,
+    siteName: siteTitle,
+    locale: "de_DE",
+    images: [
+      {
+        url: heroHelloImage.src,
+        width: heroHelloImage.width,
+        height: heroHelloImage.height,
+        alt: "Konglo Digital Startseite",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: [heroHelloImage.src],
+  },
 };
 
 type ProtectedNavItemProps = {
@@ -121,7 +160,7 @@ export default async function RootLayout({
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
   const userRole = await getUserRole(supabase, userData.user);
-  const canAccessAdmin = isAuthenticated && roleCanAccessModule(userRole, "admin");
+  const canAccessAdmin = isAuthenticated && userRole === "admin";
   const canAccessInvoices =
     isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
@@ -146,14 +185,18 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ChatwootWidget />
         <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
           <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
             <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
-              <div className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900">
+              <Link
+                href="/"
+                className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+              >
                 Konglo
                 <br />
                 digital
-              </div>
+              </Link>
               <div className="flex items-center gap-3">
                 <ThemeToggle />
                 <AutoCloseMenuDetails
@@ -167,32 +210,47 @@ export default async function RootLayout({
                     </summary>
                   }
                 >
-                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto border border-zinc-200 bg-white shadow-lg">
+                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
                     <nav className="flex flex-col px-2 py-2">
                       <p className={navSectionTitleClassName}>
                         Digital Fabrication
                       </p>
-                      <ActiveNavLink href="/" className={navLinkClassName}>
-                        <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
+                      <ProtectedNavItem
+                        href="/printers"
+                        className={navLinkClassName}
+                        icon={faCube}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
                         3D-Druck
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/printers/emptying"
                         className={navLinkClassName}
+                        icon={faPrint}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                         Drucker entleeren
-                      </ActiveNavLink>
-                      <ActiveNavLink
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
+                        href="/printers/access-codes"
+                        className={navLinkClassName}
+                        icon={faKey}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
+                        Drucker Zugangscodes
+                      </ProtectedNavItem>
+                      <ProtectedNavItem
                         href="/checkout"
                         className={navLinkClassName}
+                        icon={faCartShopping}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
-                        <FontAwesomeIcon
-                          icon={faCartShopping}
-                          className="h-4 w-4"
-                        />
                         Warenkorb
-                      </ActiveNavLink>
+                      </ProtectedNavItem>
                       <ComingSoonNavItem
                         className={navLinkClassName}
                         icon={faChartPie}
@@ -221,6 +279,7 @@ export default async function RootLayout({
                       </ProtectedNavItem>
 
                       <p className={navSectionTitleClassName}>Verein</p>
+
                       <ProtectedNavItem
                         href="/resources"
                         className={navLinkClassName}
@@ -231,12 +290,24 @@ export default async function RootLayout({
                         Inventar
                       </ProtectedNavItem>
                       <ActiveNavLink
-                        href="/products"
+                        href="/calendar"
                         className={navLinkClassName}
                       >
-                        <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
-                        Produkte
+                        <FontAwesomeIcon
+                          icon={faCalendarDays}
+                          className="h-4 w-4"
+                        />
+                        Kalender
                       </ActiveNavLink>
+                      <ProtectedNavItem
+                        href="/products"
+                        className={navLinkClassName}
+                        icon={faBoxOpen}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
+                        Produkte
+                      </ProtectedNavItem>
                       <ComingSoonNavItem
                         className={navLinkClassName}
                         icon={faUser}
@@ -315,7 +386,10 @@ export default async function RootLayout({
                               kind="secondary"
                               className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
                             >
-                              <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                              <FontAwesomeIcon
+                                icon={faLock}
+                                className="h-4 w-4"
+                              />
                               Admin
                             </Button>
                           ) : null}
@@ -355,11 +429,14 @@ export default async function RootLayout({
           <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
             <div className="space-y-3">
               <div>
-                <div className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900">
+                <Link
+                  href="/"
+                  className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                >
                   Konglo
                   <br />
                   digital
-                </div>
+                </Link>
               </div>
               <ThemeToggle />
             </div>
@@ -367,21 +444,42 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Digital Fabrication
               </p>
-              <ActiveNavLink href="/" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCube} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/printers"
+                className={navItemClassName}
+                icon={faCube}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 3D-Druck
-              </ActiveNavLink>
-              <ActiveNavLink
+              </ProtectedNavItem>
+              <ProtectedNavItem
                 href="/printers/emptying"
                 className={navItemClassName}
+                icon={faPrint}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
               >
-                <FontAwesomeIcon icon={faPrint} className="h-4 w-4" />
                 Drucker entleeren
-              </ActiveNavLink>
-              <ActiveNavLink href="/checkout" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCartShopping} className="h-4 w-4" />
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/printers/access-codes"
+                className={navItemClassName}
+                icon={faKey}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
+                Drucker Zugangscodes
+              </ProtectedNavItem>
+              <ProtectedNavItem
+                href="/checkout"
+                className={navItemClassName}
+                icon={faCartShopping}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Warenkorb
-              </ActiveNavLink>
+              </ProtectedNavItem>
               <ComingSoonNavItem
                 className={navItemClassName}
                 icon={faChartPie}
@@ -414,6 +512,10 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Verein
               </p>
+              <ActiveNavLink href="/calendar" className={navItemClassName}>
+                <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                Kalender
+              </ActiveNavLink>
               <ProtectedNavItem
                 href="/resources"
                 className={navItemClassName}
@@ -423,10 +525,15 @@ export default async function RootLayout({
               >
                 Inventar
               </ProtectedNavItem>
-              <ActiveNavLink href="/products" className={navItemClassName}>
-                <FontAwesomeIcon icon={faBoxOpen} className="h-4 w-4" />
+              <ProtectedNavItem
+                href="/products"
+                className={navItemClassName}
+                icon={faBoxOpen}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
                 Produkte
-              </ActiveNavLink>
+              </ProtectedNavItem>
               <ComingSoonNavItem
                 className={navItemClassName}
                 icon={faUser}
