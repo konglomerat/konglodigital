@@ -172,7 +172,7 @@ export default async function Home() {
 
           <div className="mt-5">
             <Button
-              href="http://localhost:3000/register"
+              href="/register"
               kind="primary"
               size="large"
               className="w-full bg-blue-500 px-8 py-3 text-base font-bold shadow-lg shadow-blue-900/25 hover:!bg-[#3777ec]"
