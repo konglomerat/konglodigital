@@ -55,8 +55,10 @@ type CostCenter2Option = {
 type ShippingMode = "equal" | "byValue" | "manual";
 type TaxRate = "0" | "7" | "19";
 
-const HOLZ_COST_CENTER2 = "50";
+const DEFAULT_COST_CENTER1 = "4";
+const HOLZ_COST_CENTER2 = "57";
 const DEFAULT_TRANSFER_ACCOUNT = "17100";
+const SHIPPING_UNIT = "St";
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
@@ -96,6 +98,12 @@ const calculateDueDate = (invoiceDate: string, dueDays: MaterialOrderDueDays) =>
 
   parsedDate.setDate(parsedDate.getDate() + Number(dueDays));
   return parsedDate.toISOString().slice(0, 10);
+};
+
+const getTodayDateString = () => {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().slice(0, 10);
 };
 
 const formatStoredDate = (value: string) => {
@@ -625,7 +633,8 @@ export default function MaterialInvoicesPage({
 
     try {
       const shippingShare = shippingByParticipant.get(participant.id) ?? 0;
-      const dueDate = calculateDueDate(supplierInvoiceDate, dueDays);
+      const invoiceCreationDate = getTodayDateString();
+      const dueDate = calculateDueDate(invoiceCreationDate, dueDays);
       const body = {
         debtorName: participant.debtorName,
         customerNumber: participant.debtorAccount,
@@ -641,6 +650,7 @@ export default function MaterialInvoicesPage({
         email: participant.debtorEmail || undefined,
         paymentMethod: "sepaCreditTransfer",
         paymentCashAccountId: selectedCashAccountId,
+        costCenter1: DEFAULT_COST_CENTER1,
         positionAccount: 12000,
         invoiceDate: supplierInvoiceDate,
         dueDate: dueDate || undefined,
@@ -668,7 +678,7 @@ export default function MaterialInvoicesPage({
             ? [
                 {
                   description: participant.shippingDescription || "Anteilige Lieferkosten",
-                  unit: "Pauschale",
+                  unit: SHIPPING_UNIT,
                   quantity: 1,
                   unitAmount: Math.round(shippingShare * 100),
                   taxCode: globalTaxRate,
@@ -798,15 +808,15 @@ export default function MaterialInvoicesPage({
                   onChange={(event) => setSupplierInvoiceDate(event.target.value)}
                 />
               </FormField>
-              <FormField label="Faelligkeit">
+              <FormField label="Faelligkeit (ab Erstellung)">
                 <Select
                   value={dueDays}
                   onChange={(event) => setDueDays(event.target.value as MaterialOrderDueDays)}
                 >
-                  <option value="7">7 Tage ab Rechnungsdatum</option>
-                  <option value="10">10 Tage ab Rechnungsdatum</option>
-                  <option value="14">14 Tage ab Rechnungsdatum</option>
-                  <option value="30">30 Tage ab Rechnungsdatum</option>
+                  <option value="7">7 Tage</option>
+                  <option value="10">10 Tage</option>
+                  <option value="14">14 Tage</option>
+                  <option value="30">30 Tage</option>
                 </Select>
               </FormField>
               <FormField label="Rechnungsversand">
@@ -1057,7 +1067,7 @@ export default function MaterialInvoicesPage({
                               <Input value="1" readOnly />
                             </td>
                             <td className="px-3 py-2">
-                              <Input value="Pauschale" readOnly />
+                              <Input value={SHIPPING_UNIT} readOnly />
                             </td>
                             <td className="px-3 py-2">
                               <Input

@@ -337,6 +337,7 @@ export const POST = async (request: NextRequest) => {
     paid?: boolean;
     paymentMethod?: string;
     paymentCashAccountId?: string;
+    costCenter1?: string | number;
     positionAccount?: string | number;
     customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
@@ -365,6 +366,7 @@ export const POST = async (request: NextRequest) => {
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
   const requestedPositionAccount = parsePositiveInt(body.positionAccount);
+  const requestedCostCenter1 = parsePositiveInt(body.costCenter1);
   const defaultPositionAccount =
     requestedPositionAccount ??
     Number.parseInt(
@@ -372,12 +374,32 @@ export const POST = async (request: NextRequest) => {
       10,
     );
   const dueDays = Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10);
-  const defaultCostCenter1 = getValidDefaultCostCenter();
+  const defaultCostCenter1 =
+    requestedCostCenter1 && isValidCampaiCostCenter1(requestedCostCenter1)
+      ? requestedCostCenter1
+      : getValidDefaultCostCenter();
 
   if (Number.isNaN(defaultPositionAccount)) {
     return NextResponse.json(
       { error: "Invalid CAMPAI_INVOICE_ACCOUNT/CAMPAI_ACCOUNT" },
       { status: 500 },
+    );
+  }
+
+  if (body.costCenter1 !== undefined && !requestedCostCenter1) {
+    return NextResponse.json(
+      { error: "Missing or invalid numeric costCenter1." },
+      { status: 400 },
+    );
+  }
+
+  if (requestedCostCenter1 && !isValidCampaiCostCenter1(requestedCostCenter1)) {
+    return NextResponse.json(
+      {
+        error:
+          "Ungültige Standard-Sphäre. costCenter1 muss mit 1, 2, 3, 4 oder 9 beginnen.",
+      },
+      { status: 400 },
     );
   }
 
