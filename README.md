@@ -135,6 +135,9 @@ consistent.
 - `npm run build` — build for production
 - `npm run start` — start production server
 - `npm run lint` — lint codebase
+- `npm run i18n:extract` — extract `tx("...")` strings into `src/i18n/locales/de.json` and `src/i18n/locales/en.json`
+- `npm run i18n:translate` — auto-translate extracted keys with GPT into `src/i18n/generated/de.json` and `src/i18n/generated/en.json`
+- `npm run i18n:sync` — run extract + GPT auto-translation in sequence
 - `npm run storage:png-to-jpg` — convert PNG files in Supabase Storage to JPG (quality 60), delete original PNG files, and update `resources.image` / `resources.images` DB references
 
 ### Storage migration script
@@ -200,6 +203,14 @@ Sync database tables from source to target:
 
 Deploy on Vercel or any Node.js host that supports Next.js App Router.
 Configure the same environment variables in your hosting provider.
+
+## i18n
+
+The app now uses i18next with German (`de`) as default and English (`en`) behind `/en` routes.
+
+- Use `tx("Source string", "de" | "en")` in components to mark translatable strings.
+- `npm run i18n:extract` writes or updates locale source files from these calls.
+- `npm run i18n:translate` uses `OPENAI_API_KEY` and model `I18N_TRANSLATE_MODEL` (default `gpt-4.1-mini`) to generate translations.
 
 ## Inspiration
 

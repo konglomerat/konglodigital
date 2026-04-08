@@ -1,0 +1,1626 @@
+{
+  "konglodigital::, wenn du eine andere E-Mail-Adresse nutzen möchtest.": {
+    "filePath": "src/app/page.tsx",
+    "key": ", wenn du eine andere E-Mail-Adresse nutzen möchtest.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": ", wenn du eine andere E-Mail-Adresse nutzen möchtest."
+  },
+  "konglodigital::Automatische Freischaltung": {
+    "filePath": "src/app/page.tsx",
+    "key": "Automatische Freischaltung",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Automatische Freischaltung"
+  },
+  "konglodigital::Direkt zu offenen Druckjobs und Produkten.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Direkt zu offenen Druckjobs und Produkten.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Direkt zu offenen Druckjobs und Produkten."
+  },
+  "konglodigital::Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung."
+  },
+  "konglodigital::Inventar ansehen": {
+    "filePath": "src/app/page.tsx",
+    "key": "Inventar ansehen",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Inventar ansehen"
+  },
+  "konglodigital::Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen."
+  },
+  "konglodigital::Jetzt registrieren": {
+    "filePath": "src/app/page.tsx",
+    "key": "Jetzt registrieren",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Jetzt registrieren"
+  },
+  "konglodigital::Kalender öffnen": {
+    "filePath": "src/app/page.tsx",
+    "key": "Kalender öffnen",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Kalender öffnen"
+  },
+  "konglodigital::Mit ❤️ im Ehrenamt entwickelt": {
+    "filePath": "src/app/page.tsx",
+    "key": "Mit ❤️ im Ehrenamt entwickelt",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Mit ❤️ im Ehrenamt entwickelt"
+  },
+  "konglodigital::Neu hier? So funktioniert die Registrierung": {
+    "filePath": "src/app/page.tsx",
+    "key": "Neu hier? So funktioniert die Registrierung",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Neu hier? So funktioniert die Registrierung"
+  },
+  "konglodigital::Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast."
+  },
+  "konglodigital::Schnellzugriff": {
+    "filePath": "src/app/page.tsx",
+    "key": "Schnellzugriff",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Schnellzugriff"
+  },
+  "konglodigital::Schreib uns an": {
+    "filePath": "src/app/page.tsx",
+    "key": "Schreib uns an",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Schreib uns an"
+  },
+  "konglodigital::Termine ansehen": {
+    "filePath": "src/app/page.tsx",
+    "key": "Termine ansehen",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Termine ansehen"
+  },
+  "konglodigital::Termine, Workshops und Belegungen prüfen.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Termine, Workshops und Belegungen prüfen.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Termine, Workshops und Belegungen prüfen."
+  },
+  "konglodigital::Wenn es nicht klappt": {
+    "filePath": "src/app/page.tsx",
+    "key": "Wenn es nicht klappt",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Wenn es nicht klappt"
+  },
+  "konglodigital::Wer kann sich registrieren?": {
+    "filePath": "src/app/page.tsx",
+    "key": "Wer kann sich registrieren?",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Wer kann sich registrieren?"
+  },
+  "konglodigital::Werkzeuge, Materialien und Standorte durchsuchen.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Werkzeuge, Materialien und Standorte durchsuchen.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Werkzeuge, Materialien und Standorte durchsuchen."
+  },
+  "konglodigital::Willkommen": {
+    "filePath": "src/app/page.tsx",
+    "key": "Willkommen",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Willkommen"
+  },
+  "konglodigital::Zum Inventar": {
+    "filePath": "src/app/page.tsx",
+    "key": "Zum Inventar",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Zum Inventar"
+  },
+  "konglodigital::Zum Warenkorb": {
+    "filePath": "src/app/page.tsx",
+    "key": "Zum Warenkorb",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Zum Warenkorb"
+  },
+  "resources::1 (Lowest)": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "1 (Lowest)",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "1 (Lowest)"
+  },
+  "resources::5 (Highest)": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "5 (Highest)",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "5 (Highest)"
+  },
+  "resources::A polygon needs at least three points.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "A polygon needs at least three points.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "A polygon needs at least three points."
+  },
+  "resources::Add images and click \"Save all\" first.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Add images and click \"Save all\" first.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Add images and click \"Save all\" first."
+  },
+  "resources::AI cover": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "AI cover",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "AI cover"
+  },
+  "resources::AI cover generated · Open resource": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "AI cover generated · Open resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "AI cover generated · Open resource"
+  },
+  "resources::AI cover skipped (resource id missing).": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "AI cover skipped (resource id missing).",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "AI cover skipped (resource id missing)."
+  },
+  "resources::All resource types": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "All resource types",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "All resource types"
+  },
+  "resources::Allow camera": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Allow camera",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Allow camera"
+  },
+  "resources::Also include resources that are placed inside mapped room areas when searching for rooms.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Also include resources that are placed inside mapped room areas when searching for rooms.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Also include resources that are placed inside mapped room areas when searching for rooms."
+  },
+  "resources::and delete": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "and delete",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "and delete"
+  },
+  "resources::and deleted": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "and deleted",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "and deleted"
+  },
+  "resources::and keep": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "and keep",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "and keep"
+  },
+  "resources::Apply edit": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Apply edit",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Apply edit"
+  },
+  "resources::Attachable": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Attachable",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Attachable"
+  },
+  "resources::Back": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Back",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Back"
+  },
+  "resources::Back to resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Back to resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Back to resource"
+  },
+  "resources::Back to resources": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Back to resources",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Back to resources"
+  },
+  "resources::Batch capture": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Batch capture",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Batch capture"
+  },
+  "resources::Camera": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Camera",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Camera"
+  },
+  "resources::Camera is still loading. Please try again in a moment.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Camera is still loading. Please try again in a moment.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Camera is still loading. Please try again in a moment."
+  },
+  "resources::Camera not ready.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Camera not ready.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Camera not ready."
+  },
+  "resources::Camera stream not ready yet.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Camera stream not ready yet.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Camera stream not ready yet."
+  },
+  "resources::Candidate": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Candidate",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Candidate"
+  },
+  "resources::Capture at least one photo before sending.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Capture at least one photo before sending.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Capture at least one photo before sending."
+  },
+  "resources::Capture failed unexpectedly.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Capture failed unexpectedly.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Capture failed unexpectedly."
+  },
+  "resources::Captured preview": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Captured preview",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Captured preview"
+  },
+  "resources::Categories": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Categories",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Categories"
+  },
+  "resources::Choose a resource first.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Choose a resource first.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Choose a resource first."
+  },
+  "resources::Choose one or more images (JPG/PNG/WebP).": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Choose one or more images (JPG/PNG/WebP).",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Choose one or more images (JPG/PNG/WebP)."
+  },
+  "resources::Clear search": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Clear search",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Clear search"
+  },
+  "resources::Close": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Close",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Close"
+  },
+  "resources::Collapse": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Collapse",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Collapse"
+  },
+  "resources::Coordinates are invalid. Use [[lng, lat], ...] with at least 3 points.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Coordinates are invalid. Use [[lng, lat], ...] with at least 3 points.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Coordinates are invalid. Use [[lng, lat], ...] with at least 3 points."
+  },
+  "resources::Coordinates JSON": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Coordinates JSON",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Coordinates JSON"
+  },
+  "resources::Coordinates must be valid JSON.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Coordinates must be valid JSON.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Coordinates must be valid JSON."
+  },
+  "resources::Cover image generated, but could not refresh images.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Cover image generated, but could not refresh images.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Cover image generated, but could not refresh images."
+  },
+  "resources::Cover image generated.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Cover image generated.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Cover image generated."
+  },
+  "resources::Cover prompt": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Cover prompt",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Cover prompt"
+  },
+  "resources::Creates a new cover image from the selected existing photo and keeps the original image as an additional photo.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Creates a new cover image from the selected existing photo and keeps the original image as an additional photo.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Creates a new cover image from the selected existing photo and keeps the original image as an additional photo."
+  },
+  "resources::default": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "default",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "default"
+  },
+  "resources::Delete": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Delete",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Delete"
+  },
+  "resources::Deleting...": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Deleting...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Deleting..."
+  },
+  "resources::Description": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Description",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Description"
+  },
+  "resources::Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown.": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown."
+  },
+  "resources::Drag the marker or click the map to set the location.": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Drag the marker or click the map to set the location.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Drag the marker or click the map to set the location."
+  },
+  "resources::Draw point": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Draw point",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Draw point"
+  },
+  "resources::Draw polygon": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Draw polygon",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Draw polygon"
+  },
+  "resources::Draw toggle": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Draw toggle",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Draw toggle"
+  },
+  "resources::Drawing mode active: click the map to add polygon points.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Drawing mode active: click the map to add polygon points.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Drawing mode active: click the map to add polygon points."
+  },
+  "resources::Drawing mode active: click the map to place a point.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Drawing mode active: click the map to place a point.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Drawing mode active: click the map to place a point."
+  },
+  "resources::Duplicate resources": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Duplicate resources",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Duplicate resources"
+  },
+  "resources::Duplicates": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Duplicates",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Duplicates"
+  },
+  "resources::Edit": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Edit",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Edit"
+  },
+  "resources::Edit mode: drag orange points to move, click green points to add, Alt/Option-click orange points to remove.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Edit mode: drag orange points to move, click green points to add, Alt/Option-click orange points to remove.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Edit mode: drag orange points to move, click green points to add, Alt/Option-click orange points to remove."
+  },
+  "resources::Edit resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Edit resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Edit resource"
+  },
+  "resources::Edit selected feature": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Edit selected feature",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Edit selected feature"
+  },
+  "resources::Enable camera access to capture resources.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Enable camera access to capture resources.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Enable camera access to capture resources."
+  },
+  "resources::Expand": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Expand",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Expand"
+  },
+  "resources::Fast actions:": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Fast actions:",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Fast actions:"
+  },
+  "resources::Feature removed. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Feature removed. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Feature removed. Save to persist."
+  },
+  "resources::Feature updated. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Feature updated. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Feature updated. Save to persist."
+  },
+  "resources::Filter by map viewport": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Filter by map viewport",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Filter by map viewport"
+  },
+  "resources::Filter by resource type": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Filter by resource type",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Filter by resource type"
+  },
+  "resources::Finish polygon": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Finish polygon",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Finish polygon"
+  },
+  "resources::Generate a new cover image from Image": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Generate a new cover image from Image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Generate a new cover image from Image"
+  },
+  "resources::Generate cover": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Generate cover",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Generate cover"
+  },
+  "resources::Generate cover image": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Generate cover image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Generate cover image"
+  },
+  "resources::Generating...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Generating...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Generating..."
+  },
+  "resources::Image": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Image"
+  },
+  "resources::Image metadata is being processed. Saving is temporarily disabled.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Image metadata is being processed. Saving is temporarily disabled.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Image metadata is being processed. Saving is temporarily disabled."
+  },
+  "resources::Images": {
+    "filePath": "src/app/[lang]/resources/ResourceEditorPage.tsx",
+    "key": "Images",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Images"
+  },
+  "resources::into": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "into",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "into"
+  },
+  "resources::Invalid polygon points.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Invalid polygon points.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Invalid polygon points."
+  },
+  "resources::Inventar": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Inventar",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Inventar"
+  },
+  "resources::Karte": {
+    "filePath": "src/app/[lang]/resources/ResourcesMapView.tsx",
+    "key": "Karte",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Karte"
+  },
+  "resources::Keep left, delete right": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Keep left, delete right",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Keep left, delete right"
+  },
+  "resources::Keep right, delete left": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Keep right, delete left",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Keep right, delete left"
+  },
+  "resources::Kept": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Kept",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Kept"
+  },
+  "resources::Layer": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Layer",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Layer"
+  },
+  "resources::List view": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "List view",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "List view"
+  },
+  "resources::Load more": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Load more",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Load more"
+  },
+  "resources::Loading image location data...": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Loading image location data...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading image location data..."
+  },
+  "resources::Loading location data...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Loading location data...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading location data..."
+  },
+  "resources::Loading more...": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Loading more...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading more..."
+  },
+  "resources::Loading resource...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Loading resource...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading resource..."
+  },
+  "resources::Loading resources...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Loading resources...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading resources..."
+  },
+  "resources::Loading...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Loading...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Loading..."
+  },
+  "resources::Location": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Location",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Location"
+  },
+  "resources::Location selector": {
+    "filePath": "src/app/[lang]/resources/ResourceMapCrosshair.tsx",
+    "key": "Location selector",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Location selector"
+  },
+  "resources::Map": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Map",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map"
+  },
+  "resources::Map features": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Map features",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map features"
+  },
+  "resources::Map features saved for": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Map features saved for",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map features saved for"
+  },
+  "resources::Map features saved for 1 resource.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Map features saved for 1 resource.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map features saved for 1 resource."
+  },
+  "resources::Map features saved.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Map features saved.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map features saved."
+  },
+  "resources::Map location not ready yet.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Map location not ready yet.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map location not ready yet."
+  },
+  "resources::Map view": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Map view",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Map view"
+  },
+  "resources::Merge photos from": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Merge photos from",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Merge photos from"
+  },
+  "resources::Merge photos into left": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Merge photos into left",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Merge photos into left"
+  },
+  "resources::Merge photos into right": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Merge photos into right",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Merge photos into right"
+  },
+  "resources::Merged photos into": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Merged photos into",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Merged photos into"
+  },
+  "resources::Missing Mapbox token.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Missing Mapbox token.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Missing Mapbox token."
+  },
+  "resources::Name": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Name",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Name"
+  },
+  "resources::Name is required unless an image is provided.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Name is required unless an image is provided.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Name is required unless an image is provided."
+  },
+  "resources::Name is required.": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Name is required.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Name is required."
+  },
+  "resources::New resource": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "New resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "New resource"
+  },
+  "resources::Next": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Next",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Next"
+  },
+  "resources::Next feature": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Next feature",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Next feature"
+  },
+  "resources::Next image": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Next image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Next image"
+  },
+  "resources::No existing images": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "No existing images",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No existing images"
+  },
+  "resources::No features yet.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "No features yet.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No features yet."
+  },
+  "resources::No high-confidence duplicates found.": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "No high-confidence duplicates found.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No high-confidence duplicates found."
+  },
+  "resources::No image": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "No image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No image"
+  },
+  "resources::No map feature changes to save.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "No map feature changes to save.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No map feature changes to save."
+  },
+  "resources::No resources found": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "No resources found",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No resources found"
+  },
+  "resources::No resources found.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "No resources found.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "No resources found."
+  },
+  "resources::Not attachable": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Not attachable",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Not attachable"
+  },
+  "resources::of": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "of",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "of"
+  },
+  "resources::Only show resources that are currently visible in the map area.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Only show resources that are currently visible in the map area.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Only show resources that are currently visible in the map area."
+  },
+  "resources::Open map": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Open map",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Open map"
+  },
+  "resources::Optional description": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Optional description",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Optional description"
+  },
+  "resources::photo": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "photo",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "photo"
+  },
+  "resources::photo(s)": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "photo(s)",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "photo(s)"
+  },
+  "resources::photos": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "photos",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "photos"
+  },
+  "resources::Please fix the form validation errors.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Please fix the form validation errors.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Please fix the form validation errors."
+  },
+  "resources::Point": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Point",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Point"
+  },
+  "resources::Point added. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Point added. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Point added. Save to persist."
+  },
+  "resources::Point is invalid. Use [lng, lat].": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Point is invalid. Use [lng, lat].",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Point is invalid. Use [lng, lat]."
+  },
+  "resources::Point JSON": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Point JSON",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Point JSON"
+  },
+  "resources::Point removed. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Point removed. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Point removed. Save to persist."
+  },
+  "resources::points": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "points",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "points"
+  },
+  "resources::Polygon": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Polygon",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Polygon"
+  },
+  "resources::Polygon added. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Polygon added. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Polygon added. Save to persist."
+  },
+  "resources::Polygon updated. Save to persist.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Polygon updated. Save to persist.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Polygon updated. Save to persist."
+  },
+  "resources::Prev": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Prev",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Prev"
+  },
+  "resources::Prev feature": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Prev feature",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Prev feature"
+  },
+  "resources::Previous image": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Previous image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Previous image"
+  },
+  "resources::Priority": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Priority",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Priority"
+  },
+  "resources::Priority is required.": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Priority is required.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Priority is required."
+  },
+  "resources::Processing photo...": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Processing photo...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Processing photo..."
+  },
+  "resources::Really delete this resource? This cannot be undone.": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Really delete this resource? This cannot be undone.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Really delete this resource? This cannot be undone."
+  },
+  "resources::Recent uploads will appear here": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Recent uploads will appear here",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Recent uploads will appear here"
+  },
+  "resources::Related resources": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Related resources",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Related resources"
+  },
+  "resources::Reload": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Reload",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Reload"
+  },
+  "resources::Reset form": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Reset form",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Reset form"
+  },
+  "resources::Resource and map features saved.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Resource and map features saved.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource and map features saved."
+  },
+  "resources::Resource created · Open resource": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Resource created · Open resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource created · Open resource"
+  },
+  "resources::Resource created (id missing).": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Resource created (id missing).",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource created (id missing)."
+  },
+  "resources::Resource created.": {
+    "filePath": "src/app/[lang]/resources/ResourceEditorPage.tsx",
+    "key": "Resource created.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource created."
+  },
+  "resources::Resource details": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Resource details",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource details"
+  },
+  "resources::Resource name": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Resource name",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource name"
+  },
+  "resources::Resource not found.": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Resource not found.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource not found."
+  },
+  "resources::Resource preview": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Resource preview",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource preview"
+  },
+  "resources::Resource updated.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Resource updated.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Resource updated."
+  },
+  "resources::resources.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "resources.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "resources."
+  },
+  "resources::Results": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Results",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Results"
+  },
+  "resources::Review likely duplicates and either keep one or merge photos.": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Review likely duplicates and either keep one or merge photos.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Review likely duplicates and either keep one or merge photos."
+  },
+  "resources::Satellit": {
+    "filePath": "src/app/[lang]/resources/ResourcesMapView.tsx",
+    "key": "Satellit",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Satellit"
+  },
+  "resources::Satellite": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Satellite",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Satellite"
+  },
+  "resources::Save": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Save",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Save"
+  },
+  "resources::Save all": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Save all",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Save all"
+  },
+  "resources::Saved state": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Saved state",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Saved state"
+  },
+  "resources::Saving...": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Saving...",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Saving..."
+  },
+  "resources::score": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "score",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "score"
+  },
+  "resources::Search": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Search",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Search"
+  },
+  "resources::Search and select related resources": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Search and select related resources",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Search and select related resources"
+  },
+  "resources::Search by name and select one or more related resources.": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Search by name and select one or more related resources.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Search by name and select one or more related resources."
+  },
+  "resources::Search by name, tag, or category": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Search by name, tag, or category",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Search by name, tag, or category"
+  },
+  "resources::Search resources": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Search resources",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Search resources"
+  },
+  "resources::Select a resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Select a resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Select a resource"
+  },
+  "resources::Selected": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Selected",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Selected"
+  },
+  "resources::Selected resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Selected resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Selected resource"
+  },
+  "resources::Set priority to": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Set priority to",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Set priority to"
+  },
+  "resources::Show resources in rooms": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Show resources in rooms",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Show resources in rooms"
+  },
+  "resources::Showing resources with saved locations.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Showing resources with saved locations.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Showing resources with saved locations."
+  },
+  "resources::similar metadata": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "similar metadata",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "similar metadata"
+  },
+  "resources::Source image": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Source image",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Source image"
+  },
+  "resources::Start drawing": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Start drawing",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Start drawing"
+  },
+  "resources::Stop drawing": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Stop drawing",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Stop drawing"
+  },
+  "resources::Switch resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Switch resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Switch resource"
+  },
+  "resources::tag1, tag2": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "tag1, tag2",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "tag1, tag2"
+  },
+  "resources::Tags": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Tags",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Tags"
+  },
+  "resources::Tap the shutter to capture photos": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Tap the shutter to capture photos",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Tap the shutter to capture photos"
+  },
+  "resources::The original photo will be kept as an additional image.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "The original photo will be kept as an additional image.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "The original photo will be kept as an additional image."
+  },
+  "resources::Tools & Ressourcen, die im Konglomerat zur Verfügung stehen.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Tools & Ressourcen, die im Konglomerat zur Verfügung stehen.",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Tools & Ressourcen, die im Konglomerat zur Verfügung stehen."
+  },
+  "resources::Type": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "Type",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Type"
+  },
+  "resources::Type is required.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Type is required.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Type is required."
+  },
+  "resources::Unable to access camera.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Unable to access camera.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to access camera."
+  },
+  "resources::Unable to capture photo.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Unable to capture photo.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to capture photo."
+  },
+  "resources::Unable to delete resource.": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "Unable to delete resource.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to delete resource."
+  },
+  "resources::Unable to generate cover image.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to generate cover image.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to generate cover image."
+  },
+  "resources::Unable to generate preview.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Unable to generate preview.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to generate preview."
+  },
+  "resources::Unable to list cameras.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Unable to list cameras.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to list cameras."
+  },
+  "resources::Unable to load map features.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to load map features.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to load map features."
+  },
+  "resources::Unable to load more resources.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Unable to load more resources.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to load more resources."
+  },
+  "resources::Unable to load resource details.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to load resource details.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to load resource details."
+  },
+  "resources::Unable to load resources.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to load resources.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to load resources."
+  },
+  "resources::Unable to resolve duplicate.": {
+    "filePath": "src/app/[lang]/resources/duplicates/DuplicatesPageClient.tsx",
+    "key": "Unable to resolve duplicate.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to resolve duplicate."
+  },
+  "resources::Unable to save map features for": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to save map features for",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to save map features for"
+  },
+  "resources::Unable to save map features.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to save map features.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to save map features."
+  },
+  "resources::Unable to save resource.": {
+    "filePath": "src/app/[lang]/resources/ResourceEditorPage.tsx",
+    "key": "Unable to save resource.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to save resource."
+  },
+  "resources::Unable to update resource.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unable to update resource.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unable to update resource."
+  },
+  "resources::Unsaved changes": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Unsaved changes",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Unsaved changes"
+  },
+  "resources::Update resource": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Update resource",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Update resource"
+  },
+  "resources::Upload at least one image first, then generate a cover.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Upload at least one image first, then generate a cover.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Upload at least one image first, then generate a cover."
+  },
+  "resources::Upload failed to return URLs.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Upload failed to return URLs.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Upload failed to return URLs."
+  },
+  "resources::Upload failed.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Upload failed.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Upload failed."
+  },
+  "resources::Upload preparation failed.": {
+    "filePath": "src/app/[lang]/resources/batch/page.tsx",
+    "key": "Upload preparation failed.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Upload preparation failed."
+  },
+  "resources::View details and metadata for the selected resource.": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceDetailClient.tsx",
+    "key": "View details and metadata for the selected resource.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "View details and metadata for the selected resource."
+  },
+  "resources::Wait until image location data has finished loading before saving.": {
+    "filePath": "src/app/[lang]/resources/features/ResourceFeaturesEditorClient.tsx",
+    "key": "Wait until image location data has finished loading before saving.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Wait until image location data has finished loading before saving."
+  },
+  "resources::We detected a location from the image. Please confirm or adjust it on the map.": {
+    "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
+    "key": "We detected a location from the image. Please confirm or adjust it on the map.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "We detected a location from the image. Please confirm or adjust it on the map."
+  }
+}

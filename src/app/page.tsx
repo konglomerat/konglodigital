@@ -7,7 +7,7 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import Button from "./components/Button";
+import Button from "./[lang]/components/Button";
 import heroHelloImage from "./hero-hello.jpg";
 import inventoryImage from "./inventory.jpg";
 import inventoryBwImage from "./inventory-bw.jpg";
@@ -15,46 +15,13 @@ import calendarImage from "./calendar.jpg";
 import calendarBwImage from "./calendar-bw.jpg";
 import print3dImage from "./3dprint.jpg";
 import print3dBwImage from "./3dprint-bw.jpg";
+import { getServerI18n } from "@/i18n/server";
 
 type QuickAction = {
   href: string;
   title: string;
   description: string;
 };
-
-const quickActions: QuickAction[] = [
-  {
-    href: "/checkout",
-    title: "Zum Warenkorb",
-    description: "Direkt zu offenen Druckjobs und Produkten.",
-  },
-  {
-    href: "/resources",
-    title: "Inventar ansehen",
-    description: "Werkzeuge, Materialien und Standorte durchsuchen.",
-  },
-  {
-    href: "/calendar",
-    title: "Kalender öffnen",
-    description: "Termine, Workshops und Belegungen prüfen.",
-  },
-  /*
-  {
-    href: "/products",
-    title: "Produkte finden",
-    description: "Materialien und Services schnell auswählen.",
-  },
-  {
-    href: "/account",
-    title: "Mein Profil",
-    description: "Persönliche Daten und Einstellungen verwalten.",
-  },
-  {
-    href: "/invoices",
-    title: "Rechnungen",
-    description: "Rechnungen und Abrechnungen an einem Ort.",
-  },*/
-];
 
 const workflowSteps = [
   {
@@ -72,16 +39,38 @@ const workflowSteps = [
 ];
 
 export default async function Home() {
+  const { tx } = await getServerI18n();
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
+
+  const quickActions: QuickAction[] = [
+    {
+      href: "/checkout",
+      title: tx("Zum Warenkorb", "de"),
+      description: tx("Direkt zu offenen Druckjobs und Produkten.", "de"),
+    },
+    {
+      href: "/resources",
+      title: tx("Inventar ansehen", "de"),
+      description: tx(
+        "Werkzeuge, Materialien und Standorte durchsuchen.",
+        "de",
+      ),
+    },
+    {
+      href: "/calendar",
+      title: tx("Kalender öffnen", "de"),
+      description: tx("Termine, Workshops und Belegungen prüfen.", "de"),
+    },
+  ];
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
       <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
         <div className="order-2 md:order-1">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Willkommen
+            {tx("Willkommen", "de")}
           </p>
           <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 md:text-5xl">
             Konglo
@@ -89,15 +78,18 @@ export default async function Home() {
             digital
           </h1>
           <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-600 md:text-base">
-            Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.
+            {tx(
+              "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
+              "de",
+            )}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button href="/resources" kind="primary" size="medium">
-              Zum Inventar
+              {tx("Zum Inventar", "de")}
             </Button>
             <Button href="/calendar" kind="secondary" size="medium">
-              Termine ansehen
+              {tx("Termine ansehen", "de")}
             </Button>
           </div>
         </div>
@@ -127,45 +119,52 @@ export default async function Home() {
       {!isAuthenticated ? (
         <section className="rounded-2xl bg-blue-700 p-5 shadow-sm ring-1 ring-blue-600 md:p-6">
           <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">
-            Neu hier? So funktioniert die Registrierung
+            {tx("Neu hier? So funktioniert die Registrierung", "de")}
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <article>
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
                 <FontAwesomeIcon icon={faUserPlus} className="h-4 w-4" />
-                <span>Wer kann sich registrieren?</span>
+                <span>{tx("Wer kann sich registrieren?", "de")}</span>
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage
-                auch andere Personen.
+                {tx(
+                  "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
+                  "de",
+                )}
               </p>
             </article>
 
             <article>
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
                 <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
-                <span>Automatische Freischaltung</span>
+                <span>{tx("Automatische Freischaltung", "de")}</span>
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich
-                beim Konglomerat angemeldet hast.
+                {tx(
+                  "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
+                  "de",
+                )}
               </p>
             </article>
 
             <article>
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
                 <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
-                <span>Wenn es nicht klappt</span>
+                <span>{tx("Wenn es nicht klappt", "de")}</span>
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Schreib uns an{" "}
+                {tx("Schreib uns an", "de")}{" "}
                 <a
                   href="mailto:vorstand@konglomerat.org"
                   className="font-medium text-cyan-100 underline underline-offset-2 hover:text-white dark:text-blue-300 dark:hover:text-blue-200"
                 >
                   vorstand@konglomerat.org
-                </a>
-                , wenn du eine andere E-Mail-Adresse nutzen möchtest.
+                </a>{" "}
+                {tx(
+                  ", wenn du eine andere E-Mail-Adresse nutzen möchtest.",
+                  "de",
+                )}
               </p>
             </article>
           </div>
@@ -177,7 +176,7 @@ export default async function Home() {
               size="large"
               className="w-full bg-blue-500 px-8 py-3 text-base font-bold shadow-lg shadow-blue-900/25 hover:!bg-[#3777ec]"
             >
-              Jetzt registrieren
+              {tx("Jetzt registrieren", "de")}
             </Button>
           </div>
         </section>
@@ -187,7 +186,7 @@ export default async function Home() {
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
-              Schnellzugriff
+              {tx("Schnellzugriff", "de")}
             </h2>
           </div>
         </div>
@@ -257,7 +256,7 @@ export default async function Home() {
 
       <section className="pt-2">
         <p className="mb-1 text-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
-          Mit ❤️ im Ehrenamt entwickelt
+          {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>
         <a
           href="https://konglomerat.org"

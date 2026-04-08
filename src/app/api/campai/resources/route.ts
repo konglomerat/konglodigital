@@ -13,7 +13,7 @@ import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
-} from "@/app/resources/map-features";
+} from "@/app/[lang]/resources/map-features";
 
 const splitList = (value: string) =>
   value
@@ -592,7 +592,9 @@ export const GET = async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const limit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = Number.parseInt(searchParams.get("offset") ?? "0", 10);
-  const searchTerm = searchParams.get("searchTerm") ?? "";
+  const searchTerm =
+    searchParams.get("searchTerm") ?? searchParams.get("q") ?? "";
+  const resourceType = searchParams.get("type") ?? "";
 
   let query = supabase
     .from("resources")
@@ -609,6 +611,10 @@ export const GET = async (request: NextRequest) => {
   if (searchTerm.trim()) {
     const term = `%${searchTerm.trim()}%`;
     query = query.or(`name.ilike.${term},description.ilike.${term}`);
+  }
+
+  if (resourceType.trim()) {
+    query = query.ilike("type", resourceType.trim());
   }
 
   const { data: rows, error, count } = await query;

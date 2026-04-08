@@ -13,7 +13,7 @@ import {
   getPointFeatures,
   normalizeResourceMapFeatures,
   upsertGpsPointFeature,
-} from "@/app/resources/map-features";
+} from "@/app/[lang]/resources/map-features";
 
 const splitList = (value: string) =>
   value

@@ -27,10 +27,13 @@ import "./globals.css";
 import { signOut } from "./actions";
 import { getUserRole, roleCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import Button from "./components/Button";
-import ThemeToggle from "./components/ThemeToggle";
-import AutoCloseMenuDetails from "./components/AutoCloseMenuDetails";
-import ChatwootWidget from "./components/ChatwootWidget";
+import Button from "./[lang]/components/Button";
+import ThemeToggle from "./[lang]/components/ThemeToggle";
+import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
+import ChatwootWidget from "./[lang]/components/ChatwootWidget";
+import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
+import { I18nProvider } from "@/i18n/client";
+import { getRequestLocale } from "@/i18n/server";
 
 config.autoAddCss = false;
 
@@ -129,6 +132,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getRequestLocale();
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
@@ -147,7 +151,7 @@ export default async function RootLayout({
   const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -158,412 +162,423 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ChatwootWidget />
-        <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-          <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
-            <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
-              <Link
-                href="/"
-                className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
-              >
-                Konglo
-                <br />
-                digital
-              </Link>
-              <div className="flex items-center gap-3">
-                <ThemeToggle />
-                <AutoCloseMenuDetails
-                  className="group"
-                  summary={
-                    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
-                      Menü
-                      <span className="text-lg transition group-open:rotate-45">
-                        +
-                      </span>
-                    </summary>
-                  }
-                >
-                  <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
-                    <nav className="flex flex-col px-2 py-2">
-                      <p className={navSectionTitleClassName}>
-                        Digital Fabrication
-                      </p>
-                      <ProtectedNavItem
-                        href="/printers"
-                        className={navLinkClassName}
-                        icon={faCube}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        3D-Druck
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/printers/emptying"
-                        className={navLinkClassName}
-                        icon={faPrint}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Drucker entleeren
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/printers/access-codes"
-                        className={navLinkClassName}
-                        icon={faKey}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Drucker Zugangscodes
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/checkout"
-                        className={navLinkClassName}
-                        icon={faCartShopping}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Warenkorb
-                      </ProtectedNavItem>
-
-                      <p className={navSectionTitleClassName}>Self Service</p>
-                      <ProtectedNavItem
-                        href="/monatsbeitrag"
-                        className={navLinkClassName}
-                        icon={faCalendarCheck}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Zugangskarte
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/account"
-                        className={navLinkClassName}
-                        icon={faUser}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Profil
-                      </ProtectedNavItem>
-
-                      <p className={navSectionTitleClassName}>Verein</p>
-
-                      <ProtectedNavItem
-                        href="/resources"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Inventar
-                      </ProtectedNavItem>
-                      <ActiveNavLink
-                        href="/calendar"
-                        className={navLinkClassName}
-                      >
-                        <FontAwesomeIcon
-                          icon={faCalendarDays}
-                          className="h-4 w-4"
-                        />
-                        Kalender
-                      </ActiveNavLink>
-                      <ProtectedNavItem
-                        href="/products"
-                        className={navLinkClassName}
-                        icon={faBoxOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Produkte
-                      </ProtectedNavItem>
-                      <p className={navSectionTitleClassName}>buchhaltung</p>
-                      <ProtectedNavItem
-                        href="/invoices"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={canAccessInvoices}
-                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-                      >
-                        Rechnungen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/reimbursement"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Rückerstattung von Auslagen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/eigenbeleg"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Eigenbeleg erstellen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/buchungen"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Beleg einbuchen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/budget"
-                        className={navLinkClassName}
-                        icon={faChartPie}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Budget Werkbereiche
-                      </ProtectedNavItem>
-                    </nav>
-                    <div className="border-t border-zinc-200 px-4 py-4">
-                      {isAuthenticated ? (
-                        <div className="space-y-3">
-                          {canAccessAdmin ? (
-                            <Button
-                              href="/admin/users"
-                              kind="secondary"
-                              className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                            >
-                              <FontAwesomeIcon
-                                icon={faLock}
-                                className="h-4 w-4"
-                              />
-                              Admin
-                            </Button>
-                          ) : null}
-                          <form action={signOut}>
-                            <Button
-                              type="submit"
-                              kind="primary"
-                              className={navButtonClassName}
-                            >
-                              <FontAwesomeIcon
-                                icon={faRightFromBracket}
-                                className="h-4 w-4"
-                              />
-                              Abmelden
-                            </Button>
-                          </form>
-                        </div>
-                      ) : (
-                        <Button
-                          href="/login"
-                          kind="primary"
-                          className={navButtonClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faRightToBracket}
-                            className="h-4 w-4"
-                          />
-                          Anmelden
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </AutoCloseMenuDetails>
-              </div>
-            </div>
-          </header>
-          <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
-            <div className="space-y-3">
-              <div>
+        <I18nProvider locale={locale}>
+          <ChatwootWidget />
+          <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+            <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
+              <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                 <Link
                   href="/"
-                  className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                  className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
                 >
                   Konglo
                   <br />
                   digital
                 </Link>
+                <div className="flex items-center gap-3">
+                  <LanguageSwitcher />
+                  <ThemeToggle />
+                  <AutoCloseMenuDetails
+                    className="group"
+                    summary={
+                      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                        Menü
+                        <span className="text-lg transition group-open:rotate-45">
+                          +
+                        </span>
+                      </summary>
+                    }
+                  >
+                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
+                      <nav className="flex flex-col px-2 py-2">
+                        <p className={navSectionTitleClassName}>
+                          Digital Fabrication
+                        </p>
+                        <ProtectedNavItem
+                          href="/printers"
+                          className={navLinkClassName}
+                          icon={faCube}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          3D-Druck
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/printers/emptying"
+                          className={navLinkClassName}
+                          icon={faPrint}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Drucker entleeren
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/printers/access-codes"
+                          className={navLinkClassName}
+                          icon={faKey}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Drucker Zugangscodes
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/checkout"
+                          className={navLinkClassName}
+                          icon={faCartShopping}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Warenkorb
+                        </ProtectedNavItem>
+
+                        <p className={navSectionTitleClassName}>Self Service</p>
+                        <ProtectedNavItem
+                          href="/monatsbeitrag"
+                          className={navLinkClassName}
+                          icon={faCalendarCheck}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Zugangskarte
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/account"
+                          className={navLinkClassName}
+                          icon={faUser}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Profil
+                        </ProtectedNavItem>
+
+                        <p className={navSectionTitleClassName}>Verein</p>
+
+                        <ProtectedNavItem
+                          href="/resources"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Inventar
+                        </ProtectedNavItem>
+                        <ActiveNavLink
+                          href="/calendar"
+                          className={navLinkClassName}
+                        >
+                          <FontAwesomeIcon
+                            icon={faCalendarDays}
+                            className="h-4 w-4"
+                          />
+                          Kalender
+                        </ActiveNavLink>
+                        <ProtectedNavItem
+                          href="/products"
+                          className={navLinkClassName}
+                          icon={faBoxOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Produkte
+                        </ProtectedNavItem>
+                        <p className={navSectionTitleClassName}>buchhaltung</p>
+                        <ProtectedNavItem
+                          href="/invoices"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={canAccessInvoices}
+                          tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                        >
+                          Rechnungen
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/reimbursement"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Rückerstattung von Auslagen
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/eigenbeleg"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Eigenbeleg erstellen
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/buchungen"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Beleg einbuchen
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/budget"
+                          className={navLinkClassName}
+                          icon={faChartPie}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Budget Werkbereiche
+                        </ProtectedNavItem>
+                      </nav>
+                      <div className="border-t border-zinc-200 px-4 py-4">
+                        {isAuthenticated ? (
+                          <div className="space-y-3">
+                            {canAccessAdmin ? (
+                              <Button
+                                href="/admin/users"
+                                kind="secondary"
+                                className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faLock}
+                                  className="h-4 w-4"
+                                />
+                                Admin
+                              </Button>
+                            ) : null}
+                            <form action={signOut}>
+                              <Button
+                                type="submit"
+                                kind="primary"
+                                className={navButtonClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faRightFromBracket}
+                                  className="h-4 w-4"
+                                />
+                                Abmelden
+                              </Button>
+                            </form>
+                          </div>
+                        ) : (
+                          <Button
+                            href="/login"
+                            kind="primary"
+                            className={navButtonClassName}
+                          >
+                            <FontAwesomeIcon
+                              icon={faRightToBracket}
+                              className="h-4 w-4"
+                            />
+                            Anmelden
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </AutoCloseMenuDetails>
+                </div>
               </div>
-              <ThemeToggle />
+            </header>
+            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
+              <div className="space-y-3">
+                <div>
+                  <Link
+                    href="/"
+                    className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                  >
+                    Konglo
+                    <br />
+                    digital
+                  </Link>
+                </div>
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcher />
+                  <ThemeToggle />
+                </div>
+              </div>
+              <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
+                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Digital Fabrication
+                </p>
+                <ProtectedNavItem
+                  href="/printers"
+                  className={navItemClassName}
+                  icon={faCube}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  3D-Druck
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/printers/emptying"
+                  className={navItemClassName}
+                  icon={faPrint}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Drucker entleeren
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/printers/access-codes"
+                  className={navItemClassName}
+                  icon={faKey}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Drucker Zugangscodes
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/checkout"
+                  className={navItemClassName}
+                  icon={faCartShopping}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Warenkorb
+                </ProtectedNavItem>
+
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Self Service
+                </p>
+                <ProtectedNavItem
+                  href="/monatsbeitrag"
+                  className={navItemClassName}
+                  icon={faCalendarCheck}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Zugangskarte
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/account"
+                  className={navItemClassName}
+                  icon={faUser}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Profil
+                </ProtectedNavItem>
+
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Verein
+                </p>
+                <ActiveNavLink href="/calendar" className={navItemClassName}>
+                  <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                  Kalender
+                </ActiveNavLink>
+                <ProtectedNavItem
+                  href="/resources"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Inventar
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/products"
+                  className={navItemClassName}
+                  icon={faBoxOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Produkte
+                </ProtectedNavItem>
+
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  buchhaltung
+                </p>
+                <ProtectedNavItem
+                  href="/invoices"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={canAccessInvoices}
+                  tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                >
+                  Rechnungen
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/reimbursement"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Rückerstattung von Auslagen
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/eigenbeleg"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Eigenbeleg erstellen
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/buchungen"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Beleg einbuchen
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/budget"
+                  className={navItemClassName}
+                  icon={faChartPie}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Budget Werkbereiche
+                </ProtectedNavItem>
+              </nav>
+              {isAuthenticated ? (
+                <div className="mt-auto space-y-3">
+                  {canAccessAdmin ? (
+                    <Button
+                      href="/admin/users"
+                      kind="secondary"
+                      className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                      Admin
+                    </Button>
+                  ) : null}
+                  <form action={signOut}>
+                    <Button
+                      type="submit"
+                      kind="primary"
+                      className={navButtonClassName}
+                    >
+                      <FontAwesomeIcon
+                        icon={faRightFromBracket}
+                        className="h-4 w-4"
+                      />
+                      Abmelden
+                    </Button>
+                  </form>
+                </div>
+              ) : (
+                <Button
+                  href="/login"
+                  kind="primary"
+                  className={navButtonClassName}
+                >
+                  <FontAwesomeIcon
+                    icon={faRightToBracket}
+                    className="h-4 w-4"
+                  />
+                  Anmelden
+                </Button>
+              )}
+            </aside>
+            <div className="ml-0 md:ml-64">
+              <main className="mx-auto w-full md:px-10 md:py-10">
+                {children}
+              </main>
             </div>
-            <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-              <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Digital Fabrication
-              </p>
-              <ProtectedNavItem
-                href="/printers"
-                className={navItemClassName}
-                icon={faCube}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                3D-Druck
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/printers/emptying"
-                className={navItemClassName}
-                icon={faPrint}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Drucker entleeren
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/printers/access-codes"
-                className={navItemClassName}
-                icon={faKey}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Drucker Zugangscodes
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/checkout"
-                className={navItemClassName}
-                icon={faCartShopping}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Warenkorb
-              </ProtectedNavItem>
-
-              <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Self Service
-              </p>
-              <ProtectedNavItem
-                href="/monatsbeitrag"
-                className={navItemClassName}
-                icon={faCalendarCheck}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Zugangskarte
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/account"
-                className={navItemClassName}
-                icon={faUser}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Profil
-              </ProtectedNavItem>
-
-              <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Verein
-              </p>
-              <ActiveNavLink href="/calendar" className={navItemClassName}>
-                <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                Kalender
-              </ActiveNavLink>
-              <ProtectedNavItem
-                href="/resources"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Inventar
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/products"
-                className={navItemClassName}
-                icon={faBoxOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Produkte
-              </ProtectedNavItem>
-
-              <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                buchhaltung
-              </p>
-              <ProtectedNavItem
-                href="/invoices"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={canAccessInvoices}
-                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-              >
-                Rechnungen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/reimbursement"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Rückerstattung von Auslagen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/eigenbeleg"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Eigenbeleg erstellen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/buchungen"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Beleg einbuchen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/budget"
-                className={navItemClassName}
-                icon={faChartPie}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Budget Werkbereiche
-              </ProtectedNavItem>
-            </nav>
-            {isAuthenticated ? (
-              <div className="mt-auto space-y-3">
-                {canAccessAdmin ? (
-                  <Button
-                    href="/admin/users"
-                    kind="secondary"
-                    className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                  >
-                    <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                    Admin
-                  </Button>
-                ) : null}
-                <form action={signOut}>
-                  <Button
-                    type="submit"
-                    kind="primary"
-                    className={navButtonClassName}
-                  >
-                    <FontAwesomeIcon
-                      icon={faRightFromBracket}
-                      className="h-4 w-4"
-                    />
-                    Abmelden
-                  </Button>
-                </form>
-              </div>
-            ) : (
-              <Button
-                href="/login"
-                kind="primary"
-                className={navButtonClassName}
-              >
-                <FontAwesomeIcon icon={faRightToBracket} className="h-4 w-4" />
-                Anmelden
-              </Button>
-            )}
-          </aside>
-          <div className="ml-0 md:ml-64">
-            <main className="mx-auto w-full md:px-10 md:py-10">{children}</main>
           </div>
-        </div>
+        </I18nProvider>
       </body>
     </html>
   );
