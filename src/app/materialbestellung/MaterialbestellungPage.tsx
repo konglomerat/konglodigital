@@ -814,7 +814,8 @@ export default function MaterialInvoicesPage({
         sendByMail: invoiceSendMode === "email",
         positions: [
           ...participant.positions.map((position) => ({
-            description: position.articleDescription || position.description,
+            description: position.description,
+            details: position.articleDescription || "",
             unit: position.unit,
             quantity: Math.max(parseNumberInput(position.quantity), 0),
             unitAmount: Math.max(
@@ -1202,7 +1203,7 @@ export default function MaterialInvoicesPage({
                                   }
                                 />
                                 <Input
-                                  placeholder="Beschreibung (optional)"
+                                  placeholder="Details"
                                   className="min-w-0 whitespace-nowrap text-xs text-zinc-500 placeholder:text-zinc-400 dark:text-zinc-400"
                                   value={position.articleDescription}
                                   onChange={(event) =>
