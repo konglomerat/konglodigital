@@ -1,9 +1,10 @@
 "use client";
 
-import { type FocusEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FocusEvent, Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   faFileArrowUp,
   faFilePdf,
+  faArrowRotateLeft,
   faPlus,
   faRightLeft,
   faRotate,
@@ -24,7 +25,7 @@ import {
   type MaterialOrderInvoiceSendMode,
   type MaterialOrderSummary,
 } from "@/lib/material-orders";
-import { normalizeInvoiceDateString, type MaterialInvoiceParseResult } from "@/lib/material-invoice";
+import { type MaterialInvoiceParseResult } from "@/lib/material-invoice";
 
 type DebtorDetails = {
   account?: number | null;
@@ -118,6 +119,7 @@ const formatStoredDate = (value: string) => {
 const createEmptyPosition = (): MaterialOrderEditablePosition => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   description: "",
+  articleDescription: "",
   quantity: "1",
   unit: "Stk",
   unitAmountEuro: "",
@@ -126,8 +128,7 @@ const createEmptyPosition = (): MaterialOrderEditablePosition => ({
 const createEmptyParticipant = (): MaterialOrderEditableParticipant => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   name: "Neue Person",
-  confidence: "low",
-  positions: [createEmptyPosition()],
+  positions: [],
   debtorAccount: null,
   debtorName: "",
   shippingDescription: "Anteilige Lieferkosten",
@@ -145,10 +146,10 @@ const buildParticipantsFromParse = (
   parsed.participants.map((participant, participantIndex) => ({
     id: participant.id || `participant-${participantIndex}`,
     name: participant.name,
-    confidence: participant.confidence,
     positions: participant.positions.map((position, positionIndex) => ({
       id: position.id || `${participant.id}-${positionIndex}`,
       description: position.description,
+      articleDescription: position.articleDescription ?? "",
       quantity: String(position.quantity).replace(".", ","),
       unit: position.unit || "Stk",
       unitAmountEuro: toInputEuro(position.unitAmountEuro),
@@ -239,6 +240,7 @@ const buildDraft = (params: {
   supplierName: string;
   supplierInvoiceNumber: string;
   supplierInvoiceDate: string;
+  totalAmountEuro: number;
   dueDays: MaterialOrderDueDays;
   invoiceSendMode: MaterialOrderInvoiceSendMode;
   shippingAmountEuro: string;
@@ -250,6 +252,7 @@ const buildDraft = (params: {
   supplierName: params.supplierName,
   supplierInvoiceNumber: params.supplierInvoiceNumber,
   supplierInvoiceDate: params.supplierInvoiceDate,
+  totalAmountEuro: params.totalAmountEuro,
   dueDays: params.dueDays,
   invoiceSendMode: params.invoiceSendMode,
   shippingAmountEuro: params.shippingAmountEuro,
@@ -275,9 +278,11 @@ export default function MaterialInvoicesPage({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [participants, setParticipants] = useState<MaterialOrderEditableParticipant[]>([]);
+  const [unassignedPositions, setUnassignedPositions] = useState<MaterialOrderEditablePosition[]>([]);
   const [supplierName, setSupplierName] = useState("");
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
+  const [totalAmountEuro, setTotalAmountEuro] = useState(0);
   const [dueDays, setDueDays] = useState<MaterialOrderDueDays>("30");
   const [invoiceSendMode, setInvoiceSendMode] = useState<MaterialOrderInvoiceSendMode>("none");
   const [shippingAmountEuro, setShippingAmountEuro] = useState("0,00");
@@ -372,6 +377,7 @@ export default function MaterialInvoicesPage({
             supplierName,
             supplierInvoiceNumber,
             supplierInvoiceDate,
+            totalAmountEuro,
             dueDays,
             invoiceSendMode,
             shippingAmountEuro,
@@ -392,6 +398,7 @@ export default function MaterialInvoicesPage({
       supplierInvoiceDate,
       supplierInvoiceNumber,
       supplierName,
+      totalAmountEuro,
     ],
   );
 
@@ -508,9 +515,11 @@ export default function MaterialInvoicesPage({
     lastSavedDraftRef.current = null;
     setCurrentOrderId(null);
     setParticipants([]);
+    setUnassignedPositions([]);
     setSupplierName("");
     setSupplierInvoiceNumber("");
     setSupplierInvoiceDate("");
+    setTotalAmountEuro(0);
     setDueDays("30");
     setInvoiceSendMode("none");
     setShippingAmountEuro("0,00");
@@ -551,13 +560,26 @@ export default function MaterialInvoicesPage({
       setCurrentOrderId(null);
       setSupplierName(parsed.supplierName);
       setSupplierInvoiceNumber(parsed.supplierInvoiceNumber);
-      setSupplierInvoiceDate(normalizeInvoiceDateString(parsed.supplierInvoiceDate));
+      setSupplierInvoiceDate(parsed.supplierInvoiceDate);
+      setTotalAmountEuro(parsed.totalAmountEuro);
       setShippingAmountEuro(toInputEuro(parsed.shippingAmountEuro));
       setGlobalTaxRate(
         String(parsed.participants[0]?.positions[0]?.taxRate ?? 19) as TaxRate,
       );
       setIssues(parsed.issues ?? []);
-      setParticipants(buildParticipantsFromParse(parsed));
+      setParticipants([]);
+      setUnassignedPositions(
+        parsed.participants.flatMap((participant, participantIndex) =>
+          participant.positions.map((position, positionIndex) => ({
+            id: position.id || `${participant.id}-${positionIndex}`,
+            description: position.description,
+            articleDescription: position.articleDescription ?? "",
+            quantity: String(position.quantity).replace(".", ","),
+            unit: position.unit || "Stk",
+            unitAmountEuro: toInputEuro(position.unitAmountEuro),
+          }))
+        )
+      );
     } catch (error) {
       setParseError(
         error instanceof Error ? error.message : "PDF konnte nicht analysiert werden.",
@@ -594,6 +616,7 @@ export default function MaterialInvoicesPage({
           supplierName: data.draft.supplierName,
           supplierInvoiceNumber: data.draft.supplierInvoiceNumber,
           supplierInvoiceDate: data.draft.supplierInvoiceDate,
+          totalAmountEuro: data.draft.totalAmountEuro,
           dueDays: data.draft.dueDays,
           invoiceSendMode: data.draft.invoiceSendMode,
           shippingAmountEuro: data.draft.shippingAmountEuro,
@@ -608,6 +631,7 @@ export default function MaterialInvoicesPage({
       setSupplierName(data.draft.supplierName);
       setSupplierInvoiceNumber(data.draft.supplierInvoiceNumber);
       setSupplierInvoiceDate(data.draft.supplierInvoiceDate);
+      setTotalAmountEuro(data.draft.totalAmountEuro);
       setDueDays(data.draft.dueDays);
       setInvoiceSendMode(data.draft.invoiceSendMode);
       setShippingAmountEuro(data.draft.shippingAmountEuro);
@@ -631,6 +655,19 @@ export default function MaterialInvoicesPage({
     setParticipants((current) =>
       current.map((participant) =>
         participant.id === participantId ? updater(participant) : participant,
+      ),
+    );
+  };
+
+  const assignPositionToParticipant = (positionId: string, participantId: string) => {
+    const position = unassignedPositions.find((p) => p.id === positionId);
+    if (!position || !participantId) return;
+    setUnassignedPositions((current) => current.filter((p) => p.id !== positionId));
+    setParticipants((current) =>
+      current.map((participant) =>
+        participant.id === participantId
+          ? { ...participant, positions: [...participant.positions, position] }
+          : participant,
       ),
     );
   };
@@ -777,7 +814,7 @@ export default function MaterialInvoicesPage({
         sendByMail: invoiceSendMode === "email",
         positions: [
           ...participant.positions.map((position) => ({
-            description: position.description,
+            description: position.articleDescription || position.description,
             unit: position.unit,
             quantity: Math.max(parseNumberInput(position.quantity), 0),
             unitAmount: Math.max(
@@ -858,9 +895,9 @@ export default function MaterialInvoicesPage({
 
       <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 dark:border-indigo-800 dark:from-indigo-950/30 dark:to-blue-950/30">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-indigo-900 dark:text-indigo-200">PDF-Analyse (KI)</h2>
+          <h2 className="text-base font-semibold text-indigo-900 dark:text-indigo-200">PDF Auslesen</h2>
           <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-400">
-            Rechnung vom Händler als PDF uploaden und automatisch auswerten und aufteilen lassen. Kann danach noch manuell angepasst werden.
+            Hier kann die PDF vom Händler hochgeladen und ausgelesen werden. Die Positionen werden automatisch erkannt und müssen dann nur noch zugeordnet werden.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -880,17 +917,17 @@ export default function MaterialInvoicesPage({
             onClick={handleParse}
             disabled={!file || isParsing}
           >
-            {isParsing ? "Wird analysiert…" : "PDF analysieren"}
+            {isParsing ? "Wird ausgelesen…" : "E-Rechnung auslesen"}
           </Button>
-          <Button
-            kind="secondary"
-            size="medium"
-            icon={faRotate}
+          <button
+            type="button"
+            title="Zurücksetzen"
             onClick={resetEditor}
             disabled={isParsing}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
-            Erneut analysieren
-          </Button>
+            <FontAwesomeIcon icon={faArrowRotateLeft} />
+          </button>
         </div>
         {parseError ? <p className="mt-3 text-sm text-rose-600">{parseError}</p> : null}
         {issues.length > 0 ? (
@@ -903,28 +940,44 @@ export default function MaterialInvoicesPage({
       </div>
 
       <div className="space-y-6" onBlurCapture={handleEditorBlurCapture}>
+
+          {participants.length > 0 && (
+            <dl className="grid gap-x-6 gap-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm sm:grid-cols-2 xl:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Lieferant</dt>
+                <dd className="mt-0.5 font-medium">{supplierName || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Rechnungsnummer</dt>
+                <dd className="mt-0.5 font-medium">{supplierInvoiceNumber || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Rechnungsdatum</dt>
+                <dd className="mt-0.5 font-medium">{supplierInvoiceDate ? formatStoredDate(`${supplierInvoiceDate}T00:00:00`) : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Umsatzsteuer</dt>
+                <dd className="mt-0.5 font-medium">
+                  {toInputEuro(Math.round((totalAmountEuro - totalAmountEuro / (1 + parseInt(globalTaxRate) / 100)) * 100) / 100)} EUR ({globalTaxRate} %)
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Lieferkosten</dt>
+                <dd className="mt-0.5 font-medium">{shippingAmountEuro} EUR</dd>
+              </div>
+              <div className="xl:text-right">
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Gesamtbetrag</dt>
+                <dd className="mt-0.5 font-medium">{toInputEuro(totalAmountEuro)} EUR</dd>
+              </div>
+            </dl>
+          )}
+
           <FormSection
-            title="Rechnungsdaten"
-            description="Globale Rechnungsdaten für diese Materialbestellung."
+            title="Einstellungen Teilrechnungen"
+            description="Diese Einstellungen gelten für alle Teilrechnungen dieser Bestellung."
           >
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <FormField label="Lieferant">
-                <Input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
-              </FormField>
-              <FormField label="Lieferanten-Rechnungsnummer">
-                <Input
-                  value={supplierInvoiceNumber}
-                  onChange={(event) => setSupplierInvoiceNumber(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Rechnungsdatum">
-                <Input
-                  type="date"
-                  value={supplierInvoiceDate}
-                  onChange={(event) => setSupplierInvoiceDate(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Faelligkeit (ab Erstellung)">
+              <FormField label="Fälligkeit (ab Erstellung)">
                 <Select
                   value={dueDays}
                   onChange={(event) => setDueDays(event.target.value as MaterialOrderDueDays)}
@@ -949,8 +1002,25 @@ export default function MaterialInvoicesPage({
               <FormField label="Lieferkosten gesamt in EUR">
                 <Input
                   value={shippingAmountEuro}
-                  onChange={(event) => setShippingAmountEuro(event.target.value)}
+                  disabled
                 />
+              </FormField>
+              <FormField label="Werkbereich">
+                <Select
+                  value={selectedCostCenter2}
+                  onChange={(event) => setSelectedCostCenter2(event.target.value)}
+                  disabled={costCenter2Options.length === 0}
+                >
+                  {costCenter2Options.length === 0 ? (
+                    <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
+                  ) : (
+                    costCenter2Options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))
+                  )}
+                </Select>
               </FormField>
               <FormField label="Lieferkosten verteilen">
                 <Select
@@ -972,23 +1042,6 @@ export default function MaterialInvoicesPage({
                   <option value="19">19%</option>
                 </Select>
               </FormField>
-              <FormField label="bezahlt von Werkbereich">
-                <Select
-                  value={selectedCostCenter2}
-                  onChange={(event) => setSelectedCostCenter2(event.target.value)}
-                  disabled={costCenter2Options.length === 0}
-                >
-                  {costCenter2Options.length === 0 ? (
-                    <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
-                  ) : (
-                    costCenter2Options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))
-                  )}
-                </Select>
-              </FormField>
             </div>
 
             {bankConnectionsError ? (
@@ -996,22 +1049,66 @@ export default function MaterialInvoicesPage({
             ) : null}
           </FormSection>
 
-          <FormSection title={`Mitbesteller${participants.length > 0 ? ` (${participants.length})` : ""}`} description="Pro Person werden Positionen und Lieferkostenanteil aufgeteilt.">
-          <div className="space-y-5">
-            {participants.length > 0 ? (
-              <div className="flex justify-end">
-                <Button
-                  kind="secondary"
-                  size="small"
-                  icon={faPlus}
-                  onClick={() =>
-                    setParticipants((current) => [...current, createEmptyParticipant()])
-                  }
-                >
-                  Person hinzufügen
-                </Button>
+          {unassignedPositions.length > 0 && (
+            <FormSection title={`Nicht Zugeordnet (${unassignedPositions.length})`} description="Weise jede Position einem Mitbesteller zu.">
+              <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/70">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Artikelbezeichnung</th>
+                      <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Artikelbeschreibung</th>
+                      <th className="w-52 px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Zuweisen an</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {unassignedPositions.map((position) => (
+                      <tr key={position.id}>
+                        <td className="px-3 py-2 font-medium">{position.description}</td>
+                        <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">{position.articleDescription || <span className="italic">—</span>}</td>
+                        <td className="px-3 py-2">
+                          <Select
+                            value=""
+                            disabled={participants.length === 0}
+                            onChange={(event) => {
+                              if (event.target.value) assignPositionToParticipant(position.id, event.target.value);
+                            }}
+                          >
+                            <option value="">{participants.length === 0 ? "Erst Mitbesteller anlegen" : "Person auswählen …"}</option>
+                            {participants.map((participant) => (
+                              <option key={participant.id} value={participant.id}>
+                                {participant.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : null}
+            </FormSection>
+          )}
+
+          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <header className="mb-4 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  {`Mitbesteller${participants.length > 0 ? ` (${participants.length})` : ""}`}
+                </h2>
+                <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">Pro Person werden Positionen und Lieferkostenanteil aufgeteilt.</p>
+              </div>
+              <Button
+                kind="secondary"
+                size="small"
+                icon={faPlus}
+                onClick={() =>
+                  setParticipants((current) => [...current, createEmptyParticipant()])
+                }
+              >
+                Person hinzufügen
+              </Button>
+            </header>
+          <div className="space-y-5">
 
             {participants.map((participant) => {
               const subtotal = sumParticipantSubtotal(participant);
@@ -1023,20 +1120,47 @@ export default function MaterialInvoicesPage({
                   key={participant.id}
                   className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto">
-                    <Input
-                      value={participant.name}
-                      onChange={(event) =>
-                        updateParticipant(participant.id, (current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }))
-                      }
-                      className="max-w-sm flex-none"
-                    />
-                    <span className="whitespace-nowrap rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                      KI-Zuordnung: {participant.confidence}
-                    </span>
+                  <div className="flex w-full flex-wrap items-center gap-3">
+                    <div className="max-w-sm flex-none">
+                      <AutocompleteInput
+                        apiPath="/api/campai/debtors"
+                        entityLabelSingular="Debitor"
+                        placeholder="Debitor suchen"
+                        value={participant.debtorName}
+                        onChange={(event) =>
+                          updateParticipant(participant.id, (current) => ({
+                            ...current,
+                            debtorName: event.target.value,
+                            debtorAccount: null,
+                            debtorAddress: null,
+                            debtorEmail: "",
+                            invoiceId: null,
+                          }))
+                        }
+                        onSelect={(suggestion) => {
+                          updateParticipant(participant.id, (current) => ({
+                            ...current,
+                            name: suggestion.name,
+                            debtorName: suggestion.name,
+                            debtorAccount: suggestion.account,
+                          }));
+                          void fetchDebtorDetails(participant.id, suggestion.account);
+                        }}
+                      />
+                    </div>
+                    {participant.debtorAccount ? (
+                      <div className="min-w-0 text-sm text-zinc-500 dark:text-zinc-400">
+                        <span className="font-medium text-zinc-700 dark:text-zinc-300">#{participant.debtorAccount}</span>
+                        {participant.debtorAddress ? (
+                          <span className="ml-2">{participant.debtorAddress.addressLine || ""}, {participant.debtorAddress.zip || ""} {participant.debtorAddress.city || ""}</span>
+                        ) : null}
+                        {participant.debtorEmail ? (
+                          <span className="ml-2">{participant.debtorEmail}</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-zinc-400 dark:text-zinc-500">Kein Debitor zugeordnet</span>
+                    )}
                     {participant.invoiceId ? (
                       <p className="ml-auto whitespace-nowrap text-sm text-emerald-700 dark:text-emerald-300">
                         In Campai erstellt ✓
@@ -1044,8 +1168,7 @@ export default function MaterialInvoicesPage({
                     ) : null}
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                       <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
                       <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
                         <thead className="bg-zinc-50 dark:bg-zinc-900/70">
@@ -1060,10 +1183,13 @@ export default function MaterialInvoicesPage({
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                           {participant.positions.map((position) => (
-                            <tr key={position.id}>
+                            <Fragment key={position.id}>
+                            <tr className="align-top position-row">
                               <td className="px-3 py-2">
+                                <div className="flex flex-col gap-1">
                                 <Input
                                   value={position.description}
+                                  className="min-w-0 whitespace-nowrap"
                                   onChange={(event) =>
                                     updateParticipant(participant.id, (current) => ({
                                       ...current,
@@ -1075,6 +1201,22 @@ export default function MaterialInvoicesPage({
                                     }))
                                   }
                                 />
+                                <Input
+                                  placeholder="Beschreibung (optional)"
+                                  className="min-w-0 whitespace-nowrap text-xs text-zinc-500 placeholder:text-zinc-400 dark:text-zinc-400"
+                                  value={position.articleDescription}
+                                  onChange={(event) =>
+                                    updateParticipant(participant.id, (current) => ({
+                                      ...current,
+                                      positions: current.positions.map((entry) =>
+                                        entry.id === position.id
+                                          ? { ...entry, articleDescription: event.target.value }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                />
+                                </div>
                               </td>
                               <td className="px-3 py-2">
                                 <Input
@@ -1122,10 +1264,10 @@ export default function MaterialInvoicesPage({
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <Input value={toInputEuro(calculatePositionTotal(position))} readOnly />
+                                <Input value={toInputEuro(calculatePositionTotal(position))} disabled />
                               </td>
                               <td className="px-3 py-2 text-right">
-                                <div className="inline-flex gap-1">
+                                <div className="row-actions inline-flex gap-1">
                                   <div className="relative inline-flex">
                                     <button
                                       type="button"
@@ -1169,8 +1311,9 @@ export default function MaterialInvoicesPage({
                                 </div>
                               </td>
                             </tr>
+                            </Fragment>
                           ))}
-                          <tr className="bg-amber-50/60 dark:bg-amber-900/10">
+                          <tr className="position-row align-top">
                             <td className="px-3 py-2">
                               <Input
                                 value={participant.shippingDescription}
@@ -1183,10 +1326,10 @@ export default function MaterialInvoicesPage({
                               />
                             </td>
                             <td className="px-3 py-2">
-                              <Input value="1" readOnly />
+                              <Input value="1" disabled />
                             </td>
                             <td className="px-3 py-2">
-                              <Input value={SHIPPING_UNIT} readOnly />
+                              <Input value={SHIPPING_UNIT} disabled />
                             </td>
                             <td className="px-3 py-2">
                               <Input
@@ -1195,7 +1338,7 @@ export default function MaterialInvoicesPage({
                                     ? participant.manualShippingShareEuro
                                     : toInputEuro(shippingShare)
                                 }
-                                readOnly
+                                disabled
                               />
                             </td>
                             <td className="px-3 py-2">
@@ -1205,7 +1348,7 @@ export default function MaterialInvoicesPage({
                                     ? participant.manualShippingShareEuro
                                     : toInputEuro(shippingShare)
                                 }
-                                readOnly
+                                disabled
                               />
                             </td>
                             <td className="px-3 py-2" />
@@ -1213,77 +1356,35 @@ export default function MaterialInvoicesPage({
                         </tbody>
                       </table>
                       </div>
-                      <Button
-                        kind="secondary"
-                        size="small"
-                        icon={faPlus}
-                        onClick={() =>
-                          updateParticipant(participant.id, (current) => ({
-                            ...current,
-                            positions: [...current.positions, createEmptyPosition()],
-                          }))
-                        }
-                      >
-                        Neue Position
-                      </Button>
-                      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/70">
-                        <div className="flex justify-between py-0.5">
-                          <span className="font-medium text-zinc-700 dark:text-zinc-300">Summe netto</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-100">{euroFormatter.format(total)}</span>
-                        </div>
-                        <div className="flex justify-between py-0.5">
-                          <span className="font-medium text-zinc-700 dark:text-zinc-300">MwSt ({globalTaxRate}%)</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-100">{euroFormatter.format(roundCurrency(total * taxRatePercent / 100))}</span>
-                        </div>
-                        <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
-                          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Summe brutto</span>
-                          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{euroFormatter.format(roundCurrency(total + roundCurrency(total * taxRatePercent / 100)))}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
-                      <FormField label="Debitor zuordnen">
-                        <AutocompleteInput
-                          apiPath="/api/campai/debtors"
-                          entityLabelSingular="Debitor"
-                          placeholder="Debitor suchen"
-                          value={participant.debtorName}
-                          onChange={(event) =>
+                      <div className="flex items-start justify-between gap-4">
+                        <Button
+                          kind="secondary"
+                          size="small"
+                          icon={faPlus}
+                          onClick={() =>
                             updateParticipant(participant.id, (current) => ({
                               ...current,
-                              debtorName: event.target.value,
-                              debtorAccount: null,
-                              debtorAddress: null,
-                              debtorEmail: "",
-                              invoiceId: null,
+                              positions: [...current.positions, createEmptyPosition()],
                             }))
                           }
-                          onSelect={(suggestion) => {
-                            updateParticipant(participant.id, (current) => ({
-                              ...current,
-                              debtorName: suggestion.name,
-                              debtorAccount: suggestion.account,
-                            }));
-                            void fetchDebtorDetails(participant.id, suggestion.account);
-                          }}
-                        />
-                      </FormField>
-
-                      <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
-                        <div className="font-medium">
-                          {participant.debtorAccount
-                            ? `Debitor #${participant.debtorAccount}`
-                            : "Noch kein Debitor zugeordnet"}
-                        </div>
-                        {participant.debtorEmail ? <div>{participant.debtorEmail}</div> : null}
-                        <div>
-                          {participant.debtorAddress
-                            ? `${participant.debtorAddress.addressLine || ""}, ${participant.debtorAddress.zip || ""} ${participant.debtorAddress.city || ""}`
-                            : "Adresse wird nach Debitor-Auswahl geladen"}
+                        >
+                          Neue Position
+                        </Button>
+                        <div className="text-sm">
+                          <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                            <span>Summe netto</span>
+                            <span>{euroFormatter.format(total)}</span>
+                          </div>
+                          <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                            <span>MwSt ({globalTaxRate}%)</span>
+                            <span>{euroFormatter.format(roundCurrency(total * taxRatePercent / 100))}</span>
+                          </div>
+                          <div className="mt-0.5 flex justify-between gap-8 border-t border-zinc-200 pt-1 font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
+                            <span>Summe brutto</span>
+                            <span>{euroFormatter.format(roundCurrency(total + roundCurrency(total * taxRatePercent / 100)))}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 pt-1">
@@ -1343,7 +1444,7 @@ export default function MaterialInvoicesPage({
               );
             })}
           </div>
-          </FormSection>
+          </section>
       </div>
 
       <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">

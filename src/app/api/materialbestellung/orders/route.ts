@@ -163,3 +163,31 @@ export const POST = async (request: NextRequest) => {
 
   return NextResponse.json({ id: saved.id });
 };
+
+export const DELETE = async (request: NextRequest) => {
+  const { supabase } = createSupabaseRouteClient(request);
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";
+  if (!id) {
+    return NextResponse.json({ error: "ID fehlt." }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("material_orders")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+};

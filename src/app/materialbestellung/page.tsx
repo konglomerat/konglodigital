@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { faArrowsRotate, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "../components/Button";
 import type { MaterialOrderSummary } from "@/lib/material-orders";
@@ -31,6 +32,7 @@ export default function MaterialbestellungListPage() {
   const [orders, setOrders] = useState<MaterialOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadOrders = async () => {
     try {
@@ -48,6 +50,28 @@ export default function MaterialbestellungListPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (order: MaterialOrderSummary) => {
+    const label = order.supplierInvoiceNumber || order.supplierName || order.id;
+    if (!window.confirm(`Materialbestellung "${label}" wirklich löschen?`)) {
+      return;
+    }
+    try {
+      setDeletingId(order.id);
+      await fetchJson(`/api/materialbestellung/orders?id=${encodeURIComponent(order.id)}`, {
+        method: "DELETE",
+      });
+      setOrders((current) => current.filter((o) => o.id !== order.id));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Materialbestellung konnte nicht gelöscht werden.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -77,7 +101,7 @@ export default function MaterialbestellungListPage() {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Mitbesteller</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Lieferant</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Zuletzt gespeichert</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Öffnen</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Aktionen</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -114,9 +138,20 @@ export default function MaterialbestellungListPage() {
                   <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{order.supplierName || "-"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{formatDate(order.updatedAt)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <Button href={`/materialbestellung/${order.id}`} size="small">
-                      Öffnen
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button href={`/materialbestellung/${order.id}`} size="small">
+                        Öffnen
+                      </Button>
+                      <button
+                        type="button"
+                        title="Löschen"
+                        disabled={deletingId === order.id}
+                        onClick={() => void handleDelete(order)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

@@ -23,6 +23,7 @@
     "@supabase/supabase-js": "^2.93.2",
     "browser-image-compression": "^2.0.2",
     "exifreader": "^4.24.3",
+    "fast-xml-parser": "^5.5.10",
     "ical.js": "^2.2.1",
     "jspdf": "^4.2.0",
     "mapbox-gl": "^3.10.0",

@@ -1,15 +1,17 @@
 export type MaterialOrderEditablePosition = {
   id: string;
   description: string;
+  articleDescription: string;
   quantity: string;
   unit: string;
   unitAmountEuro: string;
 };
 
+import { normalizeUnitCode } from "./unit-codes";
+
 export type MaterialOrderEditableParticipant = {
   id: string;
   name: string;
-  confidence: "high" | "medium" | "low";
   positions: MaterialOrderEditablePosition[];
   debtorAccount: number | null;
   debtorName: string;
@@ -38,6 +40,7 @@ export type MaterialOrderDraft = {
   supplierName: string;
   supplierInvoiceNumber: string;
   supplierInvoiceDate: string;
+  totalAmountEuro: number;
   dueDays: MaterialOrderDueDays;
   invoiceSendMode: MaterialOrderInvoiceSendMode;
   shippingAmountEuro: string;
@@ -140,10 +143,17 @@ export const normalizeMaterialOrderDraft = (value: unknown): MaterialOrderDraft 
               typeof positionTyped.quantity === "string"
                 ? positionTyped.quantity
                 : "1",
-            unit: typeof positionTyped.unit === "string" ? positionTyped.unit : "Stk",
+            unit:
+              typeof positionTyped.unit === "string"
+                ? normalizeUnitCode(positionTyped.unit)
+                : "Stk",
             unitAmountEuro:
               typeof positionTyped.unitAmountEuro === "string"
                 ? positionTyped.unitAmountEuro
+                : "",
+            articleDescription:
+              typeof positionTyped.articleDescription === "string"
+                ? positionTyped.articleDescription
                 : "",
           });
         });
@@ -155,12 +165,6 @@ export const normalizeMaterialOrderDraft = (value: unknown): MaterialOrderDraft 
             ? participantTyped.id
             : `participant-${Math.random().toString(36).slice(2, 8)}`,
         name: typeof participantTyped.name === "string" ? participantTyped.name : "",
-        confidence:
-          participantTyped.confidence === "high" ||
-          participantTyped.confidence === "medium" ||
-          participantTyped.confidence === "low"
-            ? participantTyped.confidence
-            : "low",
         positions,
         debtorAccount:
           typeof participantTyped.debtorAccount === "number"
@@ -235,6 +239,10 @@ export const normalizeMaterialOrderDraft = (value: unknown): MaterialOrderDraft 
     issues: Array.isArray(typed.issues)
       ? typed.issues.filter((issue): issue is string => typeof issue === "string")
       : [],
+    totalAmountEuro:
+      typeof typed.totalAmountEuro === "number" && Number.isFinite(typed.totalAmountEuro)
+        ? typed.totalAmountEuro
+        : 0,
     participants,
   };
 };
