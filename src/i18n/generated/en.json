@@ -3,6 +3,7 @@
     ", wenn du eine andere E-Mail-Adresse nutzen möchtest.": ", if you want to use a different email address.",
     "Automatische Freischaltung": "Automatic activation",
     "Direkt zu offenen Druckjobs und Produkten.": "Directly to open print jobs and products.",
+    "Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar.": "Discover a selected tool, material, or piece of furniture from our inventory.",
     "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.": "Here you’ll find everything about the workshop, self-service, and administration.",
     "Inventar ansehen": "View inventory",
     "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.": "Every Konglomerate member can register, others on request.",
@@ -11,6 +12,7 @@
     "Mit ❤️ im Ehrenamt entwickelt": "Developed with ❤️ by volunteers",
     "Neu hier? So funktioniert die Registrierung": "New here? How registration works",
     "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.": "Use the email you registered with the Konglomerate for sign-up.",
+    "Ressource des Monats": "Resource of the Month",
     "Schnellzugriff": "Quick access",
     "Schreib uns an": "Contact us",
     "Termine ansehen": "View appointments",
@@ -20,7 +22,8 @@
     "Werkzeuge, Materialien und Standorte durchsuchen.": "Browse tools, materials, and locations.",
     "Willkommen": "Welcome",
     "Zum Inventar": "To inventory",
-    "Zum Warenkorb": "To cart"
+    "Zum Warenkorb": "To cart",
+    "Zur Ressource": "To the Resource"
   },
   "resources": {
     "Inventar": "Inventory",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createInstance, type TOptionsBase, type i18n } from "i18next";
 import { I18nextProvider, initReactI18next, useTranslation } from "react-i18next";
@@ -69,22 +69,25 @@ export function I18nProvider({ locale, children }: I18nProviderProps) {
 export const useI18n = (defaultNamespace: Namespace = DEFAULT_NAMESPACE) => {
   const { t, i18n } = useTranslation();
 
-  const tx = (
-    sourceText: string,
-    sourceLocaleOrOptions?: Locale | TranslateOptions,
-    options?: TranslateOptions,
-  ): string => {
-    const resolvedOptions =
-      typeof sourceLocaleOrOptions === "string"
-        ? options
-        : sourceLocaleOrOptions;
+  const tx = useCallback(
+    (
+      sourceText: string,
+      sourceLocaleOrOptions?: Locale | TranslateOptions,
+      options?: TranslateOptions,
+    ): string => {
+      const resolvedOptions =
+        typeof sourceLocaleOrOptions === "string"
+          ? options
+          : sourceLocaleOrOptions;
 
-    return t(buildTranslationKey(sourceText), {
-      ns: defaultNamespace,
-      defaultValue: sourceText,
-      ...(resolvedOptions ?? {}),
-    });
-  };
+      return t(buildTranslationKey(sourceText), {
+        ns: defaultNamespace,
+        defaultValue: sourceText,
+        ...(resolvedOptions ?? {}),
+      });
+    },
+    [defaultNamespace, t],
+  );
 
   return {
     t,

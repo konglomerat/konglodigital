@@ -3,6 +3,7 @@
     ", wenn du eine andere E-Mail-Adresse nutzen möchtest.": ", wenn du eine andere E-Mail-Adresse nutzen möchtest.",
     "Automatische Freischaltung": "Automatische Freischaltung",
     "Direkt zu offenen Druckjobs und Produkten.": "Direkt zu offenen Druckjobs und Produkten.",
+    "Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar.": "Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar.",
     "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.": "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
     "Inventar ansehen": "Inventar ansehen",
     "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.": "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
@@ -11,6 +12,7 @@
     "Mit ❤️ im Ehrenamt entwickelt": "Mit ❤️ im Ehrenamt entwickelt",
     "Neu hier? So funktioniert die Registrierung": "Neu hier? So funktioniert die Registrierung",
     "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.": "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
+    "Ressource des Monats": "Ressource des Monats",
     "Schnellzugriff": "Schnellzugriff",
     "Schreib uns an": "Schreib uns an",
     "Termine ansehen": "Termine ansehen",
@@ -20,7 +22,8 @@
     "Werkzeuge, Materialien und Standorte durchsuchen.": "Werkzeuge, Materialien und Standorte durchsuchen.",
     "Willkommen": "Willkommen",
     "Zum Inventar": "Zum Inventar",
-    "Zum Warenkorb": "Zum Warenkorb"
+    "Zum Warenkorb": "Zum Warenkorb",
+    "Zur Ressource": "Zur Ressource"
   },
   "resources": {
     "1 (Lowest)": "",
@@ -30,7 +33,7 @@
     "AI cover": "",
     "AI cover generated · Open resource": "",
     "AI cover skipped (resource id missing).": "",
-    "All resource types": "",
+    "All types": "",
     "Allow camera": "",
     "Also include resources that are placed inside mapped room areas when searching for rooms.": "",
     "and delete": "",

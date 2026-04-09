@@ -266,6 +266,18 @@ create table if not exists public.access_code_inbox (
     check (extracted_from in ('subject', 'body', 'none'))
 );
 
+alter table public.access_code_inbox enable row level security;
+
+drop policy if exists "Authenticated users can read access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can insert access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can update access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can delete access code inbox" on public.access_code_inbox;
+
+create policy "Authenticated users can read access code inbox"
+on public.access_code_inbox
+for select
+using (auth.role() = 'authenticated');
+
 create index if not exists access_code_inbox_created_at_idx
   on public.access_code_inbox (created_at desc);
 

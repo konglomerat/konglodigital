@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Select from "react-select";
 import { useForm } from "react-hook-form";
 import {
@@ -14,6 +14,7 @@ import {
   faRotateLeft,
   faSatellite,
   faSpinner,
+  faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -621,6 +622,7 @@ export default function ResourceFeaturesEditorClient({
   embedded = false,
 }: ResourceFeaturesEditorClientProps = {}) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialResourceId = resourceId ?? searchParams.get("resourceId") ?? "";
   const hasFixedResource = embedded && Boolean(resourceId);
@@ -642,6 +644,7 @@ export default function ResourceFeaturesEditorClient({
   const [loadingResources, setLoadingResources] = useState(true);
   const [loadingFeatures, setLoadingFeatures] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingResource, setDeletingResource] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [switchMenu, setSwitchMenu] = useState<ResourceSwitchMenuState | null>(
@@ -844,6 +847,44 @@ export default function ResourceFeaturesEditorClient({
     !resourceFormSaving &&
     !isLocationDataLoading &&
     Boolean(selectedResourceId);
+
+  const handleDeleteResource = useCallback(async () => {
+    if (!selectedResourceId || deletingResource) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      tx("Really delete this resource? This cannot be undone."),
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingResource(true);
+    setErrorMessage(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/campai/resources/${selectedResourceId}`,
+        {
+          method: "DELETE",
+        });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? tx("Unable to delete resource."));
+      }
+
+      router.push(localizePathname("/resources", locale));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : tx("Unable to delete resource."),
+      );
+    } finally {
+      setDeletingResource(false);
+    }
+  }, [deletingResource, locale, router, selectedResourceId, tx]);
 
   const handleLocationDataLoadingChange = useCallback((isLoading: boolean) => {
     isLocationDataLoadingRef.current = isLoading;
@@ -2212,6 +2253,15 @@ export default function ResourceFeaturesEditorClient({
               {tx("Back to resource")}
             </Button>
           ) : null}
+          <Button
+            type="button"
+            kind="danger-secondary"
+            icon={faTrash}
+            onClick={handleDeleteResource}
+            disabled={!selectedResourceId || deletingResource}
+          >
+            {deletingResource ? tx("Deleting...") : tx("Delete")}
+          </Button>
           <Button
             type="button"
             kind="primary"

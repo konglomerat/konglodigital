@@ -20,6 +20,13 @@
     "sourceLocale": "de",
     "sourceText": "Direkt zu offenen Druckjobs und Produkten."
   },
+  "konglodigital::Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar.": {
+    "filePath": "src/app/page.tsx",
+    "key": "Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar.",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Entdecke ein ausgewähltes Werkzeug, Material oder Möbelstück aus unserem Inventar."
+  },
   "konglodigital::Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.": {
     "filePath": "src/app/page.tsx",
     "key": "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
@@ -75,6 +82,13 @@
     "namespace": "konglodigital",
     "sourceLocale": "de",
     "sourceText": "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast."
+  },
+  "konglodigital::Ressource des Monats": {
+    "filePath": "src/app/page.tsx",
+    "key": "Ressource des Monats",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Ressource des Monats"
   },
   "konglodigital::Schnellzugriff": {
     "filePath": "src/app/page.tsx",
@@ -146,6 +160,13 @@
     "sourceLocale": "de",
     "sourceText": "Zum Warenkorb"
   },
+  "konglodigital::Zur Ressource": {
+    "filePath": "src/app/page.tsx",
+    "key": "Zur Ressource",
+    "namespace": "konglodigital",
+    "sourceLocale": "de",
+    "sourceText": "Zur Ressource"
+  },
   "resources::1 (Lowest)": {
     "filePath": "src/app/[lang]/resources/ResourceForm.tsx",
     "key": "1 (Lowest)",
@@ -195,12 +216,12 @@
     "sourceLocale": "en",
     "sourceText": "AI cover skipped (resource id missing)."
   },
-  "resources::All resource types": {
+  "resources::All types": {
     "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
-    "key": "All resource types",
+    "key": "All types",
     "namespace": "resources",
     "sourceLocale": "en",
-    "sourceText": "All resource types"
+    "sourceText": "All types"
   },
   "resources::Allow camera": {
     "filePath": "src/app/[lang]/resources/batch/page.tsx",

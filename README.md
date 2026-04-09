@@ -96,6 +96,11 @@ Optionally set `CAMPAI_PRODUCTS_ENDPOINT` to override the products URL.
 The resources page fetches items via `/api/campai/resources`.
 Resources are stored in the Supabase `resources` table.
 
+To feature a resource on the public homepage in the "Resource of the month"
+section, add the tag `resourceofthemonth` to that resource. If multiple
+resources use the tag, the homepage prefers the highest `priority` value and
+then the most recently updated entry.
+
 To allow creating and updating resources (including image uploads), configure:
 
 - SUPABASE_RESOURCES_BUCKET (optional, defaults to `resources`; bucket must be public for images to load in the app)

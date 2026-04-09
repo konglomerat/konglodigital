@@ -13,7 +13,6 @@ import {
   faCalendarDays,
   faChartPie,
   faFolderOpen,
-  faCalendarCheck,
   faPrint,
   faKey,
   faCartShopping,
@@ -233,15 +232,6 @@ export default async function RootLayout({
 
                         <p className={navSectionTitleClassName}>Self Service</p>
                         <ProtectedNavItem
-                          href="/monatsbeitrag"
-                          className={navLinkClassName}
-                          icon={faCalendarCheck}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Zugangskarte
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
                           href="/account"
                           className={navLinkClassName}
                           icon={faUser}
@@ -438,15 +428,6 @@ export default async function RootLayout({
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   Self Service
                 </p>
-                <ProtectedNavItem
-                  href="/monatsbeitrag"
-                  className={navItemClassName}
-                  icon={faCalendarCheck}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Zugangskarte
-                </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/account"
                   className={navItemClassName}

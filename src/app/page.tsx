@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
+import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import heroHelloImage from "./hero-hello.jpg";
 import inventoryImage from "./inventory.jpg";
 import inventoryBwImage from "./inventory-bw.jpg";
@@ -22,21 +23,6 @@ type QuickAction = {
   title: string;
   description: string;
 };
-
-const workflowSteps = [
-  {
-    title: "1. Entdecken",
-    text: "Finde Werkzeuge, freie Termine und passende Produkte.",
-  },
-  {
-    title: "2. Nutzen",
-    text: "Starte deinen Prozess mit wenigen Klicks und klaren Wegen.",
-  },
-  {
-    title: "3. Verwalten",
-    text: "Behalte Käufe, Beiträge und Unterlagen im Blick.",
-  },
-];
 
 export default async function Home() {
   const { tx } = await getServerI18n();
@@ -253,6 +239,8 @@ export default async function Home() {
           })}
         </div>
       </section>
+
+      <ResourceOfTheMonthSection />
 
       <section className="pt-2">
         <p className="mb-1 text-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
