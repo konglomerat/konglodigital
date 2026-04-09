@@ -78,6 +78,14 @@
   --tw-ring-color: #3f3f46 !important;
 }
 
+.dark input:disabled,
+.dark select:disabled,
+.dark textarea:disabled {
+  background-color: #2c2c30 !important;
+  border-color: #52525b !important;
+  color: #a1a1aa !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -168,6 +176,46 @@ input[type="search"]::-webkit-search-cancel-button {
 .multiply {
   mix-blend-mode: multiply;
 }
+
+/* Ghost position rows: inputs and buttons hidden until row hover */
+table tr.position-row input,
+table tr.position-row select,
+.dark table tr.position-row input,
+.dark table tr.position-row select,
+.dark table tr.position-row input:disabled,
+.dark table tr.position-row select:disabled {
+  border-color: transparent !important;
+  background-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  outline: none !important;
+}
+
+table tr.position-row:hover input,
+table tr.position-row:hover select,
+table tr.position-row input:focus,
+table tr.position-row select:focus {
+  border-color: #d4d4d8 !important;
+  background-color: white !important;
+}
+
+.dark table tr.position-row:hover input,
+.dark table tr.position-row:hover select,
+.dark table tr.position-row input:focus,
+.dark table tr.position-row select:focus {
+  border-color: #3f3f46 !important;
+  background-color: #111113 !important;
+}
+
+tr.position-row .row-actions {
+  visibility: hidden;
+}
+
+tr.position-row:hover .row-actions {
+  visibility: visible;
+}
+
 
 .negative-multiply {
   filter: none;
