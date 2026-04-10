@@ -23,7 +23,9 @@ const loadResourceOptions = async () => {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("resources")
-    .select("id, pretty_title, name, description, image, images, updated_at, created_at, type")
+    .select(
+      "id, pretty_title, name, description, image, images, updated_at, created_at, type",
+    )
     .not("type", "ilike", "project")
     .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false })
@@ -40,8 +42,11 @@ const loadResourceOptions = async () => {
     description: entry.description ?? null,
     image:
       entry.images?.find(
-        (value: unknown): value is string => typeof value === "string" && Boolean(value),
-      ) ?? entry.image ?? null,
+        (value: unknown): value is string =>
+          typeof value === "string" && Boolean(value),
+      ) ??
+      entry.image ??
+      null,
     updatedAt: entry.updated_at ?? null,
   })) satisfies SelectableItem[];
 };
@@ -86,7 +91,10 @@ export default async function GenerateNewsletterPage() {
         updatedAt: entry.updatedAt ?? null,
       })),
     ),
-    Promise.allSettled([listRapidmailRecipientLists(), listRapidmailMailings()]),
+    Promise.allSettled([
+      listRapidmailRecipientLists(),
+      listRapidmailMailings(),
+    ]),
   ]);
 
   let recipientLists: RapidmailRecipientList[] = [];

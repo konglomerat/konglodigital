@@ -22,9 +22,12 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 
 const siteTitle = "Konglomerat Digitale Werkstätten";
 
-const loadCachedProject = cache(async (id: string) => loadProjectByIdentifier(id));
+const loadCachedProject = cache(async (id: string) =>
+  loadProjectByIdentifier(id),
+);
 
-const normalizeLocale = (lang?: string): Locale => (lang === "en" ? "en" : "de");
+const normalizeLocale = (lang?: string): Locale =>
+  lang === "en" ? "en" : "de";
 
 const stripMarkdown = (value: string | null | undefined) => {
   if (!value) {
@@ -53,7 +56,10 @@ const getProjectDescription = (
   project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
   locale: Locale,
 ) => {
-  const plainDescription = truncateText(stripMarkdown(project?.description), 180);
+  const plainDescription = truncateText(
+    stripMarkdown(project?.description),
+    180,
+  );
   if (plainDescription) {
     return plainDescription;
   }
@@ -68,9 +74,9 @@ const getProjectOgImage = (
 ) => {
   const projectImage =
     project?.images?.find(
-      (media): media is string => typeof media === "string" && !isVideoUrl(media),
-    ) ??
-    (project?.image && !isVideoUrl(project.image) ? project.image : null);
+      (media): media is string =>
+        typeof media === "string" && !isVideoUrl(media),
+    ) ?? (project?.image && !isVideoUrl(project.image) ? project.image : null);
 
   if (projectImage) {
     return getSupabaseRenderedImageUrl(projectImage, { width: 1600 });

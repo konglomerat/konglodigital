@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { DEFAULT_LOCALE, normalizeLocale, localizePathname } from "@/i18n/config";
+import {
+  DEFAULT_LOCALE,
+  normalizeLocale,
+  localizePathname,
+} from "@/i18n/config";
 import { createRapidmailDraft } from "@/lib/rapidmail";
 import { buildProjectPath } from "@/lib/project-path";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
@@ -169,7 +173,9 @@ const createNewsletterHtml = ({
         siteUrl,
       ).toString();
       const description = truncate(
-        stripMarkdown(resource.description ?? "Noch keine Beschreibung hinterlegt."),
+        stripMarkdown(
+          resource.description ?? "Noch keine Beschreibung hinterlegt.",
+        ),
         220,
       );
 
@@ -197,7 +203,9 @@ const createNewsletterHtml = ({
         siteUrl,
       ).toString();
       const description = truncate(
-        stripMarkdown(project.description ?? "Noch keine Beschreibung hinterlegt."),
+        stripMarkdown(
+          project.description ?? "Noch keine Beschreibung hinterlegt.",
+        ),
         220,
       );
 
@@ -292,11 +300,12 @@ export const POST = async (request: NextRequest) => {
       typeof body.fromName === "string" ? body.fromName.trim() : "";
     const fromEmail =
       typeof body.fromEmail === "string" ? body.fromEmail.trim() : "";
-    const subject =
-      typeof body.subject === "string" ? body.subject.trim() : "";
+    const subject = typeof body.subject === "string" ? body.subject.trim() : "";
     const recipientListId = Number(body.recipientListId);
     const locale =
-      typeof body.locale === "string" ? normalizeLocale(body.locale) : DEFAULT_LOCALE;
+      typeof body.locale === "string"
+        ? normalizeLocale(body.locale)
+        : DEFAULT_LOCALE;
     const resourceIds = normalizeIdList(body.resourceIds);
     const projectIds = normalizeIdList(body.projectIds);
 
@@ -315,10 +324,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     if (!subject) {
-      return NextResponse.json(
-        { error: "Betreff fehlt." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Betreff fehlt." }, { status: 400 });
     }
 
     if (!Number.isInteger(recipientListId) || recipientListId <= 0) {
@@ -340,14 +346,18 @@ export const POST = async (request: NextRequest) => {
       resourceIds.length > 0
         ? adminSupabase
             .from("resources")
-            .select("id, pretty_title, name, description, image, images, updated_at, type")
+            .select(
+              "id, pretty_title, name, description, image, images, updated_at, type",
+            )
             .in("id", resourceIds)
             .not("type", "ilike", "project")
         : Promise.resolve({ data: [] as ContentRow[], error: null }),
       projectIds.length > 0
         ? adminSupabase
             .from("resources")
-            .select("id, pretty_title, name, description, image, images, updated_at, type")
+            .select(
+              "id, pretty_title, name, description, image, images, updated_at, type",
+            )
             .in("id", projectIds)
             .ilike("type", "project")
         : Promise.resolve({ data: [] as ContentRow[], error: null }),
@@ -362,10 +372,16 @@ export const POST = async (request: NextRequest) => {
     }
 
     const resourceMap = new Map(
-      (resourceResult.data ?? []).map((entry) => [entry.id, entry as ContentRow]),
+      (resourceResult.data ?? []).map((entry) => [
+        entry.id,
+        entry as ContentRow,
+      ]),
     );
     const projectMap = new Map(
-      (projectResult.data ?? []).map((entry) => [entry.id, entry as ContentRow]),
+      (projectResult.data ?? []).map((entry) => [
+        entry.id,
+        entry as ContentRow,
+      ]),
     );
 
     const selectedResources = resourceIds

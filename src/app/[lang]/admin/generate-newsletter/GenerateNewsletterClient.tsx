@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
-import { FormField, FormSection, Input, Select } from "@/app/[lang]/components/ui/form";
+import {
+  FormField,
+  FormSection,
+  Input,
+  Select,
+} from "@/app/[lang]/components/ui/form";
 import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
 
 type SelectableItem = {
@@ -161,7 +166,9 @@ function SelectableGrid({
                         {item.name}
                       </h4>
                       {item.prettyTitle ? (
-                        <p className="text-xs text-zinc-500">/{item.prettyTitle}</p>
+                        <p className="text-xs text-zinc-500">
+                          /{item.prettyTitle}
+                        </p>
                       ) : null}
                     </div>
                     <span
@@ -278,9 +285,13 @@ export default function GenerateNewsletterClient({
         }),
       });
 
-      const data = (await response.json().catch(() => ({}))) as CreateDraftResponse;
+      const data = (await response
+        .json()
+        .catch(() => ({}))) as CreateDraftResponse;
       if (!response.ok) {
-        throw new Error(data.error ?? "Newsletter-Entwurf konnte nicht erstellt werden.");
+        throw new Error(
+          data.error ?? "Newsletter-Entwurf konnte nicht erstellt werden.",
+        );
       }
 
       setSubmitSuccess(
@@ -317,7 +328,10 @@ export default function GenerateNewsletterClient({
       >
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Absendername" required>
-            <Input value={fromName} onChange={(event) => setFromName(event.target.value)} />
+            <Input
+              value={fromName}
+              onChange={(event) => setFromName(event.target.value)}
+            />
           </FormField>
           <FormField label="Absender-E-Mail" required>
             <Input
@@ -327,7 +341,10 @@ export default function GenerateNewsletterClient({
             />
           </FormField>
           <FormField label="Betreff" required className="md:col-span-2">
-            <Input value={subject} onChange={(event) => setSubject(event.target.value)} />
+            <Input
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+            />
           </FormField>
           <FormField label="Empfaengerliste" required className="md:col-span-2">
             <Select
@@ -399,9 +416,12 @@ export default function GenerateNewsletterClient({
       <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-zinc-900">Entwurf anlegen</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">
+              Entwurf anlegen
+            </h2>
             <p className="text-sm text-zinc-600">
-              Ausgewaehlt: {selectedResourceIds.size} Ressourcen, {selectedProjectIds.size} Projekte.
+              Ausgewaehlt: {selectedResourceIds.size} Ressourcen,{" "}
+              {selectedProjectIds.size} Projekte.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -426,7 +446,9 @@ export default function GenerateNewsletterClient({
               }}
               disabled={!canSubmit}
             >
-              {isSubmitting ? "Erzeuge Entwurf ..." : "Rapidmail-Entwurf anlegen"}
+              {isSubmitting
+                ? "Erzeuge Entwurf ..."
+                : "Rapidmail-Entwurf anlegen"}
             </Button>
           </div>
         </div>

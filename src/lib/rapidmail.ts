@@ -250,9 +250,8 @@ const createZipBase64 = (fileName: string, content: string) => {
 };
 
 export const listRapidmailRecipientLists = async () => {
-  const response = await rapidmailFetch<RapidmailRecipientListsResponse>(
-    "/recipientlists",
-  );
+  const response =
+    await rapidmailFetch<RapidmailRecipientListsResponse>("/recipientlists");
 
   return (response._embedded?.recipientlists ?? [])
     .filter((entry) => typeof entry.id === "number" && Boolean(entry.name))
@@ -266,9 +265,7 @@ export const listRapidmailRecipientLists = async () => {
 };
 
 export const listRapidmailMailings = async () => {
-  const response = await rapidmailFetch<RapidmailMailingsResponse>(
-    "/mailings",
-  );
+  const response = await rapidmailFetch<RapidmailMailingsResponse>("/mailings");
 
   return (response._embedded?.mailings ?? [])
     .filter(
