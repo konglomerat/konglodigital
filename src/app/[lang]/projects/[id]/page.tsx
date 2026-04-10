@@ -1,11 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
+import heroHelloImage from "../../../hero-hello.jpg";
 import Button from "../../components/Button";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ShareButton from "../../components/ShareButton";
+import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { buildProjectPath } from "@/lib/project-path";
@@ -15,6 +19,125 @@ import { hasRight } from "@/lib/permissions";
 import { getSupabaseRenderedImageUrl, isVideoUrl } from "@/lib/resource-media";
 import { loadProjectByIdentifier } from "../project-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
+
+const siteTitle = "Konglomerat Digitale Werkstätten";
+
+const loadCachedProject = cache(async (id: string) => loadProjectByIdentifier(id));
+
+const normalizeLocale = (lang?: string): Locale => (lang === "en" ? "en" : "de");
+
+const stripMarkdown = (value: string | null | undefined) => {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/(^|\s)([#>*_~-]+)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const truncateText = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+};
+
+const getProjectDescription = (
+  project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
+  locale: Locale,
+) => {
+  const plainDescription = truncateText(stripMarkdown(project?.description), 180);
+  if (plainDescription) {
+    return plainDescription;
+  }
+
+  return locale === "en"
+    ? `${project?.name ?? siteTitle}. Take a look at this project.`
+    : `${project?.name ?? siteTitle}. Schau dir dieses Projekt an.`;
+};
+
+const getProjectOgImage = (
+  project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
+) => {
+  const projectImage =
+    project?.images?.find(
+      (media): media is string => typeof media === "string" && !isVideoUrl(media),
+    ) ??
+    (project?.image && !isVideoUrl(project.image) ? project.image : null);
+
+  if (projectImage) {
+    return getSupabaseRenderedImageUrl(projectImage, { width: 1600 });
+  }
+
+  return heroHelloImage.src;
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params:
+    | { id: string; lang?: string }
+    | Promise<{ id: string; lang?: string }>;
+}): Promise<Metadata> {
+  const { id, lang } = await Promise.resolve(params);
+  const locale = normalizeLocale(lang);
+  const project = await loadCachedProject(id);
+
+  if (!project) {
+    return {};
+  }
+
+  const canonicalPath = localizePathname(buildProjectPath(project), locale);
+  const alternateLanguagePaths = {
+    de: localizePathname(buildProjectPath(project), "de"),
+    en: localizePathname(buildProjectPath(project), "en"),
+  };
+  const description = getProjectDescription(project, locale);
+  const ogImage = getProjectOgImage(project);
+  const title = `${project.name} | ${siteTitle}`;
+
+  return {
+    title,
+    description,
+    keywords: project.tags ?? undefined,
+    authors: project.author?.name ? [{ name: project.author.name }] : undefined,
+    alternates: {
+      canonical: canonicalPath,
+      languages: alternateLanguagePaths,
+    },
+    openGraph: {
+      type: "article",
+      url: canonicalPath,
+      title,
+      description,
+      siteName: siteTitle,
+      locale: locale === "en" ? "en_US" : "de_DE",
+      publishedTime: project.createdAt ?? undefined,
+      modifiedTime: project.updatedAt ?? undefined,
+      authors: project.author?.name ? [project.author.name] : undefined,
+      tags: project.tags ?? undefined,
+      images: [
+        {
+          url: ogImage,
+          alt: project.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) {
@@ -36,14 +159,16 @@ const formatDate = (value: string | null | undefined) => {
 export default async function ProjectDetailPage({
   params,
 }: {
-  params: Promise<{ id: string; lang?: string }>;
+  params:
+    | { id: string; lang?: string }
+    | Promise<{ id: string; lang?: string }>;
 }) {
-  const { id, lang } = await params;
-  const locale = lang === "en" ? "en" : "de";
+  const { id, lang } = await Promise.resolve(params);
+  const locale = normalizeLocale(lang);
   const [{ tx }, supabase, project] = await Promise.all([
     getServerI18n(),
     createSupabaseServerClient({ readOnly: true }),
-    loadProjectByIdentifier(id),
+    loadCachedProject(id),
   ]);
 
   if (!project) {

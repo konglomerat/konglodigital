@@ -135,11 +135,7 @@ export default function MediaLightboxGallery({
       onClick={() => setLightboxIndex(index)}
       aria-label={`${title} ${index + 1}`}
     >
-      {renderMedia(
-        previewMediaUrl,
-        `${title} ${index + 1}`,
-        mediaClassName,
-      )}
+      {renderMedia(previewMediaUrl, `${title} ${index + 1}`, mediaClassName)}
     </button>
   );
 
@@ -156,14 +152,16 @@ export default function MediaLightboxGallery({
             )}
             {normalizedMedia.length > 1 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {normalizedPreviewMedia.slice(1).map((mediaUrl, index) =>
-                  renderThumbnailButton(
-                    mediaUrl,
-                    index + 1,
-                    "overflow-hidden rounded-[1.5rem] text-left",
-                    "h-auto w-full",
-                  ),
-                )}
+                {normalizedPreviewMedia
+                  .slice(1)
+                  .map((mediaUrl, index) =>
+                    renderThumbnailButton(
+                      mediaUrl,
+                      index + 1,
+                      "overflow-hidden rounded-[1.5rem] text-left",
+                      "h-auto w-full",
+                    ),
+                  )}
               </div>
             ) : null}
           </section>
@@ -235,7 +233,9 @@ export default function MediaLightboxGallery({
                 onClick={(event) => {
                   event.stopPropagation();
                   setLightboxIndex((current) =>
-                    current === null ? 0 : (current + 1) % normalizedMedia.length,
+                    current === null
+                      ? 0
+                      : (current + 1) % normalizedMedia.length,
                   );
                 }}
                 className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"

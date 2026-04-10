@@ -78,10 +78,7 @@ const renderInline = (value: string) => {
       /`([^`]+)`/g,
       (_, code: string) => `<code class="${INLINE_CODE_CLASS}">${code}</code>`,
     )
-    .replace(
-      /\*\*([^*]+)\*\*/g,
-      `<strong class="${STRONG_CLASS}">$1</strong>`,
-    )
+    .replace(/\*\*([^*]+)\*\*/g, `<strong class="${STRONG_CLASS}">$1</strong>`)
     .replace(/\*([^*]+)\*/g, `<em class="${EMPHASIS_CLASS}">$1</em>`)
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label: string, href: string) => {
       const sanitized = sanitizeUrl(href);

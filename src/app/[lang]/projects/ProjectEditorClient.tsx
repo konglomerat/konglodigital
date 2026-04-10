@@ -91,10 +91,7 @@ type ProjectCropSession = {
 const normalizeTagValue = (value: string) => value.trim().replace(/^#+/, "");
 
 const parseTagString = (value: string) =>
-  value
-    .split(",")
-    .map(normalizeTagValue)
-    .filter(Boolean);
+  value.split(",").map(normalizeTagValue).filter(Boolean);
 
 const splitTagDraft = (value: string) =>
   value
@@ -929,10 +926,7 @@ export default function ProjectEditorClient({
               </div>
             </div>
             <p className="text-xs text-zinc-500">
-              {tx(
-                "Mit Enter, Komma oder Leerzeichen trennen.",
-                "de",
-              )}
+              {tx("Mit Enter, Komma oder Leerzeichen trennen.", "de")}
             </p>
           </div>
 

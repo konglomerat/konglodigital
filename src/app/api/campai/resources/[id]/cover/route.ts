@@ -7,7 +7,7 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
+import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { createOpenAIClient } from "@/lib/openai";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
@@ -197,9 +197,13 @@ export const POST = async (
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    if (existing.owner_id !== data.user.id) {
+    const editPermissionError = getResourceEditPermissionError({
+      hasEditRight: canEditByRight,
+      isOwner: existing.owner_id === data.user.id,
+    });
+    if (editPermissionError) {
       return NextResponse.json(
-        { error: "Insufficient permissions." },
+        { error: editPermissionError },
         { status: 403 },
       );
     }

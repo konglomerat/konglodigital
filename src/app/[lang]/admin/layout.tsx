@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 
+import ActiveNavLink from "@/app/ActiveNavLink";
+import { localizePathname } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/server";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -8,6 +11,7 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getRequestLocale();
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data } = await supabase.auth.getUser();
 
@@ -26,5 +30,28 @@ export default async function AdminLayout({
     );
   }
 
-  return children;
+  return (
+    <div className="space-y-6">
+      <nav className="flex flex-wrap gap-2 rounded-3xl border border-zinc-200 bg-white p-2 shadow-sm">
+        <ActiveNavLink
+          href={localizePathname("/admin/users", locale)}
+          exact
+          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+        >
+          Benutzer
+        </ActiveNavLink>
+        <ActiveNavLink
+          href={localizePathname("/admin/generate-newsletter", locale)}
+          exact
+          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+        >
+          Newsletter erzeugen
+        </ActiveNavLink>
+      </nav>
+
+      {children}
+    </div>
+  );
 }

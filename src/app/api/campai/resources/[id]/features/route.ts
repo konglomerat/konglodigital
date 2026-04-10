@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { normalizeResourceMapFeatures } from "@/app/[lang]/resources/map-features";
-import { hasRight } from "@/lib/permissions";
+import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type ResourceRow = {
@@ -92,9 +92,13 @@ export const PUT = async (
   }
 
   const canEditByRight = hasRight(data.user, "resources:edit");
-  if (!canEditByRight && existingResource.owner_id !== data.user.id) {
+  const editPermissionError = getResourceEditPermissionError({
+    hasEditRight: canEditByRight,
+    isOwner: existingResource.owner_id === data.user.id,
+  });
+  if (editPermissionError) {
     return NextResponse.json(
-      { error: "Insufficient permissions." },
+      { error: editPermissionError },
       { status: 403 },
     );
   }
