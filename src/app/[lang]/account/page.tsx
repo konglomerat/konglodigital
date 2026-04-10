@@ -211,7 +211,11 @@ export default function AccountPage() {
   useEffect(() => {
     const normalizedEmail = normalizeEmail(user?.email);
 
-    if (!normalizedEmail || typeof window === "undefined" || !window.crypto?.subtle) {
+    if (
+      !normalizedEmail ||
+      typeof window === "undefined" ||
+      !window.crypto?.subtle
+    ) {
       setGravatarUrl("");
       return;
     }
@@ -403,7 +407,9 @@ export default function AccountPage() {
                     alt={displayName || user.email || "Profilbild"}
                     className="h-16 w-16 rounded-full object-cover"
                     onError={() => {
-                      setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
+                      setAvatarCandidateIndex(
+                        (currentIndex) => currentIndex + 1,
+                      );
                     }}
                   />
                 ) : (
@@ -433,7 +439,8 @@ export default function AccountPage() {
                   className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-600"
                 />
                 <p className="text-xs text-zinc-500">
-                  Wenn der Name geändert werden soll, ändere ihn bitte direkt in Campai.
+                  Wenn der Name geändert werden soll, ändere ihn bitte direkt in
+                  Campai.
                 </p>
               </div>
               <div className="space-y-2">

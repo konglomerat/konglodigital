@@ -368,41 +368,39 @@ export default function ResourcesPageClient({
         new Set(
           resources
             .map((resource) => resource.type?.trim())
-            .filter((resourceType): resourceType is string =>
-              typeof resourceType === "string" &&
-              resourceType.toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
+            .filter(
+              (resourceType): resourceType is string =>
+                typeof resourceType === "string" &&
+                resourceType.toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
             ),
         ),
       ).sort((left, right) => left.localeCompare(right)),
     [resources],
   );
-  const resourceTypeOptions = useMemo(
-    () => {
-      const optionsByValue = new Map<string, string>();
+  const resourceTypeOptions = useMemo(() => {
+    const optionsByValue = new Map<string, string>();
 
-      Object.entries(RESOURCE_TYPES).forEach(([value, config]) => {
-        if (value === INVENTORY_HIDDEN_RESOURCE_TYPE) {
-          return;
-        }
-        optionsByValue.set(value, config.label);
-      });
-
-      resourceTypes.forEach((value) => {
-        if (!optionsByValue.has(value)) {
-          optionsByValue.set(value, value);
-        }
-      });
-
-      if (selectedResourceType && !optionsByValue.has(selectedResourceType)) {
-        optionsByValue.set(selectedResourceType, selectedResourceType);
+    Object.entries(RESOURCE_TYPES).forEach(([value, config]) => {
+      if (value === INVENTORY_HIDDEN_RESOURCE_TYPE) {
+        return;
       }
+      optionsByValue.set(value, config.label);
+    });
 
-      return Array.from(optionsByValue.entries())
-        .map(([value, label]) => ({ value, label }))
-        .sort((left, right) => left.label.localeCompare(right.label));
-    },
-    [resourceTypes, selectedResourceType],
-  );
+    resourceTypes.forEach((value) => {
+      if (!optionsByValue.has(value)) {
+        optionsByValue.set(value, value);
+      }
+    });
+
+    if (selectedResourceType && !optionsByValue.has(selectedResourceType)) {
+      optionsByValue.set(selectedResourceType, selectedResourceType);
+    }
+
+    return Array.from(optionsByValue.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [resourceTypes, selectedResourceType]);
 
   useEffect(() => {
     setResources(initialResources);
@@ -688,7 +686,8 @@ export default function ResourcesPageClient({
       return;
     }
     if (
-      selectedResourceType.trim().toLowerCase() === INVENTORY_HIDDEN_RESOURCE_TYPE
+      selectedResourceType.trim().toLowerCase() ===
+      INVENTORY_HIDDEN_RESOURCE_TYPE
     ) {
       setSelectedResourceType("");
       replaceFilterParamsInUrl(

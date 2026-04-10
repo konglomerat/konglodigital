@@ -74,7 +74,10 @@ export default function ImageCropDialog({
     originY: number;
   } | null>(null);
 
-  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [imageSize, setImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const [aspect, setAspect] = useState<CropAspect>("original");
   const [zoom, setZoom] = useState(1);
@@ -122,10 +125,7 @@ export default function ImageCropDialog({
   );
 
   useEffect(() => {
-    if (
-      clampedPosition.x !== position.x ||
-      clampedPosition.y !== position.y
-    ) {
+    if (clampedPosition.x !== position.x || clampedPosition.y !== position.y) {
       setPosition(clampedPosition);
     }
   }, [clampedPosition, position.x, position.y]);
@@ -233,8 +233,10 @@ export default function ImageCropDialog({
       const effectiveScale = baseScale * zoom;
       const sourceWidth = frameSize.width / effectiveScale;
       const sourceHeight = frameSize.height / effectiveScale;
-      const sourceCenterX = imageSize.width / 2 - clampedPosition.x / effectiveScale;
-      const sourceCenterY = imageSize.height / 2 - clampedPosition.y / effectiveScale;
+      const sourceCenterX =
+        imageSize.width / 2 - clampedPosition.x / effectiveScale;
+      const sourceCenterY =
+        imageSize.height / 2 - clampedPosition.y / effectiveScale;
       const sourceX = clamp(
         sourceCenterX - sourceWidth / 2,
         0,
@@ -362,12 +364,14 @@ export default function ImageCropDialog({
                 {tx("Format", "de")}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {([
-                  ["original", tx("Original", "de")],
-                  ["landscape", tx("Querformat", "de")],
-                  ["portrait", tx("Hochformat", "de")],
-                  ["square", tx("Quadrat", "de")],
-                ] as Array<[CropAspect, string]>).map(([value, label]) => (
+                {(
+                  [
+                    ["original", tx("Original", "de")],
+                    ["landscape", tx("Querformat", "de")],
+                    ["portrait", tx("Hochformat", "de")],
+                    ["square", tx("Quadrat", "de")],
+                  ] as Array<[CropAspect, string]>
+                ).map(([value, label]) => (
                   <button
                     key={value}
                     type="button"
@@ -410,8 +414,14 @@ export default function ImageCropDialog({
               <Button kind="secondary" onClick={onClose} disabled={saving}>
                 {tx("Abbrechen", "de")}
               </Button>
-              <Button kind="primary" onClick={() => void handleApply()} disabled={saving || !imageSize}>
-                {saving ? tx("Speichert…", "de") : tx("Zuschnitt übernehmen", "de")}
+              <Button
+                kind="primary"
+                onClick={() => void handleApply()}
+                disabled={saving || !imageSize}
+              >
+                {saving
+                  ? tx("Speichert…", "de")
+                  : tx("Zuschnitt übernehmen", "de")}
               </Button>
             </div>
           </div>

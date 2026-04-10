@@ -73,10 +73,7 @@ export const POST = async (request: NextRequest) => {
         ? profileError.message
         : "Profile could not be updated.";
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 
   return NextResponse.json({ success: true });

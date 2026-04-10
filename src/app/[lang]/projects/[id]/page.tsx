@@ -12,6 +12,7 @@ import { buildProjectPath } from "@/lib/project-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
+import { getSupabaseRenderedImageUrl, isVideoUrl } from "@/lib/resource-media";
 import { loadProjectByIdentifier } from "../project-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 
@@ -65,6 +66,11 @@ export default async function ProjectDetailPage({
     project.images?.filter(
       (media): media is string => typeof media === "string",
     ) ?? (project.image ? [project.image] : []);
+  const heroPreviewMedia = heroMedia.map((mediaUrl) =>
+    isVideoUrl(mediaUrl)
+      ? mediaUrl
+      : getSupabaseRenderedImageUrl(mediaUrl, { width: 1600 }),
+  );
   const renderedMarkdown = renderSimpleMarkdown(project.description ?? "");
   const hasTags = Boolean(project.tags && project.tags.length > 0);
   const hasProjectLinks = Boolean(
@@ -121,6 +127,7 @@ export default async function ProjectDetailPage({
         <article className="space-y-8">
           <MediaLightboxGallery
             media={heroMedia}
+            previewMedia={heroPreviewMedia}
             title={project.name}
             closeLabel={tx("Schließen", "de")}
             previousLabel={tx("Zurück", "de")}
@@ -175,7 +182,7 @@ export default async function ProjectDetailPage({
                     </div>
                   )}
                   <div>
-                    <p className="text-lg font-semibold text-zinc-950">
+                    <p className="text-lg font-semibold text-zinc-950 dark:text-white">
                       {project.author.name}
                     </p>
                   </div>
@@ -202,7 +209,7 @@ export default async function ProjectDetailPage({
             </p>
             <div className="mt-4 space-y-4 text-sm text-zinc-700">
               <div>
-                <p className="font-semibold text-zinc-950">
+                <p className="font-semibold text-zinc-950 dark:text-white">
                   {tx("Werkstatt", "de")}
                 </p>
                 {project.workshopResource ? (
@@ -227,7 +234,7 @@ export default async function ProjectDetailPage({
               </div>
 
               <div>
-                <p className="font-semibold text-zinc-950">
+                <p className="font-semibold text-zinc-950 dark:text-white">
                   {tx("Aktualisiert", "de")}
                 </p>
                 <p className="mt-1 text-zinc-500">

@@ -7,7 +7,7 @@ import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildProjectPath } from "@/lib/project-path";
-import { isVideoUrl } from "@/lib/resource-media";
+import { getSupabaseRenderedImageUrl, isVideoUrl } from "@/lib/resource-media";
 import { loadProjects } from "./project-data";
 
 const stripMarkdown = (value: string) =>
@@ -45,7 +45,7 @@ export default async function ProjectsPage() {
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600">
             {tx(
-              "Dokumentiere Bauprojekte, Umbauten, Installationen und Prototypen aus den Werkstätten als gut lesbare Einträge mit Bildern, Links und Ressourcenbezug.",
+              "Hier kannst du Projekte, Umbauten und Prototypen unserer Werkstätten entdecken.",
               "de",
             )}
           </p>
@@ -74,6 +74,13 @@ export default async function ProjectsPage() {
             const heroMediaUrl =
               project.images?.find(Boolean) ?? project.image ?? null;
             const heroMediaIsVideo = isVideoUrl(heroMediaUrl);
+            const heroThumbnailUrl =
+              heroMediaUrl && !heroMediaIsVideo
+                ? getSupabaseRenderedImageUrl(heroMediaUrl, {
+                    width: 960,
+                    resize: "cover",
+                  })
+                : heroMediaUrl;
 
             return (
               <article
@@ -90,7 +97,7 @@ export default async function ProjectsPage() {
                         <>
                           <video
                             src={heroMediaUrl}
-                            className="aspect-square w-full bg-zinc-950 object-cover"
+                            className="aspect-[4/3] w-full bg-zinc-950 object-cover"
                             muted
                             playsInline
                             preload="metadata"
@@ -101,14 +108,14 @@ export default async function ProjectsPage() {
                         </>
                       ) : (
                         <img
-                          src={heroMediaUrl}
+                          src={heroThumbnailUrl ?? heroMediaUrl}
                           alt={project.name}
-                          className="aspect-square w-full object-cover"
+                          className="aspect-[4/3] w-full object-cover"
                         />
                       )}
                     </div>
                   ) : (
-                    <div className="flex aspect-square w-full items-center justify-center bg-[linear-gradient(135deg,#e6f0ff_0%,#fdf7e8_100%)] text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                    <div className="flex aspect-[4/3] w-full items-center justify-center bg-[linear-gradient(135deg,#e6f0ff_0%,#fdf7e8_100%)] text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                       {tx("Projekt", "de")}
                     </div>
                   )}

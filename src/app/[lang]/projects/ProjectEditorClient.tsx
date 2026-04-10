@@ -2,7 +2,14 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Reorder } from "motion/react";
@@ -81,7 +88,23 @@ type ProjectCropSession = {
   cleanupUrl?: string;
 };
 
-const toTagString = (tags?: string[]) => (tags ?? []).join(", ");
+const normalizeTagValue = (value: string) => value.trim().replace(/^#+/, "");
+
+const parseTagString = (value: string) =>
+  value
+    .split(",")
+    .map(normalizeTagValue)
+    .filter(Boolean);
+
+const splitTagDraft = (value: string) =>
+  value
+    .split(/[\s,;\n\r\t]+/)
+    .map(normalizeTagValue)
+    .filter(Boolean);
+
+const serializeTagList = (tags: string[]) => tags.join(", ");
+
+const toTagString = (tags?: string[]) => serializeTagList(tags ?? []);
 
 const normalizeImageList = (project?: InitialProject | null) => {
   if (!project) {
@@ -98,7 +121,10 @@ const normalizeImageList = (project?: InitialProject | null) => {
 };
 
 const createProjectImageItemId = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `project-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -165,7 +191,9 @@ export default function ProjectEditorClient({
       createExistingProjectImageItem(imageUrl, index),
     ),
   );
-  const [cropSession, setCropSession] = useState<ProjectCropSession | null>(null);
+  const [cropSession, setCropSession] = useState<ProjectCropSession | null>(
+    null,
+  );
   const [cropLoadingId, setCropLoadingId] = useState<string | null>(null);
   const [resourceOptions, setResourceOptions] = useState<ResourceOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
@@ -201,6 +229,77 @@ export default function ProjectEditorClient({
 
   const watchedWorkshopResourceId = watch("workshopResourceId");
   const watchedUsedResourceIds = watch("usedResourceIds");
+  const watchedTags = watch("tags");
+  const [tagDraft, setTagDraft] = useState("");
+
+  const projectTags = useMemo(
+    () => parseTagString(watchedTags ?? ""),
+    [watchedTags],
+  );
+
+  const syncTags = (nextTags: string[]) => {
+    setValue("tags", serializeTagList(nextTags), {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  const addTags = (rawValue: string) => {
+    const nextTags = splitTagDraft(rawValue);
+    if (nextTags.length === 0) {
+      return;
+    }
+
+    const mergedTags = [...projectTags];
+    nextTags.forEach((tag) => {
+      if (!mergedTags.includes(tag)) {
+        mergedTags.push(tag);
+      }
+    });
+
+    syncTags(mergedTags);
+    setTagDraft("");
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    syncTags(projectTags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      event.key === "Enter" ||
+      event.key === "Tab" ||
+      event.key === "," ||
+      event.key === ";" ||
+      event.key === " "
+    ) {
+      if (tagDraft.trim()) {
+        event.preventDefault();
+        addTags(tagDraft);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    if (event.key === "Backspace" && !tagDraft && projectTags.length > 0) {
+      event.preventDefault();
+      removeTag(projectTags[projectTags.length - 1]);
+    }
+  };
+
+  const handleTagPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    if (splitTagDraft(pastedText).length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    addTags(pastedText);
+  };
 
   useEffect(() => {
     let active = true;
@@ -609,7 +708,11 @@ export default function ProjectEditorClient({
                       value={imageItem}
                       layout
                       whileDrag={{ scale: 1.03, zIndex: 20 }}
-                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 32,
+                      }}
                       className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-2xl border border-zinc-200 bg-zinc-100 p-3 active:cursor-grabbing"
                     >
                       <div className="overflow-hidden rounded-xl bg-white">
@@ -662,7 +765,8 @@ export default function ProjectEditorClient({
                             onClick={() => {
                               setImageItems((previous) =>
                                 previous.filter(
-                                  (currentImage) => currentImage.id !== imageItem.id,
+                                  (currentImage) =>
+                                    currentImage.id !== imageItem.id,
                                 ),
                               );
                             }}
@@ -789,15 +893,47 @@ export default function ProjectEditorClient({
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
               {tx("Tags", "de")}
             </label>
-            <input
-              type="text"
-              {...register("tags")}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
-              placeholder={tx(
-                "z. B. cnc, ausstellung, projectofthemonth",
+            <input type="hidden" {...register("tags")} />
+            <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 focus-within:border-zinc-400">
+              <div className="flex flex-wrap items-center gap-2">
+                {projectTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-800"
+                  >
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      className="text-zinc-500 transition hover:text-zinc-900"
+                      aria-label={`${tx("Tag entfernen", "de")}: ${tag}`}
+                      onClick={() => removeTag(tag)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={tagDraft}
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={() => addTags(tagDraft)}
+                  onPaste={handleTagPaste}
+                  autoComplete="off"
+                  className="min-w-[12rem] flex-1 border-0 bg-transparent py-1 text-sm text-zinc-950 outline-none"
+                  placeholder={tx(
+                    "z. B. cnc, ausstellung, projectofthemonth",
+                    "de",
+                  )}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">
+              {tx(
+                "Mit Enter, Komma oder Leerzeichen trennen.",
                 "de",
               )}
-            />
+            </p>
           </div>
 
           <label className="flex items-start gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">

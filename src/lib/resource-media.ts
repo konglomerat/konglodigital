@@ -1,5 +1,13 @@
 export type ResourceMediaKind = "image" | "video" | "unknown";
 
+type SupabaseRenderResizeMode = "cover" | "contain" | "fill";
+
+type SupabaseRenderImageOptions = {
+  width?: number;
+  height?: number;
+  resize?: SupabaseRenderResizeMode;
+};
+
 const IMAGE_EXTENSIONS = new Set([
   "avif",
   "bmp",
@@ -63,3 +71,39 @@ export const isImageUrl = (value?: string | null) =>
 
 export const isVideoUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "video";
+
+export const getSupabaseRenderedImageUrl = (
+  url: string,
+  options: SupabaseRenderImageOptions = {},
+) => {
+  try {
+    const marker = "/storage/v1/object/public/";
+    if (!url.includes(marker)) {
+      return url;
+    }
+
+    const parsed = new URL(url);
+    const renderPathMarker = "/storage/v1/render/image/";
+    const targetUrl = url.includes(renderPathMarker)
+      ? parsed
+      : new URL(
+          `${parsed.origin}/storage/v1/render/image/public/${parsed.pathname.slice(
+            parsed.pathname.indexOf(marker) + marker.length,
+          )}`,
+        );
+
+    if (options.width) {
+      targetUrl.searchParams.set("width", String(options.width));
+    }
+    if (options.height) {
+      targetUrl.searchParams.set("height", String(options.height));
+    }
+    if (options.resize) {
+      targetUrl.searchParams.set("resize", options.resize);
+    }
+
+    return targetUrl.toString();
+  } catch {
+    return url;
+  }
+};

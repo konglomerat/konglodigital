@@ -1001,9 +1001,7 @@ export const PUT = async (
     imageUrl = imageUrls[0] ?? null;
     imageUpdated = true;
     if (imageFiles.length > 0) {
-      const vision = await describeImage(request, imageFiles).catch(
-        () => null,
-      );
+      const vision = await describeImage(request, imageFiles).catch(() => null);
       if (vision) {
         if (!description && vision.description) {
           description = vision.description;
@@ -1020,7 +1018,7 @@ export const PUT = async (
 
   if (imageUpdated) {
     const primaryImageUrl = Array.isArray(imageUrls)
-      ? imageUrls.find((url) => isImageUrl(url)) ?? null
+      ? (imageUrls.find((url) => isImageUrl(url)) ?? null)
       : imageUrl && isImageUrl(imageUrl)
         ? imageUrl
         : null;

@@ -334,7 +334,9 @@ export const generateStaticParams = async () => {
 export default async function ResourceDetailPage({
   params,
 }: {
-  params: { id: string; lang?: string } | Promise<{ id: string; lang?: string }>;
+  params:
+    | { id: string; lang?: string }
+    | Promise<{ id: string; lang?: string }>;
 }) {
   const { id, lang } = await Promise.resolve(params);
   const locale = lang === "en" ? "en" : "de";

@@ -131,7 +131,10 @@ const selectMemberProfilesByUserIds = async (
   userIds: string[],
   selectFields: string,
 ) => {
-  return client.from("member_profiles").select(selectFields).in("user_id", userIds);
+  return client
+    .from("member_profiles")
+    .select(selectFields)
+    .in("user_id", userIds);
 };
 
 const buildUpsertPayload = (

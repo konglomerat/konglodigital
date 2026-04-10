@@ -854,9 +854,7 @@ export const POST = async (request: NextRequest) => {
   );
   const projectLinks = normalizeProjectLinks(payload.projectLinks ?? []);
   const gpsData =
-    imageFiles.length > 0
-      ? await extractGpsFromFile(imageFiles[0])
-      : null;
+    imageFiles.length > 0 ? await extractGpsFromFile(imageFiles[0]) : null;
   const fallbackGpsPointFeature =
     gpsData?.latitude != null && gpsData?.longitude != null
       ? [
@@ -896,10 +894,10 @@ export const POST = async (request: NextRequest) => {
     imageUrl = imageUrl ?? imageUrls[0] ?? null;
   }
 
-  const imageUrlsForAnalysis = (imageUrls ?? []).filter((url) => isImageUrl(url));
-  if (
-    imageFiles.length > 0 || imageUrlsForAnalysis.length > 0
-  ) {
+  const imageUrlsForAnalysis = (imageUrls ?? []).filter((url) =>
+    isImageUrl(url),
+  );
+  if (imageFiles.length > 0 || imageUrlsForAnalysis.length > 0) {
     const vision = await describeImage(imageFiles, imageUrlsForAnalysis).catch(
       () => null,
     );

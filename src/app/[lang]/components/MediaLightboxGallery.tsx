@@ -14,6 +14,7 @@ import { isVideoUrl } from "@/lib/resource-media";
 
 type MediaLightboxGalleryProps = {
   media: string[];
+  previewMedia?: string[];
   title: string;
   closeLabel: string;
   previousLabel: string;
@@ -53,6 +54,7 @@ const renderMedia = (
 
 export default function MediaLightboxGallery({
   media,
+  previewMedia,
   title,
   closeLabel,
   previousLabel,
@@ -68,21 +70,24 @@ export default function MediaLightboxGallery({
     [media],
   );
 
+  const normalizedPreviewMedia = useMemo(
+    () =>
+      normalizedMedia.map(
+        (_, index) => previewMedia?.[index] ?? normalizedMedia[index],
+      ),
+    [normalizedMedia, previewMedia],
+  );
+
+  const activeLightboxIndex =
+    lightboxIndex !== null && lightboxIndex < normalizedMedia.length
+      ? lightboxIndex
+      : null;
+
   const activeLightboxMedia =
-    lightboxIndex !== null ? normalizedMedia[lightboxIndex] : null;
+    activeLightboxIndex !== null ? normalizedMedia[activeLightboxIndex] : null;
 
   useEffect(() => {
-    setLightboxIndex((current) => {
-      if (current === null) {
-        return null;
-      }
-
-      return current < normalizedMedia.length ? current : null;
-    });
-  }, [normalizedMedia.length]);
-
-  useEffect(() => {
-    if (lightboxIndex === null) {
+    if (activeLightboxIndex === null) {
       return;
     }
 
@@ -115,22 +120,26 @@ export default function MediaLightboxGallery({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [lightboxIndex, normalizedMedia.length]);
+  }, [activeLightboxIndex, normalizedMedia.length]);
 
   const renderThumbnailButton = (
-    mediaUrl: string,
+    previewMediaUrl: string,
     index: number,
     className: string,
     mediaClassName: string,
   ) => (
     <button
-      key={`${mediaUrl}-${index}`}
+      key={`${previewMediaUrl}-${index}`}
       type="button"
       className={className}
       onClick={() => setLightboxIndex(index)}
       aria-label={`${title} ${index + 1}`}
     >
-      {renderMedia(mediaUrl, `${title} ${index + 1}`, mediaClassName)}
+      {renderMedia(
+        previewMediaUrl,
+        `${title} ${index + 1}`,
+        mediaClassName,
+      )}
     </button>
   );
 
@@ -140,14 +149,14 @@ export default function MediaLightboxGallery({
         normalizedMedia.length > 0 ? (
           <section className="grid gap-4 px-6 py-2 md:px-8">
             {renderThumbnailButton(
-              normalizedMedia[0],
+              normalizedPreviewMedia[0],
               0,
               "overflow-hidden rounded-[2rem] text-left",
               "h-auto w-full",
             )}
             {normalizedMedia.length > 1 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {normalizedMedia.slice(1).map((mediaUrl, index) =>
+                {normalizedPreviewMedia.slice(1).map((mediaUrl, index) =>
                   renderThumbnailButton(
                     mediaUrl,
                     index + 1,
@@ -163,7 +172,7 @@ export default function MediaLightboxGallery({
         <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50/60">
           {normalizedMedia.length > 0 ? (
             <div className="flex flex-wrap gap-2 p-2">
-              {normalizedMedia.map((mediaUrl, index) =>
+              {normalizedPreviewMedia.map((mediaUrl, index) =>
                 renderThumbnailButton(
                   mediaUrl,
                   index,

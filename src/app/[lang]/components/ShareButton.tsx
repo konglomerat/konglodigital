@@ -59,7 +59,10 @@ export default function ShareButton({
       }
     }
 
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
       try {
         await navigator.clipboard.writeText(shareUrl);
         setStatus("copied");
@@ -78,7 +81,11 @@ export default function ShareButton({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button kind="secondary" className={className} onClick={() => void handleShare()}>
+      <Button
+        kind="secondary"
+        className={className}
+        onClick={() => void handleShare()}
+      >
         {tx("Teilen", "de")}
       </Button>
       {status === "copied" ? (

@@ -6,6 +6,44 @@ const escapeHtml = (value: string) =>
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const HEADING_CLASSES = {
+  1: "mt-8 mb-4 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white",
+  2: "mt-8 mb-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white",
+  3: "mt-6 mb-3 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white",
+  4: "mt-6 mb-3 text-lg font-semibold text-zinc-950 dark:text-white",
+  5: "mt-5 mb-2 text-base font-semibold text-zinc-950 dark:text-white",
+  6: "mt-5 mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-zinc-700 dark:text-zinc-200",
+} as const;
+
+const PARAGRAPH_CLASS =
+  "mb-4 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+
+const INLINE_CODE_CLASS =
+  "rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.95em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100";
+
+const LINK_CLASS =
+  "text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300";
+
+const STRONG_CLASS = "font-semibold text-zinc-950 dark:text-white";
+
+const EMPHASIS_CLASS = "italic";
+
+const BLOCKQUOTE_CLASS =
+  "my-6 border-l-4 border-zinc-300 pl-4 italic text-zinc-600 dark:border-zinc-700 dark:text-zinc-300";
+
+const UNORDERED_LIST_CLASS =
+  "mb-4 list-disc space-y-2 pl-6 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+
+const ORDERED_LIST_CLASS =
+  "mb-4 list-decimal space-y-2 pl-6 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+
+const LIST_ITEM_CLASS = "pl-1";
+
+const HR_CLASS = "my-8 border-zinc-200 dark:border-zinc-800";
+
+const withClass = (tag: string, className: string, content: string) =>
+  `<${tag} class="${className}">${content}</${tag}>`;
+
 const sanitizeUrl = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -36,9 +74,15 @@ const renderInline = (value: string) => {
   const escaped = escapeHtml(value);
 
   return escaped
-    .replace(/`([^`]+)`/g, (_, code: string) => `<code>${code}</code>`)
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(
+      /`([^`]+)`/g,
+      (_, code: string) => `<code class="${INLINE_CODE_CLASS}">${code}</code>`,
+    )
+    .replace(
+      /\*\*([^*]+)\*\*/g,
+      `<strong class="${STRONG_CLASS}">$1</strong>`,
+    )
+    .replace(/\*([^*]+)\*/g, `<em class="${EMPHASIS_CLASS}">$1</em>`)
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label: string, href: string) => {
       const sanitized = sanitizeUrl(href);
       if (!sanitized) {
@@ -48,22 +92,40 @@ const renderInline = (value: string) => {
       const external =
         sanitized.startsWith("http://") || sanitized.startsWith("https://");
 
-      return `<a href="${escapeHtml(sanitized)}"${
+      return `<a class="${LINK_CLASS}" href="${escapeHtml(sanitized)}"${
         external ? ' target="_blank" rel="noreferrer"' : ""
       }>${label}</a>`;
     });
 };
 
+const isHeadingLine = (value: string) => /^#{1,6}\s+/.test(value.trim());
+
+const isUnorderedListLine = (value: string) => /^\s*[-*+]\s+/.test(value);
+
+const isOrderedListLine = (value: string) => /^\s*\d+\.\s+/.test(value);
+
+const isQuoteLine = (value: string) => /^\s*>\s?/.test(value);
+
+const isHorizontalRuleLine = (value: string) => /^---+$/.test(value.trim());
+
+const isBlockLine = (value: string) =>
+  isHeadingLine(value) ||
+  isUnorderedListLine(value) ||
+  isOrderedListLine(value) ||
+  isQuoteLine(value) ||
+  isHorizontalRuleLine(value);
+
 const renderList = (lines: string[], ordered: boolean) => {
   const tag = ordered ? "ol" : "ul";
+  const className = ordered ? ORDERED_LIST_CLASS : UNORDERED_LIST_CLASS;
   const items = lines
     .map((line) =>
       ordered ? line.replace(/^\d+\.\s+/, "") : line.replace(/^[-*+]\s+/, ""),
     )
-    .map((line) => `<li>${renderInline(line)}</li>`)
+    .map((line) => `<li class="${LIST_ITEM_CLASS}">${renderInline(line)}</li>`)
     .join("");
 
-  return `<${tag}>${items}</${tag}>`;
+  return `<${tag} class="${className}">${items}</${tag}>`;
 };
 
 export const renderSimpleMarkdown = (value: string) => {
@@ -84,17 +146,23 @@ export const renderSimpleMarkdown = (value: string) => {
       continue;
     }
 
-    if (/^#{1,6}\s+/.test(trimmed)) {
+    if (isHeadingLine(trimmed)) {
       const level = trimmed.match(/^#+/)?.[0].length ?? 1;
       const content = trimmed.replace(/^#{1,6}\s+/, "");
-      blocks.push(`<h${level}>${renderInline(content)}</h${level}>`);
+      blocks.push(
+        withClass(
+          `h${level}`,
+          HEADING_CLASSES[level as keyof typeof HEADING_CLASSES],
+          renderInline(content),
+        ),
+      );
       index += 1;
       continue;
     }
 
-    if (/^[-*+]\s+/.test(trimmed)) {
+    if (isUnorderedListLine(trimmed)) {
       const listLines: string[] = [];
-      while (index < lines.length && /^\s*[-*+]\s+/.test(lines[index])) {
+      while (index < lines.length && isUnorderedListLine(lines[index])) {
         listLines.push(lines[index].trim());
         index += 1;
       }
@@ -102,9 +170,9 @@ export const renderSimpleMarkdown = (value: string) => {
       continue;
     }
 
-    if (/^\d+\.\s+/.test(trimmed)) {
+    if (isOrderedListLine(trimmed)) {
       const listLines: string[] = [];
-      while (index < lines.length && /^\s*\d+\.\s+/.test(lines[index])) {
+      while (index < lines.length && isOrderedListLine(lines[index])) {
         listLines.push(lines[index].trim());
         index += 1;
       }
@@ -112,30 +180,40 @@ export const renderSimpleMarkdown = (value: string) => {
       continue;
     }
 
-    if (/^>\s?/.test(trimmed)) {
+    if (isQuoteLine(trimmed)) {
       const quoteLines: string[] = [];
-      while (index < lines.length && /^\s*>\s?/.test(lines[index])) {
+      while (index < lines.length && isQuoteLine(lines[index])) {
         quoteLines.push(lines[index].replace(/^\s*>\s?/, "").trim());
         index += 1;
       }
       blocks.push(
-        `<blockquote><p>${renderInline(quoteLines.join(" "))}</p></blockquote>`,
+        `<blockquote class="${BLOCKQUOTE_CLASS}"><p class="m-0">${renderInline(quoteLines.join(" "))}</p></blockquote>`,
       );
       continue;
     }
 
-    if (/^---+$/.test(trimmed)) {
-      blocks.push("<hr />");
+    if (isHorizontalRuleLine(trimmed)) {
+      blocks.push(`<hr class="${HR_CLASS}" />`);
       index += 1;
       continue;
     }
 
     const paragraphLines: string[] = [];
-    while (index < lines.length && lines[index].trim()) {
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !isBlockLine(lines[index])
+    ) {
       paragraphLines.push(lines[index].trim());
       index += 1;
     }
-    blocks.push(`<p>${renderInline(paragraphLines.join("<br />"))}</p>`);
+    blocks.push(
+      withClass(
+        "p",
+        PARAGRAPH_CLASS,
+        paragraphLines.map((line) => renderInline(line)).join("<br />"),
+      ),
+    );
   }
 
   return blocks.join("\n");
