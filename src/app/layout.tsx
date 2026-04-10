@@ -252,6 +252,15 @@ export default async function RootLayout({
                         >
                           Inventar
                         </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/projects"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Projekte
+                        </ProtectedNavItem>
                         <ActiveNavLink
                           href="/calendar"
                           className={navLinkClassName}
@@ -453,6 +462,15 @@ export default async function RootLayout({
                   tooltip={membersOnlyTooltip}
                 >
                   Inventar
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/projects"
+                  className={navItemClassName}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Projekte
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/products"

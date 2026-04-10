@@ -32,6 +32,7 @@ type ResourceRow = {
 
 const MAP_BASE_RESOURCE_TYPES = ["place", "furniture"] as const;
 const MAP_BASE_RESOURCE_LIMIT = 1000;
+const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -129,7 +130,7 @@ const getRelatedResourcesMap = async (
     counterpartIds.length
       ? await supabase
           .from("resources")
-          .select("id, name, pretty_title")
+          .select("id, name, pretty_title, type")
           .in("id", counterpartIds)
       : { data: [], error: null };
 
@@ -148,7 +149,10 @@ const getRelatedResourcesMap = async (
           id: string;
           name: string | null;
           pretty_title: string | null;
-        } => typeof row.id === "string",
+          type: string | null;
+        } =>
+          typeof row.id === "string" &&
+          row.type?.trim().toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
       )
       .map((row) => [
         row.id,
@@ -216,6 +220,17 @@ const loadResourceFromDb = async (idOrPrettyTitle: string) => {
     .single();
 
   if (error || !row) {
+    return {
+      resource: null as ResourcePayload | null,
+      errorMessage: "Not found",
+    };
+  }
+
+  if (
+    typeof (row as ResourceRow).type === "string" &&
+    (row as ResourceRow).type?.trim().toLowerCase() ===
+      INVENTORY_HIDDEN_RESOURCE_TYPE
+  ) {
     return {
       resource: null as ResourcePayload | null,
       errorMessage: "Not found",
@@ -302,6 +317,7 @@ export const generateStaticParams = async () => {
   const { data: rows } = await supabase
     .from("resources")
     .select("id, pretty_title")
+    .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE)
     .order("created_at", { ascending: false })
     .range(0, 499);
 

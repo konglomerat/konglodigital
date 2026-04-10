@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createInstance, type TOptionsBase, type i18n } from "i18next";
-import { I18nextProvider, initReactI18next, useTranslation } from "react-i18next";
+import {
+  I18nextProvider,
+  initReactI18next,
+  useTranslation,
+} from "react-i18next";
 import {
   DEFAULT_NAMESPACE,
   DEFAULT_LOCALE,

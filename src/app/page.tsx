@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
+import ProjectOfTheMonthSection from "./ProjectOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import heroHelloImage from "./hero-hello.jpg";
 import inventoryImage from "./inventory.jpg";
@@ -48,6 +49,14 @@ export default async function Home() {
       href: "/calendar",
       title: tx("Kalender öffnen", "de"),
       description: tx("Termine, Workshops und Belegungen prüfen.", "de"),
+    },
+    {
+      href: "/projects",
+      title: tx("Projekte entdecken", "de"),
+      description: tx(
+        "Umbauten, Prototypen und Werkstattprojekte ansehen.",
+        "de",
+      ),
     },
   ];
 
@@ -177,7 +186,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
             return (
               <Link
@@ -224,6 +233,12 @@ export default async function Home() {
                       className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
                     />
                   </div>
+                ) : action.href === "/projects" ? (
+                  <div className="flex h-[160px] items-center justify-center bg-[linear-gradient(135deg,#e0f2fe_0%,#fef3c7_100%)]">
+                    <span className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-700">
+                      Projekte
+                    </span>
+                  </div>
                 ) : null}
 
                 <div className="px-5 pb-4">
@@ -239,6 +254,8 @@ export default async function Home() {
           })}
         </div>
       </section>
+
+      <ProjectOfTheMonthSection />
 
       <ResourceOfTheMonthSection />
 

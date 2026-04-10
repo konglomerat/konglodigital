@@ -1,16 +1,12 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   faArrowLeft,
-  faChevronLeft,
-  faChevronRight,
   faLayerGroup,
   faPen,
   faTrash,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
@@ -18,6 +14,7 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import Button from "../../components/Button";
+import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
 import { getPointFeatures } from "../map-features";
@@ -44,23 +41,6 @@ export default function ResourceDetailClient({
     initialErrorMessage,
   );
   const [deleting, setDeleting] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  const lightboxImages = useMemo(
-    () =>
-      resource?.images?.length
-        ? resource.images
-        : resource?.image
-          ? [resource.image]
-          : [],
-    [resource],
-  );
-  const normalizedImages = useMemo(
-    () => lightboxImages.filter((image): image is string => Boolean(image)),
-    [lightboxImages],
-  );
-  const activeLightboxImage =
-    lightboxIndex !== null ? normalizedImages[lightboxIndex] : null;
 
   const normalizedMapBasemapResources = useMemo(
     () =>
@@ -118,37 +98,6 @@ export default function ResourceDetailClient({
     );
   }, [resource?.type]);
 
-  useEffect(() => {
-    if (lightboxIndex === null) {
-      return;
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setLightboxIndex(null);
-        return;
-      }
-      if (normalizedImages.length < 2) {
-        return;
-      }
-      if (event.key === "ArrowRight") {
-        setLightboxIndex((prev) =>
-          prev === null ? 0 : (prev + 1) % normalizedImages.length,
-        );
-      }
-      if (event.key === "ArrowLeft") {
-        setLightboxIndex((prev) =>
-          prev === null
-            ? 0
-            : (prev - 1 + normalizedImages.length) % normalizedImages.length,
-        );
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [lightboxIndex, normalizedImages.length]);
-
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
@@ -159,6 +108,9 @@ export default function ResourceDetailClient({
             </h1>
             <p className="mt-2 text-sm text-zinc-600">
               {tx("View details and metadata for the selected resource.")}
+            </p>
+            <p className="mt-3 inline-flex max-w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800">
+              {tx("Images and text on this page were generated with AI.")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -252,56 +204,22 @@ export default function ResourceDetailClient({
             </p>
           ) : (
             <div className="flex flex-col gap-6">
-              <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50/60">
-                {resource.images && resource.images.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 p-2">
-                    {resource.images.map((imageUrl, index) => (
-                      <div
-                        key={`${resource.id}-image-${index}`}
-                        className="inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-xl bg-zinc-100"
-                      >
-                        <img
-                          src={imageUrl}
-                          alt={`${resource.name} ${index + 1}`}
-                          className="h-60 w-auto object-cover"
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setLightboxIndex(index)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setLightboxIndex(index);
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : resource.image ? (
-                  <div className="inline-flex h-60 w-auto items-center justify-center overflow-hidden bg-zinc-100">
-                    <img
-                      src={resource.image}
-                      alt={resource.name}
-                      className="h-60 w-auto object-cover"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setLightboxIndex(0)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setLightboxIndex(0);
-                        }
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-60 w-full items-center justify-center bg-zinc-100">
-                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
-                      {tx("No image")}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <MediaLightboxGallery
+                media={
+                  resource.images?.length
+                    ? resource.images
+                    : resource.image
+                      ? [resource.image]
+                      : []
+                }
+                title={resource.name}
+                closeLabel={tx("Close")}
+                previousLabel={tx("Prev")}
+                nextLabel={tx("Next")}
+                previewLabel={tx("Resource preview")}
+                noMediaLabel={tx("No image")}
+                variant="resource"
+              />
               <div>
                 <h2 className="text-xl font-semibold text-zinc-900">
                   {resource.name}
@@ -403,66 +321,6 @@ export default function ResourceDetailClient({
           )}
         </section>
       </main>
-      {activeLightboxImage ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setLightboxIndex(null)}
-        >
-          <Button
-            type="button"
-            kind="secondary"
-            onClick={() => setLightboxIndex(null)}
-            className="absolute right-1 top-3 rounded-full !bg-transparent !border-none px-3 py-3 !text-xl font-semibold !text-white"
-            icon={faXmark}
-          >
-            {tx("Close")}
-          </Button>
-          {normalizedImages.length > 1 ? (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-4">
-              <Button
-                type="button"
-                kind="secondary"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setLightboxIndex((prev) =>
-                    prev === null
-                      ? 0
-                      : (prev - 1 + normalizedImages.length) %
-                        normalizedImages.length,
-                  );
-                }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
-                icon={faChevronLeft}
-              >
-                {tx("Prev")}
-              </Button>
-              <Button
-                type="button"
-                kind="secondary"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setLightboxIndex((prev) =>
-                    prev === null ? 0 : (prev + 1) % normalizedImages.length,
-                  );
-                }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
-                icon={faChevronRight}
-                iconReverse
-              >
-                {tx("Next")}
-              </Button>
-            </div>
-          ) : null}
-          <img
-            src={activeLightboxImage}
-            alt={tx("Resource preview")}
-            className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }

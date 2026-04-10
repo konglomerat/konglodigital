@@ -64,6 +64,7 @@ type ResourcesListResponse = {
 };
 
 const RESOURCES_PAGE_SIZE = 100;
+const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 const highlightText = (text: string, term: string): ReactNode => {
   const normalizedTerm = term.trim();
@@ -368,7 +369,8 @@ export default function ResourcesPageClient({
           resources
             .map((resource) => resource.type?.trim())
             .filter((resourceType): resourceType is string =>
-              Boolean(resourceType),
+              typeof resourceType === "string" &&
+              resourceType.toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
             ),
         ),
       ).sort((left, right) => left.localeCompare(right)),
@@ -379,6 +381,9 @@ export default function ResourcesPageClient({
       const optionsByValue = new Map<string, string>();
 
       Object.entries(RESOURCE_TYPES).forEach(([value, config]) => {
+        if (value === INVENTORY_HIDDEN_RESOURCE_TYPE) {
+          return;
+        }
         optionsByValue.set(value, config.label);
       });
 
@@ -672,6 +677,30 @@ export default function ResourcesPageClient({
     );
   }, [
     filterByMapView,
+    includeWithinPolygons,
+    replaceFilterParamsInUrl,
+    searchTerm,
+    selectedResourceType,
+  ]);
+
+  useEffect(() => {
+    if (!hasRestoredState) {
+      return;
+    }
+    if (
+      selectedResourceType.trim().toLowerCase() === INVENTORY_HIDDEN_RESOURCE_TYPE
+    ) {
+      setSelectedResourceType("");
+      replaceFilterParamsInUrl(
+        searchTerm.trim(),
+        "",
+        filterByMapView,
+        includeWithinPolygons,
+      );
+    }
+  }, [
+    filterByMapView,
+    hasRestoredState,
     includeWithinPolygons,
     replaceFilterParamsInUrl,
     searchTerm,

@@ -3,6 +3,7 @@ import {
   faLocationDot,
   faUser,
   faCar,
+  faDiagramProject,
   faScrewdriverWrench,
   faShirt,
   faCouch,
@@ -30,6 +31,11 @@ export const RESOURCE_TYPES = {
     label: "Tool",
     icon: faScrewdriverWrench,
     color: "text-violet-500",
+  },
+  project: {
+    label: "Project",
+    icon: faDiagramProject,
+    color: "text-sky-500",
   },
   clothing: {
     label: "Clothing",

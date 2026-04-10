@@ -12,6 +12,46 @@ type AccountUser = {
   metadata: Record<string, unknown>;
 };
 
+const readMetadataText = (metadata: Record<string, unknown>, key: string) => {
+  const value = metadata[key];
+  return typeof value === "string" ? value.trim() : "";
+};
+
+const normalizeEmail = (value?: string | null) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
+};
+
+const bytesToHex = (value: Uint8Array) => {
+  return Array.from(value, (entry) => entry.toString(16).padStart(2, "0")).join(
+    "",
+  );
+};
+
+const buildGravatarUrl = (hash: string) => {
+  return `https://www.gravatar.com/avatar/${hash}?d=mp&s=160`;
+};
+
+const getInitials = (value: string) => {
+  const parts = value
+    .split(/\s+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return "?";
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+};
+
 const parseDebtorAccount = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.trunc(value);
@@ -76,18 +116,21 @@ export default function AccountPage() {
 
   const [user, setUser] = useState<AccountUser | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [accountLoadError, setAccountLoadError] = useState<string | null>(null);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [shortBio, setShortBio] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
   const [campaiError, setCampaiError] = useState<string | null>(null);
   const [campaiDebug, setCampaiDebug] = useState<unknown>(null);
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
+  const [gravatarUrl, setGravatarUrl] = useState("");
+  const [avatarCandidateIndex, setAvatarCandidateIndex] = useState(0);
 
   const fullName = useMemo(() => {
     const first =
@@ -116,29 +159,40 @@ export default function AccountPage() {
     [user],
   );
 
+  const displayName = useMemo(() => {
+    return campaiName || fullName || user?.email?.trim() || "";
+  }, [campaiName, fullName, user?.email]);
+
+  const avatarCandidateUrls = useMemo(() => {
+    return Array.from(new Set([avatarUrl.trim(), gravatarUrl].filter(Boolean)));
+  }, [avatarUrl, gravatarUrl]);
+
+  const activeAvatarUrl = avatarCandidateUrls[avatarCandidateIndex] ?? "";
+  const avatarCandidateKey = avatarCandidateUrls.join("|");
+
   useEffect(() => {
     let active = true;
     const loadUser = async () => {
       setLoadingUser(true);
+      setAccountLoadError(null);
       try {
         const data = await fetchJson<{ user: AccountUser }>("/api/account/me");
         if (!active) {
           return;
         }
         setUser(data.user);
-        setFirstName(
-          typeof data.user.metadata.first_name === "string"
-            ? data.user.metadata.first_name
-            : "",
-        );
-        setLastName(
-          typeof data.user.metadata.last_name === "string"
-            ? data.user.metadata.last_name
-            : "",
-        );
-      } catch {
+        setAvatarUrl(readMetadataText(data.user.metadata, "avatar_url"));
+        setShortBio(readMetadataText(data.user.metadata, "short_bio"));
+      } catch (loadError) {
         if (active) {
           setUser(null);
+          const errorMessage =
+            loadError instanceof Error
+              ? loadError.message
+              : "Kontodaten konnten nicht geladen werden.";
+          if (errorMessage !== "Unauthorized") {
+            setAccountLoadError(errorMessage);
+          }
         }
       } finally {
         if (active) {
@@ -153,6 +207,40 @@ export default function AccountPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const normalizedEmail = normalizeEmail(user?.email);
+
+    if (!normalizedEmail || typeof window === "undefined" || !window.crypto?.subtle) {
+      setGravatarUrl("");
+      return;
+    }
+
+    let active = true;
+
+    const loadGravatarUrl = async () => {
+      const digest = await window.crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(normalizedEmail),
+      );
+
+      if (!active) {
+        return;
+      }
+
+      setGravatarUrl(buildGravatarUrl(bytesToHex(new Uint8Array(digest))));
+    };
+
+    void loadGravatarUrl();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.email]);
+
+  useEffect(() => {
+    setAvatarCandidateIndex(0);
+  }, [avatarCandidateKey]);
 
   useEffect(() => {
     if (!user || linkedDebtorAccount === null) {
@@ -215,7 +303,10 @@ export default function AccountPage() {
       await fetchJson("/api/account/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName }),
+        body: JSON.stringify({
+          avatarUrl,
+          shortBio,
+        }),
       });
       setProfileStatus("Profil gespeichert.");
     } catch (submitError) {
@@ -274,6 +365,13 @@ export default function AccountPage() {
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-zinc-500">Konto wird geladen ...</p>
         </section>
+      ) : accountLoadError ? (
+        <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-rose-900">
+            Konto konnte nicht geladen werden
+          </h2>
+          <p className="mt-2 text-sm text-rose-700">{accountLoadError}</p>
+        </section>
       ) : !user ? (
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-900">
@@ -295,36 +393,48 @@ export default function AccountPage() {
           <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-zinc-900">Profil</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Halte deinen Namen aktuell.
+              Dein Name wird direkt aus Campai übernommen.
             </p>
             <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    Vorname
-                  </label>
-                  <input
-                    name="firstName"
-                    type="text"
-                    required
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              <div className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+                {activeAvatarUrl ? (
+                  <img
+                    src={activeAvatarUrl}
+                    alt={displayName || user.email || "Profilbild"}
+                    className="h-16 w-16 rounded-full object-cover"
+                    onError={() => {
+                      setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
+                    }}
                   />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
+                    {getInitials(displayName || user.email || "?")}
+                  </div>
+                )}
+                <div className="text-sm text-zinc-600">
+                  <p className="font-semibold text-zinc-900">
+                    {displayName || "Dein Profil"}
+                  </p>
+                  <p>
+                    Das Bild und die Kurzbiografie werden bei Projekten als
+                    Autoreninfo angezeigt.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    Nachname
-                  </label>
-                  <input
-                    name="lastName"
-                    type="text"
-                    required
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
-                  />
-                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Name in Campai
+                </label>
+                <input
+                  type="text"
+                  value={campaiName}
+                  readOnly
+                  placeholder="Kein Campai-Kontakt verknüpft"
+                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-600"
+                />
+                <p className="text-xs text-zinc-500">
+                  Wenn der Name geändert werden soll, ändere ihn bitte direkt in Campai.
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -336,6 +446,40 @@ export default function AccountPage() {
                   disabled
                   className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Profilbild URL
+                </label>
+                <input
+                  name="avatarUrl"
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(event) => setAvatarUrl(event.target.value)}
+                  placeholder="https://…"
+                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                />
+                <p className="text-xs text-zinc-500">
+                  Verwende eine öffentlich erreichbare Bild-URL. Wenn keine URL
+                  gesetzt ist oder das Bild nicht lädt, verwenden wir dein
+                  Gravatar anhand deiner E-Mail-Adresse.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Kurzbiografie
+                </label>
+                <textarea
+                  name="shortBio"
+                  value={shortBio}
+                  onChange={(event) => setShortBio(event.target.value)}
+                  rows={4}
+                  placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
+                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                />
+                <p className="text-xs text-zinc-500">
+                  Diese Kurzinfo erscheint in der Autorenbox deiner Projekte.
+                </p>
               </div>
               <Button
                 type="submit"

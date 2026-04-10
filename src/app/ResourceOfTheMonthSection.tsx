@@ -149,7 +149,7 @@ export default async function ResourceOfTheMonthSection() {
                 alt={resourceOfTheMonth.name}
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_160px_0_80px_-20px_#c8df8c]" />
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_140px_90px_-30px_#c8df8c] lg:shadow-[inset_160px_0_80px_-20px_#c8df8c]" />
             </>
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#f3f8d5_0%,transparent_34%),linear-gradient(160deg,#7c9a37_0%,#2f4f1f_100%)]" />

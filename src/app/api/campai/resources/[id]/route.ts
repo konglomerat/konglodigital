@@ -10,6 +10,12 @@ import { hasRight } from "@/lib/permissions";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
+  normalizeProjectLinks,
+  parseProjectLinksJson,
+  type ProjectLink,
+} from "@/lib/project-links";
+import { isImageMimeType, isImageUrl } from "@/lib/resource-media";
+import {
   getPointFeatures,
   normalizeResourceMapFeatures,
   upsertGpsPointFeature,
@@ -64,6 +70,86 @@ const resolveRelatedResourceIds = async (
     .filter((id): id is string => typeof id === "string" && id.length > 0);
 
   return resolvedIds;
+};
+
+const resolveWorkshopResourceId = async (
+  supabase: ReturnType<typeof createSupabaseRouteClient>["supabase"],
+  value: string,
+) => {
+  const normalizedId = value.trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("resources")
+    .select("id, type")
+    .eq("id", normalizedId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Unable to resolve workshop resource.");
+  }
+
+  if (!data || typeof data.id !== "string") {
+    return null;
+  }
+
+  return typeof data.type === "string" &&
+    data.type.trim().toLowerCase() === "place"
+    ? data.id
+    : null;
+};
+
+const getWorkshopResourcesMap = async (
+  supabase: ReturnType<typeof createSupabaseRouteClient>["supabase"],
+  workshopIds: Array<string | null | undefined>,
+) => {
+  const normalizedIds = Array.from(
+    new Set(
+      workshopIds
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (normalizedIds.length === 0) {
+    return new Map<
+      string,
+      { id: string; name?: string; prettyTitle?: string | null }
+    >();
+  }
+
+  const { data, error } = await supabase
+    .from("resources")
+    .select("id, name, pretty_title")
+    .in("id", normalizedIds);
+
+  if (error) {
+    throw new Error(error.message || "Unable to load workshop resources.");
+  }
+
+  return new Map(
+    (data ?? [])
+      .filter(
+        (
+          row,
+        ): row is {
+          id: string;
+          name: string | null;
+          pretty_title: string | null;
+        } => typeof row.id === "string",
+      )
+      .map((row) => [
+        row.id,
+        {
+          id: row.id,
+          name: row.name ?? undefined,
+          prettyTitle: row.pretty_title ?? null,
+        },
+      ]),
+  );
 };
 
 const toCanonicalLinkPair = (sourceId: string, targetId: string) =>
@@ -278,6 +364,14 @@ const readResourcePayload = async (request: NextRequest) => {
       categories: String(formData.get("categories") ?? ""),
       categoryIds: String(formData.get("categoryIds") ?? ""),
       attachable: String(formData.get("attachable") ?? "0") === "1",
+      workshopResourceId: String(formData.get("workshopResourceId") ?? ""),
+      projectLinks: parseProjectLinksJson(
+        typeof formData.get("projectLinks") === "string"
+          ? String(formData.get("projectLinks") ?? "")
+          : null,
+      ),
+      socialMediaConsent:
+        String(formData.get("socialMediaConsent") ?? "0") === "1",
       imageFiles: images,
       imageUrl: undefined as string | null | undefined,
       imageUrls,
@@ -297,6 +391,9 @@ const readResourcePayload = async (request: NextRequest) => {
     categories?: string[] | string;
     categoryIds?: string[] | string;
     attachable?: boolean;
+    workshopResourceId?: string | null;
+    projectLinks?: ProjectLink[] | unknown;
+    socialMediaConsent?: boolean;
     imageUrl?: string | null;
     imageUrls?: string[] | null;
   };
@@ -322,6 +419,9 @@ const readResourcePayload = async (request: NextRequest) => {
       ? body.categoryIds.join(",")
       : (body.categoryIds ?? ""),
     attachable: body.attachable ?? false,
+    workshopResourceId: body.workshopResourceId ?? "",
+    projectLinks: normalizeProjectLinks(body.projectLinks),
+    socialMediaConsent: body.socialMediaConsent ?? false,
     imageFiles: [] as File[],
     imageUrl,
     imageUrls,
@@ -353,6 +453,11 @@ type GpsData = {
   longitude: number | null;
   altitude: number | null;
 };
+
+const isPlaceholderGpsCoordinate = (
+  latitude: number | null,
+  longitude: number | null,
+) => latitude === 0 && longitude === 0;
 
 const toNumber = (value: unknown) => {
   if (typeof value === "number") {
@@ -414,7 +519,11 @@ const extractGpsFromTags = (tags: unknown): GpsData | null => {
   const groupLatitude = gpsGroup ? toNumber(gpsGroup.Latitude) : null;
   const groupLongitude = gpsGroup ? toNumber(gpsGroup.Longitude) : null;
   const groupAltitude = gpsGroup ? toNumber(gpsGroup.Altitude) : null;
-  if (groupLatitude !== null && groupLongitude !== null) {
+  if (
+    groupLatitude !== null &&
+    groupLongitude !== null &&
+    !isPlaceholderGpsCoordinate(groupLatitude, groupLongitude)
+  ) {
     return {
       latitude: groupLatitude,
       longitude: groupLongitude,
@@ -446,6 +555,10 @@ const extractGpsFromTags = (tags: unknown): GpsData | null => {
     ? -longitude
     : longitude;
 
+  if (isPlaceholderGpsCoordinate(signedLatitude, signedLongitude)) {
+    return null;
+  }
+
   let altitude = toNumber(altValue);
   const altRefValue = toNumber(altRef);
   if (altitude !== null && altRefValue === 1) {
@@ -460,7 +573,7 @@ const extractGpsFromTags = (tags: unknown): GpsData | null => {
 };
 
 const extractGpsFromFile = async (file: File) => {
-  if (!file.type.startsWith("image/")) {
+  if (!isImageMimeType(file.type)) {
     return null;
   }
   try {
@@ -478,6 +591,9 @@ const extractGpsFromFile = async (file: File) => {
 };
 
 const extractGpsFromUrl = async (url: string) => {
+  if (!isImageUrl(url)) {
+    return null;
+  }
   try {
     const response = await fetch(url, { cache: "no-store" });
     const buffer = await response.arrayBuffer();
@@ -505,7 +621,7 @@ const getResizeOptions = (mimeType: string) => {
 
 const resizeImageBuffer = async (file: File, maxWidth: number) => {
   const buffer = Buffer.from(await file.arrayBuffer());
-  if (!file.type.startsWith("image/") || maxWidth <= 0) {
+  if (!isImageMimeType(file.type) || maxWidth <= 0) {
     return {
       data: buffer,
       contentType: file.type || "application/octet-stream",
@@ -586,13 +702,22 @@ type StoredCategory = {
   bookingCategoryId?: string | null;
 };
 
+type StoredProjectLink = {
+  label?: string;
+  url?: string;
+};
+
 type ResourceRow = {
   id: string;
   pretty_title?: string | null;
+  owner_id?: string | null;
   name: string;
   description: string | null;
   image: string | null;
   images?: string[] | null;
+  project_links?: StoredProjectLink[] | null;
+  social_media_consent?: boolean | null;
+  workshop_resource_id?: string | null;
   priority?: number | null;
   gps_altitude?: number | null;
   type: string | null;
@@ -602,7 +727,13 @@ type ResourceRow = {
   map_features?: unknown;
 };
 
-const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
+const toResourcePayload = (
+  row: ResourceRow,
+  workshopById = new Map<
+    string,
+    { id: string; name?: string; prettyTitle?: string | null }
+  >(),
+): ResourcePayload => ({
   ...(() => {
     const mapFeatures = normalizeResourceMapFeatures(row.map_features ?? null);
     const pointFeature = getPointFeatures(mapFeatures).find(
@@ -616,10 +747,19 @@ const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
   })(),
   id: row.id,
   prettyTitle: row.pretty_title ?? null,
+  ownerId: row.owner_id ?? null,
   name: row.name,
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
+  projectLinks: normalizeProjectLinks(row.project_links ?? []),
+  socialMediaConsent: row.social_media_consent ?? false,
+  workshopResource:
+    row.workshop_resource_id != null
+      ? (workshopById.get(row.workshop_resource_id) ?? {
+          id: row.workshop_resource_id,
+        })
+      : null,
   gpsAltitude: row.gps_altitude ?? null,
   type: row.type ?? undefined,
   priority: row.priority ?? null,
@@ -633,7 +773,7 @@ const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
     : undefined,
 });
 
-const uploadResourceImage = async (
+const uploadResourceMedia = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   file: File,
   bucket: string,
@@ -702,7 +842,10 @@ export const GET = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const resource = toResourcePayload(row as ResourceRow);
+  const workshopById = await getWorkshopResourcesMap(supabase, [
+    (row as ResourceRow).workshop_resource_id ?? null,
+  ]);
+  const resource = toResourcePayload(row as ResourceRow, workshopById);
   resource.relatedResources =
     (await getRelatedResourcesMap(supabase, [resource.id])).get(resource.id) ??
     [];
@@ -729,7 +872,7 @@ export const PUT = async (
   const { data: existingResource, error: existingResourceError } =
     await supabase
       .from("resources")
-      .select("owner_id, map_features, image, images")
+      .select("owner_id, map_features, image, images, workshop_resource_id")
       .eq("id", params.id)
       .maybeSingle();
 
@@ -761,6 +904,9 @@ export const PUT = async (
   if (!payload.type.trim()) {
     return NextResponse.json({ error: "Type is required." }, { status: 400 });
   }
+  const imageFiles = payload.imageFiles.filter((file) =>
+    isImageMimeType(file.type),
+  );
   const categoryList = payload.categories ? splitList(payload.categories) : [];
   const categoryIdList = payload.categoryIds
     ? splitList(payload.categoryIds)
@@ -786,6 +932,11 @@ export const PUT = async (
   let description = payload.description?.trim() ?? "";
   let name = payload.name.trim();
   let tags = payload.tags ? splitList(payload.tags) : [];
+  const workshopResourceId = await resolveWorkshopResourceId(
+    supabase,
+    payload.workshopResourceId ?? "",
+  );
+  const projectLinks = normalizeProjectLinks(payload.projectLinks ?? []);
   const existingImageUrl =
     typeof existingResource.image === "string" ? existingResource.image : null;
   const existingImageUrlsRaw = normalizeImageUrls(existingResource.images);
@@ -834,7 +985,7 @@ export const PUT = async (
     for (const file of payload.imageFiles) {
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${params.id}/${crypto.randomUUID()}-${safeName}`;
-      const storedPath = await uploadResourceImage(
+      const storedPath = await uploadResourceMedia(
         adminSupabase,
         file,
         storageBucket,
@@ -849,22 +1000,34 @@ export const PUT = async (
     imageUrls = [...baseImages, ...uploadedUrls];
     imageUrl = imageUrls[0] ?? null;
     imageUpdated = true;
-    const vision = await describeImage(request, payload.imageFiles);
-    description = vision.description;
-    if (!name && vision.title) {
-      name = vision.title.trim();
-    }
-    if (tags.length === 0 && vision.tags) {
-      tags = vision.tags.map((tag) => tag.trim()).filter(Boolean);
+    if (imageFiles.length > 0) {
+      const vision = await describeImage(request, imageFiles).catch(
+        () => null,
+      );
+      if (vision) {
+        if (!description && vision.description) {
+          description = vision.description;
+        }
+        if (!name && vision.title) {
+          name = vision.title.trim();
+        }
+        if (tags.length === 0 && vision.tags) {
+          tags = vision.tags.map((tag) => tag.trim()).filter(Boolean);
+        }
+      }
     }
   }
 
   if (imageUpdated) {
-    const primaryUrl = Array.isArray(imageUrls) ? imageUrls[0] : imageUrl;
-    if (primaryUrl) {
-      gpsData = await extractGpsFromUrl(primaryUrl);
-    } else if (payload.imageFiles.length > 0) {
-      gpsData = await extractGpsFromFile(payload.imageFiles[0]);
+    const primaryImageUrl = Array.isArray(imageUrls)
+      ? imageUrls.find((url) => isImageUrl(url)) ?? null
+      : imageUrl && isImageUrl(imageUrl)
+        ? imageUrl
+        : null;
+    if (primaryImageUrl) {
+      gpsData = await extractGpsFromUrl(primaryImageUrl);
+    } else if (imageFiles.length > 0) {
+      gpsData = await extractGpsFromFile(imageFiles[0]);
     }
   }
 
@@ -894,6 +1057,9 @@ export const PUT = async (
     tags: tags.length > 0 ? tags : null,
     categories: storedCategories,
     attachable: payload.attachable,
+    project_links: projectLinks.length > 0 ? projectLinks : null,
+    social_media_consent: payload.socialMediaConsent ?? false,
+    workshop_resource_id: workshopResourceId,
     updated_at: new Date().toISOString(),
   };
 
@@ -935,7 +1101,10 @@ export const PUT = async (
 
   await setResourceLinks(supabase, params.id, relatedResourceIds);
 
-  const resource = toResourcePayload(updated as ResourceRow);
+  const workshopById = await getWorkshopResourcesMap(supabase, [
+    (updated as ResourceRow).workshop_resource_id ?? null,
+  ]);
+  const resource = toResourcePayload(updated as ResourceRow, workshopById);
   resource.relatedResources =
     (await getRelatedResourcesMap(supabase, [resource.id])).get(resource.id) ??
     [];
