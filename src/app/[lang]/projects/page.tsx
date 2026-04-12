@@ -1,13 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "../components/Button";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildProjectPath } from "@/lib/project-path";
-import { getSupabaseRenderedImageUrl, isVideoUrl } from "@/lib/resource-media";
+import {
+  getResourceMediaKindFromUrl,
+  getSupabaseRenderedImageUrl,
+  isVideoUrl,
+} from "@/lib/resource-media";
 import { loadProjects } from "./project-data";
 
 const stripMarkdown = (value: string) =>
@@ -73,9 +79,10 @@ export default async function ProjectsPage() {
               : tx("Noch keine Beschreibung hinterlegt.", "de");
             const heroMediaUrl =
               project.images?.find(Boolean) ?? project.image ?? null;
+            const heroMediaKind = getResourceMediaKindFromUrl(heroMediaUrl);
             const heroMediaIsVideo = isVideoUrl(heroMediaUrl);
             const heroThumbnailUrl =
-              heroMediaUrl && !heroMediaIsVideo
+              heroMediaUrl && heroMediaKind === "image"
                 ? getSupabaseRenderedImageUrl(heroMediaUrl, {
                     width: 960,
                     resize: "cover",
@@ -106,6 +113,13 @@ export default async function ProjectsPage() {
                             {tx("Video", "de")}
                           </span>
                         </>
+                      ) : heroMediaKind === "document" ? (
+                        <div className="flex aspect-[4/3] w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
+                          <FontAwesomeIcon icon={faFilePdf} className="h-10 w-10" />
+                          <span className="mt-3 text-xs font-semibold uppercase tracking-[0.2em]">
+                            PDF
+                          </span>
+                        </div>
                       ) : (
                         <img
                           src={heroThumbnailUrl ?? heroMediaUrl}

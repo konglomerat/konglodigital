@@ -18,6 +18,7 @@ import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
 import { getPointFeatures } from "../map-features";
+import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 
 type Resource = ResourcePayload;
 
@@ -97,6 +98,10 @@ export default function ResourceDetailClient({
       typeValue
     );
   }, [resource?.type]);
+  const renderedDescription = useMemo(
+    () => renderSimpleMarkdown(resource?.description ?? ""),
+    [resource?.description],
+  );
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -217,7 +222,9 @@ export default function ResourceDetailClient({
                 previousLabel={tx("Prev")}
                 nextLabel={tx("Next")}
                 previewLabel={tx("Resource preview")}
-                noMediaLabel={tx("No image")}
+                noMediaLabel={tx("No media", "en")}
+                documentLabel={tx("PDF", "de")}
+                openDocumentLabel={tx("PDF öffnen", "de")}
                 variant="resource"
               />
               <div>
@@ -225,9 +232,10 @@ export default function ResourceDetailClient({
                   {resource.name}
                 </h2>
                 {resource.description ? (
-                  <p className="mt-2 whitespace-pre-line text-sm text-zinc-600">
-                    {resource.description}
-                  </p>
+                  <div
+                    className="markdown-content mt-3 text-sm"
+                    dangerouslySetInnerHTML={{ __html: renderedDescription }}
+                  />
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-3 text-xs text-zinc-600">

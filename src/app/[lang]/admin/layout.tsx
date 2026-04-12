@@ -42,12 +42,28 @@ export default async function AdminLayout({
           Benutzer
         </ActiveNavLink>
         <ActiveNavLink
+          href={localizePathname("/kofi", locale)}
+          exact
+          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+        >
+          KoFi
+        </ActiveNavLink>
+        <ActiveNavLink
           href={localizePathname("/admin/generate-newsletter", locale)}
           exact
           className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
           activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
         >
           Newsletter erzeugen
+        </ActiveNavLink>
+        <ActiveNavLink
+          href={localizePathname("/admin/generate-story", locale)}
+          exact
+          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+        >
+          Storys erzeugen
         </ActiveNavLink>
       </nav>
 

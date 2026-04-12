@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 
 import Button from "../../components/Button";
+import MdxEditorInput from "../../components/MdxEditorInput";
 import ResourceForm from "../ResourceForm";
 import {
   DEFAULT_INDOOR_TILESET_ID,
@@ -48,6 +49,11 @@ import {
 import type { RelatedResourceSelectOption } from "../ResourceForm";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import {
+  getResourceMediaKindFromMimeType,
+  getResourceMediaKindFromUrl,
+  isImageUrl,
+} from "@/lib/resource-media";
 
 type ResourceSummary = {
   id: string;
@@ -635,6 +641,7 @@ export default function ResourceFeaturesEditorClient({
   >([]);
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
   const [featureLayer, setFeatureLayer] = useState("default");
+  const [featureDescription, setFeatureDescription] = useState("");
   const [featureCoordinatesJson, setFeatureCoordinatesJson] = useState("[]");
   const [drawingGeometryType, setDrawingGeometryType] = useState<
     "Polygon" | "Point"
@@ -938,10 +945,12 @@ export default function ResourceFeaturesEditorClient({
   useEffect(() => {
     if (!activeFeature) {
       setFeatureLayer("default");
+      setFeatureDescription("");
       setFeatureCoordinatesJson("[]");
       return;
     }
     setFeatureLayer(activeFeature.layer);
+    setFeatureDescription(activeFeature.description ?? "");
     setFeatureCoordinatesJson(
       JSON.stringify(
         activeFeature.geometryType === "Point"
@@ -1193,18 +1202,16 @@ export default function ResourceFeaturesEditorClient({
 
   useEffect(() => {
     setCoverSourceIndex((previous) => {
-      if (existingImages.length === 0) {
+      const imageSourceCount = existingImages.filter((url) => isImageUrl(url)).length;
+      if (imageSourceCount === 0) {
         return 0;
       }
-      if (previous < 0) {
-        return 0;
-      }
-      if (previous >= existingImages.length) {
+      if (previous < 0 || previous >= imageSourceCount) {
         return 0;
       }
       return previous;
     });
-  }, [existingImages.length]);
+  }, [existingImages]);
 
   const handleRemoveImage = (index: number) => {
     if (index < existingImages.length) {
@@ -1264,6 +1271,19 @@ export default function ResourceFeaturesEditorClient({
     [existingImages, imageFileMeta],
   );
 
+  const mediaKinds = useMemo(
+    () => [
+      ...existingImages.map((url) => getResourceMediaKindFromUrl(url)),
+      ...imageFiles.map((file) => getResourceMediaKindFromMimeType(file.type)),
+    ],
+    [existingImages, imageFiles],
+  );
+
+  const coverSourceImages = useMemo(
+    () => existingImages.filter((url) => isImageUrl(url)),
+    [existingImages],
+  );
+
   const handleResourceFormSubmit = useCallback(
     async (data: ResourceFormValues) => {
       if (!selectedResourceId) {
@@ -1281,7 +1301,7 @@ export default function ResourceFeaturesEditorClient({
       if (!name && imageFiles.length === 0) {
         setResourceFormSaving(false);
         setResourceFormError(
-          tx("Name is required unless an image is provided."),
+          tx("Name is required unless a file is provided.", "en"),
         );
         return;
       }
@@ -1995,12 +2015,14 @@ export default function ResourceFeaturesEditorClient({
         ? {
             id: activeFeature.id,
             layer: featureLayer,
+            description: featureDescription,
             geometryType: "Point",
             point: parsedCoordinates,
           }
         : {
             id: activeFeature.id,
             layer: featureLayer,
+            description: featureDescription,
             geometryType: "Polygon",
             coordinates: parsedCoordinates,
           },
@@ -2494,6 +2516,26 @@ export default function ResourceFeaturesEditorClient({
                   className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900"
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs text-zinc-500">
+                  {tx("Description")}
+                </label>
+                <MdxEditorInput
+                  value={featureDescription}
+                  onChange={setFeatureDescription}
+                  ariaLabel={tx("Map element description", "en")}
+                  placeholder={tx(
+                    "Optional text for this map element. You can also embed already uploaded images.",
+                    "en",
+                  )}
+                  availableImageUrls={existingImages}
+                  embedButtonLabel={tx("Embed uploaded image", "en")}
+                  emptyImageMessage={tx(
+                    "Uploaded images become available here after they have been saved.",
+                    "en",
+                  )}
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -2668,12 +2710,15 @@ export default function ResourceFeaturesEditorClient({
                 setImageFileMeta={setImageFileMeta}
                 onImageProcessingChange={handleLocationDataLoadingChange}
                 imagePreviews={imagePreviews}
+                mediaKinds={mediaKinds}
                 imageMeta={imageMeta}
                 onRemoveImage={handleRemoveImage}
                 onReorderImages={handleReorderImages}
                 onSubmit={handleSubmit(handleResourceFormSubmit)}
                 saving={resourceFormSaving}
                 submitLabel={tx("Update resource")}
+                fileLabel={tx("Files", "en")}
+                descriptionAvailableImageUrls={existingImages}
                 relatedResourceOptions={relatedResourceOptions.filter(
                   (option) => option.value !== selectedResourceId,
                 )}
@@ -2708,15 +2753,15 @@ export default function ResourceFeaturesEditorClient({
               onChange={(event) =>
                 setCoverSourceIndex(Number.parseInt(event.target.value, 10))
               }
-              disabled={existingImages.length === 0}
+              disabled={coverSourceImages.length === 0}
               className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
             >
-              {existingImages.length === 0 ? (
+              {coverSourceImages.length === 0 ? (
                 <option value="0">{tx("No existing images")}</option>
               ) : (
-                existingImages.map((_, index) => (
-                  <option key={`cover-source-${index}`} value={String(index)}>
-                    {tx("Image")} {index + 1}
+                coverSourceImages.map((_, imageIndex) => (
+                  <option key={`cover-source-${imageIndex}`} value={String(imageIndex)}>
+                    {tx("Image")} {imageIndex + 1}
                   </option>
                 ))
               )}
@@ -2739,7 +2784,7 @@ export default function ResourceFeaturesEditorClient({
                 generatingCover ||
                 resourceFormSaving ||
                 saveAllPending ||
-                existingImages.length === 0 ||
+                coverSourceImages.length === 0 ||
                 !selectedResourceId
               }
               onClick={async () => {
@@ -2750,7 +2795,7 @@ export default function ResourceFeaturesEditorClient({
                   setResourceFormError(tx("Choose a resource first."));
                   return;
                 }
-                if (existingImages.length === 0) {
+                if (coverSourceImages.length === 0) {
                   setResourceFormError(
                     tx(
                       "Upload at least one image first, then generate a cover.",

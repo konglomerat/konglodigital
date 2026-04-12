@@ -893,7 +893,10 @@ export const PUT = async (
     isOwner: existingResource.owner_id === data.user.id,
   });
   if (editPermissionError) {
-    return NextResponse.json({ error: editPermissionError }, { status: 403 });
+    return NextResponse.json(
+      { error: editPermissionError },
+      { status: 403 },
+    );
   }
 
   const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";

@@ -16,21 +16,23 @@ import { Reorder } from "motion/react";
 import Select from "react-select";
 import {
   faArrowLeft,
+  faFilePdf,
   faFloppyDisk,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
+import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
 import { buildProjectPath } from "@/lib/project-path";
 import { normalizeProjectLinks } from "@/lib/project-links";
 import {
+  getResourceMediaKindFromMimeType,
   getResourceMediaKindFromUrl,
-  isImageMimeType,
-  isVideoMimeType,
   type ResourceMediaKind,
 } from "@/lib/resource-media";
 import { fetchJson, resizeImage } from "../resources/resource-form-utils";
@@ -161,11 +163,7 @@ const createNewProjectImageItem = (
 ): NewProjectImageItem => ({
   id,
   kind: "new",
-  mediaType: isVideoMimeType(file.type)
-    ? "video"
-    : isImageMimeType(file.type)
-      ? "image"
-      : "unknown",
+  mediaType: getResourceMediaKindFromMimeType(file.type),
   previewUrl: URL.createObjectURL(file),
   file,
 });
@@ -404,6 +402,17 @@ export default function ProjectEditorClient({
     [usedResourceOptions, watchedUsedResourceIds],
   );
 
+  const descriptionImageUrls = useMemo(
+    () =>
+      imageItems
+        .filter(
+          (imageItem): imageItem is ExistingProjectImageItem =>
+            imageItem.kind === "existing" && imageItem.mediaType === "image",
+        )
+        .map((imageItem) => imageItem.imageUrl),
+    [imageItems],
+  );
+
   const handleAddImages = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -425,7 +434,7 @@ export default function ProjectEditorClient({
   const handleStartCrop = async (imageItem: ProjectImageItem) => {
     setFormError(null);
 
-    if (imageItem.mediaType === "video") {
+    if (imageItem.mediaType !== "image") {
       return;
     }
 
@@ -644,19 +653,33 @@ export default function ProjectEditorClient({
 
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              {tx("Beschreibung (Markdown)", "de")}
+              {tx("Beschreibung", "de")}
             </label>
-            <textarea
-              {...register("description")}
-              className="min-h-[320px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-mono text-sm text-zinc-950"
+            <textarea {...register("description")} className="hidden" />
+            <MdxEditorInput
+              value={watch("description") ?? ""}
+              onChange={(nextValue) => {
+                setValue("description", nextValue, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                });
+              }}
+              ariaLabel={tx("Projektbeschreibung", "de")}
               placeholder={tx(
                 "## Idee\n\nBeschreibe hier Entstehung, Ziel, Materialien und Ergebnis des Projekts.",
+                "de",
+              )}
+              availableImageUrls={descriptionImageUrls}
+              embedButtonLabel={tx("Hochgeladenes Bild einbetten", "de")}
+              emptyImageMessage={tx(
+                "Bereits gespeicherte Bilder erscheinen hier zum Einbetten.",
                 "de",
               )}
             />
             <p className="text-xs text-zinc-500">
               {tx(
-                "Unterstützt Überschriften, Listen, Links, Hervorhebungen und kurze Zitate.",
+                "Unterstutzt Uberschriften, Listen, Links, Hervorhebungen und eingebettete Bilder.",
                 "de",
               )}
             </p>
@@ -669,14 +692,14 @@ export default function ProjectEditorClient({
               </label>
               <p className="mt-1 text-xs text-zinc-500">
                 {tx(
-                  "Mehrere Bilder und Videos sind möglich. Bestehende Medien kannst du einzeln entfernen.",
+                  "Mehrere Bilder, Videos und PDFs sind möglich. Bestehende Medien kannst du einzeln entfernen.",
                   "de",
                 )}
               </p>
             </div>
             <input
               type="file"
-              accept="image/*,video/*"
+              accept="image/*,video/*,.pdf,application/pdf"
               multiple
               className="w-full rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm"
               onChange={(event) => {
@@ -721,6 +744,13 @@ export default function ProjectEditorClient({
                             playsInline
                             preload="metadata"
                           />
+                        ) : imageItem.mediaType === "document" ? (
+                          <div className="flex h-28 w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
+                            <FontAwesomeIcon icon={faFilePdf} className="h-8 w-8" />
+                            <span className="mt-2 text-xs font-semibold uppercase tracking-[0.16em]">
+                              PDF
+                            </span>
+                          </div>
                         ) : (
                           <img
                             src={imageItem.previewUrl}
@@ -735,10 +765,12 @@ export default function ProjectEditorClient({
                             ? tx("Titelmedium", "de")
                             : imageItem.mediaType === "video"
                               ? `${tx("Video", "de")} ${index + 1}`
+                              : imageItem.mediaType === "document"
+                                ? `PDF ${index + 1}`
                               : `${tx("Bild", "de")} ${index + 1}`}
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {imageItem.mediaType !== "video" ? (
+                          {imageItem.mediaType === "image" ? (
                             <Button
                               type="button"
                               kind="secondary"

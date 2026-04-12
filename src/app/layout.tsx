@@ -22,6 +22,7 @@ import {
   faRightToBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "@mdxeditor/editor/style.css";
 import "./globals.css";
 import { signOut } from "./actions";
 import { getUserRole, roleCanAccessModule } from "@/lib/roles";
@@ -33,6 +34,7 @@ import ChatwootWidget from "./[lang]/components/ChatwootWidget";
 import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
+import { storyOpenSans } from "@/lib/story-fonts";
 
 config.autoAddCss = false;
 
@@ -159,7 +161,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${storyOpenSans.variable} antialiased`}
       >
         <I18nProvider locale={locale}>
           <ChatwootWidget />

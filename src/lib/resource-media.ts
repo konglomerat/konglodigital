@@ -1,4 +1,4 @@
-export type ResourceMediaKind = "image" | "video" | "unknown";
+export type ResourceMediaKind = "image" | "video" | "document" | "unknown";
 
 type SupabaseRenderResizeMode = "cover" | "contain" | "fill";
 
@@ -29,6 +29,8 @@ const VIDEO_EXTENSIONS = new Set([
   "webm",
 ]);
 
+const DOCUMENT_EXTENSIONS = new Set(["pdf"]);
+
 const getPathname = (value: string) => {
   try {
     return new URL(value).pathname;
@@ -49,6 +51,24 @@ export const isImageMimeType = (value?: string | null) =>
 export const isVideoMimeType = (value?: string | null) =>
   typeof value === "string" && value.startsWith("video/");
 
+export const isPdfMimeType = (value?: string | null) =>
+  typeof value === "string" && value.toLowerCase().includes("pdf");
+
+export const getResourceMediaKindFromMimeType = (
+  value?: string | null,
+): ResourceMediaKind => {
+  if (isImageMimeType(value)) {
+    return "image";
+  }
+  if (isVideoMimeType(value)) {
+    return "video";
+  }
+  if (isPdfMimeType(value)) {
+    return "document";
+  }
+  return "unknown";
+};
+
 export const getResourceMediaKindFromUrl = (
   value?: string | null,
 ): ResourceMediaKind => {
@@ -63,6 +83,9 @@ export const getResourceMediaKindFromUrl = (
   if (VIDEO_EXTENSIONS.has(extension)) {
     return "video";
   }
+  if (DOCUMENT_EXTENSIONS.has(extension)) {
+    return "document";
+  }
   return "unknown";
 };
 
@@ -71,6 +94,9 @@ export const isImageUrl = (value?: string | null) =>
 
 export const isVideoUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "video";
+
+export const isPdfUrl = (value?: string | null) =>
+  getResourceMediaKindFromUrl(value) === "document";
 
 export const getSupabaseRenderedImageUrl = (
   url: string,

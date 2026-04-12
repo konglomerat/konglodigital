@@ -5,6 +5,7 @@ import type { Map } from "mapbox-gl";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import {
   MAPBOX_STYLE,
   MAPBOX_SATELLITE_STYLE,
@@ -64,6 +65,14 @@ const getSupabaseThumbnailUrl = (url: string, width = 72) => {
     return url;
   }
 };
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 const RESOURCE_FEATURES_SOURCE_ID = "resource-features-overlay";
 const RESOURCE_FEATURES_FILL_LAYER_PREFIX = "resource-features-fill";
@@ -195,10 +204,15 @@ export default function ResourcesMapView({
   const markerElementsRef = useRef<
     Record<string, { outer: HTMLDivElement; inner: HTMLDivElement }>
   >({});
+  const resourcesRef = useRef(resources);
   const lastStyleRef = useRef<string | null>(null);
   const mapStyle = isSatellite ? MAPBOX_SATELLITE_STYLE : MAPBOX_STYLE;
   const markerResources = pointResources ?? resources;
   const useCompactMarkers = markerResources.length > 20;
+
+  useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
 
   const getMarkerSize = useCallback((zoom: number, compact: boolean) => {
     const minZoom = 15;
@@ -298,6 +312,7 @@ export default function ResourcesMapView({
             ...polygon,
             properties: {
               ...polygon.properties,
+              featureDescription: feature.description ?? null,
               resourceId: resource.id,
               resourceType,
               resourceName: resource.name,
@@ -420,6 +435,74 @@ export default function ResourcesMapView({
         map.on("style.load", () => {
           void applyOverlay();
           applyResourceFeatureLayers(map);
+        });
+        map.on("click", (event) => {
+          const layerIds =
+            map
+              .getStyle()
+              .layers?.map((layer) => layer.id)
+              .filter((layerId) =>
+                layerId.startsWith(`${RESOURCE_FEATURES_FILL_LAYER_PREFIX}-`),
+              ) ?? [];
+
+          if (layerIds.length === 0) {
+            return;
+          }
+
+          const hit = map.queryRenderedFeatures(event.point, {
+            layers: layerIds,
+          })[0];
+          if (!hit) {
+            return;
+          }
+
+          const resourceId =
+            typeof hit.properties?.resourceId === "string"
+              ? hit.properties.resourceId
+              : null;
+          if (!resourceId) {
+            return;
+          }
+
+          const resource = resourcesRef.current.find(
+            (entry) => entry.id === resourceId,
+          );
+          const detailLink = localizePathname(
+            buildResourcePath({
+              id: resourceId,
+              prettyTitle: resource?.prettyTitle,
+            }),
+            locale,
+          );
+          const featureLayer =
+            typeof hit.properties?.layer === "string"
+              ? hit.properties.layer
+              : "default";
+          const featureDescription =
+            typeof hit.properties?.featureDescription === "string"
+              ? hit.properties.featureDescription
+              : typeof hit.properties?.description === "string"
+                ? hit.properties.description
+                : "";
+          const descriptionHtml = featureDescription
+            ? renderSimpleMarkdown(featureDescription)
+            : "";
+
+          new mapboxgl.Popup({
+            offset: 12,
+            className: "resource-map-popup",
+          })
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `<div class="resource-map-popup__content">` +
+                `<span class="resource-map-popup__eyebrow">${escapeHtml(featureLayer)}</span>` +
+                `<a href="${detailLink}" class="resource-map-popup__title">${escapeHtml(resource?.name ?? resourceId)}</a>` +
+                (descriptionHtml
+                  ? `<div class="markdown-content markdown-content--popup">${descriptionHtml}</div>`
+                  : "") +
+              `</div>`,
+            )
+            .addTo(map);
         });
         mapRef.current = map;
       }

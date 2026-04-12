@@ -17,6 +17,8 @@ import calendarImage from "./calendar.jpg";
 import calendarBwImage from "./calendar-bw.jpg";
 import print3dImage from "./3dprint.jpg";
 import print3dBwImage from "./3dprint-bw.jpg";
+import projectsImage from "./projects.jpg";
+import projectsBwImage from "./projects-bw.jpg";
 import { getServerI18n } from "@/i18n/server";
 
 type QuickAction = {
@@ -234,10 +236,17 @@ export default async function Home() {
                     />
                   </div>
                 ) : action.href === "/projects" ? (
-                  <div className="flex h-[160px] items-center justify-center bg-[linear-gradient(135deg,#e0f2fe_0%,#fef3c7_100%)]">
-                    <span className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-700">
-                      Projekte
-                    </span>
+                  <div className="relative">
+                    <Image
+                      src={projectsBwImage}
+                      alt="Projekte"
+                      className="h-auto w-full multiply negative-multiply"
+                    />
+                    <Image
+                      src={projectsImage}
+                      alt="Projekte"
+                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                    />
                   </div>
                 ) : null}
 

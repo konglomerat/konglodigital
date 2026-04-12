@@ -21,6 +21,7 @@ export type ProjectLink = {
 export type ResourceMapFeature = {
   id: string;
   layer: string;
+  description?: string;
 } & (
   | {
       geometryType: "Polygon";
@@ -222,7 +223,29 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
         return null;
       }
       const row = entry as Record<string, unknown>;
-      if (typeof row.id !== "string" || typeof row.layer !== "string") {
+      const properties =
+        row.properties && typeof row.properties === "object"
+          ? (row.properties as Record<string, unknown>)
+          : null;
+      const id =
+        typeof row.id === "string"
+          ? row.id
+          : typeof properties?.id === "string"
+            ? properties.id
+            : null;
+      const layer =
+        typeof row.layer === "string"
+          ? row.layer
+          : typeof properties?.layer === "string"
+            ? properties.layer
+            : null;
+      const description =
+        typeof row.description === "string"
+          ? row.description.trim() || undefined
+          : typeof properties?.description === "string"
+            ? properties.description.trim() || undefined
+            : undefined;
+      if (!id || !layer) {
         return null;
       }
       const geometryType =
@@ -246,8 +269,9 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
           return null;
         }
         return {
-          id: row.id,
-          layer: row.layer,
+          id,
+          layer,
+          description,
           geometryType: "Point",
           point: [lng, lat],
         };
@@ -273,8 +297,9 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
         return null;
       }
       return {
-        id: row.id,
-        layer: row.layer,
+        id,
+        layer,
+        description,
         geometryType: "Polygon",
         coordinates,
       };

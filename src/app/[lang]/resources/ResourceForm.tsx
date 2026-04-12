@@ -9,11 +9,13 @@ import type {
   UseFormWatch,
 } from "react-hook-form";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Reorder } from "motion/react";
 import Select from "react-select";
 
 import Button from "../components/Button";
+import MdxEditorInput from "../components/MdxEditorInput";
 import ResourceMapCrosshair from "./ResourceMapCrosshair";
 import { RESOURCE_TYPES, type ResourceType } from "./resource-types";
 import { useI18n } from "@/i18n/client";
@@ -24,6 +26,11 @@ import {
   type ImageGps,
   type ResourceFormValues,
 } from "./resource-form-utils";
+import {
+  getResourceMediaKindFromMimeType,
+  getResourceMediaKindFromUrl,
+  type ResourceMediaKind,
+} from "@/lib/resource-media";
 
 type ResourceFormTheme = "dark" | "light";
 
@@ -40,6 +47,7 @@ type ResourceFormProps = {
   setImageFiles: Dispatch<SetStateAction<File[]>>;
   setImageFileMeta: Dispatch<SetStateAction<Array<ImageGps | null>>>;
   imagePreviews: string[];
+  mediaKinds?: ResourceMediaKind[];
   imageMeta?: Array<ImageGps | null>;
   onRemoveImage: (index: number) => void;
   onReorderImages: (order: number[]) => void;
@@ -56,6 +64,7 @@ type ResourceFormProps = {
   gpsLocation?: ImageGps | null;
   onGpsChange?: (gps: ImageGps) => void;
   gpsSuggested?: boolean;
+  descriptionAvailableImageUrls?: string[];
   relatedResourceOptions: RelatedResourceSelectOption[];
   relatedResourceLoading?: boolean;
   showSubmitButton?: boolean;
@@ -99,6 +108,7 @@ export default function ResourceForm({
   setImageFiles,
   setImageFileMeta,
   imagePreviews,
+  mediaKinds,
   onRemoveImage,
   onReorderImages,
   onSubmit,
@@ -107,13 +117,14 @@ export default function ResourceForm({
   submitIcon,
   requireName = true,
   theme = "light",
-  fileLabel = "Images",
+  fileLabel = "Files",
   fileSubLabel,
   fileHelpText,
   maxImageWidth,
   gpsLocation,
   onGpsChange,
   gpsSuggested = false,
+  descriptionAvailableImageUrls,
   relatedResourceOptions,
   relatedResourceLoading = false,
   showSubmitButton = true,
@@ -123,7 +134,8 @@ export default function ResourceForm({
   const { tx } = useI18n(RESOURCES_NAMESPACE);
   const themeStyles = styles[theme];
   const helpText =
-    fileHelpText ?? tx("Choose one or more images (JPG/PNG/WebP).");
+    fileHelpText ??
+    tx("Choose one or more images or PDFs (JPG/PNG/WebP/PDF).", "en");
   const resizeWidth = maxImageWidth ?? 2000;
   const selectedRelatedResourceIds = watch("relatedResourceIds") ?? "";
   const selectedPriority = watch("priority") ?? "3";
@@ -251,10 +263,24 @@ export default function ResourceForm({
 
       <div className="flex flex-col gap-2 md:col-span-2">
         <label className={themeStyles.label}>{tx("Description")}</label>
-        <textarea
-          {...register("description")}
-          className={themeStyles.textarea}
+        <textarea {...register("description")} className="hidden" />
+        <MdxEditorInput
+          value={watch("description") ?? ""}
+          onChange={(nextValue) => {
+            setValue("description", nextValue, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            });
+          }}
+          ariaLabel={tx("Description")}
           placeholder={tx("Optional description")}
+          availableImageUrls={descriptionAvailableImageUrls}
+          embedButtonLabel={tx("Embed uploaded image", "en")}
+          emptyImageMessage={tx(
+            "Uploaded images become available here after they have been saved.",
+            "en",
+          )}
         />
       </div>
 
@@ -372,12 +398,24 @@ export default function ResourceForm({
         </div>
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,.pdf,application/pdf"
           multiple
           onChange={async (event) => {
             const files = Array.from(event.target.files ?? []);
             console.log("ResourceForm: files selected", files);
             if (files.length === 0) {
+              return;
+            }
+            const containsImages = files.some(
+              (file) => getResourceMediaKindFromMimeType(file.type) === "image",
+            );
+            if (!containsImages) {
+              setImageFiles((previous) => [...previous, ...files]);
+              setImageFileMeta((previous) => [
+                ...previous,
+                ...files.map(() => null),
+              ]);
+              event.target.value = "";
               return;
             }
             setIsProcessingImages(true);
@@ -426,6 +464,9 @@ export default function ResourceForm({
               )
               .map((previewIndex, renderIndex) => {
                 const preview = imagePreviews[previewIndex];
+                const mediaKind =
+                  mediaKinds?.[previewIndex] ??
+                  getResourceMediaKindFromUrl(preview);
                 return (
                   <Reorder.Item
                     key={`${preview}-${previewIndex}`}
@@ -448,13 +489,22 @@ export default function ResourceForm({
                     }}
                     className="flex shrink-0 items-center gap-3 rounded-xl border border-zinc-200 bg-white relative"
                   >
-                    <img
-                      src={preview}
-                      alt={`Preview ${renderIndex + 1}`}
-                      draggable={false}
-                      onDragStart={(event) => event.preventDefault()}
-                      className="h-16 w-16 rounded-xl object-cover"
-                    />
+                    {mediaKind === "document" ? (
+                      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+                        <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6" />
+                        <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                          PDF
+                        </span>
+                      </div>
+                    ) : (
+                      <img
+                        src={preview}
+                        alt={`Preview ${renderIndex + 1}`}
+                        draggable={false}
+                        onDragStart={(event) => event.preventDefault()}
+                        className="h-16 w-16 rounded-xl object-cover"
+                      />
+                    )}
 
                     <button
                       type="button"

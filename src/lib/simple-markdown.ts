@@ -24,6 +24,8 @@ const INLINE_CODE_CLASS =
 const LINK_CLASS =
   "text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300";
 
+const IMAGE_CLASS = "w-full rounded-2xl border border-zinc-200";
+
 const STRONG_CLASS = "font-semibold text-zinc-950 dark:text-white";
 
 const EMPHASIS_CLASS = "italic";
@@ -74,6 +76,14 @@ const renderInline = (value: string) => {
   const escaped = escapeHtml(value);
 
   return escaped
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt: string, src: string) => {
+      const sanitized = sanitizeUrl(src);
+      if (!sanitized) {
+        return alt;
+      }
+
+      return `<img class="${IMAGE_CLASS}" src="${escapeHtml(sanitized)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+    })
     .replace(
       /`([^`]+)`/g,
       (_, code: string) => `<code class="${INLINE_CODE_CLASS}">${code}</code>`,

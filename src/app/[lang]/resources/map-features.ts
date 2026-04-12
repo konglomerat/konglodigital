@@ -3,6 +3,7 @@ export type MapPolygonPoint = [number, number];
 export type ResourceMapPolygonFeature = {
   id: string;
   layer: string;
+  description?: string;
   geometryType: "Polygon";
   coordinates: MapPolygonPoint[];
 };
@@ -10,6 +11,7 @@ export type ResourceMapPolygonFeature = {
 export type ResourceMapPointFeature = {
   id: string;
   layer: string;
+  description?: string;
   geometryType: "Point";
   point: MapPolygonPoint;
 };
@@ -49,6 +51,15 @@ const normalizeLayer = (value: unknown) => {
   return trimmed.length > 0 ? trimmed.slice(0, 64) : "default";
 };
 
+const normalizeDescription = (value: unknown) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed.slice(0, 16000) : undefined;
+};
+
 const normalizeGeometryType = (value: unknown) => {
   if (typeof value !== "string") {
     return "Polygon" as const;
@@ -70,23 +81,41 @@ export const normalizeResourceMapFeatures = (
         return null;
       }
       const row = entry as Record<string, unknown>;
+      const properties =
+        row.properties && typeof row.properties === "object"
+          ? (row.properties as Record<string, unknown>)
+          : null;
       const geometry =
         row.geometry && typeof row.geometry === "object"
           ? (row.geometry as Record<string, unknown>)
           : null;
       const geometryType = normalizeGeometryType(
-        row.geometryType ?? geometry?.type ?? row.type,
+        row.geometryType ??
+          geometry?.type ??
+          row.type ??
+          properties?.geometryType,
       );
-      const rawCoordinates = Array.isArray(row.coordinates)
-        ? row.coordinates
-        : Array.isArray(row.points)
-          ? row.points
-          : [];
+      const rawCoordinates =
+        Array.isArray(row.coordinates)
+          ? row.coordinates
+          : Array.isArray(row.points)
+            ? row.points
+            : Array.isArray(geometry?.coordinates)
+              ? geometry.coordinates
+              : [];
 
       const idCandidate =
         typeof row.id === "string" && row.id.trim()
           ? row.id.trim()
+          : typeof properties?.id === "string" && properties.id.trim()
+            ? properties.id.trim()
           : `feature-${index + 1}`;
+      const description = normalizeDescription(
+        row.description ??
+          row.content ??
+          properties?.description ??
+          properties?.content,
+      );
 
       if (geometryType === "Point") {
         const pointCandidate = normalizePoint(
@@ -100,7 +129,8 @@ export const normalizeResourceMapFeatures = (
         }
         return {
           id: idCandidate.slice(0, 80),
-          layer: normalizeLayer(row.layer),
+          layer: normalizeLayer(row.layer ?? properties?.layer),
+          description,
           geometryType: "Point",
           point: pointCandidate,
         };
@@ -116,7 +146,8 @@ export const normalizeResourceMapFeatures = (
 
       return {
         id: idCandidate.slice(0, 80),
-        layer: normalizeLayer(row.layer),
+        layer: normalizeLayer(row.layer ?? properties?.layer),
+        description,
         geometryType: "Polygon",
         coordinates,
       };
@@ -185,6 +216,7 @@ export const toMapFeatureGeoJson = (
       properties: {
         id: feature.id,
         layer: feature.layer,
+        description: feature.description ?? null,
         geometryType: feature.geometryType,
       },
       geometry: {
@@ -204,6 +236,7 @@ export const toMapPointFeatureGeoJson = (
     properties: {
       id: feature.id,
       layer: feature.layer,
+      description: feature.description ?? null,
       geometryType: feature.geometryType,
     },
     geometry: {

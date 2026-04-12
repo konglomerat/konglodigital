@@ -12,6 +12,7 @@ import {
   faClone,
   faChevronLeft,
   faChevronRight,
+  faFilePdf,
   faXmark,
   faList,
   faMagnifyingGlass,
@@ -38,6 +39,7 @@ import {
 } from "../components/ui/tooltip";
 import ResourcesMapView from "./ResourcesMapView";
 import { RESOURCE_TYPES } from "./resource-types";
+import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 
 type Resource = ResourcePayload;
 
@@ -148,7 +150,9 @@ const ResourceCard = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const hasCarousel = images.length > 1;
   const displayImages = images.map((image) =>
-    getSupabaseThumbnailUrl(image, 900),
+    getResourceMediaKindFromUrl(image) === "image"
+      ? getSupabaseThumbnailUrl(image, 900)
+      : image,
   );
   const slideWidth = "100%";
   const slideGap = "0rem";
@@ -209,11 +213,20 @@ const ResourceCard = ({
                   key={`${resource.id}-slide-${index}`}
                   className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-xl bg-zinc-100"
                 >
-                  <img
-                    src={image}
-                    alt={resource.name}
-                    className="block h-full w-full object-cover"
-                  />
+                  {getResourceMediaKindFromUrl(images[index]) === "document" ? (
+                    <div className="flex h-full w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
+                      <FontAwesomeIcon icon={faFilePdf} className="h-9 w-9" />
+                      <span className="mt-3 text-xs font-semibold uppercase tracking-[0.2em]">
+                        PDF
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={image}
+                      alt={resource.name}
+                      className="block h-full w-full object-cover"
+                    />
+                  )}
                 </div>
               ))}
             </motion.div>

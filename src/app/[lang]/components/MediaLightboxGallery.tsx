@@ -6,11 +6,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   faChevronLeft,
   faChevronRight,
+  faFilePdf,
+  faUpRightFromSquare,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "./Button";
-import { isVideoUrl } from "@/lib/resource-media";
+import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 
 type MediaLightboxGalleryProps = {
   media: string[];
@@ -21,6 +24,8 @@ type MediaLightboxGalleryProps = {
   nextLabel: string;
   previewLabel?: string;
   noMediaLabel?: string | null;
+  documentLabel?: string;
+  openDocumentLabel?: string;
   variant: "project" | "resource";
 };
 
@@ -33,7 +38,9 @@ const renderMedia = (
     autoPlay?: boolean;
   },
 ) => {
-  if (isVideoUrl(mediaUrl)) {
+  const mediaKind = getResourceMediaKindFromUrl(mediaUrl);
+
+  if (mediaKind === "video") {
     return (
       <video
         src={mediaUrl}
@@ -49,6 +56,20 @@ const renderMedia = (
     );
   }
 
+  if (mediaKind === "document") {
+    return (
+      <div
+        aria-label={alt}
+        className={`${className} flex flex-col items-center justify-center bg-rose-50 text-rose-700`}
+      >
+        <FontAwesomeIcon icon={faFilePdf} className="h-10 w-10" />
+        <span className="mt-3 text-sm font-semibold uppercase tracking-[0.2em]">
+          PDF
+        </span>
+      </div>
+    );
+  }
+
   return <img src={mediaUrl} alt={alt} className={className} />;
 };
 
@@ -61,6 +82,8 @@ export default function MediaLightboxGallery({
   nextLabel,
   previewLabel,
   noMediaLabel = null,
+  documentLabel = "PDF",
+  openDocumentLabel = "Open document",
   variant,
 }: MediaLightboxGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -246,7 +269,7 @@ export default function MediaLightboxGallery({
               </Button>
             </div>
           ) : null}
-          {isVideoUrl(activeLightboxMedia) ? (
+          {getResourceMediaKindFromUrl(activeLightboxMedia) === "video" ? (
             <video
               src={activeLightboxMedia}
               controls
@@ -259,6 +282,32 @@ export default function MediaLightboxGallery({
               className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl bg-zinc-950 object-contain shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             />
+          ) : getResourceMediaKindFromUrl(activeLightboxMedia) ===
+            "document" ? (
+            <div
+              className="flex w-full max-w-xl flex-col items-center rounded-2xl bg-white px-8 py-10 text-center shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <FontAwesomeIcon
+                icon={faFilePdf}
+                className="h-14 w-14 text-rose-700"
+              />
+              <p className="mt-4 text-lg font-semibold text-zinc-950">
+                {documentLabel}
+              </p>
+              <a
+                href={activeLightboxMedia}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                <FontAwesomeIcon
+                  icon={faUpRightFromSquare}
+                  className="h-3.5 w-3.5"
+                />
+                {openDocumentLabel}
+              </a>
+            </div>
           ) : (
             <img
               src={activeLightboxMedia}

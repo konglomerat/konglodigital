@@ -20,6 +20,10 @@ import type { RelatedResourceSelectOption } from "./ResourceForm";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import {
+  getResourceMediaKindFromMimeType,
+  getResourceMediaKindFromUrl,
+} from "@/lib/resource-media";
 
 type ModeConfig = {
   title: string;
@@ -38,7 +42,7 @@ const config: ModeConfig = {
   submitLabel: "Create resource",
   submitIcon: faPlus,
   theme: "dark",
-  fileHelpText: "Choose one or more images (JPG/PNG/WebP).",
+  fileHelpText: "Choose one or more images or PDFs (JPG/PNG/WebP/PDF).",
   maxImageWidth: 2000,
   headerLinks: [
     {
@@ -198,7 +202,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
     const type = data.type.trim();
     if (!name && imageFiles.length === 0) {
       setSaving(false);
-      setFormError(tx("Name is required unless an image is provided."));
+      setFormError(tx("Name is required unless a file is provided.", "en"));
       return;
     }
     if (!type) {
@@ -299,6 +303,14 @@ export default function ResourceEditorPage({}: Record<string, never>) {
     [existingImages, imageFileMeta],
   );
 
+  const mediaKinds = useMemo(
+    () => [
+      ...existingImages.map((url) => getResourceMediaKindFromUrl(url)),
+      ...imageFiles.map((file) => getResourceMediaKindFromMimeType(file.type)),
+    ],
+    [existingImages, imageFiles],
+  );
+
   const relatedResourceOptions = useMemo<RelatedResourceSelectOption[]>(() => {
     const hasLocation =
       location &&
@@ -390,6 +402,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
             setImageFiles={setImageFiles}
             setImageFileMeta={setImageFileMeta}
             imagePreviews={imagePreviews}
+            mediaKinds={mediaKinds}
             imageMeta={imageMeta}
             onRemoveImage={handleRemoveImage}
             onReorderImages={handleReorderImages}
@@ -399,7 +412,8 @@ export default function ResourceEditorPage({}: Record<string, never>) {
             submitIcon={config.submitIcon}
             requireName={imageFiles.length === 0}
             theme={config.theme}
-            fileLabel={tx("Images")}
+            fileLabel={tx("Files", "en")}
+            descriptionAvailableImageUrls={existingImages}
             fileHelpText={
               config.fileHelpText ? tx(config.fileHelpText) : undefined
             }

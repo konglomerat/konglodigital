@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
+import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import heroHelloImage from "../../../hero-hello.jpg";
 import Button from "../../components/Button";
@@ -16,7 +18,12 @@ import { buildProjectPath } from "@/lib/project-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
-import { getSupabaseRenderedImageUrl, isVideoUrl } from "@/lib/resource-media";
+import {
+  getResourceMediaKindFromUrl,
+  getSupabaseRenderedImageUrl,
+  isImageUrl,
+  isVideoUrl,
+} from "@/lib/resource-media";
 import { loadProjectByIdentifier } from "../project-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 
@@ -74,9 +81,8 @@ const getProjectOgImage = (
 ) => {
   const projectImage =
     project?.images?.find(
-      (media): media is string =>
-        typeof media === "string" && !isVideoUrl(media),
-    ) ?? (project?.image && !isVideoUrl(project.image) ? project.image : null);
+      (media): media is string => typeof media === "string" && isImageUrl(media),
+    ) ?? (project?.image && isImageUrl(project.image) ? project.image : null);
 
   if (projectImage) {
     return getSupabaseRenderedImageUrl(projectImage, { width: 1600 });
@@ -198,9 +204,9 @@ export default async function ProjectDetailPage({
       (media): media is string => typeof media === "string",
     ) ?? (project.image ? [project.image] : []);
   const heroPreviewMedia = heroMedia.map((mediaUrl) =>
-    isVideoUrl(mediaUrl)
-      ? mediaUrl
-      : getSupabaseRenderedImageUrl(mediaUrl, { width: 1600 }),
+    getResourceMediaKindFromUrl(mediaUrl) === "image"
+      ? getSupabaseRenderedImageUrl(mediaUrl, { width: 1600 })
+      : mediaUrl,
   );
   const renderedMarkdown = renderSimpleMarkdown(project.description ?? "");
   const hasTags = Boolean(project.tags && project.tags.length > 0);
@@ -219,7 +225,7 @@ export default async function ProjectDetailPage({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
               {project.workshopResource?.name ?? tx("Projekt", "de")}
             </p>
-            <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-tight text-zinc-950 md:text-5xl">
+            <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100 md:text-5xl">
               {project.name}
             </h1>
           </div>
@@ -263,6 +269,8 @@ export default async function ProjectDetailPage({
             closeLabel={tx("Schließen", "de")}
             previousLabel={tx("Zurück", "de")}
             nextLabel={tx("Weiter", "de")}
+            documentLabel={tx("PDF", "de")}
+            openDocumentLabel={tx("PDF öffnen", "de")}
             variant="project"
           />
 
@@ -418,11 +426,17 @@ export default async function ProjectDetailPage({
                     className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700 transition hover:border-blue-200 hover:text-blue-700"
                   >
                     {resource.image ? (
+                      getResourceMediaKindFromUrl(resource.image) === "document" ? (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+                          <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6" />
+                        </div>
+                      ) : (
                       <img
                         src={resource.image}
                         alt={resource.name ?? resource.id}
                         className="h-14 w-14 rounded-xl object-cover"
                       />
+                      )
                     ) : (
                       <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-200 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
                         {tx("Bild", "de")}
