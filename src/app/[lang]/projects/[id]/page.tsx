@@ -81,7 +81,8 @@ const getProjectOgImage = (
 ) => {
   const projectImage =
     project?.images?.find(
-      (media): media is string => typeof media === "string" && isImageUrl(media),
+      (media): media is string =>
+        typeof media === "string" && isImageUrl(media),
     ) ?? (project?.image && isImageUrl(project.image) ? project.image : null);
 
   if (projectImage) {
@@ -426,16 +427,20 @@ export default async function ProjectDetailPage({
                     className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700 transition hover:border-blue-200 hover:text-blue-700"
                   >
                     {resource.image ? (
-                      getResourceMediaKindFromUrl(resource.image) === "document" ? (
+                      getResourceMediaKindFromUrl(resource.image) ===
+                      "document" ? (
                         <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
-                          <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6" />
+                          <FontAwesomeIcon
+                            icon={faFilePdf}
+                            className="h-6 w-6"
+                          />
                         </div>
                       ) : (
-                      <img
-                        src={resource.image}
-                        alt={resource.name ?? resource.id}
-                        className="h-14 w-14 rounded-xl object-cover"
-                      />
+                        <img
+                          src={resource.image}
+                          alt={resource.name ?? resource.id}
+                          className="h-14 w-14 rounded-xl object-cover"
+                        />
                       )
                     ) : (
                       <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-200 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">

@@ -295,9 +295,7 @@ export default function ResourceForm({
       </div>
 
       <div className="flex flex-col gap-2 md:col-span-2">
-        <label className={themeStyles.label}>
-          {tx("Related resources")}
-        </label>
+        <label className={themeStyles.label}>{tx("Related resources")}</label>
         <input type="hidden" {...register("relatedResourceIds")} />
         <Select<RelatedResourceSelectOption, true>
           isMulti
@@ -336,10 +334,7 @@ export default function ResourceForm({
           noOptionsMessage={() => tx("No resources found")}
         />
         <p className={themeStyles.fileHelp}>
-          {tx(
-            "Search by name and select one or more related resources.",
-            "en",
-          )}
+          {tx("Search by name and select one or more related resources.", "en")}
         </p>
       </div>
 

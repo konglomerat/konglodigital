@@ -95,21 +95,20 @@ export const normalizeResourceMapFeatures = (
           row.type ??
           properties?.geometryType,
       );
-      const rawCoordinates =
-        Array.isArray(row.coordinates)
-          ? row.coordinates
-          : Array.isArray(row.points)
-            ? row.points
-            : Array.isArray(geometry?.coordinates)
-              ? geometry.coordinates
-              : [];
+      const rawCoordinates = Array.isArray(row.coordinates)
+        ? row.coordinates
+        : Array.isArray(row.points)
+          ? row.points
+          : Array.isArray(geometry?.coordinates)
+            ? geometry.coordinates
+            : [];
 
       const idCandidate =
         typeof row.id === "string" && row.id.trim()
           ? row.id.trim()
           : typeof properties?.id === "string" && properties.id.trim()
             ? properties.id.trim()
-          : `feature-${index + 1}`;
+            : `feature-${index + 1}`;
       const description = normalizeDescription(
         row.description ??
           row.content ??

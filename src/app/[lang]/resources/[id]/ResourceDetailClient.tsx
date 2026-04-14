@@ -204,9 +204,7 @@ export default function ResourceDetailClient({
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           {!resource ? (
-            <p className="text-sm text-zinc-500">
-              {tx("Resource not found.")}
-            </p>
+            <p className="text-sm text-zinc-500">{tx("Resource not found.")}</p>
           ) : (
             <div className="flex flex-col gap-6">
               <MediaLightboxGallery

@@ -746,7 +746,10 @@ export default function ProjectEditorClient({
                           />
                         ) : imageItem.mediaType === "document" ? (
                           <div className="flex h-28 w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
-                            <FontAwesomeIcon icon={faFilePdf} className="h-8 w-8" />
+                            <FontAwesomeIcon
+                              icon={faFilePdf}
+                              className="h-8 w-8"
+                            />
                             <span className="mt-2 text-xs font-semibold uppercase tracking-[0.16em]">
                               PDF
                             </span>
@@ -767,7 +770,7 @@ export default function ProjectEditorClient({
                               ? `${tx("Video", "de")} ${index + 1}`
                               : imageItem.mediaType === "document"
                                 ? `PDF ${index + 1}`
-                              : `${tx("Bild", "de")} ${index + 1}`}
+                                : `${tx("Bild", "de")} ${index + 1}`}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {imageItem.mediaType === "image" ? (

@@ -872,10 +872,12 @@ export default function ResourceFeaturesEditorClient({
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/campai/resources/${selectedResourceId}`,
+      const response = await fetch(
+        `/api/campai/resources/${selectedResourceId}`,
         {
           method: "DELETE",
-        });
+        },
+      );
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
         throw new Error(data.error ?? tx("Unable to delete resource."));
@@ -1202,7 +1204,9 @@ export default function ResourceFeaturesEditorClient({
 
   useEffect(() => {
     setCoverSourceIndex((previous) => {
-      const imageSourceCount = existingImages.filter((url) => isImageUrl(url)).length;
+      const imageSourceCount = existingImages.filter((url) =>
+        isImageUrl(url),
+      ).length;
       if (imageSourceCount === 0) {
         return 0;
       }
@@ -2094,7 +2098,9 @@ export default function ResourceFeaturesEditorClient({
     }
     if (isLocationDataLoadingRef.current || isLocationDataLoading) {
       setResourceFormError(
-        tx("Wait until image location data has finished loading before saving."),
+        tx(
+          "Wait until image location data has finished loading before saving.",
+        ),
       );
       return;
     }
@@ -2328,12 +2334,13 @@ export default function ResourceFeaturesEditorClient({
         <aside className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
             <p className="text-xs text-zinc-600">
-              {tx("Fast actions:")} {" "}
+              {tx("Fast actions:")}{" "}
               <span className="font-semibold text-zinc-800">⌘/Ctrl+S</span>{" "}
               {tx("Save")} ·{" "}
               <span className="font-semibold text-zinc-800">D</span>{" "}
               {tx("Draw toggle")} ·{" "}
-              <span className="font-semibold text-zinc-800">P</span> {tx("Point")} ·{" "}
+              <span className="font-semibold text-zinc-800">P</span>{" "}
+              {tx("Point")} ·{" "}
               <span className="font-semibold text-zinc-800">G</span>{" "}
               {tx("Polygon")} ·{" "}
               <span className="font-semibold text-zinc-800">Enter</span>{" "}
@@ -2362,9 +2369,7 @@ export default function ResourceFeaturesEditorClient({
                 onClick={handleToggleDrawing}
                 disabled={!selectedResourceId}
               >
-                {isDrawing
-                  ? tx("Stop drawing")
-                  : tx("Start drawing")}
+                {isDrawing ? tx("Stop drawing") : tx("Start drawing")}
               </Button>
             </div>
           </div>
@@ -2440,9 +2445,7 @@ export default function ResourceFeaturesEditorClient({
               ) : null}
             </div>
             {mapFeatures.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                {tx("No features yet.")}
-              </p>
+              <p className="text-sm text-zinc-500">{tx("No features yet.")}</p>
             ) : (
               <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
                 {mapFeatures.map((feature, index) => {
@@ -2672,9 +2675,7 @@ export default function ResourceFeaturesEditorClient({
               icon={isEditResourceCollapsed ? faChevronDown : faChevronUp}
               onClick={() => setIsEditResourceCollapsed((value) => !value)}
             >
-              {isEditResourceCollapsed
-                ? tx("Expand")
-                : tx("Collapse")}
+              {isEditResourceCollapsed ? tx("Expand") : tx("Collapse")}
             </Button>
           </div>
         </div>
@@ -2760,7 +2761,10 @@ export default function ResourceFeaturesEditorClient({
                 <option value="0">{tx("No existing images")}</option>
               ) : (
                 coverSourceImages.map((_, imageIndex) => (
-                  <option key={`cover-source-${imageIndex}`} value={String(imageIndex)}>
+                  <option
+                    key={`cover-source-${imageIndex}`}
+                    value={String(imageIndex)}
+                  >
                     {tx("Image")} {imageIndex + 1}
                   </option>
                 ))
@@ -2857,13 +2861,11 @@ export default function ResourceFeaturesEditorClient({
                 }
               }}
             >
-              {generatingCover
-                ? tx("Generating...")
-                : tx("Generate cover")}
+              {generatingCover ? tx("Generating...") : tx("Generate cover")}
             </Button>
             {existingImages.length === 0 ? (
               <p className="text-xs text-zinc-500">
-                {tx("Add images and click \"Save all\" first.")}
+                {tx('Add images and click "Save all" first.')}
               </p>
             ) : null}
           </div>

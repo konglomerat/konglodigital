@@ -115,7 +115,10 @@ export default async function ProjectsPage() {
                         </>
                       ) : heroMediaKind === "document" ? (
                         <div className="flex aspect-[4/3] w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
-                          <FontAwesomeIcon icon={faFilePdf} className="h-10 w-10" />
+                          <FontAwesomeIcon
+                            icon={faFilePdf}
+                            className="h-10 w-10"
+                          />
                           <span className="mt-3 text-xs font-semibold uppercase tracking-[0.2em]">
                             PDF
                           </span>

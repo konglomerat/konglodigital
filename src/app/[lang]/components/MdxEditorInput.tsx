@@ -19,10 +19,7 @@ import {
   UndoRedo,
 } from "@mdxeditor/editor";
 
-import {
-  getSupabaseRenderedImageUrl,
-  isImageUrl,
-} from "@/lib/resource-media";
+import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
 
 type MdxEditorInputProps = {
   value: string;
@@ -141,7 +138,9 @@ export default function MdxEditorInput({
           quotePlugin(),
           markdownShortcutPlugin(),
           imagePlugin({
-            imageAutocompleteSuggestions: imageOptions.map((image) => image.url),
+            imageAutocompleteSuggestions: imageOptions.map(
+              (image) => image.url,
+            ),
           }),
           toolbarPlugin({
             toolbarClassName: "mdx-editor-input__toolbar",

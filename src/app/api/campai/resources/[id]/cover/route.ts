@@ -202,10 +202,7 @@ export const POST = async (
       isOwner: existing.owner_id === data.user.id,
     });
     if (editPermissionError) {
-      return NextResponse.json(
-        { error: editPermissionError },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: editPermissionError }, { status: 403 });
     }
   }
 

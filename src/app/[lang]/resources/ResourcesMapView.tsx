@@ -6,10 +6,7 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
-import {
-  MAPBOX_STYLE,
-  MAPBOX_SATELLITE_STYLE,
-} from "./mapbox-basemap";
+import { MAPBOX_STYLE, MAPBOX_SATELLITE_STYLE } from "./mapbox-basemap";
 import {
   getPointFeatures,
   toMapFeatureGeoJson,
@@ -341,7 +338,8 @@ export default function ResourcesMapView({
 
   const haveSameResourceIds = useCallback(
     (left: string[], right: string[]) =>
-      left.length === right.length && left.every((id, index) => id === right[index]),
+      left.length === right.length &&
+      left.every((id, index) => id === right[index]),
     [],
   );
 
@@ -500,7 +498,7 @@ export default function ResourcesMapView({
                 (descriptionHtml
                   ? `<div class="markdown-content markdown-content--popup">${descriptionHtml}</div>`
                   : "") +
-              `</div>`,
+                `</div>`,
             )
             .addTo(map);
         });
@@ -617,7 +615,10 @@ export default function ResourcesMapView({
 
         markerElement.appendChild(markerInner);
 
-        const detailLink = localizePathname(buildResourcePath(location), locale);
+        const detailLink = localizePathname(
+          buildResourcePath(location),
+          locale,
+        );
         const popupHtml = location.image
           ? `<div style="display:flex; flex-direction:column;">
                <img src="${location.image}" alt="${location.name}" style="width:200px; height:200px; object-fit:cover; border-radius:0;" />

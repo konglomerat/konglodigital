@@ -245,9 +245,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       }
     } catch (error) {
       setFormError(
-        error instanceof Error
-          ? error.message
-          : tx("Unable to save resource."),
+        error instanceof Error ? error.message : tx("Unable to save resource."),
       );
     } finally {
       setSaving(false);
@@ -364,9 +362,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
             <h1 className="text-3xl font-semibold tracking-tight">
               {tx(config.title)}
             </h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              {tx(config.subtitle)}
-            </p>
+            <p className="mt-2 text-sm text-zinc-600">{tx(config.subtitle)}</p>
           </div>
           <div className="flex items-center gap-2">
             {config.headerLinks.map((link) => (
