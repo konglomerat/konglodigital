@@ -11,6 +11,7 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 type ButtonKind =
   | "primary"
   | "secondary"
+  | "outline"
   | "danger-primary"
   | "danger-secondary";
 
@@ -50,6 +51,7 @@ const sizeClassName: Record<ButtonSize, string> = {
 const kindClassName: Record<ButtonKind, string> = {
   primary: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
   secondary: "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
+  outline: "border-blue-600 bg-transparent text-blue-600 hover:bg-blue-50",
   "danger-primary":
     "border-transparent bg-rose-600 text-white hover:bg-rose-700",
   "danger-secondary": "border-rose-200 bg-white text-rose-700 hover:bg-rose-50",
