@@ -1,38 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { jsPDF } from "jspdf";
-import { PDFDocument } from "pdf-lib";
-import SelectInput from "react-select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBolt,
-  faBook,
-  faBullseye,
-  faBuilding,
-  faCalendarCheck,
-  faCamera,
-  faCube,
-  faFileInvoice,
-  faFlask,
-  faFolderOpen,
-  faGear,
-  faHeart,
-  faLayerGroup,
   faArrowTrendDown,
   faArrowTrendUp,
+  faCalendarCheck,
+  faCheck,
+  faFileInvoice,
+  faFolderOpen,
   faMoneyBillTransfer,
-  faWandMagicSparkles,
   faPlus,
-  faPrint,
-  faShirt,
-  faStore,
-  faTrash,
-  faTree,
-  faUser,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Button from "../components/Button";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
@@ -44,105 +26,78 @@ import {
   Textarea,
 } from "../components/ui/form";
 
-type KontoOption = "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
-type InvoiceState = "offen" | "bezahlt";
 type BookingType = "ausgabe" | "einnahme";
-
-type AreaOption = {
+type AssociationAccount = "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
+type CostCenterOption = {
   value: string;
   label: string;
-  icon: IconProp;
 };
+type CreditorPaymentMethodType = "creditTransfer" | "cash";
 
 type FormValues = {
-  email: string;
   issueDate: string;
-  senderOrReceiver: string;
-  receiptNumber?: string;
-  orderNumber?: string;
   bookingText: string;
+  receiptNumber: string;
   evidence?: FileList;
+  noEvidence: boolean;
+  eigenbelegReason?: string;
   bookingType: BookingType;
   amountEuro: string;
-  accountCash: KontoOption;
-  area?: string;
-  project?: string;
-  postens: Array<{ title: string; amountEuro?: string }>;
+  counterpartyName: string;
+  counterpartyAccount: string;
+  associationArea: string;
+  associationAccount: AssociationAccount;
   notes?: string;
-  invoiceState: InvoiceState;
-  accountOwner?: string;
-  iban?: string;
-  inSystem: "im-system" | "sonstiges";
+  alreadyRefunded: boolean;
 };
 
+type ReceiptValues = {
+  transactionDate: string;
+  occasion: string;
+  reason: string;
+  documentReference?: string;
+  income?: string;
+  expense?: string;
+  senderName: string;
+  senderAccount?: string;
+  senderArea?: string;
+  receiverName: string;
+  receiverAccount?: string;
+  receiverArea?: string;
+  invoiceStatus: "offen" | "bezahlt";
+  notes?: string;
+};
+
+const associationName = "Konglomerat e.V.";
 const amountPattern = /^\d+(?:[.,]\d{1,2})?$/;
 
-const areaOptions: AreaOption[] = [
-  { value: "3D-DRUCK", label: "3D-Druck", icon: faCube },
-  { value: "DRUCK", label: "Druck", icon: faPrint },
-  { value: "_BASIS", label: "_Basis", icon: faLayerGroup },
-  { value: "BETON", label: "Beton", icon: faBuilding },
-  { value: "CNC", label: "CNC", icon: faGear },
-  { value: "ELEKTRO", label: "Elektro", icon: faBolt },
-  { value: "FOTO/FILM", label: "Foto/Film", icon: faCamera },
-  { value: "HOLZ", label: "Holz", icon: faTree },
-  { value: "KUSS", label: "Kuss", icon: faHeart },
-  { value: "LASER", label: "Laser", icon: faBullseye },
-  { value: "N-BIBO", label: "N-Bibo", icon: faBook },
-  { value: "PRINTSHOP", label: "Printshop", icon: faStore },
-  { value: "TEXTIL", label: "Textil", icon: faShirt },
-  { value: "ZÜNDSTOFFE", label: "Zündstoffe", icon: faFlask },
+const associationAccountOptions: Array<{
+  value: AssociationAccount;
+  label: string;
+}> = [
+  { value: "K0004 B", label: "K0004 B" },
+  { value: "K0104 A", label: "K0104 A" },
+  { value: "BAR", label: "BAR" },
+  { value: "PAYPAL", label: "PAYPAL" },
+  { value: "Kreditkarte", label: "Kreditkarte" },
 ];
 
-const testValues: Omit<FormValues, "evidence"> = {
-  email: "test@konglomerat.org",
-  issueDate: "2026-02-26",
-  senderOrReceiver: "Amazon EU S.à r.l.",
-  receiptNumber: "RE-2026-00981",
-  orderNumber: "AMZ-774-9123",
-  bookingText: "Materialbestellung für Werkbereich Holz",
-  bookingType: "ausgabe",
-  amountEuro: "89,90",
-  accountCash: "K0104 A",
-  area: "HOLZ",
-  project: "#WerkbereichHolz",
-  postens: [
-    { title: "Holzplatten Birke", amountEuro: "59,90" },
-    { title: "Schrauben und Verbrauchsmaterial", amountEuro: "30,00" },
-  ],
-  notes: "Bestellung über Amazon Marketplace",
-  invoiceState: "bezahlt",
-  accountOwner: "Konglomerat e.V.",
-  iban: "DE12500105170648489890",
-  inSystem: "im-system",
-};
+async function fetchJson<T>(url: string, init?: RequestInit) {
+  const response = await fetch(url, init);
+  const data = (await response.json().catch(() => ({}))) as { error?: string } & T;
+  if (!response.ok) {
+    throw new Error(data.error ?? "Request failed");
+  }
+  return data;
+}
 
 function normalizeValue(value?: string) {
   if (!value) {
     return "-";
   }
+
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : "-";
-}
-
-function parseEuroToCents(value?: string) {
-  if (!value) {
-    return 0;
-  }
-  const normalized = value.replace(/\./g, "").replace(",", ".").trim();
-  const parsed = Number.parseFloat(normalized);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
-  return Math.round(parsed * 100);
-}
-
-function formatCentsToEuro(cents: number) {
-  const value = Math.max(0, cents) / 100;
-  return value.toLocaleString("de-DE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -155,153 +110,181 @@ function bytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-function isPdfFile(file: File) {
-  return (
-    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-  );
+function formatAmount(value?: string) {
+  if (!value || !value.trim()) {
+    return "-";
+  }
+
+  const normalized = value.replace(/\./g, "").replace(",", ".").trim();
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed)) {
+    return value.trim();
+  }
+
+  return parsed.toLocaleString("de-DE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-function createBuchungPdf(values: FormValues) {
+function generateEigenbelegNumber(date: string) {
+  const baseDate = date ? new Date(date) : new Date();
+  const safeDate = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
+  const yyyy = safeDate.getFullYear();
+  const mm = String(safeDate.getMonth() + 1).padStart(2, "0");
+  const dd = String(safeDate.getDate()).padStart(2, "0");
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mi = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return `EGB-${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+}
+
+function createEigenbelegPdf(values: ReceiptValues) {
   const document = new jsPDF({ unit: "mm", format: "a4" });
   const pageHeight = document.internal.pageSize.getHeight();
-  const maxWidth = document.internal.pageSize.getWidth() - 30;
-  let y = 16;
+  const maxWidth = document.internal.pageSize.getWidth() - 36;
+  const belegnummer = generateEigenbelegNumber(values.transactionDate);
+  let y = 20;
+
+  const ensureSpace = (minHeight = 10) => {
+    if (y <= pageHeight - minHeight) {
+      return;
+    }
+    document.addPage();
+    y = 20;
+  };
 
   const heading = (text: string) => {
-    if (y > pageHeight - 20) {
-      document.addPage();
-      y = 16;
-    }
+    ensureSpace(14);
     document.setFont("helvetica", "bold");
-    document.setFontSize(12);
-    document.text(text, 15, y);
-    y += 7;
+    document.setFontSize(13);
+    document.text(text, 18, y);
+    y += 8;
   };
 
   const line = (label: string, value: string) => {
-    if (y > pageHeight - 20) {
-      document.addPage();
-      y = 16;
-    }
+    ensureSpace(12);
     document.setFont("helvetica", "bold");
     document.setFontSize(10);
-    document.text(`${label}:`, 15, y);
+    document.text(`${label}:`, 18, y);
     document.setFont("helvetica", "normal");
-    const wrapped = document.splitTextToSize(value, maxWidth - 35);
-    document.text(wrapped, 50, y);
+    const wrapped = document.splitTextToSize(value, maxWidth - 44);
+    document.text(wrapped, 62, y);
     y += Math.max(6, wrapped.length * 5);
   };
 
   document.setFont("helvetica", "bold");
-  document.setFontSize(16);
-  document.text("Generator Buchungen", 15, y);
-  y += 8;
+  document.setFontSize(18);
+  document.text("Eigenbeleg", 18, y);
+  y += 9;
   document.setFont("helvetica", "normal");
   document.setFontSize(10);
-  document.text(`Erstellt am: ${new Date().toLocaleString("de-DE")}`, 15, y);
+  document.text(`Belegnummer: ${belegnummer}`, 18, y);
+  y += 6;
+  document.text(`Erstellt am: ${new Date().toLocaleString("de-DE")}`, 18, y);
   y += 10;
 
   heading("Belegangaben");
-  line("E-Mail", normalizeValue(values.email));
-  line("Ausstellungsdatum", normalizeValue(values.issueDate));
-  line("Sender/Empfänger", normalizeValue(values.senderOrReceiver));
-  line("Rechnungs-/Belegnummer", normalizeValue(values.receiptNumber));
-  line("Bestell-/Vorgangsnummer", normalizeValue(values.orderNumber));
-  line("Buchungstext", normalizeValue(values.bookingText));
-  line("Nachweis-Datei", normalizeValue(values.evidence?.item(0)?.name));
+  line("Grund", normalizeValue(values.reason));
+  line("Datum", normalizeValue(values.transactionDate));
+  line("Buchungstext", normalizeValue(values.occasion));
+  line("Rechnungsnummer", normalizeValue(values.documentReference));
 
-  heading("Betrag");
+  heading("Beteiligte");
   line(
-    "Buchungsart",
-    values.bookingType === "ausgabe" ? "Ausgabe" : "Einnahme",
+    "Sender",
+    [values.senderName, values.senderAccount, values.senderArea]
+      .filter((entry) => typeof entry === "string" && entry.trim())
+      .join(" | ") || "-",
   );
-  line("Betrag in Euro", normalizeValue(values.amountEuro));
-
-  heading("Metadaten");
-  line("Konto/Kasse", values.accountCash);
-  line("Bereich", normalizeValue(values.area));
-  line("Projekt", normalizeValue(values.project));
   line(
-    "Posten",
-    values.postens
-      .map((posten) => {
-        const title = posten.title.trim();
-        const amount = posten.amountEuro?.trim();
-        if (!title && !amount) {
-          return "";
-        }
-        return amount ? `${title || "Posten"} (${amount} €)` : title;
-      })
-      .filter(Boolean)
-      .map((posten, index) => `${index + 1}. ${posten}`)
-      .join("\n") || "-",
+    "Empfänger",
+    [values.receiverName, values.receiverAccount, values.receiverArea]
+      .filter((entry) => typeof entry === "string" && entry.trim())
+      .join(" | ") || "-",
   );
-  line("Notizen", normalizeValue(values.notes));
 
-  heading("Rechnungsstand / Überweisung");
-  line("Ist bereits beglichen?", values.invoiceState);
-  line("Kontoinhaber", normalizeValue(values.accountOwner));
-  line("IBAN", normalizeValue(values.iban));
-  line("Im System", values.inSystem);
+  heading("Betrag und Status");
+  line("Einnahme", formatAmount(values.income));
+  line("Ausgabe", formatAmount(values.expense));
+  line("Status", values.invoiceStatus === "bezahlt" ? "bezahlt" : "offen");
 
-  const datePart = values.issueDate || new Date().toISOString().slice(0, 10);
-  const fileName = `buchung-${datePart}.pdf`;
+  heading("Notizen");
+  line("Hinweise", normalizeValue(values.notes));
+
+  const fileDate = values.transactionDate || new Date().toISOString().slice(0, 10);
+  const fileName = `eigenbeleg-${fileDate}.pdf`;
   const bytes = new Uint8Array(document.output("arraybuffer"));
   document.save(fileName);
   return { fileName, bytes };
 }
 
-async function mergeEvidenceWithGeneratedPdf(
-  evidenceFile: File | null,
-  generatedBytes: Uint8Array,
-  generatedName: string,
-) {
-  if (!evidenceFile) {
+function buildReceiptValues(
+  values: FormValues,
+  associationAreaLabel?: string,
+): ReceiptValues {
+  const invoiceStatus: ReceiptValues["invoiceStatus"] = values.alreadyRefunded
+    ? "bezahlt"
+    : "offen";
+
+  const baseValues = {
+    transactionDate: values.issueDate,
+    occasion: values.bookingText,
+    reason: values.noEvidence
+      ? `Eigenbeleg: ${normalizeValue(values.eigenbelegReason)}`
+      : "Belegbuchung",
+    documentReference: values.receiptNumber,
+    invoiceStatus,
+    notes: values.notes,
+  };
+
+  if (values.bookingType === "ausgabe") {
     return {
-      bytes: generatedBytes,
-      fileName: generatedName,
-      contentType: "application/pdf",
+      ...baseValues,
+      income: undefined,
+      expense: values.amountEuro,
+      senderName: associationName,
+      senderAccount: values.associationAccount,
+      senderArea: associationAreaLabel,
+      receiverName: values.counterpartyName,
+      receiverAccount: values.counterpartyAccount,
+      receiverArea: undefined,
+    };
+  }
+
+  return {
+    ...baseValues,
+    income: values.amountEuro,
+    expense: undefined,
+    senderName: values.counterpartyName,
+    senderAccount: values.counterpartyAccount,
+    senderArea: undefined,
+    receiverName: associationName,
+    receiverAccount: values.associationAccount,
+    receiverArea: associationAreaLabel,
+  };
+}
+
+async function buildCampaiAttachment(values: FormValues, receiptValues: ReceiptValues) {
+  if (!values.noEvidence) {
+    const evidenceFile = values.evidence?.item(0);
+    if (!evidenceFile) {
+      throw new Error("Bitte einen Beleg hochladen oder 'Beleg nicht vorhanden' aktivieren.");
+    }
+
+    return {
+      bytes: new Uint8Array(await evidenceFile.arrayBuffer()),
+      fileName: evidenceFile.name,
+      contentType: evidenceFile.type || "application/octet-stream",
       warning: undefined as string | undefined,
     };
   }
 
-  if (!isPdfFile(evidenceFile)) {
-    const evidenceBytes = new Uint8Array(await evidenceFile.arrayBuffer());
-    return {
-      bytes: evidenceBytes,
-      fileName: evidenceFile.name,
-      contentType: evidenceFile.type || "application/octet-stream",
-      warning:
-        "Nachweis ist kein PDF. Der generierte Buchungsbeleg wurde nicht angehängt.",
-    };
-  }
-
-  const evidenceBytes = new Uint8Array(await evidenceFile.arrayBuffer());
-  const mergedPdf = await PDFDocument.create();
-  const evidencePdf = await PDFDocument.load(evidenceBytes);
-  const generatedPdf = await PDFDocument.load(generatedBytes);
-
-  const firstPages = await mergedPdf.copyPages(
-    evidencePdf,
-    evidencePdf.getPageIndices(),
-  );
-  for (const page of firstPages) {
-    mergedPdf.addPage(page);
-  }
-
-  const secondPages = await mergedPdf.copyPages(
-    generatedPdf,
-    generatedPdf.getPageIndices(),
-  );
-  for (const page of secondPages) {
-    mergedPdf.addPage(page);
-  }
-
-  const mergedBytes = new Uint8Array(await mergedPdf.save());
-  const mergedName = `${evidenceFile.name.replace(/\.pdf$/i, "")}-mit-buchung.pdf`;
+  const { fileName, bytes } = createEigenbelegPdf(receiptValues);
   return {
-    bytes: mergedBytes,
-    fileName: mergedName,
+    bytes,
+    fileName,
     contentType: "application/pdf",
     warning: undefined as string | undefined,
   };
@@ -313,354 +296,473 @@ export default function BuchungenPage() {
     handleSubmit,
     control,
     clearErrors,
-    getValues,
     reset,
-    setValue,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
+      issueDate: new Date().toISOString().slice(0, 10),
+      bookingText: "",
+      receiptNumber: "",
+      noEvidence: false,
+      eigenbelegReason: "",
       bookingType: "ausgabe",
       amountEuro: "",
-      postens: [{ title: "", amountEuro: "" }],
-      accountCash: "K0004 B",
-      invoiceState: "offen",
-      inSystem: "im-system",
+      counterpartyName: "",
+      counterpartyAccount: "",
+      associationArea: "",
+      associationAccount: "K0104 A",
+      notes: "",
+      alreadyRefunded: false,
     },
   });
 
-  const {
-    fields: postenFields,
-    append,
-    remove,
-    replace,
-  } = useFieldArray({
-    control,
-    name: "postens",
-  });
-
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractMessage, setExtractMessage] = useState<string | null>(null);
-  const [fillOnlyEmptyFields, setFillOnlyEmptyFields] = useState(true);
   const [storeResult, setStoreResult] = useState<{
     id?: string | null;
-    warning?: string;
     error?: string;
+    warning?: string;
   } | null>(null);
+  const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
+  const [costCentersLoading, setCostCentersLoading] = useState(true);
+  const [costCentersError, setCostCentersError] = useState<string | null>(null);
+  const [showCreateCreditorPanel, setShowCreateCreditorPanel] =
+    useState(false);
+  const [creditorPaymentMethodType, setCreditorPaymentMethodType] =
+    useState<CreditorPaymentMethodType>("creditTransfer");
+  const [creditorIban, setCreditorIban] = useState("");
+  const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
+  const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
+  const [creditorError, setCreditorError] = useState<string | null>(null);
+  const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
+  const [debtorEmail, setDebtorEmail] = useState("");
+  const [debtorSendByMail, setDebtorSendByMail] = useState(false);
+  const [debtorAddressLine, setDebtorAddressLine] = useState("");
+  const [debtorZip, setDebtorZip] = useState("");
+  const [debtorCity, setDebtorCity] = useState("");
+  const [debtorDetails1, setDebtorDetails1] = useState("");
+  const [debtorDetails2, setDebtorDetails2] = useState("");
+  const [isCreatingDebtor, setIsCreatingDebtor] = useState(false);
+  const [debtorError, setDebtorError] = useState<string | null>(null);
 
   const selectedEvidence = useWatch({ control, name: "evidence" });
   const selectedBookingType = useWatch({ control, name: "bookingType" });
-  const selectedArea = useWatch({ control, name: "area" });
-  const watchedPostens = useWatch({ control, name: "postens" }) ?? [];
-  const selectedAreaOption =
-    areaOptions.find((option) => option.value === selectedArea) ?? null;
+  const selectedNoEvidence = useWatch({ control, name: "noEvidence" });
+  const counterpartyName = useWatch({ control, name: "counterpartyName" }) ?? "";
+  const counterpartyAccount =
+    useWatch({ control, name: "counterpartyAccount" }) ?? "";
+  const selectedAssociationArea =
+    useWatch({ control, name: "associationArea" }) ?? "";
+
+  const isExpenseFlow = selectedBookingType !== "einnahme";
+  const counterpartyApiPath = isExpenseFlow
+    ? "/api/campai/creditors"
+    : "/api/campai/debtors";
+  const counterpartyEntityLabel = isExpenseFlow ? "Kreditor" : "Debitor";
+  const activeCounterpartyError = isExpenseFlow ? creditorError : debtorError;
   const selectedEvidenceName = useMemo(() => {
     if (!selectedEvidence || selectedEvidence.length === 0) {
       return "";
     }
     return selectedEvidence.item(0)?.name ?? "";
   }, [selectedEvidence]);
+  const selectedAssociationAreaLabel =
+    costCenters.find((option) => option.value === selectedAssociationArea)?.label ??
+    undefined;
 
-  const extractFromEvidence = async () => {
-    const file = selectedEvidence?.item(0);
-    if (!file) {
-      setExtractMessage(
-        "Bitte zuerst eine Datei bei 'Beleg hochladen' auswählen.",
-      );
+  useEffect(() => {
+    setValue("counterpartyName", "", {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+    setValue("counterpartyAccount", "", {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+    setShowCreateCreditorPanel(false);
+    setShowCreateDebtorPanel(false);
+    setCreditorError(null);
+    setDebtorError(null);
+  }, [selectedBookingType, setValue]);
+
+  useEffect(() => {
+    if (!selectedNoEvidence) {
+      clearErrors("eigenbelegReason");
       return;
     }
 
-    setIsExtracting(true);
-    setExtractMessage(null);
+    clearErrors("evidence");
+  }, [clearErrors, selectedNoEvidence]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCostCenters = async () => {
+      try {
+        setCostCentersLoading(true);
+        const response = await fetchJson<{ costCenters: CostCenterOption[] }>(
+          "/api/campai/cost-centers",
+        );
+
+        if (!active) {
+          return;
+        }
+
+        const items = response.costCenters ?? [];
+        setCostCenters(items);
+        setCostCentersError(null);
+
+        if (items.length > 0 && !selectedAssociationArea) {
+          setValue("associationArea", items[0].value, {
+            shouldDirty: false,
+            shouldTouch: false,
+            shouldValidate: false,
+          });
+        }
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setCostCentersError(
+          error instanceof Error
+            ? error.message
+            : "Kostenstellen konnten nicht geladen werden.",
+        );
+      } finally {
+        if (active) {
+          setCostCentersLoading(false);
+        }
+      }
+    };
+
+    void loadCostCenters();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedAssociationArea, setValue]);
+
+  const resetCounterparty = () => {
+    setValue("counterpartyName", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("counterpartyAccount", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setShowCreateCreditorPanel(false);
+    setShowCreateDebtorPanel(false);
+    setCreditorError(null);
+    setDebtorError(null);
+  };
+
+  const handleCounterpartySelect = (suggestion: {
+    account: number;
+    name: string;
+  }) => {
+    setValue("counterpartyName", suggestion.name, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("counterpartyAccount", String(suggestion.account), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setShowCreateCreditorPanel(false);
+    setShowCreateDebtorPanel(false);
+    setCreditorError(null);
+    setDebtorError(null);
+    clearErrors("counterpartyName");
+  };
+
+  const handleCreateCreditor = (name: string) => {
+    setValue("counterpartyName", name, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("counterpartyAccount", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setCreditorKontoinhaber(name);
+    setShowCreateCreditorPanel(true);
+    setShowCreateDebtorPanel(false);
+    setCreditorError(null);
+  };
+
+  const handleCreateDebtor = (name: string) => {
+    setValue("counterpartyName", name, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("counterpartyAccount", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setShowCreateDebtorPanel(true);
+    setShowCreateCreditorPanel(false);
+    setDebtorError(null);
+  };
+
+  const createCreditor = async () => {
+    setIsCreatingCreditor(true);
+    setCreditorError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const trimmedName = counterpartyName.trim();
+      if (!trimmedName) {
+        setCreditorError("Bitte zuerst einen Kreditorennamen eingeben.");
+        return;
+      }
 
-      const response = await fetch("/api/openai/buchungen", {
+      const payload: {
+        name: string;
+        type: "business";
+        paymentMethodType: CreditorPaymentMethodType;
+        iban?: string;
+        kontoinhaber?: string;
+      } = {
+        name: trimmedName,
+        type: "business",
+        paymentMethodType: creditorPaymentMethodType,
+      };
+
+      if (creditorPaymentMethodType === "creditTransfer") {
+        payload.iban = creditorIban.replace(/\s+/g, "").toUpperCase();
+        payload.kontoinhaber = creditorKontoinhaber.trim();
+      }
+
+      const response = await fetch("/api/campai/creditors", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as Record<
-        string,
-        unknown
-      >;
-
       if (!response.ok) {
-        setExtractMessage(
-          typeof payload.error === "string"
-            ? payload.error
-            : "Extraktion fehlgeschlagen.",
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setCreditorError(data.error ?? "Kreditor konnte nicht erstellt werden.");
+        return;
+      }
+
+      const data = (await response.json().catch(() => ({}))) as {
+        account?: number;
+        name?: string;
+      };
+
+      if (typeof data.account !== "number" || data.account <= 0) {
+        setCreditorError(
+          "Kreditor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
         );
         return;
       }
 
-      const currentValues = getValues();
-      const canApply = (currentValue: unknown) => {
-        if (!fillOnlyEmptyFields) {
-          return true;
-        }
-        if (typeof currentValue === "string") {
-          return currentValue.trim().length === 0;
-        }
-        if (Array.isArray(currentValue)) {
-          return currentValue.length === 0;
-        }
-        return currentValue === null || currentValue === undefined;
-      };
-
-      if (
-        typeof payload.issueDate === "string" &&
-        canApply(currentValues.issueDate)
-      ) {
-        setValue("issueDate", payload.issueDate, { shouldDirty: true });
-      }
-      if (
-        typeof payload.senderOrReceiver === "string" &&
-        canApply(currentValues.senderOrReceiver)
-      ) {
-        setValue("senderOrReceiver", payload.senderOrReceiver, {
-          shouldDirty: true,
-        });
-      }
-      if (
-        typeof payload.receiptNumber === "string" &&
-        canApply(currentValues.receiptNumber)
-      ) {
-        setValue("receiptNumber", payload.receiptNumber, { shouldDirty: true });
-      }
-      if (
-        typeof payload.orderNumber === "string" &&
-        canApply(currentValues.orderNumber)
-      ) {
-        setValue("orderNumber", payload.orderNumber, { shouldDirty: true });
-      }
-      if (
-        typeof payload.bookingText === "string" &&
-        canApply(currentValues.bookingText)
-      ) {
-        setValue("bookingText", payload.bookingText, { shouldDirty: true });
-      }
-      if (
-        (payload.bookingType === "ausgabe" ||
-          payload.bookingType === "einnahme") &&
-        canApply(currentValues.bookingType)
-      ) {
-        setValue("bookingType", payload.bookingType, { shouldDirty: true });
-      }
-      if (
-        typeof payload.amountEuro === "string" &&
-        canApply(currentValues.amountEuro)
-      ) {
-        setValue("amountEuro", payload.amountEuro, { shouldDirty: true });
-      }
-      if (
-        payload.accountCash === "K0004 B" ||
-        payload.accountCash === "K0104 A" ||
-        payload.accountCash === "BAR" ||
-        payload.accountCash === "PAYPAL" ||
-        payload.accountCash === "Kreditkarte"
-      ) {
-        if (canApply(currentValues.accountCash)) {
-          setValue("accountCash", payload.accountCash, { shouldDirty: true });
-        }
-      }
-      if (typeof payload.area === "string" && canApply(currentValues.area)) {
-        setValue("area", payload.area, { shouldDirty: true });
-      }
-      if (
-        typeof payload.project === "string" &&
-        canApply(currentValues.project)
-      ) {
-        setValue("project", payload.project, { shouldDirty: true });
-      }
-      if (typeof payload.notes === "string" && canApply(currentValues.notes)) {
-        setValue("notes", payload.notes, { shouldDirty: true });
-      }
-      if (
-        (payload.invoiceState === "offen" ||
-          payload.invoiceState === "bezahlt") &&
-        canApply(currentValues.invoiceState)
-      ) {
-        setValue("invoiceState", payload.invoiceState, { shouldDirty: true });
-      }
-      if (
-        typeof payload.accountOwner === "string" &&
-        canApply(currentValues.accountOwner)
-      ) {
-        setValue("accountOwner", payload.accountOwner, { shouldDirty: true });
-      }
-      if (typeof payload.iban === "string" && canApply(currentValues.iban)) {
-        setValue("iban", payload.iban, { shouldDirty: true });
-      }
-
-      if (Array.isArray(payload.postens) && payload.postens.length > 0) {
-        const nextPostens = payload.postens
-          .filter(
-            (entry): entry is { title: string; amountEuro?: string } =>
-              typeof entry === "object" &&
-              entry !== null &&
-              typeof (entry as { title?: unknown }).title === "string",
-          )
-          .map((entry) => ({
-            title: entry.title,
-            amountEuro:
-              typeof entry.amountEuro === "string" ? entry.amountEuro : "",
-          }));
-
-        const hasExistingPostens = (currentValues.postens ?? []).some(
-          (posten) =>
-            posten.title.trim().length > 0 ||
-            (posten.amountEuro?.trim().length ?? 0) > 0,
-        );
-
-        if (
-          nextPostens.length > 0 &&
-          (!fillOnlyEmptyFields || !hasExistingPostens)
-        ) {
-          replace(nextPostens);
-        }
-      }
-
-      clearErrors();
-      setExtractMessage(
-        "Felder wurden aus dem Beleg vorausgefüllt. Bitte kurz prüfen.",
+      handleCounterpartySelect({
+        account: data.account,
+        name: data.name ?? trimmedName,
+      });
+    } catch (error) {
+      setCreditorError(
+        error instanceof Error
+          ? error.message
+          : "Kreditor konnte nicht erstellt werden.",
       );
-    } catch {
-      setExtractMessage("Extraktion fehlgeschlagen.");
     } finally {
-      setIsExtracting(false);
+      setIsCreatingCreditor(false);
     }
   };
 
-  const postenTotalCents = useMemo(
-    () =>
-      watchedPostens.reduce(
-        (sum, posten) => sum + parseEuroToCents(posten.amountEuro),
-        0,
-      ),
-    [watchedPostens],
-  );
+  const createDebtor = async () => {
+    setDebtorError(null);
 
-  const hasPostenAmounts = postenTotalCents > 0;
-
-  useEffect(() => {
-    if (!hasPostenAmounts) {
+    const trimmedName = counterpartyName.trim();
+    if (!trimmedName) {
+      setDebtorError("Bitte zuerst einen Debitorennamen eingeben.");
       return;
     }
-    const formatted = formatCentsToEuro(postenTotalCents);
-    setValue("amountEuro", formatted, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
-  }, [hasPostenAmounts, postenTotalCents, setValue]);
+
+    if (!debtorAddressLine.trim() || !debtorZip.trim() || !debtorCity.trim()) {
+      setDebtorError(
+        "Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
+      );
+      return;
+    }
+
+    setIsCreatingDebtor(true);
+
+    try {
+      const response = await fetch("/api/campai/debtors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          type: "business",
+          email: debtorEmail.trim() || undefined,
+          receiptSendMethod: debtorEmail.trim()
+            ? debtorSendByMail
+              ? "email"
+              : "postal"
+            : "postal",
+          address: {
+            country: "DE",
+            zip: debtorZip.trim(),
+            city: debtorCity.trim(),
+            addressLine: debtorAddressLine.trim(),
+            details1: debtorDetails1.trim() || undefined,
+            details2: debtorDetails2.trim() || undefined,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setDebtorError(data.error ?? "Debitor konnte nicht erstellt werden.");
+        return;
+      }
+
+      const data = (await response.json().catch(() => ({}))) as {
+        account?: number;
+        name?: string;
+      };
+
+      if (typeof data.account !== "number" || data.account <= 0) {
+        setDebtorError(
+          "Debitor wurde erstellt, aber die Debitorennummer konnte nicht ermittelt werden.",
+        );
+        return;
+      }
+
+      handleCounterpartySelect({
+        account: data.account,
+        name: data.name ?? trimmedName,
+      });
+    } catch (error) {
+      setDebtorError(
+        error instanceof Error
+          ? error.message
+          : "Debitor konnte nicht erstellt werden.",
+      );
+    } finally {
+      setIsCreatingDebtor(false);
+    }
+  };
 
   const onSubmit = async (values: FormValues) => {
-    if (!values.amountEuro?.trim()) {
-      setError("amountEuro", {
+    if (!values.counterpartyAccount?.trim()) {
+      setError("counterpartyName", {
         type: "required",
-        message: "Bitte einen Betrag eintragen.",
+        message: `Bitte einen ${counterpartyEntityLabel} aus der Liste auswählen.`,
       });
       return;
     }
 
-    clearErrors("amountEuro");
-
-    const { fileName, bytes } = createBuchungPdf(values);
-    const evidenceFile = values.evidence?.item(0) ?? null;
-    const attachment = await mergeEvidenceWithGeneratedPdf(
-      evidenceFile,
-      bytes,
-      fileName,
-    );
-
-    const isExpenseFlow = values.bookingType === "ausgabe";
-    const senderName = isExpenseFlow
-      ? "Konglomerat e.V."
-      : values.senderOrReceiver;
-    const receiverName = isExpenseFlow
-      ? values.senderOrReceiver
-      : "Konglomerat e.V.";
-    const expense = isExpenseFlow ? values.amountEuro : "";
-    const income = isExpenseFlow ? "" : values.amountEuro;
-    const notes = [
-      values.notes,
-      `Buchungsart: ${isExpenseFlow ? "Ausgabe" : "Einnahme"}`,
-      values.receiptNumber ? `Rechnungsnummer: ${values.receiptNumber}` : "",
-      values.orderNumber ? `Vorgang: ${values.orderNumber}` : "",
-      values.accountOwner ? `Kontoinhaber: ${values.accountOwner}` : "",
-      values.iban ? `IBAN: ${values.iban}` : "",
-      `Konto/Kasse: ${values.accountCash}`,
-      values.postens
-        .map((posten) => {
-          const title = posten.title.trim();
-          const amount = posten.amountEuro?.trim();
-          if (!title && !amount) {
-            return "";
-          }
-          return amount ? `${title || "Posten"} (${amount} €)` : title;
-        })
-        .filter(Boolean)
-        .map((posten, index) => `Posten ${index + 1}: ${posten}`)
-        .join(" | "),
-    ]
-      .filter(Boolean)
-      .join(" | ");
-
-    const response = await fetch("/api/campai/receipts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        reason: "Buchung",
-        occasion: values.bookingText,
-        notes,
-        transactionDate: values.issueDate,
-        expense,
-        income,
-        senderName,
-        receiverName,
-        senderArea: values.area,
-        receiverArea: values.area,
-        senderProject: values.project,
-        receiverProject: values.project,
-        receiptFileBase64: bytesToBase64(attachment.bytes),
-        receiptFileName: attachment.fileName,
-        receiptFileContentType: attachment.contentType,
-      }),
-    });
-
-    if (response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as {
-        id?: string | null;
-        uploadWarning?: string;
-      };
-      const warning = [attachment.warning, payload.uploadWarning]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-      setStoreResult({ id: payload.id ?? null, warning: warning || undefined });
-    } else {
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setStoreResult({
-        error: payload.error ?? "Speichern in Campai fehlgeschlagen.",
+    if (values.noEvidence && !values.eigenbelegReason?.trim()) {
+      setError("eigenbelegReason", {
+        type: "required",
+        message: "Bitte den Grund des Eigenbelegs eintragen.",
       });
+      return;
     }
 
-    setSubmittedAt(new Date().toLocaleString("de-DE"));
-  };
+    if (!values.noEvidence && (!values.evidence || values.evidence.length === 0)) {
+      setError("evidence", {
+        type: "required",
+        message: "Bitte einen Beleg hochladen oder 'Beleg nicht vorhanden' aktivieren.",
+      });
+      return;
+    }
 
-  const handleLoadTestData = () => {
-    reset(testValues);
-    clearErrors();
-    setSubmittedAt(null);
-    setStoreResult(null);
+    clearErrors("counterpartyName");
+    clearErrors("eigenbelegReason");
+    clearErrors("evidence");
+
+    try {
+      const receiptValues = buildReceiptValues(values, selectedAssociationAreaLabel);
+      const attachment = await buildCampaiAttachment(values, receiptValues);
+
+      const notes = [
+        values.notes?.trim(),
+        values.receiptNumber.trim()
+          ? `Rechnungsnummer: ${values.receiptNumber.trim()}`
+          : "",
+        values.noEvidence
+          ? `Grund des Eigenbelegs: ${values.eigenbelegReason?.trim() ?? ""}`
+          : "Originalbeleg hochgeladen",
+        `Vom Verein bereits erstattet: ${values.alreadyRefunded ? "ja" : "nein"}`,
+        `Konto/Kasse: ${values.associationAccount}`,
+        selectedAssociationAreaLabel
+          ? `Kostenstelle 2: ${selectedAssociationAreaLabel}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      const response = await fetch("/api/campai/receipts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: values.noEvidence ? "Eigenbeleg" : "Belegbuchung",
+          occasion: values.bookingText,
+          notes,
+          transactionDate: values.issueDate,
+          income: values.bookingType === "einnahme" ? values.amountEuro : "",
+          expense: values.bookingType === "ausgabe" ? values.amountEuro : "",
+          senderName: receiptValues.senderName,
+          receiverName: receiptValues.receiverName,
+          senderArea: receiptValues.senderArea,
+          receiverArea: receiptValues.receiverArea,
+          bookingType: values.bookingType,
+          counterpartyAccount: values.counterpartyAccount,
+          counterpartyName: values.counterpartyName,
+          costCenter2: values.associationArea,
+          refund: values.alreadyRefunded,
+          receiptFileBase64: bytesToBase64(attachment.bytes),
+          receiptFileName: attachment.fileName,
+          receiptFileContentType: attachment.contentType,
+        }),
+      });
+
+      if (response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as {
+          id?: string | null;
+          uploadWarning?: string;
+        };
+        const warning = [attachment.warning, payload.uploadWarning]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        setStoreResult({
+          id: payload.id ?? null,
+          warning: warning || undefined,
+        });
+      } else {
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setStoreResult({
+          error: payload.error ?? "Speichern in Campai fehlgeschlagen.",
+        });
+      }
+
+      setSubmittedAt(new Date().toLocaleString("de-DE"));
+    } catch (error) {
+      setStoreResult({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Speichern in Campai fehlgeschlagen.",
+      });
+    }
   };
 
   return (
@@ -671,11 +773,11 @@ export default function BuchungenPage() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
               <FontAwesomeIcon icon={faFileInvoice} className="h-5 w-5" />
             </span>
-            <span>Generator Buchungen</span>
+            <span>Buchhaltung</span>
           </h1>
           <p className="max-w-4xl text-sm leading-relaxed text-zinc-600">
-            Einbuchung von Rechnungen und Belegen für Einnahmen oder Ausgaben
-            des Vereins, seiner Projekte und Werkbereiche.
+            Beleg einbuchen oder direkt einen Eigenbeleg erzeugen, wenn kein
+            Originalbeleg vorhanden ist.
           </p>
           <p className="text-xs text-zinc-500">
             Pflichtfelder sind mit * markiert.
@@ -683,66 +785,32 @@ export default function BuchungenPage() {
         </header>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <FormSection title="Belegangaben" icon={faFolderOpen}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label="E-Mail-Adresse"
-                required
-                error={errors.email?.message}
-              >
-                <Input
-                  type="email"
-                  placeholder="name@beispiel.de"
-                  {...register("email", {
-                    required: "E-Mail-Adresse ist erforderlich.",
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: "Bitte eine gültige E-Mail-Adresse angeben.",
-                    },
-                  })}
-                />
-              </FormField>
+          <FormSection title="1. Belegangaben" icon={faFolderOpen}>
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  label="Datum"
+                  required
+                  error={errors.issueDate?.message}
+                >
+                  <Input
+                    type="date"
+                    {...register("issueDate", {
+                      required: "Bitte ein Datum auswählen.",
+                    })}
+                  />
+                </FormField>
 
-              <FormField
-                label="Ausstellungsdatum Beleg"
-                required
-                error={errors.issueDate?.message}
-              >
-                <Input
-                  type="date"
-                  {...register("issueDate", {
-                    required: "Ausstellungsdatum ist erforderlich.",
-                  })}
-                />
-              </FormField>
-
-              <FormField
-                label="Sender/Empfänger"
-                required
-                hint="Bei Ausgaben: Zahlungsempfänger. Bei Einnahmen: Zahler an den Verein."
-                error={errors.senderOrReceiver?.message}
-              >
-                <AutocompleteInput
-                  placeholder="z. B. Amazon / Mitgliedsname"
-                  {...register("senderOrReceiver", {
-                    required: "Sender/Empfänger ist erforderlich.",
-                  })}
-                />
-              </FormField>
-
-              <FormField
-                label="Rechnungs-/Belegnummer"
-                hint="Nur Belegnummer, keine Bestell- oder Kundennummer"
-              >
-                <Input {...register("receiptNumber")} />
-              </FormField>
-
-              <FormField
-                label="Bestell-/Vorgangsnummer"
-                hint="Besonders wichtig bei Amazon / PayPal"
-              >
-                <Input {...register("orderNumber")} />
-              </FormField>
+                <FormField
+                  label="Rechnungsnummer"
+                  error={errors.receiptNumber?.message}
+                >
+                  <Input
+                    placeholder="Optional"
+                    {...register("receiptNumber")}
+                  />
+                </FormField>
+              </div>
 
               <FormField
                 label="Buchungstext"
@@ -750,91 +818,122 @@ export default function BuchungenPage() {
                 error={errors.bookingText?.message}
               >
                 <Textarea
-                  placeholder="Kurze Zusammenfassung der Leistung/Gegenstände"
+                  placeholder="Bitte den Vorgang kurz beschreiben"
                   {...register("bookingText", {
-                    required: "Buchungstext ist erforderlich.",
+                    required: "Bitte einen Buchungstext eingeben.",
                   })}
                 />
               </FormField>
 
-              <FormField
-                label="Beleg hochladen"
-                required
-                hint="1 Datei, max. 10 MB (PDF, Dokument, Bild oder Tabelle)"
-                error={errors.evidence?.message as string | undefined}
-              >
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.odt,.ods,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
-                  {...register("evidence", {
-                    validate: {
-                      required: (files) =>
-                        !!files?.length || "Bitte einen Beleg hochladen.",
-                      maxOneFile: (files) =>
-                        !files ||
-                        files.length <= 1 ||
-                        "Es ist nur eine Datei erlaubt.",
-                      maxSize: (files) => {
-                        if (!files || files.length === 0) {
-                          return true;
-                        }
-                        const file = files.item(0);
-                        if (!file) {
-                          return true;
-                        }
-                        return (
-                          file.size <= 10 * 1024 * 1024 ||
-                          "Datei darf maximal 10 MB groß sein."
-                        );
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  label="Beleg upload"
+                  required={!selectedNoEvidence}
+                  hint="Eine Datei, die in Campai als Beleg angehangen wird"
+                  error={errors.evidence?.message as string | undefined}
+                >
+                  <Input
+                    type="file"
+                    disabled={selectedNoEvidence}
+                    accept=".pdf,.doc,.docx,.odt,.ods,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+                    {...register("evidence", {
+                      validate: {
+                        requiredUnlessNoEvidence: (files) => {
+                          if (selectedNoEvidence) {
+                            return true;
+                          }
+                          return (
+                            !!files?.length ||
+                            "Bitte einen Beleg hochladen oder 'Beleg nicht vorhanden' aktivieren."
+                          );
+                        },
+                        maxOneFile: (files) =>
+                          !files ||
+                          files.length <= 1 ||
+                          "Es ist nur eine Datei erlaubt.",
+                        maxSize: (files) => {
+                          if (!files || files.length === 0) {
+                            return true;
+                          }
+                          const file = files.item(0);
+                          if (!file) {
+                            return true;
+                          }
+                          return (
+                            file.size <= 10 * 1024 * 1024 ||
+                            "Datei darf maximal 10 MB groß sein."
+                          );
+                        },
                       },
-                    },
-                  })}
-                />
-                {selectedEvidenceName ? (
-                  <div className="space-y-2">
+                    })}
+                  />
+                  {selectedEvidenceName ? (
                     <p className="text-xs text-zinc-500">
                       Ausgewählt: {selectedEvidenceName}
                     </p>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      icon={faWandMagicSparkles}
-                      onClick={extractFromEvidence}
-                      disabled={isExtracting}
-                    >
-                      {isExtracting
-                        ? "Beleg wird analysiert…"
-                        : "PDF auslesen (GPT)"}
-                    </Button>
-                    <label className="inline-flex items-center gap-2 text-xs text-zinc-600">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-blue-600"
-                        checked={fillOnlyEmptyFields}
-                        onChange={(event) =>
-                          setFillOnlyEmptyFields(event.target.checked)
-                        }
-                      />
-                      Nur leere Felder füllen
-                    </label>
-                    {extractMessage ? (
-                      <p className="text-xs text-zinc-600">{extractMessage}</p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </FormField>
+                  ) : null}
+                </FormField>
+
+                <FormField label="Belegstatus">
+                  <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      autoComplete="off"
+                      {...register("noEvidence")}
+                    />
+                    Beleg nicht vorhanden
+                  </label>
+                </FormField>
+              </div>
+
+              {selectedNoEvidence ? (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
+                  <FormField
+                    label="Grund des Eigenbelegs"
+                    required
+                    hint="Dieser Text wird in den generierten Eigenbeleg übernommen und in Campai angehangen."
+                    error={errors.eigenbelegReason?.message}
+                  >
+                    <Textarea
+                      placeholder="Warum liegt kein Originalbeleg vor?"
+                      {...register("eigenbelegReason")}
+                    />
+                  </FormField>
+                </div>
+              ) : null}
             </div>
           </FormSection>
 
-          <FormSection title="Einnahme oder Ausgabe" icon={faMoneyBillTransfer}>
-            <div className="space-y-4">
-              <input type="hidden" {...register("bookingType")} />
+          <FormSection
+            title="2. Einnahme oder Ausgabe"
+            icon={faMoneyBillTransfer}
+            description={
+              isExpenseFlow
+                ? "Bei Ausgaben ist der Verein der Sender. Wähle dazu Kostenstelle 2, Kreditor, Konto und Betrag."
+                : "Bei Einnahmen ist der Verein der Empfänger. Wähle dazu Kostenstelle 2, Debitor, Konto und Betrag."
+            }
+          >
+            <div className="space-y-5">
+              <input type="hidden" autoComplete="off" {...register("bookingType")} />
+              <input
+                type="hidden"
+                autoComplete="off"
+                {...register("counterpartyName", {
+                  required: `${counterpartyEntityLabel} ist erforderlich.`,
+                })}
+              />
+              <input
+                type="hidden"
+                autoComplete="off"
+                {...register("counterpartyAccount")}
+              />
+
               <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
                 <button
                   type="button"
                   onClick={() => setValue("bookingType", "ausgabe")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    selectedBookingType === "ausgabe"
+                    isExpenseFlow
                       ? "bg-white text-zinc-900 shadow-sm"
                       : "text-zinc-600 hover:text-zinc-900"
                   }`}
@@ -851,7 +950,7 @@ export default function BuchungenPage() {
                   type="button"
                   onClick={() => setValue("bookingType", "einnahme")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    selectedBookingType === "einnahme"
+                    !isExpenseFlow
                       ? "bg-white text-zinc-900 shadow-sm"
                       : "text-zinc-600 hover:text-zinc-900"
                   }`}
@@ -866,162 +965,360 @@ export default function BuchungenPage() {
                 </button>
               </div>
 
-              <FormField
-                label={
-                  selectedBookingType === "einnahme"
-                    ? "Einnahme in Euro"
-                    : "Ausgabe in Euro"
-                }
-                required
-                hint={
-                  hasPostenAmounts
-                    ? `Automatisch aus Posten summiert: ${formatCentsToEuro(postenTotalCents)} €`
-                    : "Optional manuell eintragen, wenn keine Posten-Beträge gepflegt sind."
-                }
-                error={errors.amountEuro?.message}
-              >
-                <Input
-                  placeholder={
-                    selectedBookingType === "einnahme"
-                      ? "z. B. 30,00"
-                      : "z. B. 95,00"
-                  }
-                  readOnly={hasPostenAmounts}
-                  {...register("amountEuro", {
-                    required: "Bitte einen Betrag eintragen.",
-                    pattern: {
-                      value: amountPattern,
-                      message: "Bitte gültigen Betrag eingeben.",
-                    },
-                  })}
-                />
-              </FormField>
-            </div>
-          </FormSection>
-
-          <FormSection title="Metadaten" icon={faUser}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Konto/Kasse" required>
-                <Select {...register("accountCash")}>
-                  <option value="K0004 B">K0004 B</option>
-                  <option value="K0104 A">K0104 A</option>
-                  <option value="BAR">BAR</option>
-                  <option value="PAYPAL">PAYPAL</option>
-                  <option value="Kreditkarte">Kreditkarte</option>
-                </Select>
-              </FormField>
-              <FormField label="Bereich" hint="Werkbereich auswählen">
-                <input type="hidden" {...register("area")} />
-                <SelectInput<AreaOption, false>
-                  options={areaOptions}
-                  value={selectedAreaOption}
-                  onChange={(option) => {
-                    setValue("area", option?.value ?? "", {
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    });
-                  }}
-                  placeholder="Bereich auswählen"
-                  isClearable
-                  formatOptionLabel={(option) => (
-                    <span className="flex items-center gap-2">
-                      <FontAwesomeIcon
-                        icon={option.icon}
-                        className="h-3.5 w-3.5 text-zinc-500"
-                      />
-                      <span>{option.label}</span>
-                    </span>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField label="Sender">
+                  {isExpenseFlow ? (
+                    <Input value={associationName} disabled readOnly />
+                  ) : (
+                    <AutocompleteInput
+                      apiPath={counterpartyApiPath}
+                      entityLabelSingular={counterpartyEntityLabel}
+                      placeholder="Name eingeben…"
+                      showCreateOption
+                      value={counterpartyName}
+                      onChange={(event) => {
+                        setValue("counterpartyName", event.target.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue("counterpartyAccount", "", {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setDebtorError(null);
+                        if (!event.target.value.trim()) {
+                          setShowCreateDebtorPanel(false);
+                        }
+                      }}
+                      onSelect={handleCounterpartySelect}
+                      onCreateNew={handleCreateDebtor}
+                    />
                   )}
-                  className="text-sm"
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      minHeight: 40,
-                      borderColor: state.isFocused ? "#60a5fa" : "#e4e4e7",
-                      borderRadius: 8,
-                      boxShadow: "none",
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isFocused ? "#f4f4f5" : "white",
-                      color: "#18181b",
-                    }),
-                  }}
-                />
-              </FormField>
-              <FormField label="#Projekt" hint="Hashtag nicht vergessen!">
-                <Input {...register("project")} />
-              </FormField>
-              <FormField
-                label="Posten"
-                hint="Mehrere Posten möglich (ein Posten pro Zeile)"
-              >
-                <div className="space-y-2">
-                  {postenFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <Input
-                        placeholder={`Posten ${index + 1}`}
-                        {...register(`postens.${index}.title` as const)}
-                      />
-                      <Input
-                        placeholder="Betrag €"
-                        className="max-w-36"
-                        {...register(`postens.${index}.amountEuro` as const, {
-                          pattern: {
-                            value: amountPattern,
-                            message: "Ungültiger Betrag",
-                          },
-                        })}
-                      />
-                      <Button
-                        type="button"
-                        kind="secondary"
-                        icon={faTrash}
-                        onClick={() => remove(index)}
-                        disabled={postenFields.length === 1}
-                      >
-                        Entfernen
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    kind="secondary"
-                    icon={faPlus}
-                    onClick={() => append({ title: "", amountEuro: "" })}
+                </FormField>
+
+                <FormField label="Empfänger">
+                  {isExpenseFlow ? (
+                    <AutocompleteInput
+                      apiPath={counterpartyApiPath}
+                      entityLabelSingular={counterpartyEntityLabel}
+                      placeholder="Name eingeben…"
+                      showCreateOption
+                      value={counterpartyName}
+                      onChange={(event) => {
+                        setValue("counterpartyName", event.target.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue("counterpartyAccount", "", {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setCreditorError(null);
+                        if (!event.target.value.trim()) {
+                          setShowCreateCreditorPanel(false);
+                        }
+                      }}
+                      onSelect={handleCounterpartySelect}
+                      onCreateNew={handleCreateCreditor}
+                    />
+                  ) : (
+                    <Input value={associationName} disabled readOnly />
+                  )}
+                </FormField>
+
+                <FormField
+                  label="Kostenstelle 2"
+                  required
+                  hint="Werkbereich des Vereins auswählen"
+                  error={errors.associationArea?.message ?? costCentersError ?? undefined}
+                >
+                  <Select
+                    disabled={costCentersLoading || costCenters.length === 0}
+                    {...register("associationArea", {
+                      required: "Bitte eine Kostenstelle 2 auswählen.",
+                    })}
                   >
-                    Posten hinzufügen
-                  </Button>
+                    {costCenters.length === 0 ? (
+                      <option value="">
+                        {costCentersLoading
+                          ? "Kostenstellen werden geladen…"
+                          : "Keine Kostenstellen verfügbar"}
+                      </option>
+                    ) : null}
+                    {costCenters.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                <FormField
+                  label="Konto/Kasse"
+                  required
+                  error={errors.associationAccount?.message}
+                >
+                  <Select
+                    {...register("associationAccount", {
+                      required: "Bitte ein Konto auswählen.",
+                    })}
+                  >
+                    {associationAccountOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                <FormField
+                  label={isExpenseFlow ? "Ausgabe in Euro" : "Einnahme in Euro"}
+                  required
+                  error={errors.amountEuro?.message}
+                >
+                  <Input
+                    placeholder={isExpenseFlow ? "z. B. 95,00" : "z. B. 30,00"}
+                    {...register("amountEuro", {
+                      required: "Bitte einen Betrag eintragen.",
+                      pattern: {
+                        value: amountPattern,
+                        message: "Bitte gültigen Betrag eingeben.",
+                      },
+                    })}
+                  />
+                </FormField>
+              </div>
+
+              {counterpartyAccount ? (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                  <span>
+                    {counterpartyEntityLabel} <strong>#{counterpartyAccount}</strong>
+                    {counterpartyName ? ` (${counterpartyName})` : ""} ausgewählt
+                  </span>
+                  <button
+                    type="button"
+                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                    onClick={resetCounterparty}
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              </FormField>
-              <FormField label="Notizen">
-                <Textarea {...register("notes")} />
-              </FormField>
+              ) : null}
+
+              {errors.counterpartyName?.message ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {errors.counterpartyName.message}
+                </div>
+              ) : null}
+
+              {activeCounterpartyError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {activeCounterpartyError}
+                </div>
+              ) : null}
+
+              {showCreateCreditorPanel && !counterpartyAccount && isExpenseFlow ? (
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                  <p className="text-sm font-medium text-blue-900">
+                    Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
+                  </p>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Zahlungsart" required>
+                      <Select
+                        value={creditorPaymentMethodType}
+                        onChange={(event) =>
+                          setCreditorPaymentMethodType(
+                            event.target.value as CreditorPaymentMethodType,
+                          )
+                        }
+                      >
+                        <option value="creditTransfer">Überweisung</option>
+                        <option value="cash">Bargeld</option>
+                      </Select>
+                    </FormField>
+
+                    {creditorPaymentMethodType === "creditTransfer" ? (
+                      <FormField label="Kontoinhaber" required>
+                        <Input
+                          placeholder="Vor- und Nachname"
+                          value={creditorKontoinhaber}
+                          onChange={(event) =>
+                            setCreditorKontoinhaber(event.target.value)
+                          }
+                        />
+                      </FormField>
+                    ) : null}
+                  </div>
+
+                  {creditorPaymentMethodType === "creditTransfer" ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField label="IBAN" required>
+                        <Input
+                          placeholder="DE…"
+                          value={creditorIban}
+                          onChange={(event) => setCreditorIban(event.target.value)}
+                        />
+                      </FormField>
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      kind="primary"
+                      icon={faPlus}
+                      disabled={
+                        isCreatingCreditor ||
+                        !counterpartyName.trim() ||
+                        (creditorPaymentMethodType === "creditTransfer" &&
+                          (!creditorIban.trim() || !creditorKontoinhaber.trim()))
+                      }
+                      onClick={createCreditor}
+                    >
+                      {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
+                    </Button>
+                    <Button
+                      type="button"
+                      kind="secondary"
+                      onClick={() => setShowCreateCreditorPanel(false)}
+                    >
+                      Abbrechen
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {showCreateDebtorPanel && !counterpartyAccount && !isExpenseFlow ? (
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-blue-900">
+                      Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="E-Mail-Adresse">
+                      <Input
+                        type="email"
+                        placeholder="kunde@beispiel.de"
+                        value={debtorEmail}
+                        onChange={(event) => setDebtorEmail(event.target.value)}
+                      />
+                    </FormField>
+
+                    <FormField label="Versand per E-Mail">
+                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                        <input
+                          type="checkbox"
+                          autoComplete="off"
+                          checked={debtorSendByMail}
+                          onChange={(event) =>
+                            setDebtorSendByMail(event.target.checked)
+                          }
+                        />
+                        Rechnung per E-Mail versenden
+                      </label>
+                    </FormField>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Straße / Adresse" required>
+                      <Input
+                        placeholder="Straße und Hausnummer"
+                        value={debtorAddressLine}
+                        onChange={(event) =>
+                          setDebtorAddressLine(event.target.value)
+                        }
+                      />
+                    </FormField>
+
+                    <FormField label="Adresszusatz 1">
+                      <Input
+                        placeholder="Optional"
+                        value={debtorDetails1}
+                        onChange={(event) => setDebtorDetails1(event.target.value)}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField label="PLZ" required>
+                      <Input
+                        placeholder="01159"
+                        value={debtorZip}
+                        onChange={(event) => setDebtorZip(event.target.value)}
+                      />
+                    </FormField>
+
+                    <FormField label="Stadt" required>
+                      <Input
+                        placeholder="Dresden"
+                        value={debtorCity}
+                        onChange={(event) => setDebtorCity(event.target.value)}
+                      />
+                    </FormField>
+
+                    <FormField label="Adresszusatz 2">
+                      <Input
+                        placeholder="Optional"
+                        value={debtorDetails2}
+                        onChange={(event) => setDebtorDetails2(event.target.value)}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      kind="primary"
+                      icon={faPlus}
+                      disabled={
+                        isCreatingDebtor ||
+                        !counterpartyName.trim() ||
+                        !debtorAddressLine.trim() ||
+                        !debtorZip.trim() ||
+                        !debtorCity.trim()
+                      }
+                      onClick={createDebtor}
+                    >
+                      {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
+                    </Button>
+                    <Button
+                      type="button"
+                      kind="secondary"
+                      onClick={() => setShowCreateDebtorPanel(false)}
+                    >
+                      Abbrechen
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </FormSection>
 
-          <FormSection
-            title="Rechnungsstand / Überweisungsauftrag"
-            icon={faCalendarCheck}
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Ist die Rechnung bereits beglichen?" required>
-                <Select {...register("invoiceState")}>
-                  <option value="offen">offen</option>
-                  <option value="bezahlt">bezahlt</option>
-                </Select>
+          <FormSection title="3. Notizen und Belegstatus" icon={faCalendarCheck}>
+            <div className="space-y-4">
+              <FormField label="Notizen">
+                <Textarea
+                  placeholder="Optionale interne Hinweise"
+                  {...register("notes")}
+                />
               </FormField>
-              <FormField label="Kontoinhaber">
-                <Input {...register("accountOwner")} />
-              </FormField>
-              <FormField label="IBAN">
-                <Input {...register("iban")} />
-              </FormField>
-              <FormField label="Im System">
-                <Select {...register("inSystem")}>
-                  <option value="im-system">Im System</option>
-                  <option value="sonstiges">Sonstiges</option>
-                </Select>
+
+              <FormField label="Belegstatus">
+                <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    autoComplete="off"
+                    {...register("alreadyRefunded")}
+                  />
+                  Betrag wurde bereits vom Verein erstattet
+                </label>
               </FormField>
             </div>
           </FormSection>
@@ -1030,7 +1327,7 @@ export default function BuchungenPage() {
             <div className="flex flex-wrap items-center gap-3">
               {submittedAt ? (
                 <p className="text-sm text-emerald-700">
-                  Formular lokal erfasst: {submittedAt}
+                  Formular gespeichert: {submittedAt}
                 </p>
               ) : null}
               {storeResult?.id ? (
@@ -1048,9 +1345,31 @@ export default function BuchungenPage() {
               <Button
                 type="button"
                 kind="secondary"
-                onClick={handleLoadTestData}
+                onClick={() => {
+                  reset({
+                    issueDate: new Date().toISOString().slice(0, 10),
+                    bookingText: "",
+                    receiptNumber: "",
+                    noEvidence: false,
+                    eigenbelegReason: "",
+                    bookingType: "ausgabe",
+                    amountEuro: "",
+                    counterpartyName: "",
+                    counterpartyAccount: "",
+                    associationArea: costCenters[0]?.value ?? "",
+                    associationAccount: "K0104 A",
+                    notes: "",
+                    alreadyRefunded: false,
+                  });
+                  setSubmittedAt(null);
+                  setStoreResult(null);
+                  setShowCreateCreditorPanel(false);
+                  setShowCreateDebtorPanel(false);
+                  setCreditorError(null);
+                  setDebtorError(null);
+                }}
               >
-                Testdaten laden
+                Zurücksetzen
               </Button>
               <Button
                 type="submit"
@@ -1059,9 +1378,7 @@ export default function BuchungenPage() {
                 disabled={isSubmitting}
                 className="ml-auto"
               >
-                {isSubmitting
-                  ? "Wird gespeichert…"
-                  : "Buchung speichern & PDF erstellen"}
+                {isSubmitting ? "Wird gespeichert…" : "In Campai speichern"}
               </Button>
             </div>
           </div>
@@ -1069,4 +1386,4 @@ export default function BuchungenPage() {
       </main>
     </div>
   );
-}
+};
