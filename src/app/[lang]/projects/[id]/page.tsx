@@ -132,7 +132,9 @@ export async function generateMetadata({
       description,
       siteName: siteTitle,
       locale: locale === "en" ? "en_US" : "de_DE",
-      publishedTime: project.createdAt ?? undefined,
+      publishedTime: toMetadataDateValue(
+        project.publishDate ?? project.createdAt,
+      ),
       modifiedTime: project.updatedAt ?? undefined,
       authors: project.author?.name ? [project.author.name] : undefined,
       tags: project.tags ?? undefined,
@@ -157,7 +159,9 @@ const formatDate = (value: string | null | undefined) => {
     return null;
   }
 
-  const parsed = new Date(value);
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T12:00:00.000Z`)
+    : new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
@@ -167,6 +171,19 @@ const formatDate = (value: string | null | undefined) => {
     month: "long",
     day: "numeric",
   });
+};
+
+const toMetadataDateValue = (value: string | null | undefined) => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return `${value}T12:00:00.000Z`;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 };
 
 export default async function ProjectDetailPage({
@@ -217,6 +234,10 @@ export default async function ProjectDetailPage({
   const hasRelatedResources = Boolean(
     project.relatedResources && project.relatedResources.length > 0,
   );
+  const publishedDateLabel = formatDate(
+    project.publishDate ?? project.createdAt,
+  );
+  const updatedDateLabel = formatDate(project.updatedAt ?? project.createdAt);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
@@ -253,9 +274,9 @@ export default async function ProjectDetailPage({
         </div>
 
         <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
-          {formatDate(project.updatedAt ?? project.createdAt) ? (
+          {publishedDateLabel ? (
             <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1">
-              {formatDate(project.updatedAt ?? project.createdAt)}
+              {publishedDateLabel}
             </span>
           ) : null}
         </div>
@@ -329,11 +350,18 @@ export default async function ProjectDetailPage({
                 </div>
 
                 <p className="text-sm leading-relaxed text-zinc-600">
-                  {project.author.bio ??
+                  {project.author.bio}
+                  {/*project.author.bio ??
+                    (project.authorName
+                      ? tx(
+                          "Dieser Name wurde manuell für das Projekt hinterlegt.",
+                          "de",
+                        )
+                      : null) ??
                     tx(
                       "Für dieses Profil ist noch keine Kurzbiografie hinterlegt.",
                       "de",
-                    )}
+                    ) */}
                 </p>
               </div>
             ) : (
@@ -375,11 +403,18 @@ export default async function ProjectDetailPage({
 
               <div>
                 <p className="font-semibold text-zinc-950 dark:text-white">
-                  {tx("Aktualisiert", "de")}
+                  {tx("Veröffentlicht", "de")}
                 </p>
                 <p className="mt-1 text-zinc-500">
-                  {formatDate(project.updatedAt ?? project.createdAt) ?? "-"}
+                  {publishedDateLabel ?? "-"}
                 </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-zinc-950 dark:text-white">
+                  {tx("Aktualisiert", "de")}
+                </p>
+                <p className="mt-1 text-zinc-500">{updatedDateLabel ?? "-"}</p>
               </div>
             </div>
           </section>

@@ -37,10 +37,12 @@ export type ResourcePayload = {
   id: string;
   prettyTitle?: string | null;
   ownerId?: string | null;
+  authorName?: string | null;
   name: string;
   description?: string;
   image?: string | null;
   images?: string[] | null;
+  publishDate?: string | null;
   gpsLatitude?: number | null;
   gpsLongitude?: number | null;
   gpsAltitude?: number | null;

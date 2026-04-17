@@ -26,6 +26,7 @@ type ProjectRow = {
   id: string;
   pretty_title?: string | null;
   owner_id?: string | null;
+  author_name?: string | null;
   name: string;
   description: string | null;
   image: string | null;
@@ -34,13 +35,14 @@ type ProjectRow = {
   social_media_consent?: boolean | null;
   workshop_resource_id?: string | null;
   tags: string[] | null;
+  publish_date?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   map_features?: unknown;
 };
 
 export type ProjectAuthor = {
-  id: string;
+  id: string | null;
   name: string;
   avatarUrl: string | null;
   bio: string | null;
@@ -56,6 +58,63 @@ export type ProjectRecord = ResourcePayload & {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const normalizeOptionalText = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+};
+
+const toProjectSortTimestamp = (value: string | null | undefined) => {
+  if (!value) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const normalizedValue = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T12:00:00.000Z`
+    : value;
+  const timestamp = Date.parse(normalizedValue);
+
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+};
+
+const compareProjectsByPublishDateDesc = (a: ProjectRow, b: ProjectRow) => {
+  const publishDateDifference =
+    toProjectSortTimestamp(b.publish_date) - toProjectSortTimestamp(a.publish_date);
+
+  if (publishDateDifference !== 0) {
+    return publishDateDifference;
+  }
+
+  const createdAtDifference =
+    toProjectSortTimestamp(b.created_at) - toProjectSortTimestamp(a.created_at);
+
+  if (createdAtDifference !== 0) {
+    return createdAtDifference;
+  }
+
+  return toProjectSortTimestamp(b.updated_at) - toProjectSortTimestamp(a.updated_at);
+};
+
+const PROJECTS_SELECT =
+  "id, pretty_title, owner_id, author_name, name, description, image, images, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features";
+
+const buildProjectAuthor = (
+  manualAuthorName: string | null,
+  ownerAuthor: ProjectAuthor | null,
+) => {
+  if (manualAuthorName) {
+    return {
+      id: null,
+      name: manualAuthorName,
+      avatarUrl: null,
+      bio: null,
+      email: null,
+      initials: getProjectAuthorInitials(manualAuthorName),
+    } satisfies ProjectAuthor;
+  }
+
+  return ownerAuthor;
+};
 
 const getRelatedResourcesMap = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
@@ -261,6 +320,7 @@ const toProjectRecord = (
   >,
   author: ProjectAuthor | null,
 ): ProjectRecord => {
+  const manualAuthorName = normalizeOptionalText(row.author_name);
   const mapFeatures = normalizeResourceMapFeatures(row.map_features ?? null);
   const pointFeature = getPointFeatures(mapFeatures).find(
     (feature) => feature.id === "gps-point",
@@ -270,10 +330,12 @@ const toProjectRecord = (
     id: row.id,
     prettyTitle: row.pretty_title ?? null,
     ownerId: row.owner_id ?? null,
+    authorName: manualAuthorName,
     name: row.name,
     description: row.description ?? undefined,
     image: row.image ?? null,
     images: row.images ?? (row.image ? [row.image] : undefined),
+    publishDate: row.publish_date ?? null,
     gpsLatitude: pointFeature?.point[1] ?? null,
     gpsLongitude: pointFeature?.point[0] ?? null,
     type: "project",
@@ -290,7 +352,7 @@ const toProjectRecord = (
     mapFeatures,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
-    author,
+    author: buildProjectAuthor(manualAuthorName, author),
   };
 };
 
@@ -308,25 +370,28 @@ const resolveProjectId = async (
 
 export const loadProjects = async (limit = 60) => {
   const supabase = createSupabaseAdminClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("resources")
-    .select(
-      "id, pretty_title, owner_id, name, description, image, images, project_links, social_media_consent, workshop_resource_id, tags, created_at, updated_at, map_features",
-    )
+    .select(PROJECTS_SELECT)
     .ilike("type", "project")
-    .order("updated_at", { ascending: false })
+    .order("publish_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .range(0, Math.max(limit, 1) - 1);
 
-  const rows = (data ?? []) as ProjectRow[];
-  const workshopById = await getWorkshopResourcesMap(
-      supabase,
-      rows.map((row) => row.workshop_resource_id ?? null),
-    );
+  if (error) {
+    return [];
+  }
 
-  return rows.map((row) =>
-    toProjectRecord(row, [], workshopById, null),
+  const rows = ((data ?? []) as unknown as ProjectRow[]).sort(
+    compareProjectsByPublishDateDesc,
   );
+  const workshopById = await getWorkshopResourcesMap(
+    supabase,
+    rows.map((row) => row.workshop_resource_id ?? null),
+  );
+
+  return rows.map((row) => toProjectRecord(row, [], workshopById, null));
 };
 
 export const loadProjectByIdentifier = async (identifier: string) => {
@@ -336,24 +401,25 @@ export const loadProjectByIdentifier = async (identifier: string) => {
     return null;
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("resources")
-    .select(
-      "id, pretty_title, owner_id, name, description, image, images, project_links, social_media_consent, workshop_resource_id, tags, created_at, updated_at, map_features, type",
-    )
+    .select(`${PROJECTS_SELECT}, type`)
     .eq("id", projectId)
     .ilike("type", "project")
     .maybeSingle();
 
-  if (!data) {
+  if (error || !data) {
     return null;
   }
 
-  const row = data as ProjectRow;
+  const row = data as unknown as ProjectRow;
+  const manualAuthorName = normalizeOptionalText(row.author_name);
   const [relatedMap, workshopById, author] = await Promise.all([
     getRelatedResourcesMap(supabase, [row.id]),
     getWorkshopResourcesMap(supabase, [row.workshop_resource_id ?? null]),
-    loadProjectAuthor(row.owner_id ?? null),
+    manualAuthorName
+      ? Promise.resolve(null)
+      : loadProjectAuthor(row.owner_id ?? null),
   ]);
 
   return toProjectRecord(

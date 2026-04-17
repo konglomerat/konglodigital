@@ -27,8 +27,9 @@ const loadProjectsOfTheMonth = async () => {
       )
       .ilike("type", "project")
       .contains("tags", [PROJECT_OF_THE_MONTH_TAG])
-      .order("updated_at", { ascending: false })
+      .order("publish_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(8);
 
     const rows = (data ?? []) as ProjectOfTheMonthRow[];

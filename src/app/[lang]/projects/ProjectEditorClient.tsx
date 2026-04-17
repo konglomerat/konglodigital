@@ -40,6 +40,9 @@ import { fetchJson, resizeImage } from "../resources/resource-form-utils";
 type InitialProject = ResourcePayload & {
   createdAt?: string | null;
   updatedAt?: string | null;
+  author?: {
+    name: string;
+  } | null;
 };
 
 type ResourceOption = {
@@ -49,8 +52,10 @@ type ResourceOption = {
 };
 
 type ProjectFormValues = {
+  authorName: string;
   title: string;
   description: string;
+  publishDate: string;
   tags: string;
   workshopResourceId: string;
   usedResourceIds: string[];
@@ -104,6 +109,23 @@ const splitTagDraft = (value: string) =>
 const serializeTagList = (tags: string[]) => tags.join(", ");
 
 const toTagString = (tags?: string[]) => serializeTagList(tags ?? []);
+
+const toDateInputValue = (value?: string | null) => {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return parsed.toISOString().slice(0, 10);
+};
 
 const normalizeImageList = (project?: InitialProject | null) => {
   if (!project) {
@@ -198,8 +220,10 @@ export default function ProjectEditorClient({
   const { control, register, handleSubmit, setValue, watch } =
     useForm<ProjectFormValues>({
       defaultValues: {
+        authorName: initialProject?.authorName ?? "",
         title: initialProject?.name ?? "",
         description: initialProject?.description ?? "",
+        publishDate: toDateInputValue(initialProject?.publishDate),
         tags: toTagString(initialProject?.tags),
         workshopResourceId: initialProject?.workshopResource?.id ?? "",
         usedResourceIds:
@@ -520,6 +544,7 @@ export default function ProjectEditorClient({
       .filter(isNewProjectImageItem)
       .map((imageItem) => imageItem.file);
     const formData = new FormData();
+    formData.append("authorName", values.authorName);
     formData.append("name", normalizedTitle);
     formData.append("description", values.description);
     formData.append("type", "project");
@@ -537,6 +562,7 @@ export default function ProjectEditorClient({
     formData.append("categories", "");
     formData.append("categoryIds", "");
     formData.append("attachable", "0");
+    formData.append("publishDate", values.publishDate);
     formData.append("workshopResourceId", values.workshopResourceId);
     formData.append("projectLinks", JSON.stringify(normalizedLinks));
     formData.append(
@@ -870,6 +896,43 @@ export default function ProjectEditorClient({
         </section>
 
         <section className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              {tx("Autor", "de")}
+            </label>
+            <input
+              type="text"
+              {...register("authorName")}
+              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950"
+              placeholder={tx("z. B. Anna Beispiel", "de")}
+            />
+            <p className="text-xs text-zinc-500">
+              {initialProject?.author?.name && !initialProject?.authorName
+                ? `${tx("Wenn das Feld leer bleibt, wird aktuell ", "de")}${initialProject.author.name}${tx(" als Autor angezeigt.", "de")}`
+                : tx(
+                    "Wenn das Feld leer bleibt, wird automatisch der verknüpfte Benutzer angezeigt.",
+                    "de",
+                  )}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              {tx("Veröffentlichungsdatum", "de")}
+            </label>
+            <input
+              type="date"
+              {...register("publishDate")}
+              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950"
+            />
+            <p className="text-xs text-zinc-500">
+              {tx(
+                "Dieses Datum steuert die Reihenfolge in der Projektübersicht.",
+                "de",
+              )}
+            </p>
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
               {tx("Werkstatt", "de")}

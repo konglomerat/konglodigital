@@ -93,6 +93,7 @@ $$;
 create table if not exists public.resources (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references auth.users (id) on delete set null,
+  author_name text,
   name text not null,
   pretty_title text,
   description text,
@@ -110,6 +111,7 @@ create table if not exists public.resources (
   tags text[],
   categories jsonb,
   map_features jsonb,
+  publish_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -123,6 +125,8 @@ alter table public.resources add column if not exists pretty_title text;
 alter table public.resources add column if not exists project_links jsonb;
 alter table public.resources add column if not exists social_media_consent boolean not null default false;
 alter table public.resources add column if not exists workshop_resource_id uuid references public.resources (id) on delete set null;
+alter table public.resources add column if not exists author_name text;
+alter table public.resources add column if not exists publish_date date;
 
 create table if not exists public.resource_pretty_titles (
   resource_id uuid not null references public.resources (id) on delete cascade,
