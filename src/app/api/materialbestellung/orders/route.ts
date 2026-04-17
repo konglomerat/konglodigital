@@ -5,7 +5,6 @@ import {
   normalizeMaterialOrderDraft,
   normalizeMaterialOrderSummary,
 } from "@/lib/material-orders";
-import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const roundCurrency = (value: number) => Math.round(value * 100) / 100;
@@ -21,10 +20,6 @@ export const GET = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";
@@ -100,10 +95,6 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const body = (await request.json().catch(() => ({}))) as {
     id?: string;
     draft?: unknown;
@@ -169,10 +160,6 @@ export const DELETE = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";

@@ -26,7 +26,7 @@ import {
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 import { signOut } from "./actions";
-import { getUserRole, roleCanAccessModule } from "@/lib/roles";
+import { getUserRole } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
 import ThemeToggle from "./components/ThemeToggle";
@@ -161,8 +161,6 @@ export default async function RootLayout({
   const isAuthenticated = Boolean(userData.user);
   const userRole = await getUserRole(supabase, userData.user);
   const canAccessAdmin = isAuthenticated && userRole === "admin";
-  const canAccessInvoices =
-    isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
     "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-2.5 text-sm font-medium transition last:border-b-0";
   const navLinkClassName =
@@ -319,8 +317,8 @@ export default async function RootLayout({
                         href="/materialbestellung"
                         className={navLinkClassName}
                         icon={faLayerGroup}
-                        isAccessible={canAccessInvoices}
-                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
                         Materialbestellung
                       </ProtectedNavItem>
@@ -335,8 +333,8 @@ export default async function RootLayout({
                         href="/invoices"
                         className={navLinkClassName}
                         icon={faFolderOpen}
-                        isAccessible={canAccessInvoices}
-                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
                       >
                         Rechnungen
                       </ProtectedNavItem>
@@ -548,8 +546,8 @@ export default async function RootLayout({
                 href="/materialbestellung"
                 className={navItemClassName}
                 icon={faLayerGroup}
-                isAccessible={canAccessInvoices}
-                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
               >
                 Materialbestellung
               </ProtectedNavItem>
@@ -567,8 +565,8 @@ export default async function RootLayout({
                 href="/invoices"
                 className={navItemClassName}
                 icon={faFolderOpen}
-                isAccessible={canAccessInvoices}
-                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
               >
                 Rechnungen
               </ProtectedNavItem>

@@ -658,12 +658,6 @@ export const POST = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!hasRight(data.user, "resources:create")) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
-  }
   const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";
 
   const payload = await readResourcePayload(request);

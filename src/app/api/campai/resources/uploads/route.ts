@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
 
 const sanitizeFileName = (value: string) =>
   value.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -20,12 +19,6 @@ export const POST = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!hasRight(data.user, "resources:create")) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
   }
 
   let payload: UploadRequest;
