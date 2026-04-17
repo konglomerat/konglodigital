@@ -744,14 +744,6 @@ export const PUT = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const canEditByRight = hasRight(data.user, "resources:edit");
-  if (!canEditByRight && existingResource.owner_id !== data.user.id) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
-  }
-
   const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";
 
   const payload = await readResourcePayload(request);
@@ -970,15 +962,6 @@ export const DELETE = async (
 
   if (fetchError || !row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const canDelete =
-    hasRight(data.user, "resources:delete") || row.owner_id === data.user.id;
-  if (!canDelete) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
   }
 
   const { error: deleteLinksError } = await supabase
