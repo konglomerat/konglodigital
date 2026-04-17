@@ -84,7 +84,10 @@ const LABEL_PATTERNS = [
   ["material", ["material"]],
   ["fraesdauer", ["fraesdauer", "frasdauer"]],
   ["rohlingsmasse", ["rohlingsmasse"]],
-  ["benoetigte-fraeser", ["benoetigte-fraeser", "benotigte-fraser", "benotigte-fraeser"]],
+  [
+    "benoetigte-fraeser",
+    ["benoetigte-fraeser", "benotigte-fraser", "benotigte-fraeser"],
+  ],
   ["materialstaerke", ["materialstaerke", "materialstarke"]],
   ["lizenz", ["lizenz"]],
   ["fraesdateien", ["fraesdateien", "frasdateien"]],
@@ -144,9 +147,7 @@ const toIsoDate = (value) => {
 const sanitizeProjectLink = (value) => {
   const trimmed = value.trim().replace(/[)>.,;]+$/g, "");
   if (
-    /^https:\/\/drive\.google\.com\/open\?id=[A-Za-z0-9_-]+$/i.test(
-      trimmed,
-    )
+    /^https:\/\/drive\.google\.com\/open\?id=[A-Za-z0-9_-]+$/i.test(trimmed)
   ) {
     return trimmed;
   }
@@ -218,7 +219,10 @@ const getPhotoCrop = async (imagePath) => {
     const min = Math.min(red, green, blue);
     const luminance = (red + green + blue) / 3;
     const saturation = max - min;
-    return (luminance > 35 && luminance < 235) || (saturation > 18 && luminance < 245);
+    return (
+      (luminance > 35 && luminance < 235) ||
+      (saturation > 18 && luminance < 245)
+    );
   };
 
   const findLargestSegment = (scores, threshold) => {
@@ -312,16 +316,24 @@ const parseCatalogText = (ocrText) => {
 
   const title = lines[0] ?? null;
   const authorLine = lines.find((line) => /^von\s+/i.test(line));
-  const authorName = authorLine ? authorLine.replace(/^von\s+/i, "").trim() : null;
-  const dateLine = [...lines].reverse().find((line) => /^\d{2}\.\d{2}\.\d{4}$/.test(line));
+  const authorName = authorLine
+    ? authorLine.replace(/^von\s+/i, "").trim()
+    : null;
+  const dateLine = [...lines]
+    .reverse()
+    .find((line) => /^\d{2}\.\d{2}\.\d{4}$/.test(line));
   const publishDate = dateLine ? toIsoDate(dateLine) : null;
 
-  const descriptionStartIndex = lines.findIndex((line) => normalizeLabel(line) === "beschreibung");
+  const descriptionStartIndex = lines.findIndex(
+    (line) => normalizeLabel(line) === "beschreibung",
+  );
   const labelOrder = [];
   const metadata = {};
   let description = "";
 
-  const metadataStartIndex = lines.findIndex((line) => normalizeLabel(line).startsWith("material"));
+  const metadataStartIndex = lines.findIndex((line) =>
+    normalizeLabel(line).startsWith("material"),
+  );
   if (descriptionStartIndex >= 0) {
     const descriptionLines = lines.slice(
       descriptionStartIndex + 1,
@@ -331,7 +343,9 @@ const parseCatalogText = (ocrText) => {
   }
 
   let activeLabel = null;
-  for (const line of lines.slice(metadataStartIndex >= 0 ? metadataStartIndex : 0)) {
+  for (const line of lines.slice(
+    metadataStartIndex >= 0 ? metadataStartIndex : 0,
+  )) {
     const normalized = normalizeLabel(line);
     if (!normalized || normalized === "cc") {
       continue;
@@ -383,9 +397,15 @@ const parseCatalogText = (ocrText) => {
     .filter((item) => item.value);
 
   const detailMarkdown = details.length
-    ? ["## Projektdaten", ...details.map((item) => `- ${item.label}: ${item.value}`)].join("\n")
+    ? [
+        "## Projektdaten",
+        ...details.map((item) => `- ${item.label}: ${item.value}`),
+      ].join("\n")
     : "";
-  const fullDescription = [description, detailMarkdown].filter(Boolean).join("\n\n").trim();
+  const fullDescription = [description, detailMarkdown]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
 
   return {
     title,
@@ -399,14 +419,19 @@ const parseCatalogText = (ocrText) => {
 
 const uploadFile = async ({ filePath, storagePath, contentType }) => {
   const buffer = await fs.readFile(filePath);
-  const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, buffer, {
-    upsert: false,
-    contentType,
-  });
+  const { error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(storagePath, buffer, {
+      upsert: false,
+      contentType,
+    });
   if (error) {
-    throw new Error(`Unable to upload ${path.basename(filePath)}: ${error.message}`);
+    throw new Error(
+      `Unable to upload ${path.basename(filePath)}: ${error.message}`,
+    );
   }
-  return supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+  return supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath).data
+    .publicUrl;
 };
 
 const ensurePrettyTitle = async ({ resourceId, name }) => {
@@ -422,7 +447,9 @@ const ensurePrettyTitle = async ({ resourceId, name }) => {
       .maybeSingle();
 
     if (error) {
-      throw new Error(`Unable to resolve pretty title ${candidate}: ${error.message}`);
+      throw new Error(
+        `Unable to resolve pretty title ${candidate}: ${error.message}`,
+      );
     }
 
     if (!data || data.resource_id === resourceId) {
@@ -443,7 +470,9 @@ const ensurePrettyTitle = async ({ resourceId, name }) => {
     );
 
   if (historyError) {
-    throw new Error(`Unable to save pretty title history: ${historyError.message}`);
+    throw new Error(
+      `Unable to save pretty title history: ${historyError.message}`,
+    );
   }
 
   const { error: resourceError } = await supabase
@@ -452,7 +481,9 @@ const ensurePrettyTitle = async ({ resourceId, name }) => {
     .eq("id", resourceId);
 
   if (resourceError) {
-    throw new Error(`Unable to update resource pretty title: ${resourceError.message}`);
+    throw new Error(
+      `Unable to update resource pretty title: ${resourceError.message}`,
+    );
   }
 
   return prettyTitle;
@@ -465,7 +496,9 @@ const findExistingProject = async ({ title, prettyTitle }) => {
     .eq("pretty_title", prettyTitle)
     .maybeSingle();
   if (byPrettyTitle.error) {
-    throw new Error(`Unable to check existing pretty title ${prettyTitle}: ${byPrettyTitle.error.message}`);
+    throw new Error(
+      `Unable to check existing pretty title ${prettyTitle}: ${byPrettyTitle.error.message}`,
+    );
   }
   if (byPrettyTitle.data?.resource_id) {
     return byPrettyTitle.data.resource_id;
@@ -478,7 +511,9 @@ const findExistingProject = async ({ title, prettyTitle }) => {
     .eq("name", title)
     .maybeSingle();
   if (byName.error) {
-    throw new Error(`Unable to check existing project ${title}: ${byName.error.message}`);
+    throw new Error(
+      `Unable to check existing project ${title}: ${byName.error.message}`,
+    );
   }
   return byName.data?.id ?? null;
 };
@@ -492,7 +527,8 @@ const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
       description: parsed.description || null,
       image: coverImageUrl,
       images: [coverImageUrl, pdfUrl],
-      project_links: parsed.projectLinks.length > 0 ? parsed.projectLinks : null,
+      project_links:
+        parsed.projectLinks.length > 0 ? parsed.projectLinks : null,
       social_media_consent: false,
       publish_date: parsed.publishDate,
       type: "project",
@@ -503,10 +539,15 @@ const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
     .single();
 
   if (error || !data?.id) {
-    throw new Error(`Unable to create project ${parsed.title}: ${error?.message || "missing id"}`);
+    throw new Error(
+      `Unable to create project ${parsed.title}: ${error?.message || "missing id"}`,
+    );
   }
 
-  const prettyTitle = await ensurePrettyTitle({ resourceId: data.id, name: parsed.title });
+  const prettyTitle = await ensurePrettyTitle({
+    resourceId: data.id,
+    name: parsed.title,
+  });
   return { id: data.id, prettyTitle };
 };
 
@@ -525,7 +566,9 @@ const updateExistingProject = async ({ resourceId, parsed }) => {
     .eq("id", resourceId);
 
   if (error) {
-    throw new Error(`Unable to backfill project ${parsed.title}: ${error.message}`);
+    throw new Error(
+      `Unable to backfill project ${parsed.title}: ${error.message}`,
+    );
   }
 };
 
@@ -538,7 +581,9 @@ const parseArgs = () => {
 };
 
 const shouldSkipPdf = (fileName) => {
-  const normalized = normalizeLabel(path.basename(fileName, path.extname(fileName)));
+  const normalized = normalizeLabel(
+    path.basename(fileName, path.extname(fileName)),
+  );
   return normalized === "cnc-projektekatalog";
 };
 
@@ -547,7 +592,9 @@ const main = async () => {
   const catalogDir = await ensureCatalogDir(rawCatalogDir);
   const entries = await fs.readdir(catalogDir, { withFileTypes: true });
   const pdfPaths = entries
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"))
+    .filter(
+      (entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"),
+    )
     .map((entry) => path.join(catalogDir, entry.name))
     .filter((filePath) => !shouldSkipPdf(filePath))
     .sort((left, right) => left.localeCompare(right, "de"));
@@ -556,7 +603,9 @@ const main = async () => {
     throw new Error("No project PDFs found in catalog directory.");
   }
 
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "konglo-project-catalog-"));
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "konglo-project-catalog-"),
+  );
   const previewDir = path.join(tempRoot, "previews");
   const coverDir = path.join(tempRoot, "covers");
   await fs.mkdir(previewDir, { recursive: true });
@@ -571,7 +620,9 @@ const main = async () => {
     const parsed = parseCatalogText(ocrText);
 
     if (!parsed.title) {
-      throw new Error(`Unable to extract a project title from ${path.basename(pdfPath)}.`);
+      throw new Error(
+        `Unable to extract a project title from ${path.basename(pdfPath)}.`,
+      );
     }
 
     const prettyTitle = slugify(parsed.title);
@@ -634,15 +685,22 @@ const main = async () => {
     summary.push(result);
   }
 
-  console.log(JSON.stringify({
-    mode: write ? "write" : "dry-run",
-    catalogDir,
-    processed: summary.length,
-    created: summary.filter((item) => item.createdId).length,
-    backfilledExisting: summary.filter((item) => item.backfilledExisting).length,
-    skippedExisting: summary.filter((item) => item.existingId).length,
-    items: summary,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        mode: write ? "write" : "dry-run",
+        catalogDir,
+        processed: summary.length,
+        created: summary.filter((item) => item.createdId).length,
+        backfilledExisting: summary.filter((item) => item.backfilledExisting)
+          .length,
+        skippedExisting: summary.filter((item) => item.existingId).length,
+        items: summary,
+      },
+      null,
+      2,
+    ),
+  );
 };
 
 main().catch((error) => {

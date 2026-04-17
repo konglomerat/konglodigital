@@ -79,7 +79,8 @@ const toProjectSortTimestamp = (value: string | null | undefined) => {
 
 const compareProjectsByPublishDateDesc = (a: ProjectRow, b: ProjectRow) => {
   const publishDateDifference =
-    toProjectSortTimestamp(b.publish_date) - toProjectSortTimestamp(a.publish_date);
+    toProjectSortTimestamp(b.publish_date) -
+    toProjectSortTimestamp(a.publish_date);
 
   if (publishDateDifference !== 0) {
     return publishDateDifference;
@@ -92,7 +93,9 @@ const compareProjectsByPublishDateDesc = (a: ProjectRow, b: ProjectRow) => {
     return createdAtDifference;
   }
 
-  return toProjectSortTimestamp(b.updated_at) - toProjectSortTimestamp(a.updated_at);
+  return (
+    toProjectSortTimestamp(b.updated_at) - toProjectSortTimestamp(a.updated_at)
+  );
 };
 
 const PROJECTS_SELECT =
@@ -196,8 +199,11 @@ const getRelatedResourcesMap = async (
           prettyTitle: row.pretty_title ?? null,
           image:
             row.images?.find(
-              (image): image is string => typeof image === "string" && Boolean(image),
-            ) ?? row.image ?? null,
+              (image): image is string =>
+                typeof image === "string" && Boolean(image),
+            ) ??
+            row.image ??
+            null,
         },
       ]),
   );
