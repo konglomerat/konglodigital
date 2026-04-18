@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { type PrinterStatus } from "@/lib/bambu";
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import {
   getCartJobs,
   getCartProducts,
@@ -445,27 +446,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                3D Printer Dashboard
-              </h1>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button href="/printers/emptying" kind="secondary" size="small">
-                Drucker entleeren
-              </Button>
-              <Button
-                href="/printers/access-codes"
-                kind="secondary"
-                size="small"
-              >
-                Zugangscodes
-              </Button>
-            </div>
-          </div>
-        </header>
+        <PageTitle
+          title="3D Printer Dashboard"
+          links={[
+            {
+              href: "/printers/emptying",
+              label: "Drucker entleeren",
+            },
+            {
+              href: "/printers/access-codes",
+              label: "Zugangscodes",
+            },
+          ]}
+        />
 
         {errorMessage ? (
           <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
@@ -826,15 +819,6 @@ export default function Home() {
               ))}
             </div>
           )}
-        </section>
-
-        <section className="rounded-3xl border border-dashed border-zinc-300 bg-white/60 p-6 text-sm text-zinc-600">
-          <h3 className="text-base font-semibold text-zinc-900">Next steps</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Set BambuLab cloud credentials in .env.local.</li>
-            <li>Consider polling or caching if you have many printers.</li>
-            <li>Store printer metadata in a database for history tracking.</li>
-          </ul>
         </section>
       </main>
     </div>

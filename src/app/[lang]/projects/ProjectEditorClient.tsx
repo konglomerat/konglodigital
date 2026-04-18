@@ -15,7 +15,6 @@ import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Reorder } from "motion/react";
 import Select from "react-select";
 import {
-  faArrowLeft,
   faFilePdf,
   faFloppyDisk,
   faPlus,
@@ -24,6 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
@@ -619,32 +619,24 @@ export default function ProjectEditorClient({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">
-            {mode === "edit"
-              ? tx("Projekt bearbeiten", "de")
-              : tx("Neues Projekt", "de")}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600">
-            {tx(
-              "Lege ein Projekt mit Bildern, Markdown-Beschreibung, Werkstattbezug und verwendeten Ressourcen an.",
-              "de",
-            )}
-          </p>
-        </div>
-        <Button
-          href={localizePathname(
+      <PageTitle
+        title={
+          mode === "edit"
+            ? tx("Projekt bearbeiten", "de")
+            : tx("Neues Projekt", "de")
+        }
+        subTitle={tx(
+          "Lege ein Projekt mit Bildern, Markdown-Beschreibung, Werkstattbezug und verwendeten Ressourcen an.",
+          "de",
+        )}
+        backLink={{
+          href: localizePathname(
             initialProject ? buildProjectPath(initialProject) : "/projects",
             locale,
-          )}
-          kind="secondary"
-          icon={faArrowLeft}
-          className="px-4 py-2 text-xs"
-        >
-          {tx("Zurück", "de")}
-        </Button>
-      </header>
+          ),
+          label: tx("Zurück", "de"),
+        }}
+      />
 
       {formError ? (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

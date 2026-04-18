@@ -27,11 +27,6 @@ const splitList = (value: string) =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-const normalizeOptionalText = (value: string | null | undefined) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-};
-
 const toPriority = (value: unknown) => {
   if (typeof value !== "string") {
     return 3;
@@ -366,12 +361,10 @@ const readResourcePayload = async (request: NextRequest) => {
         ? Number.parseInt(maxImageWidthRaw, 10)
         : undefined;
     return {
-      authorName: String(formData.get("authorName") ?? ""),
       name: String(formData.get("name") ?? ""),
       description: String(formData.get("description") ?? ""),
       type: String(formData.get("type") ?? ""),
       priority: toPriority(formData.get("priority")),
-      publishDate: String(formData.get("publishDate") ?? ""),
       tags: String(formData.get("tags") ?? ""),
       relatedResourceIds: String(formData.get("relatedResourceIds") ?? ""),
       categories: String(formData.get("categories") ?? ""),
@@ -394,12 +387,10 @@ const readResourcePayload = async (request: NextRequest) => {
     };
   }
   const body = (await request.json()) as {
-    authorName?: string | null;
     name?: string;
     description?: string;
     type?: string;
     priority?: number | string;
-    publishDate?: string | null;
     tags?: string[] | string;
     relatedResourceIds?: string[] | string;
     categories?: string[] | string;
@@ -413,12 +404,10 @@ const readResourcePayload = async (request: NextRequest) => {
     mapFeatures?: unknown;
   };
   return {
-    authorName: body.authorName ?? "",
     name: body.name ?? "",
     description: body.description ?? "",
     type: body.type ?? "",
     priority: toPriority(String(body.priority ?? "")),
-    publishDate: body.publishDate ?? "",
     tags: Array.isArray(body.tags) ? body.tags.join(",") : (body.tags ?? ""),
     relatedResourceIds: Array.isArray(body.relatedResourceIds)
       ? body.relatedResourceIds.join(",")
@@ -657,7 +646,6 @@ type ResourceRow = {
   id: string;
   pretty_title?: string | null;
   owner_id?: string | null;
-  author_name?: string | null;
   name: string;
   description: string | null;
   image: string | null;
@@ -672,7 +660,6 @@ type ResourceRow = {
   tags: string[] | null;
   categories: StoredCategory[] | null;
   map_features?: unknown;
-  publish_date?: string | null;
 };
 
 const toResourcePayload = (
@@ -696,12 +683,10 @@ const toResourcePayload = (
   id: row.id,
   prettyTitle: row.pretty_title ?? null,
   ownerId: row.owner_id ?? null,
-  authorName: row.author_name ?? null,
   name: row.name,
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
-  publishDate: row.publish_date ?? null,
   projectLinks: normalizeProjectLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
   workshopResource:
@@ -862,8 +847,6 @@ export const POST = async (request: NextRequest) => {
   );
   let description = payload.description?.trim() ?? "";
   let name = payload.name.trim();
-  const authorName = normalizeOptionalText(payload.authorName);
-  const publishDate = normalizeOptionalText(payload.publishDate);
   let tags = payload.tags ? splitList(payload.tags) : [];
   const workshopResourceId = await resolveWorkshopResourceId(
     supabase,
@@ -951,12 +934,10 @@ export const POST = async (request: NextRequest) => {
   const { data: created, error } = await writeSupabase
     .from("resources")
     .insert({
-      author_name: authorName,
       name,
       description: description ? description : null,
       type: payload.type.trim(),
       priority: payload.priority,
-      publish_date: publishDate,
       tags: tags.length > 0 ? tags : null,
       categories: storedCategories,
       attachable: payload.attachable,

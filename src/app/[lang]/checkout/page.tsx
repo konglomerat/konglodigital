@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 
 import {
   getCartJobs,
@@ -386,17 +387,17 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Checkout</h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Review cart items and create a Campai invoice draft.
-          </p>
-        </div>
-        <Button type="button" onClick={handleClearCart} kind="secondary">
-          Clear cart
-        </Button>
-      </header>
+      <PageTitle
+        title="Checkout"
+        subTitle="Review cart items and create a Campai invoice draft."
+        links={[
+          {
+            label: "Clear cart",
+            onClick: handleClearCart,
+            kind: "secondary",
+          },
+        ]}
+      />
 
       {jobsError ? <p className="text-sm text-rose-600">{jobsError}</p> : null}
       {descriptionsError ? (

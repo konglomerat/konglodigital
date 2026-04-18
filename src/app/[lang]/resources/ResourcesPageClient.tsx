@@ -29,7 +29,7 @@ import {
   RESOURCES_NAMESPACE,
   type Locale,
 } from "@/i18n/config";
-import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import { Input, Select } from "../components/ui/form";
 import {
   Tooltip,
@@ -949,54 +949,36 @@ export default function ResourcesPageClient({
 
   return (
     <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {tx("Inventar", "de")}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            {tx(
-              "Tools & Ressourcen, die im Konglomerat zur Verfügung stehen.",
-              "de",
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            href={localizePathname("/resources/features", locale)}
-            kind="secondary"
-            className="gap-2"
-          >
-            <FontAwesomeIcon icon={faLayerGroup} className="text-[10px]" />
-            <span>{tx("Map features")}</span>
-          </Button>
-          <Button
-            href={localizePathname("/resources/duplicates", locale)}
-            kind="secondary"
-            className="gap-2"
-          >
-            <FontAwesomeIcon icon={faClone} className="text-[10px]" />
-            <span>{tx("Duplicates")}</span>
-          </Button>
-          <Button
-            href={localizePathname("/resources/batch", locale)}
-            kind="secondary"
-            className="gap-2"
-          >
-            <FontAwesomeIcon icon={faCamera} className="text-[10px]" />
-            <span>{tx("Batch capture")}</span>
-          </Button>
-          <Button
-            href={localizePathname("/resources/new", locale)}
-            kind="primary"
-            className="gap-2"
-          >
-            <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-            <span>{tx("New resource")}</span>
-          </Button>
-        </div>
-      </header>
+      <PageTitle
+        title={tx("Inventar", "de")}
+        subTitle={tx(
+          "Tools & Ressourcen, die im Konglomerat zur Verfügung stehen.",
+          "de",
+        )}
+        links={[
+          {
+            href: localizePathname("/resources/features", locale),
+            label: tx("Map features"),
+            icon: faLayerGroup,
+          },
+          {
+            href: localizePathname("/resources/duplicates", locale),
+            label: tx("Duplicates"),
+            icon: faClone,
+          },
+          {
+            href: localizePathname("/resources/batch", locale),
+            label: tx("Batch capture"),
+            icon: faCamera,
+          },
+          {
+            href: localizePathname("/resources/new", locale),
+            label: tx("New resource"),
+            icon: faPlus,
+            kind: "primary",
+          },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-2 lg:hidden">
         <button

@@ -20,6 +20,7 @@ import Link from "next/link";
 
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 
 type CampaiProduct = {
   id: string;
@@ -233,20 +234,10 @@ export default function CampaiProductsPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Produkte</h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              Durchsuche Produkte und lege sie in den Warenkorb.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600"
-          >
-            Zurück zum Dashboard
-          </Link>
-        </header>
+        <PageTitle
+          title="Produkte"
+          subTitle="Durchsuche Produkte und lege sie in den Warenkorb."
+        />
 
         {errorMessage ? (
           <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

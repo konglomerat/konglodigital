@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import PageTitle from "../components/PageTitle";
 import {
   CALENDAR_URL,
   buildDays,
@@ -40,25 +41,22 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
-            Kalender
-          </p>
-          <h1 className="text-2xl font-bold text-zinc-900">Nächste 7 Tage</h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Übersicht aller Termine im Google Kalender.
-          </p>
-        </div>
-        <a
-          href={CALENDAR_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center justify-center rounded-full border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
-        >
-          Google Kalender öffnen
-        </a>
-      </div>
+      <PageTitle
+        eyebrow="Kalender"
+        title="Nächste 7 Tage"
+        subTitle="Übersicht aller Termine im Google Kalender."
+        links={[
+          {
+            href: CALENDAR_URL,
+            label: "Google Kalender öffnen",
+            target: "_blank",
+            rel: "noreferrer",
+            size: "medium",
+            className:
+              "rounded-full border-blue-600 text-blue-600 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600",
+          },
+        ]}
+      />
 
       {errorMessage ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

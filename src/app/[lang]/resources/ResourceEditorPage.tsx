@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { faArrowLeft, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import ResourceForm from "./ResourceForm";
 import {
   createResourceFormData,
@@ -33,7 +33,8 @@ type ModeConfig = {
   theme: "dark" | "light";
   fileHelpText?: string;
   maxImageWidth: number;
-  headerLinks: Array<{ href: string; label: string; icon?: IconProp }>;
+  backLink?: { href: string; label: string; icon?: IconProp };
+  headerLinks?: Array<{ href: string; label: string; icon?: IconProp }>;
 };
 
 const config: ModeConfig = {
@@ -44,13 +45,10 @@ const config: ModeConfig = {
   theme: "dark",
   fileHelpText: "Choose one or more images or PDFs (JPG/PNG/WebP/PDF).",
   maxImageWidth: 2000,
-  headerLinks: [
-    {
-      href: "/resources",
-      label: "Back to resources",
-      icon: faArrowLeft,
-    },
-  ],
+  backLink: {
+    href: "/resources",
+    label: "Back to resources",
+  },
 };
 
 type RelatedResourceOptionCandidate = {
@@ -357,27 +355,24 @@ export default function ResourceEditorPage({}: Record<string, never>) {
   return (
     <div>
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {tx(config.title)}
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600">{tx(config.subtitle)}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {config.headerLinks.map((link) => (
-              <Button
-                key={link.href}
-                href={localizePathname(link.href, locale)}
-                kind="secondary"
-                className="px-4 py-2 text-xs"
-                icon={link.icon}
-              >
-                {tx(link.label)}
-              </Button>
-            ))}
-          </div>
-        </header>
+        <PageTitle
+          title={tx(config.title)}
+          subTitle={tx(config.subtitle)}
+          backLink={
+            config.backLink
+              ? {
+                  href: localizePathname(config.backLink.href, locale),
+                  label: tx(config.backLink.label),
+                  icon: config.backLink.icon,
+                }
+              : undefined
+          }
+          links={config.headerLinks?.map((link) => ({
+            href: localizePathname(link.href, locale),
+            label: tx(link.label),
+            icon: link.icon,
+          }))}
+        />
 
         {formError ? (
           <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

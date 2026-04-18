@@ -8,8 +8,8 @@ import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import heroHelloImage from "../../../hero-hello.jpg";
-import Button from "../../components/Button";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
+import PageTitle from "../../components/PageTitle";
 import ShareButton from "../../components/ShareButton";
 import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
@@ -22,7 +22,6 @@ import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
   isImageUrl,
-  isVideoUrl,
 } from "@/lib/resource-media";
 import { loadProjectByIdentifier } from "../project-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
@@ -242,36 +241,33 @@ export default async function ProjectDetailPage({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <header className="space-y-4 px-6 py-2 md:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              {project.workshopResource?.name ?? tx("Projekt", "de")}
-            </p>
-            <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100 md:text-5xl">
-              {project.name}
-            </h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <PageTitle
+          backLink={{
+            href: localizePathname("/projects", locale),
+            label: tx("Zur Projektübersicht", "de"),
+          }}
+          eyebrow={project.workshopResource?.name ?? tx("Projekt", "de")}
+          eyebrowClassName="text-xs tracking-[0.2em] text-zinc-500"
+          title={project.name}
+          titleClassName="mt-3 max-w-4xl dark:text-zinc-100"
+          customActions={
             <ShareButton
               title={project.name}
               text={tx("Schau dir dieses Projekt an.", "de")}
             />
-            <Button
-              href={localizePathname("/projects", locale)}
-              kind="secondary"
-            >
-              {tx("Zur Projektübersicht", "de")}
-            </Button>
-            {canEdit ? (
-              <Button
-                href={localizePathname(`/projects/edit/${project.id}`, locale)}
-                kind="primary"
-              >
-                {tx("Bearbeiten", "de")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
+          }
+          links={[
+            ...(canEdit
+              ? [
+                  {
+                    href: localizePathname(`/projects/edit/${project.id}`, locale),
+                    label: tx("Bearbeiten", "de"),
+                    kind: "primary" as const,
+                  },
+                ]
+              : []),
+          ]}
+        />
 
         <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
           {publishedDateLabel ? (

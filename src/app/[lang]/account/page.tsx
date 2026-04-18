@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { type InvoicePayload } from "@/lib/campai-invoices";
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import PasswordInput from "../components/PasswordInput";
 
 type AccountUser = {
@@ -346,12 +347,10 @@ export default function AccountPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Konto</h1>
-        <p className="text-sm text-zinc-600">
-          Verwalte deine Profildaten und dein Passwort.
-        </p>
-      </header>
+      <PageTitle
+        title="Konto"
+        subTitle="Verwalte deine Profildaten und dein Passwort."
+      />
 
       {error ? (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

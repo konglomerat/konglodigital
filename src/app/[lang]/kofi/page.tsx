@@ -19,6 +19,7 @@ import type {
   KoFiMonthlySummary,
   KoFiResponse,
 } from "@/lib/campai-kofi";
+import PageTitle from "../components/PageTitle";
 
 type ViewMode = "month" | "quarter" | "year";
 
@@ -611,20 +612,15 @@ export default function KoFiPage() {
 
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
-      <div className="flex flex-col gap-3 border-b border-zinc-200 pb-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-            Campai / SKR 42
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-            KoFi Kosten- und Finanzierungsplan
-          </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600">
-            Tabellenansicht mit Monats-, Quartals- und Jahresperspektive direkt
-            aus den Campai-Belegen, Konten und Kostenstellen.
-          </p>
-        </div>
-      </div>
+      <PageTitle
+        eyebrow="Campai / SKR 42"
+        title="KoFi Kosten- und Finanzierungsplan"
+        subTitle="Tabellenansicht mit Monats-, Quartals- und Jahresperspektive direkt aus den Campai-Belegen, Konten und Kostenstellen."
+        className="border-b border-zinc-200 pb-6"
+        eyebrowClassName="text-xs tracking-[0.26em] text-zinc-500"
+        titleClassName="mt-2 text-zinc-900 md:text-4xl"
+        subTitleClassName="mt-3 max-w-3xl leading-6"
+      />
 
       <section className="mt-6 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">

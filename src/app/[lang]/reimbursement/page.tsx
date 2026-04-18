@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -451,21 +452,19 @@ export default function ReimbursementPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <header className="space-y-3">
-          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
-              <FontAwesomeIcon icon={faRotate} className="h-5 w-5" />
+        <PageTitle
+          title={
+            <span className="flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
+                <FontAwesomeIcon icon={faRotate} className="h-5 w-5" />
+              </span>
+              <span>Rückerstattungen einreichen</span>
             </span>
-            <span>Rückerstattungen einreichen</span>
-          </h1>
-          <p className="max-w-4xl text-sm leading-relaxed text-zinc-600">
-            Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System
-            automatisch.
-          </p>
-          <p className="text-xs text-zinc-500">
-            Pflichtfelder sind mit * markiert.
-          </p>
-        </header>
+          }
+          subTitle="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
+        />
+
+        <p className="text-xs text-zinc-500">Pflichtfelder sind mit * markiert.</p>
 
         {costCentersError ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">

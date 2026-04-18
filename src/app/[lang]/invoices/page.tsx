@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 
 type InvoicePayload = {
   id: string;
@@ -131,14 +132,18 @@ export default function InvoicesPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 md:px-0 md:py-0">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Rechnungen
-        </h1>
-        <Button href="/invoices/new" kind="primary" size="small" icon={faPlus}>
-          Neue Rechnung erstellen
-        </Button>
-      </div>
+      <PageTitle
+        title="Rechnungen"
+        titleClassName="dark:text-zinc-100"
+        links={[
+          {
+            href: "/invoices/new",
+            label: "Neue Rechnung erstellen",
+            kind: "primary",
+            icon: faPlus,
+          },
+        ]}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">

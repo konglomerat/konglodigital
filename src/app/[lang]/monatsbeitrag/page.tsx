@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../components/Button";
+import PageTitle from "../components/PageTitle";
 
 type AccessCardPlanId = "none" | "quarter" | "full";
 
@@ -230,22 +231,15 @@ export default function MonatsbeitragPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Zugangskarte
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              Du hast genau drei Optionen: keine Zugangskarte, eine Abokarte oder eine 10er Karte.
-            </p>
-            <p className="mt-2 text-sm text-zinc-500">
-              Aktuell aktiv: {currentPlan === "none" ? "Keine Zugangskarte" : (currentPlanInfo?.title ?? "—")}
-            </p>
-          </div>
-          <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
-            Back to dashboard
-          </Button>
-        </header>
+        <PageTitle
+          title="Zugangskarte"
+          subTitle="Du hast genau drei Optionen: keine Zugangskarte, eine Abokarte oder eine 10er Karte."
+          backLink={{ href: "/", label: "Back to dashboard" }}
+        />
+
+        <p className="text-sm text-zinc-500">
+          Aktuell aktiv: {currentPlan === "none" ? "Keine Zugangskarte" : (currentPlanInfo?.title ?? "—")}
+        </p>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="grid gap-4 md:grid-cols-3">

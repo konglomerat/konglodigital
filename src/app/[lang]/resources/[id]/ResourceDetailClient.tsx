@@ -13,7 +13,7 @@ import type { ResourcePayload } from "@/lib/campai-resources";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
-import Button from "../../components/Button";
+import PageTitle from "../../components/PageTitle";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
@@ -88,6 +88,7 @@ export default function ResourceDetailClient({
       longitude: pointFeature.point[0],
     };
   }, [resource]);
+
   const resourceTypeLabel = useMemo(() => {
     const typeValue = resource?.type?.trim() ?? "";
     if (!typeValue) {
@@ -98,6 +99,7 @@ export default function ResourceDetailClient({
       typeValue
     );
   }, [resource?.type]);
+
   const renderedDescription = useMemo(
     () => renderSimpleMarkdown(resource?.description ?? ""),
     [resource?.description],
@@ -106,54 +108,34 @@ export default function ResourceDetailClient({
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {tx("Resource details")}
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              {tx("View details and metadata for the selected resource.")}
-            </p>
-            <p className="mt-3 inline-flex max-w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800">
-              {tx("Images and text on this page were generated with AI.")}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              href={localizePathname("/resources", locale)}
-              kind="secondary"
-              className="px-4 py-2 text-xs"
-              icon={faArrowLeft}
-            >
-              {tx("Back to resources")}
-            </Button>
-            <Button
-              href={localizePathname(
+        <PageTitle
+          title={resource.name}
+          backLink={{
+            href: localizePathname("/resources", locale),
+            label: tx("Back to resources"),
+            icon: faArrowLeft,
+          }}
+          links={[
+            {
+              href: localizePathname(
                 `/resources/features?resourceId=${resourceId}`,
                 locale,
-              )}
-              kind="secondary"
-              className="border-blue-200 px-4 py-2 text-xs text-blue-700"
-              icon={faPen}
-            >
-              {tx("Edit")}
-            </Button>
-            <Button
-              href={localizePathname(
+              ),
+              label: tx("Edit"),
+              icon: faPen,
+              className: "border-blue-200 text-blue-700",
+            },
+            {
+              href: localizePathname(
                 `/resources/features?resourceId=${resourceId}`,
                 locale,
-              )}
-              kind="secondary"
-              className="px-4 py-2 text-xs"
-              icon={faLayerGroup}
-            >
-              {tx("Map features")}
-            </Button>
-            <Button
-              type="button"
-              kind="danger-secondary"
-              icon={faTrash}
-              onClick={async () => {
+              ),
+              label: tx("Map features"),
+              icon: faLayerGroup,
+            },
+            {
+              label: deleting ? tx("Deleting…") : tx("Delete"),
+              onClick: async () => {
                 if (deleting) {
                   return;
                 }
@@ -188,13 +170,17 @@ export default function ResourceDetailClient({
                 } finally {
                   setDeleting(false);
                 }
-              }}
-              disabled={deleting}
-            >
-              {deleting ? tx("Deleting...") : tx("Delete")}
-            </Button>
-          </div>
-        </header>
+              },
+              disabled: deleting,
+              icon: faTrash,
+              kind: "danger-secondary",
+            },
+          ]}
+        />
+
+        <p className="inline-flex max-w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800">
+          {tx("Images and text on this page were generated with AI.")}
+        </p>
 
         {errorMessage ? (
           <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
@@ -202,7 +188,7 @@ export default function ResourceDetailClient({
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section>
           {!resource ? (
             <p className="text-sm text-zinc-500">{tx("Resource not found.")}</p>
           ) : (
@@ -226,9 +212,6 @@ export default function ResourceDetailClient({
                 variant="resource"
               />
               <div>
-                <h2 className="text-xl font-semibold text-zinc-900">
-                  {resource.name}
-                </h2>
                 {resource.description ? (
                   <div
                     className="markdown-content mt-3 text-sm"

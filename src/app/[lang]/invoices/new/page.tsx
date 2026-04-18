@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
+import PageTitle from "../../components/PageTitle";
 import {
   AutocompleteInput,
   type Suggestion as DebtorSuggestion,
@@ -814,14 +815,10 @@ export default function NewSimpleInvoicePage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Neue Rechnung erstellen
-        </h1>
-        <p className="text-sm text-zinc-600">
-          Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss
-        </p>
-      </header>
+      <PageTitle
+        title="Neue Rechnung erstellen"
+        subTitle="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         <FormSection

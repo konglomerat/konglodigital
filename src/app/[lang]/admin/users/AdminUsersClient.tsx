@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
+import PageTitle from "@/app/[lang]/components/PageTitle";
 
 type ActiveProfile = {
   id: string;
@@ -152,30 +153,23 @@ export default function AdminUsersClient() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
-          Admin: Benutzer
-        </h1>
-        <p className="text-sm text-zinc-600">
-          Verwalte registrierte Benutzerprofile und ihre Rollen. Die
-          Registrierung selbst läuft wieder direkt über Supabase-Mail links mit
-          Mitgliedsabgleich.
-        </p>
-        <div className="pt-2">
-          <Button
-            type="button"
-            kind="secondary"
-            className="px-4 py-2 text-sm"
-            disabled={isSendingTestEmail}
-            onClick={() => {
-              void handleSendTestEmail();
-            }}
-          >
-            {isSendingTestEmail
+      <PageTitle
+        title="Admin: Benutzer"
+        subTitle="Verwalte registrierte Benutzerprofile und ihre Rollen. Die Registrierung selbst läuft wieder direkt über Supabase-Mail links mit Mitgliedsabgleich."
+        links={[
+          {
+            label: isSendingTestEmail
               ? "Sende Test-E-Mail ..."
-              : "Test-E-Mail an robert@wirewire.de senden"}
-          </Button>
-        </div>
+              : "Test-E-Mail an robert@wirewire.de senden",
+            onClick: () => {
+              void handleSendTestEmail();
+            },
+            disabled: isSendingTestEmail,
+            className: "px-4 py-2 text-sm",
+          },
+        ]}
+      />
+
         {testEmailError ? (
           <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
             {testEmailError}
@@ -186,7 +180,6 @@ export default function AdminUsersClient() {
             {testEmailSuccess}
           </div>
         ) : null}
-      </header>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">

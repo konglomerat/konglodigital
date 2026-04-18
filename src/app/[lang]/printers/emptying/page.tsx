@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "../../components/Button";
+import PageTitle from "../../components/PageTitle";
 
 type Printer = {
   id: string;
@@ -128,24 +128,18 @@ export default function PrinterEmptyingPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-400">
-          Printer Emptying
-        </p>
-        <h1 className="text-3xl font-semibold text-zinc-900">
-          Finished prints
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-500">
-          Every minute we check if a print has finished. When a printer is done,
-          it is marked as needing to be emptied until you confirm it.
-        </p>
-        <div>
-          <Link
-            href="/printers/access-codes"
-            className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Zur Unterseite Zugangscodes
-          </Link>
-        </div>
+        <PageTitle
+          eyebrow="Printer Emptying"
+          eyebrowClassName="text-xs tracking-[0.3em] text-zinc-400"
+          title="Finished prints"
+          titleClassName="text-zinc-900"
+          subTitle="Every minute we check if a print has finished. When a printer is done, it is marked as needing to be emptied until you confirm it."
+          subTitleClassName="max-w-2xl text-zinc-500"
+          backLink={{
+            href: "/printers/access-codes",
+            label: "Zur Unterseite Zugangscodes",
+          }}
+        />
         {lastChecked ? (
           <p className="text-xs text-zinc-400">
             Last checked: {formatUpdated(lastChecked)}

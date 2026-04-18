@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, use } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../../components/Button";
+import PageTitle from "../../components/PageTitle";
 
 type CampaiProduct = {
   id: string;
@@ -131,28 +132,12 @@ export default function CampaiProductDetailPage({
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Produktdetails
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              Sieh dir Details an und passe die Menge im Warenkorb an.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              href="/products"
-              kind="secondary"
-              className="px-4 py-2 text-xs"
-            >
-              Zurück zu den Produkten
-            </Button>
-            <Button href="/" kind="secondary" className="px-4 py-2 text-xs">
-              Dashboard
-            </Button>
-          </div>
-        </header>
+        <PageTitle
+          title="Produktdetails"
+          subTitle="Sieh dir Details an und passe die Menge im Warenkorb an."
+          backLink={{ href: "/products", label: "Zurück zu den Produkten" }}
+          links={[{ href: "/", label: "Dashboard" }]}
+        />
 
         {errorMessage ? (
           <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
