@@ -51,7 +51,7 @@ const renderMedia = (
         playsInline
         preload="metadata"
         aria-label={alt}
-        className={`${className} bg-zinc-950`}
+        className={`${className} bg-foreground`}
       />
     );
   }
@@ -60,7 +60,7 @@ const renderMedia = (
     return (
       <div
         aria-label={alt}
-        className={`${className} flex flex-col items-center justify-center bg-rose-50 text-rose-700`}
+        className={`${className} flex flex-col items-center justify-center bg-destructive-soft text-destructive`}
       >
         <FontAwesomeIcon icon={faFilePdf} className="h-10 w-10" />
         <span className="mt-3 text-sm font-semibold uppercase tracking-[0.2em]">
@@ -190,21 +190,21 @@ export default function MediaLightboxGallery({
           </section>
         ) : null
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50/60">
+        <div className="overflow-hidden rounded-2xl border border-border bg-muted/60">
           {normalizedMedia.length > 0 ? (
             <div className="flex flex-wrap gap-2 p-2">
               {normalizedPreviewMedia.map((mediaUrl, index) =>
                 renderThumbnailButton(
                   mediaUrl,
                   index,
-                  "inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-xl bg-zinc-100 text-left",
+                  "inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-xl bg-accent text-left",
                   "h-60 w-auto object-cover",
                 ),
               )}
             </div>
           ) : noMediaLabel ? (
-            <div className="flex h-60 w-full items-center justify-center bg-zinc-100">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+            <div className="flex h-60 w-full items-center justify-center bg-accent">
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 {noMediaLabel}
               </span>
             </div>
@@ -214,7 +214,7 @@ export default function MediaLightboxGallery({
 
       {activeLightboxMedia ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80 p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setLightboxIndex(null)}
@@ -226,7 +226,7 @@ export default function MediaLightboxGallery({
               event.stopPropagation();
               setLightboxIndex(null);
             }}
-            className="absolute right-1 top-3 rounded-full !bg-transparent !border-none px-3 py-3 !text-xl font-semibold !text-white"
+            className="absolute right-1 top-3 rounded-full !bg-transparent !border-none px-3 py-3 !text-xl font-semibold !text-background"
             icon={faXmark}
           >
             {closeLabel}
@@ -245,7 +245,7 @@ export default function MediaLightboxGallery({
                         normalizedMedia.length,
                   );
                 }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
+                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-background/90"
                 icon={faChevronLeft}
               >
                 {previousLabel}
@@ -261,7 +261,7 @@ export default function MediaLightboxGallery({
                       : (current + 1) % normalizedMedia.length,
                   );
                 }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
+                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-background/90"
                 icon={faChevronRight}
                 iconReverse
               >
@@ -279,27 +279,27 @@ export default function MediaLightboxGallery({
               playsInline
               preload="metadata"
               aria-label={previewLabel ?? title}
-              className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl bg-zinc-950 object-contain shadow-2xl"
+              className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl bg-foreground object-contain shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             />
           ) : getResourceMediaKindFromUrl(activeLightboxMedia) ===
             "document" ? (
             <div
-              className="flex w-full max-w-xl flex-col items-center rounded-2xl bg-white px-8 py-10 text-center shadow-2xl"
+              className="flex w-full max-w-xl flex-col items-center rounded-2xl bg-popover px-8 py-10 text-center text-popover-foreground shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <FontAwesomeIcon
                 icon={faFilePdf}
-                className="h-14 w-14 text-rose-700"
+                className="h-14 w-14 text-destructive"
               />
-              <p className="mt-4 text-lg font-semibold text-zinc-950">
+              <p className="mt-4 text-lg font-semibold text-popover-foreground">
                 {documentLabel}
               </p>
               <a
                 href={activeLightboxMedia}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                className="mt-5 inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
               >
                 <FontAwesomeIcon
                   icon={faUpRightFromSquare}

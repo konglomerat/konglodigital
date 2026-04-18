@@ -184,22 +184,22 @@ export default function BudgetPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-0">
-      <h1 className="mb-6 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+      <h1 className="mb-6 text-2xl font-bold text-foreground ">
         Budget Werkbereiche
       </h1>
 
       {/* Cost Center Selection */}
-      <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-sm  ">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label
               htmlFor="costCenter"
-              className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="mb-1.5 block text-sm font-medium text-foreground/80 "
             >
               Werkbereich (Kostenstelle)
             </label>
             {loadingCostCenters ? (
-              <div className="flex items-center gap-2 py-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
                 <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
                 Kostenstellen werden geladen…
               </div>
@@ -208,7 +208,7 @@ export default function BudgetPage() {
                 id="costCenter"
                 value={selectedCostCenter}
                 onChange={(e) => setSelectedCostCenter(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring   "
               >
                 <option value="">— Werkbereich wählen —</option>
                 {costCenters.map((cc) => (
@@ -222,7 +222,7 @@ export default function BudgetPage() {
           <div className="w-32">
             <label
               htmlFor="year"
-              className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="mb-1.5 block text-sm font-medium text-foreground/80 "
             >
               Jahr
             </label>
@@ -230,7 +230,7 @@ export default function BudgetPage() {
               id="year"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring   "
             >
               {Array.from({ length: 5 }, (_, i) => currentYear - i).map(
                 (y) => (
@@ -246,14 +246,14 @@ export default function BudgetPage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+        <div className="mb-6 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive   ">
           {error}
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center gap-2 py-12 text-zinc-500">
+        <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
           <FontAwesomeIcon icon={faSpinner} spin className="h-5 w-5" />
           <span>Daten werden geladen…</span>
         </div>
@@ -263,8 +263,8 @@ export default function BudgetPage() {
       {!loading && selectedCostCenter && balances.length > 0 && (
         <>
           {/* Saldo Card */}
-          <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="mb-1 flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+          <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-sm  ">
+            <div className="mb-1 flex items-center gap-2 text-sm font-medium text-muted-foreground ">
               {selectedArea && (
                 <FontAwesomeIcon icon={selectedArea.icon} className="h-4 w-4" />
               )}
@@ -275,18 +275,18 @@ export default function BudgetPage() {
             <div
               className={`text-4xl font-bold tracking-tight ${
                 saldo >= 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-red-600 dark:text-red-400"
+                  ? "text-success "
+                  : "text-destructive "
               }`}
             >
               {formatCents(saldo)}
             </div>
             <div className="mt-3 flex gap-6 text-sm">
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1.5 text-success ">
                 <FontAwesomeIcon icon={faArrowTrendUp} className="h-3.5 w-3.5" />
                 Einnahmen: {formatCents(totalRevenue)}
               </div>
-              <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+              <div className="flex items-center gap-1.5 text-destructive ">
                 <FontAwesomeIcon icon={faArrowTrendDown} className="h-3.5 w-3.5" />
                 Ausgaben: {formatCents(totalExpenses)}
               </div>
@@ -296,34 +296,34 @@ export default function BudgetPage() {
           {/* Revenue List */}
           {revenueEntries.length > 0 && (
             <div className="mb-6">
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-400">
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-success ">
                 <FontAwesomeIcon icon={faArrowTrendUp} className="h-4 w-4" />
                 Einnahmen
               </h2>
-              <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white shadow-sm dark:divide-zinc-800 dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-sm   ">
                 {revenueEntries.map((entry, i) => (
                   <div
                     key={`rev-${i}`}
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <div>
-                      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <div className="text-sm font-medium text-foreground ">
                         {entry.accountName ?? `Konto ${entry.account}`}
                       </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="text-xs text-muted-foreground ">
                         Konto {entry.account}
                       </div>
                     </div>
-                    <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    <div className="text-sm font-semibold text-success ">
                       {formatCents(entry.credit)}
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-between bg-zinc-50 px-4 py-3 font-semibold dark:bg-zinc-800">
-                  <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                <div className="flex items-center justify-between bg-muted/50 px-4 py-3 font-semibold ">
+                  <span className="text-sm text-foreground/80 ">
                     Summe Einnahmen
                   </span>
-                  <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                  <span className="text-sm text-success ">
                     {formatCents(totalRevenue)}
                   </span>
                 </div>
@@ -334,34 +334,34 @@ export default function BudgetPage() {
           {/* Expense List */}
           {expenseEntries.length > 0 && (
             <div className="mb-6">
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-red-700 dark:text-red-400">
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-destructive ">
                 <FontAwesomeIcon icon={faArrowTrendDown} className="h-4 w-4" />
                 Ausgaben
               </h2>
-              <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white shadow-sm dark:divide-zinc-800 dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-sm   ">
                 {expenseEntries.map((entry, i) => (
                   <div
                     key={`exp-${i}`}
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <div>
-                      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <div className="text-sm font-medium text-foreground ">
                         {entry.accountName ?? `Konto ${entry.account}`}
                       </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="text-xs text-muted-foreground ">
                         Konto {entry.account}
                       </div>
                     </div>
-                    <div className="text-sm font-semibold text-red-600 dark:text-red-400">
+                    <div className="text-sm font-semibold text-destructive ">
                       {formatCents(entry.debit)}
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-between bg-zinc-50 px-4 py-3 font-semibold dark:bg-zinc-800">
-                  <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                <div className="flex items-center justify-between bg-muted/50 px-4 py-3 font-semibold ">
+                  <span className="text-sm text-foreground/80 ">
                     Summe Ausgaben
                   </span>
-                  <span className="text-sm text-red-600 dark:text-red-400">
+                  <span className="text-sm text-destructive ">
                     {formatCents(totalExpenses)}
                   </span>
                 </div>
@@ -372,25 +372,25 @@ export default function BudgetPage() {
           {/* Other entries */}
           {otherEntries.length > 0 && (
             <div className="mb-6">
-              <h2 className="mb-3 text-lg font-semibold text-zinc-700 dark:text-zinc-300">
+              <h2 className="mb-3 text-lg font-semibold text-foreground/80 ">
                 Sonstige Konten
               </h2>
-              <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white shadow-sm dark:divide-zinc-800 dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-sm   ">
                 {otherEntries.map((entry, i) => (
                   <div
                     key={`other-${i}`}
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <div>
-                      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <div className="text-sm font-medium text-foreground ">
                         {entry.accountName ?? `Konto ${entry.account}`}
                       </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="text-xs text-muted-foreground ">
                         {accountTypeLabel(entry.accountType)} · Konto{" "}
                         {entry.account}
                       </div>
                     </div>
-                    <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    <div className="text-sm font-semibold text-foreground/80 ">
                       {formatCents(entry.balanceAmount)}
                     </div>
                   </div>
@@ -403,14 +403,14 @@ export default function BudgetPage() {
 
       {/* Empty state */}
       {!loading && selectedCostCenter && balances.length === 0 && !error && (
-        <div className="py-12 text-center text-sm text-zinc-500">
+        <div className="py-12 text-center text-sm text-muted-foreground">
           Keine Buchungen für diesen Werkbereich im Jahr {year} gefunden.
         </div>
       )}
 
       {/* Initial state */}
       {!selectedCostCenter && !loading && (
-        <div className="py-12 text-center text-sm text-zinc-500">
+        <div className="py-12 text-center text-sm text-muted-foreground">
           Bitte wähle einen Werkbereich aus, um das Budget einzusehen.
         </div>
       )}

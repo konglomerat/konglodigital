@@ -37,7 +37,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={handleToggle}
-      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+      className="inline-flex items-center gap-2 rounded-full border border-input bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       <FontAwesomeIcon

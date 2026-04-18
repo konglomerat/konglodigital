@@ -247,9 +247,9 @@ export default async function ProjectDetailPage({
             label: tx("Zur Projektübersicht", "de"),
           }}
           eyebrow={project.workshopResource?.name ?? tx("Projekt", "de")}
-          eyebrowClassName="text-xs tracking-[0.2em] text-zinc-500"
+          eyebrowClassName="text-xs tracking-[0.2em] text-muted-foreground"
           title={project.name}
-          titleClassName="mt-3 max-w-4xl dark:text-zinc-100"
+          titleClassName="mt-3 max-w-4xl "
           customActions={
             <ShareButton
               title={project.name}
@@ -260,7 +260,10 @@ export default async function ProjectDetailPage({
             ...(canEdit
               ? [
                   {
-                    href: localizePathname(`/projects/edit/${project.id}`, locale),
+                    href: localizePathname(
+                      `/projects/edit/${project.id}`,
+                      locale,
+                    ),
                     label: tx("Bearbeiten", "de"),
                     kind: "primary" as const,
                   },
@@ -269,9 +272,9 @@ export default async function ProjectDetailPage({
           ]}
         />
 
-        <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           {publishedDateLabel ? (
-            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1">
+            <span className="rounded-full border border-border bg-muted/50 px-3 py-1">
               {publishedDateLabel}
             </span>
           ) : null}
@@ -294,7 +297,7 @@ export default async function ProjectDetailPage({
 
           <section className="px-6 py-2 md:px-8">
             <div
-              className="prose prose-zinc max-w-none prose-headings:font-semibold prose-a:text-blue-700 prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-blue-800 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-blockquote:border-l-4 prose-blockquote:border-zinc-300 prose-blockquote:pl-4"
+              className="prose prose-zinc max-w-none prose-headings:font-semibold prose-a:text-primary prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-primary prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5 prose-blockquote:border-l-4 prose-blockquote:border-input prose-blockquote:pl-4"
               dangerouslySetInnerHTML={{
                 __html:
                   renderedMarkdown ||
@@ -305,11 +308,11 @@ export default async function ProjectDetailPage({
 
           {hasTags ? (
             <section className="px-6 py-2 md:px-8">
-              <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {project.tags?.map((tag) => (
                   <span
                     key={`${project.id}-${tag}`}
-                    className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1"
+                    className="rounded-full border border-border bg-muted/50 px-3 py-1"
                   >
                     #{tag}
                   </span>
@@ -321,7 +324,7 @@ export default async function ProjectDetailPage({
 
         <aside className="space-y-5 lg:sticky lg:top-8">
           <section className="px-5 py-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Autor", "de")}
             </p>
             {project.author ? (
@@ -334,18 +337,18 @@ export default async function ProjectDetailPage({
                       className="h-16 w-16 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-lg font-semibold text-blue-700">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-lg font-semibold text-primary">
                       {project.author.initials}
                     </div>
                   )}
                   <div>
-                    <p className="text-lg font-semibold text-zinc-950 dark:text-white">
+                    <p className="text-lg font-semibold text-foreground">
                       {project.author.name}
                     </p>
                   </div>
                 </div>
 
-                <p className="text-sm leading-relaxed text-zinc-600">
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {project.author.bio ??
                     (project.authorName
                       ? tx(
@@ -359,19 +362,19 @@ export default async function ProjectDetailPage({
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-sm text-zinc-600">
+              <p className="mt-3 text-sm text-muted-foreground">
                 {tx("Autorinformationen sind aktuell nicht verfügbar.", "de")}
               </p>
             )}
           </section>
 
           <section className="px-5 py-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Projektinfos", "de")}
             </p>
-            <div className="mt-4 space-y-4 text-sm text-zinc-700">
+            <div className="mt-4 space-y-4 text-sm text-foreground/80">
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">
+                <p className="font-semibold text-foreground">
                   {tx("Werkstatt", "de")}
                 </p>
                 {project.workshopResource ? (
@@ -383,39 +386,39 @@ export default async function ProjectDetailPage({
                       }),
                       locale,
                     )}
-                    className="mt-1 inline-flex text-blue-700 hover:text-blue-800"
+                    className="mt-1 inline-flex text-primary hover:text-primary"
                   >
                     {project.workshopResource.name ??
                       project.workshopResource.id}
                   </Link>
                 ) : (
-                  <p className="mt-1 text-zinc-500">
+                  <p className="mt-1 text-muted-foreground">
                     {tx("Keine Werkstatt verknüpft", "de")}
                   </p>
                 )}
               </div>
 
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">
+                <p className="font-semibold text-foreground">
                   {tx("Veröffentlicht", "de")}
                 </p>
-                <p className="mt-1 text-zinc-500">
+                <p className="mt-1 text-muted-foreground">
                   {publishedDateLabel ?? "-"}
                 </p>
               </div>
 
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">
+                <p className="font-semibold text-foreground">
                   {tx("Aktualisiert", "de")}
                 </p>
-                <p className="mt-1 text-zinc-500">{updatedDateLabel ?? "-"}</p>
+                <p className="mt-1 text-muted-foreground">{updatedDateLabel ?? "-"}</p>
               </div>
             </div>
           </section>
 
           {hasProjectLinks ? (
             <section className="px-5 py-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Links", "de")}
               </p>
               <div className="mt-4 grid gap-3">
@@ -425,10 +428,10 @@ export default async function ProjectDetailPage({
                     href={link.url}
                     target={link.url.startsWith("http") ? "_blank" : undefined}
                     rel={link.url.startsWith("http") ? "noreferrer" : undefined}
-                    className="block text-sm text-blue-700 transition hover:text-blue-800"
+                    className="block text-sm text-primary transition hover:text-primary"
                   >
                     <span className="block font-semibold">{link.label}</span>
-                    <span className="mt-1 block break-all text-xs text-blue-600">
+                    <span className="mt-1 block break-all text-xs text-primary">
                       {link.url}
                     </span>
                   </a>
@@ -439,7 +442,7 @@ export default async function ProjectDetailPage({
 
           {hasRelatedResources ? (
             <section className="px-5 py-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Verwendete Ressourcen", "de")}
               </p>
               <div className="mt-4 grid gap-3">
@@ -453,12 +456,12 @@ export default async function ProjectDetailPage({
                       }),
                       locale,
                     )}
-                    className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700 transition hover:border-blue-200 hover:text-blue-700"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-muted/50 p-2 text-sm text-foreground/80 transition hover:border-primary-border hover:text-primary"
                   >
                     {resource.image ? (
                       getResourceMediaKindFromUrl(resource.image) ===
                       "document" ? (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-destructive-soft text-destructive">
                           <FontAwesomeIcon
                             icon={faFilePdf}
                             className="h-6 w-6"
@@ -472,7 +475,7 @@ export default async function ProjectDetailPage({
                         />
                       )
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-200 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         {tx("Bild", "de")}
                       </div>
                     )}

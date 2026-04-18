@@ -707,7 +707,7 @@ export default function ResourcesMapView({
   if (mapboxError) {
     return (
       <div
-        className={`flex items-center justify-center bg-zinc-50 text-xs text-zinc-500 ${className}`}
+        className={`flex items-center justify-center bg-muted text-xs text-muted-foreground ${className}`}
       >
         {mapboxError}
       </div>
@@ -724,7 +724,7 @@ export default function ResourcesMapView({
       <button
         type="button"
         onClick={() => setIsSatellite((prev) => !prev)}
-        className="absolute left-3 top-3 z-10 rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:text-zinc-900"
+        className="absolute left-3 top-3 z-10 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground shadow-sm transition hover:border-input hover:text-foreground"
       >
         {isSatellite ? tx("Karte", "de") : tx("Satellit", "de")}
       </button>

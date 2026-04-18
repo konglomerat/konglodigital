@@ -115,7 +115,7 @@ function ProtectedNavItem({
 
   return (
     <div
-      className={`${className} cursor-not-allowed select-none text-zinc-400 hover:text-zinc-400`}
+      className={`${className} cursor-not-allowed select-none text-muted-foreground/80 hover:text-muted-foreground/80`}
       aria-disabled="true"
       title={tooltip}
     >
@@ -142,13 +142,13 @@ export default async function RootLayout({
   const canAccessInvoices =
     isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-zinc-200/15 bg-transparent px-6 py-2.5 text-sm font-medium transition last:border-b-0";
+    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
-    "group flex items-center gap-3 border-b border-zinc-200/15 bg-transparent px-2 py-2.5 text-sm font-medium text-zinc-700 transition hover:text-zinc-900";
+    "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground";
   const navSectionTitleClassName =
-    "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 first:pt-0";
+    "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:pt-0";
   const navButtonClassName =
-    "flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700";
+    "flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90";
   const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
 
   return (
@@ -164,13 +164,13 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${storyOpenSans.variable} antialiased`}
       >
         <I18nProvider locale={locale}>
-          <ChatwootWidget />
-          <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-            <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm md:hidden">
+          <ChatwootWidget locale={locale} />
+          <div className="min-h-screen bg-background text-foreground">
+            <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
               <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                 <Link
                   href="/"
-                  className="text-xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                  className="text-xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
                 >
                   Konglo
                   <br />
@@ -182,7 +182,7 @@ export default async function RootLayout({
                   <AutoCloseMenuDetails
                     className="group"
                     summary={
-                      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-input bg-background px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
                         Menü
                         <span className="text-lg transition group-open:rotate-45">
                           +
@@ -190,7 +190,7 @@ export default async function RootLayout({
                       </summary>
                     }
                   >
-                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
+                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg">
                       <nav className="flex flex-col px-2 py-2">
                         <p className={navSectionTitleClassName}>
                           Digital Fabrication
@@ -330,7 +330,7 @@ export default async function RootLayout({
                           Budget Werkbereiche
                         </ProtectedNavItem>
                       </nav>
-                      <div className="border-t border-zinc-200 px-4 py-4">
+                      <div className="border-t border-border px-4 py-4">
                         {isAuthenticated ? (
                           <div className="space-y-3">
                             {canAccessAdmin ? (
@@ -379,12 +379,12 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
-            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-200 bg-white px-6 py-8 shadow-sm md:flex">
+            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
               <div className="space-y-3">
                 <div>
                   <Link
                     href="/"
-                    className="text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 transition hover:text-blue-700"
+                    className="text-3xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
                   >
                     Konglo
                     <br />
@@ -397,7 +397,7 @@ export default async function RootLayout({
                 </div>
               </div>
               <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Digital Fabrication
                 </p>
                 <ProtectedNavItem
@@ -437,7 +437,7 @@ export default async function RootLayout({
                   Warenkorb
                 </ProtectedNavItem>
 
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Self Service
                 </p>
                 <ProtectedNavItem
@@ -450,7 +450,7 @@ export default async function RootLayout({
                   Profil
                 </ProtectedNavItem>
 
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Verein
                 </p>
                 <ActiveNavLink href="/calendar" className={navItemClassName}>
@@ -480,7 +480,7 @@ export default async function RootLayout({
                   Produkte
                 </ProtectedNavItem>
 
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   buchhaltung
                 </p>
                 <ProtectedNavItem

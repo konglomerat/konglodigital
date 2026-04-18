@@ -299,14 +299,14 @@ export default function ImageCropDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/75 px-4 py-6 backdrop-blur-sm">
-      <div className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-200 px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/75 px-4 py-6 backdrop-blur-sm">
+      <div className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-card shadow-2xl">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-950">
+            <h2 className="text-xl font-semibold text-foreground">
               {tx("Bild zuschneiden", "de")}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {tx(
                 "Wähle einen Ausschnitt, ziehe das Bild und passe den Zoom an.",
                 "de",
@@ -322,7 +322,7 @@ export default function ImageCropDialog({
           <div className="space-y-4">
             <div
               ref={frameRef}
-              className="relative mx-auto w-full max-w-3xl cursor-grab overflow-hidden rounded-[2rem] bg-zinc-950 active:cursor-grabbing"
+              className="relative mx-auto w-full max-w-3xl cursor-grab overflow-hidden rounded-[2rem] bg-foreground active:cursor-grabbing"
               style={{ aspectRatio }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -347,10 +347,10 @@ export default function ImageCropDialog({
                   transform: `translate(calc(-50% + ${clampedPosition.x}px), calc(-50% + ${clampedPosition.y}px))`,
                 }}
               />
-              <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-white/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]" />
+              <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-background/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]" />
             </div>
 
-            <p className="text-center text-xs text-zinc-500">
+            <p className="text-center text-xs text-muted-foreground">
               {tx(
                 "Ziehe das Bild im Rahmen, um den Ausschnitt zu verschieben.",
                 "de",
@@ -358,9 +358,9 @@ export default function ImageCropDialog({
             </p>
           </div>
 
-          <div className="space-y-5 rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
+          <div className="space-y-5 rounded-[1.5rem] border border-border bg-muted/50 p-5">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Format", "de")}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -378,8 +378,8 @@ export default function ImageCropDialog({
                     onClick={() => setAspect(value)}
                     className={
                       aspect === value
-                        ? "rounded-xl border border-blue-600 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700"
-                        : "rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-100"
+                        ? "rounded-xl border border-primary bg-primary-soft px-3 py-2 text-sm font-semibold text-primary"
+                        : "rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground/80 transition hover:border-input hover:bg-accent"
                     }
                   >
                     {label}
@@ -389,7 +389,7 @@ export default function ImageCropDialog({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Zoom", "de")}
               </label>
               <input
@@ -401,11 +401,11 @@ export default function ImageCropDialog({
                 onChange={(event) => setZoom(Number(event.target.value))}
                 className="w-full"
               />
-              <p className="text-sm text-zinc-500">{zoom.toFixed(2)}x</p>
+              <p className="text-sm text-muted-foreground">{zoom.toFixed(2)}x</p>
             </div>
 
             {errorMessage ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 {errorMessage}
               </div>
             ) : null}

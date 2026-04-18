@@ -353,34 +353,34 @@ export default function AccountPage() {
       />
 
       {error ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <section className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {decodeURIComponent(error)}
         </section>
       ) : null}
 
       {status ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <section className="rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
           {message ? decodeURIComponent(message) : "Gespeichert."}
         </section>
       ) : null}
 
       {loadingUser ? (
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-zinc-500">Konto wird geladen ...</p>
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <p className="text-sm text-muted-foreground">Konto wird geladen ...</p>
         </section>
       ) : accountLoadError ? (
-        <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-rose-900">
+        <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-destructive">
             Konto konnte nicht geladen werden
           </h2>
-          <p className="mt-2 text-sm text-rose-700">{accountLoadError}</p>
+          <p className="mt-2 text-sm text-destructive">{accountLoadError}</p>
         </section>
       ) : !user ? (
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900">
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground">
             Anmeldung erforderlich
           </h2>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Bitte melde dich an, um deine Kontoeinstellungen zu verwalten.
           </p>
           <Button
@@ -393,13 +393,13 @@ export default function AccountPage() {
         </section>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Profil</h2>
-            <p className="mt-1 text-sm text-zinc-500">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground">Profil</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Dein Name wird direkt aus Campai übernommen.
             </p>
             <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
-              <div className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+              <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
                 {activeAvatarUrl ? (
                   <img
                     src={activeAvatarUrl}
@@ -412,12 +412,12 @@ export default function AccountPage() {
                     }}
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-lg font-semibold text-muted-foreground">
                     {getInitials(displayName || user.email || "?")}
                   </div>
                 )}
-                <div className="text-sm text-zinc-600">
-                  <p className="font-semibold text-zinc-900">
+                <div className="text-sm text-muted-foreground">
+                  <p className="font-semibold text-foreground">
                     {displayName || "Dein Profil"}
                   </p>
                   <p>
@@ -427,7 +427,7 @@ export default function AccountPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Name in Campai
                 </label>
                 <input
@@ -435,26 +435,26 @@ export default function AccountPage() {
                   value={campaiName}
                   readOnly
                   placeholder="Kein Campai-Kontakt verknüpft"
-                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-600"
+                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Wenn der Name geändert werden soll, ändere ihn bitte direkt in
                   Campai.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Email
                 </label>
                 <input
                   type="email"
                   value={user.email ?? ""}
                   disabled
-                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Profilbild URL
                 </label>
                 <input
@@ -463,16 +463,16 @@ export default function AccountPage() {
                   value={avatarUrl}
                   onChange={(event) => setAvatarUrl(event.target.value)}
                   placeholder="https://…"
-                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                  className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Verwende eine öffentlich erreichbare Bild-URL. Wenn keine URL
                   gesetzt ist oder das Bild nicht lädt, verwenden wir dein
                   Gravatar anhand deiner E-Mail-Adresse.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Kurzbiografie
                 </label>
                 <textarea
@@ -481,9 +481,9 @@ export default function AccountPage() {
                   onChange={(event) => setShortBio(event.target.value)}
                   rows={4}
                   placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
-                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                  className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Diese Kurzinfo erscheint in der Autorenbox deiner Projekte.
                 </p>
               </div>
@@ -495,22 +495,22 @@ export default function AccountPage() {
                 Profil speichern
               </Button>
               {profileError ? (
-                <p className="text-sm text-rose-600">{profileError}</p>
+                <p className="text-sm text-destructive">{profileError}</p>
               ) : null}
               {profileStatus ? (
-                <p className="text-sm text-emerald-700">{profileStatus}</p>
+                <p className="text-sm text-success">{profileStatus}</p>
               ) : null}
             </form>
           </section>
 
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Passwort</h2>
-            <p className="mt-1 text-sm text-zinc-500">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground">Passwort</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Wähle ein neues Passwort mit mindestens 8 Zeichen.
             </p>
             <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Neues Passwort
                 </label>
                 <PasswordInput
@@ -521,11 +521,11 @@ export default function AccountPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   showLabel="Anzeigen"
                   hideLabel="Ausblenden"
-                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                  className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                   Passwort bestätigen
                 </label>
                 <PasswordInput
@@ -536,7 +536,7 @@ export default function AccountPage() {
                   onChange={(event) => setPasswordConfirm(event.target.value)}
                   showLabel="Anzeigen"
                   hideLabel="Ausblenden"
-                  className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                  className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
                 />
               </div>
               <Button
@@ -547,21 +547,21 @@ export default function AccountPage() {
                 Passwort aktualisieren
               </Button>
               {passwordError ? (
-                <p className="text-sm text-rose-600">{passwordError}</p>
+                <p className="text-sm text-destructive">{passwordError}</p>
               ) : null}
               {passwordStatus ? (
-                <p className="text-sm text-emerald-700">{passwordStatus}</p>
+                <p className="text-sm text-success">{passwordStatus}</p>
               ) : null}
             </form>
           </section>
 
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-foreground">
                   Meine Belege
                 </h2>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted-foreground">
                   {debtorAccount
                     ? `Debitor: ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
                     : campaiName
@@ -569,19 +569,19 @@ export default function AccountPage() {
                       : "Kein Campai-Debitor im Profil hinterlegt"}
                 </p>
               </div>
-              <p className="text-xs font-semibold text-zinc-500">
+              <p className="text-xs font-semibold text-muted-foreground">
                 {campaiInvoices.length} Belege
               </p>
             </div>
 
             {campaiError ? (
-              <p className="mt-4 text-sm text-rose-600">{campaiError}</p>
+              <p className="mt-4 text-sm text-destructive">{campaiError}</p>
             ) : linkedDebtorAccount === null ? (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-muted-foreground">
                 Dein Konto ist noch nicht mit einem Campai-Debitor verknpft.
               </p>
             ) : campaiInvoices.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-muted-foreground">
                 Keine Belege für Debitor-Konto {debtorAccount} gefunden.
               </p>
             ) : (
@@ -591,14 +591,14 @@ export default function AccountPage() {
                   return (
                     <article
                       key={invoice.id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-3"
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/60 px-4 py-3"
                     >
                       <div className="space-y-1">
-                        <p className="text-sm font-semibold text-zinc-900">
+                        <p className="text-sm font-semibold text-foreground">
                           {invoice.receiptNumber ?? "Beleg"}
                           {invoice.title ? ` · ${invoice.title}` : ""}
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           {invoice.customerName
                             ? `${invoice.customerName} · `
                             : ""}
@@ -610,11 +610,11 @@ export default function AccountPage() {
                       </div>
                       <div className="flex items-center gap-3 text-sm">
                         {invoice.status ? (
-                          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                          <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             {invoice.status}
                           </span>
                         ) : null}
-                        <span className="font-semibold text-zinc-900">
+                        <span className="font-semibold text-foreground">
                           {formatAmount(total, invoice.currency)}
                         </span>
                         <Button
@@ -632,7 +632,7 @@ export default function AccountPage() {
               </div>
             )}
             {debug && campaiDebug ? (
-              <pre className="mt-4 max-h-64 overflow-auto rounded-2xl bg-zinc-950 p-4 text-xs text-zinc-100">
+              <pre className="mt-4 max-h-64 overflow-auto rounded-2xl bg-foreground p-4 text-xs text-background">
                 {JSON.stringify(campaiDebug, null, 2)}
               </pre>
             ) : null}

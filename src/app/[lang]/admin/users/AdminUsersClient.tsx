@@ -171,12 +171,12 @@ export default function AdminUsersClient() {
       />
 
         {testEmailError ? (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {testEmailError}
           </div>
         ) : null}
         {testEmailSuccess ? (
-          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm">
+          <div className="rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
             {testEmailSuccess}
           </div>
         ) : null}
@@ -184,10 +184,10 @@ export default function AdminUsersClient() {
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-900">
+            <h2 className="text-xl font-semibold text-foreground">
               Aktive Profile
             </h2>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               Hier siehst du alle registrierten und aktiven Benutzerprofile.
             </p>
           </div>
@@ -205,26 +205,26 @@ export default function AdminUsersClient() {
         </div>
 
         {profileListError ? (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
             {profileListError}
           </div>
         ) : null}
 
         {roleError ? (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
             {roleError}
           </div>
         ) : null}
 
         {!profileListError && profiles.length === 0 ? (
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">
+          <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
             Noch keine aktiven Profile gefunden.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm">
-                <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Profil</th>
                     <th className="px-4 py-3">Status</th>
@@ -236,7 +236,7 @@ export default function AdminUsersClient() {
                     <th className="px-4 py-3">Mail bestaetigt</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 bg-white">
+                <tbody className="divide-y divide-border/60 bg-card">
                   {profiles.map((profile) => {
                     const fallbackName = [profile.firstName, profile.lastName]
                       .filter(Boolean)
@@ -249,12 +249,12 @@ export default function AdminUsersClient() {
                       <tr key={profile.id} className="align-top">
                         <td className="px-4 py-4">
                           <div className="space-y-1">
-                            <p className="font-semibold text-zinc-900">
+                            <p className="font-semibold text-foreground">
                               {displayName}
                             </p>
-                            <p className="text-zinc-600">{profile.email}</p>
+                            <p className="text-muted-foreground">{profile.email}</p>
                             {profile.campaiContactId ? (
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-muted-foreground">
                                 Campai-ID: {profile.campaiContactId}
                               </p>
                             ) : null}
@@ -264,8 +264,8 @@ export default function AdminUsersClient() {
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                               hasCampaiLink
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-zinc-100 text-zinc-700"
+                                ? "bg-success-soft text-success"
+                                : "bg-accent text-foreground/80"
                             }`}
                           >
                             {hasCampaiLink
@@ -273,13 +273,13 @@ export default function AdminUsersClient() {
                               : "Ohne Campai-Link"}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {profile.campaiMemberNumber ?? "—"}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {profile.campaiDebtorAccount ?? "—"}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           <label
                             className="sr-only"
                             htmlFor={`role-${profile.id}`}
@@ -295,7 +295,7 @@ export default function AdminUsersClient() {
                                 .value as ActiveProfile["role"];
                               void handleRoleChange(profile.id, nextRole);
                             }}
-                            className="min-w-36 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-zinc-100"
+                            className="min-w-36 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border disabled:cursor-not-allowed disabled:bg-accent"
                           >
                             {ROLE_OPTIONS.map((roleOption) => (
                               <option
@@ -307,13 +307,13 @@ export default function AdminUsersClient() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {formatDateTime(profile.createdAt) ?? "—"}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {formatDateTime(profile.lastSignInAt) ?? "Noch nie"}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {formatDateTime(profile.emailConfirmedAt) ?? "Nein"}
                         </td>
                       </tr>

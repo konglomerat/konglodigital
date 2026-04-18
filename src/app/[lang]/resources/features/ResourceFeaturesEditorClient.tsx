@@ -2263,7 +2263,7 @@ export default function ResourceFeaturesEditorClient({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isLocationDataLoading ? (
-            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            <span className="inline-flex items-center gap-2 rounded-full border border-warning-border bg-warning-soft px-3 py-1 text-xs font-semibold text-warning">
               <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
               {tx("Loading location data...")}
             </span>
@@ -2307,19 +2307,19 @@ export default function ResourceFeaturesEditorClient({
       </header>
 
       {errorMessage ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </section>
       ) : null}
 
       {message ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+        <section className="rounded-2xl border border-success-border bg-success-soft p-4 text-sm text-success">
           {message}
         </section>
       ) : null}
 
       {isLocationDataLoading ? (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+        <section className="rounded-2xl border border-warning-border bg-warning-soft p-4 text-sm text-warning">
           <span className="inline-flex items-center gap-2">
             <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
             {tx(
@@ -2331,19 +2331,19 @@ export default function ResourceFeaturesEditorClient({
       ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
-        <aside className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs text-zinc-600">
+        <aside className="space-y-4 rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+          <div className="rounded-xl border border-border bg-muted/50 p-3">
+            <p className="text-xs text-muted-foreground">
               {tx("Fast actions:")}{" "}
-              <span className="font-semibold text-zinc-800">⌘/Ctrl+S</span>{" "}
+              <span className="font-semibold text-foreground/90">⌘/Ctrl+S</span>{" "}
               {tx("Save")} ·{" "}
-              <span className="font-semibold text-zinc-800">D</span>{" "}
+              <span className="font-semibold text-foreground/90">D</span>{" "}
               {tx("Draw toggle")} ·{" "}
-              <span className="font-semibold text-zinc-800">P</span>{" "}
+              <span className="font-semibold text-foreground/90">P</span>{" "}
               {tx("Point")} ·{" "}
-              <span className="font-semibold text-zinc-800">G</span>{" "}
+              <span className="font-semibold text-foreground/90">G</span>{" "}
               {tx("Polygon")} ·{" "}
-              <span className="font-semibold text-zinc-800">Enter</span>{" "}
+              <span className="font-semibold text-foreground/90">Enter</span>{" "}
               {tx("Finish polygon")}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -2402,7 +2402,7 @@ export default function ResourceFeaturesEditorClient({
                   event.target.value === "Point" ? "Point" : "Polygon",
                 )
               }
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700"
+              className="rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground/80"
             >
               <option value="Polygon">{tx("Polygon")}</option>
               <option value="Point">{tx("Point")}</option>
@@ -2420,7 +2420,7 @@ export default function ResourceFeaturesEditorClient({
           <div>
             <label
               htmlFor="draft-layer"
-              className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"
+              className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
             >
               {tx("Layer")}
             </label>
@@ -2429,23 +2429,23 @@ export default function ResourceFeaturesEditorClient({
               value={featureLayer}
               onChange={(event) => setFeatureLayer(event.target.value)}
               placeholder={tx("default")}
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
             />
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Features ({mapFeatures.length})
               </p>
               {activeFeatureIndex >= 0 ? (
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-muted-foreground">
                   {activeFeatureIndex + 1}/{mapFeatures.length}
                 </span>
               ) : null}
             </div>
             {mapFeatures.length === 0 ? (
-              <p className="text-sm text-zinc-500">{tx("No features yet.")}</p>
+              <p className="text-sm text-muted-foreground">{tx("No features yet.")}</p>
             ) : (
               <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
                 {mapFeatures.map((feature, index) => {
@@ -2457,8 +2457,8 @@ export default function ResourceFeaturesEditorClient({
                         onClick={() => setActiveFeatureId(feature.id)}
                         className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
                           isActive
-                            ? "border-blue-300 bg-blue-50 text-blue-900"
-                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                            ? "border-primary-border bg-primary-soft text-primary"
+                            : "border-border bg-card text-foreground/80 hover:border-input"
                         }`}
                       >
                         <span className="inline-flex items-center gap-2">
@@ -2468,7 +2468,7 @@ export default function ResourceFeaturesEditorClient({
                           />
                           {feature.layer}
                         </span>
-                        <span className="mt-1 block text-xs text-zinc-500">
+                        <span className="mt-1 block text-xs text-muted-foreground">
                           {feature.geometryType === "Point"
                             ? `${tx("Point")} ${index + 1}`
                             : `${tx("Polygon")} ${index + 1} • ${feature.coordinates.length} ${tx("points")}`}
@@ -2482,14 +2482,14 @@ export default function ResourceFeaturesEditorClient({
           </div>
 
           {activeFeature ? (
-            <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <div className="space-y-3 rounded-xl border border-border bg-muted/50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Edit selected feature")}
               </p>
               <div>
                 <label
                   htmlFor="selected-layer"
-                  className="mb-1 block text-xs text-zinc-500"
+                  className="mb-1 block text-xs text-muted-foreground"
                 >
                   {tx("Layer")}
                 </label>
@@ -2497,13 +2497,13 @@ export default function ResourceFeaturesEditorClient({
                   id="selected-layer"
                   value={featureLayer}
                   onChange={(event) => setFeatureLayer(event.target.value)}
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
                 />
               </div>
               <div>
                 <label
                   htmlFor="selected-coordinates"
-                  className="mb-1 block text-xs text-zinc-500"
+                  className="mb-1 block text-xs text-muted-foreground"
                 >
                   {activeFeature.geometryType === "Point"
                     ? tx("Point JSON")
@@ -2516,11 +2516,11 @@ export default function ResourceFeaturesEditorClient({
                     setFeatureCoordinatesJson(event.target.value)
                   }
                   rows={8}
-                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900"
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-xs text-foreground"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-zinc-500">
+                <label className="mb-1 block text-xs text-muted-foreground">
                   {tx("Description")}
                 </label>
                 <MdxEditorInput
@@ -2560,7 +2560,7 @@ export default function ResourceFeaturesEditorClient({
           ) : null}
 
           {isDrawing ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {drawingGeometryType === "Point"
                 ? tx("Drawing mode active: click the map to place a point.")
                 : tx(
@@ -2569,7 +2569,7 @@ export default function ResourceFeaturesEditorClient({
                   )}
             </p>
           ) : activeFeature ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {tx(
                 "Edit mode: drag orange points to move, click green points to add, Alt/Option-click orange points to remove.",
                 "en",
@@ -2578,9 +2578,9 @@ export default function ResourceFeaturesEditorClient({
           ) : null}
         </aside>
 
-        <section className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white lg:min-h-[70vh]">
+        <section className="relative overflow-hidden rounded-2xl border border-border bg-card lg:min-h-[70vh]">
           {mapboxError ? (
-            <div className="flex h-[70vh] items-center justify-center p-6 text-sm text-zinc-500">
+            <div className="flex h-[70vh] items-center justify-center p-6 text-sm text-muted-foreground">
               {mapboxError}
             </div>
           ) : (
@@ -2590,7 +2590,7 @@ export default function ResourceFeaturesEditorClient({
             <button
               type="button"
               onClick={() => setIsSatellite((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground/80 shadow-sm"
             >
               <FontAwesomeIcon
                 icon={isSatellite ? faMap : faSatellite}
@@ -2601,13 +2601,13 @@ export default function ResourceFeaturesEditorClient({
           </div>
           {switchMenu && !hasFixedResource ? (
             <div
-              className="absolute z-30 min-w-56 rounded-lg border border-zinc-200 bg-white p-2 shadow-lg"
+              className="absolute z-30 min-w-56 rounded-lg border border-border bg-card p-2 shadow-lg"
               style={{
                 left: Math.max(8, Math.min(switchMenu.x, 860)),
                 top: Math.max(8, Math.min(switchMenu.y, 620)),
               }}
             >
-              <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {tx("Switch resource")}
               </p>
               <div className="mt-1 space-y-1">
@@ -2627,8 +2627,8 @@ export default function ResourceFeaturesEditorClient({
                       }}
                       className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition ${
                         isSelected
-                          ? "bg-blue-50 text-blue-900"
-                          : "text-zinc-700 hover:bg-zinc-100"
+                          ? "bg-primary-soft text-primary"
+                          : "text-foreground/80 hover:bg-accent"
                       }`}
                     >
                       {label}
@@ -2641,20 +2641,20 @@ export default function ResourceFeaturesEditorClient({
         </section>
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-3 sm:p-4">
+      <section className="rounded-2xl border border-border bg-card p-3 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">
+            <h2 className="text-lg font-semibold text-foreground">
               {tx("Edit resource")}
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             {isDirty ? (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
+              <span className="rounded-full border border-warning-border bg-warning-soft px-2 py-1 text-xs font-semibold text-warning">
                 {tx("Unsaved changes")}
               </span>
             ) : (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full border border-success-border bg-success-soft px-2 py-1 text-xs font-semibold text-success">
                 {tx("Saved state")}
               </span>
             )}
@@ -2683,13 +2683,13 @@ export default function ResourceFeaturesEditorClient({
         {resourceFormError || resourceFormMessage ? (
           <div className="mt-2 space-y-2">
             {resourceFormError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-sm text-rose-700">
+              <div className="rounded-xl border border-destructive-border bg-destructive-soft p-2.5 text-sm text-destructive">
                 {resourceFormError}
               </div>
             ) : null}
 
             {resourceFormMessage ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-sm text-emerald-700">
+              <div className="rounded-xl border border-success-border bg-success-soft p-2.5 text-sm text-success">
                 {resourceFormMessage}
               </div>
             ) : null}
@@ -2698,7 +2698,7 @@ export default function ResourceFeaturesEditorClient({
 
         {!isEditResourceCollapsed ? (
           resourceFormLoading ? (
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               {tx("Loading resource...")}
             </p>
           ) : (
@@ -2733,11 +2733,11 @@ export default function ResourceFeaturesEditorClient({
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-semibold text-zinc-900">
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="text-lg font-semibold text-foreground">
           {tx("Generate cover image")}
         </h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           {tx(
             "Creates a new cover image from the selected existing photo and keeps the original image as an additional photo.",
             "en",
@@ -2746,7 +2746,7 @@ export default function ResourceFeaturesEditorClient({
 
         <div className="mt-4 grid gap-3">
           <div className="grid gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {tx("Source image")}
             </label>
             <select
@@ -2755,7 +2755,7 @@ export default function ResourceFeaturesEditorClient({
                 setCoverSourceIndex(Number.parseInt(event.target.value, 10))
               }
               disabled={coverSourceImages.length === 0}
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
             >
               {coverSourceImages.length === 0 ? (
                 <option value="0">{tx("No existing images")}</option>
@@ -2776,7 +2776,7 @@ export default function ResourceFeaturesEditorClient({
             value={coverPrompt}
             onChange={(event) => setCoverPrompt(event.target.value)}
             rows={6}
-            className="w-full resize-y rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+            className="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80"
             placeholder={tx("Cover prompt")}
           />
 
@@ -2864,7 +2864,7 @@ export default function ResourceFeaturesEditorClient({
               {generatingCover ? tx("Generating...") : tx("Generate cover")}
             </Button>
             {existingImages.length === 0 ? (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 {tx('Add images and click "Save all" first.')}
               </p>
             ) : null}

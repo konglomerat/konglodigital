@@ -130,7 +130,7 @@ export default function CampaiProductDetailPage({
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
         <PageTitle
           title="Produktdetails"
@@ -140,34 +140,34 @@ export default function CampaiProductDetailPage({
         />
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           {loading ? (
-            <p className="text-sm text-zinc-500">Produkt wird geladen ...</p>
+            <p className="text-sm text-muted-foreground">Produkt wird geladen ...</p>
           ) : !product ? (
-            <p className="text-sm text-zinc-500">Produkt nicht gefunden.</p>
+            <p className="text-sm text-muted-foreground">Produkt nicht gefunden.</p>
           ) : (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-xl font-semibold text-zinc-900">
+                <h2 className="text-xl font-semibold text-foreground">
                   {product.title}
                 </h2>
                 {product.details ? (
-                  <p className="mt-2 text-sm text-zinc-600">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     {product.details}
                   </p>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/80">
                     Stückpreis
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-zinc-900">
+                  <p className="mt-2 text-2xl font-semibold text-foreground">
                     €{(product.unitAmount / 100).toFixed(2)}
                   </p>
                 </div>
@@ -181,14 +181,14 @@ export default function CampaiProductDetailPage({
                   >
                     −
                   </Button>
-                  <div className="text-sm text-zinc-600">
+                  <div className="text-sm text-muted-foreground">
                     Im Warenkorb: {cartEntry?.quantity ?? 0}
                   </div>
                   <Button
                     type="button"
                     onClick={handleAddProduct}
                     kind="secondary"
-                    className="border-blue-200 px-4 py-2 text-sm text-blue-700"
+                    className="border-primary-border px-4 py-2 text-sm text-primary"
                   >
                     +
                   </Button>

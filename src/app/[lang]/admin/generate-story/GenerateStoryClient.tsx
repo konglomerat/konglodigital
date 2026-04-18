@@ -25,8 +25,8 @@ const FabricStorySlideEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-50 shadow-sm">
-        <div className="flex aspect-[9/16] items-center justify-center bg-white text-sm text-zinc-500">
+      <div className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm">
+        <div className="flex aspect-[9/16] items-center justify-center bg-card text-sm text-muted-foreground">
           Fabric-Editor wird geladen...
         </div>
       </div>
@@ -134,7 +134,7 @@ function SelectableGrid({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
+      <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
         Keine Eintraege gefunden.
       </div>
     );
@@ -154,14 +154,14 @@ function SelectableGrid({
             onClick={() => onSelect(item.id)}
             className={`overflow-hidden rounded-2xl border text-left transition ${
               isSelected
-                ? "border-blue-600 bg-blue-50 shadow-sm"
-                : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-sm"
+                ? "border-primary bg-primary-soft shadow-sm"
+                : "border-border bg-card hover:border-input hover:shadow-sm"
             }`}
           >
             {imageUrl ? (
               <img src={imageUrl} alt="" className="h-40 w-full object-cover" />
             ) : (
-              <div className="flex h-40 w-full items-center justify-center bg-[linear-gradient(135deg,#f5efe7_0%,#e7dbc5_100%)] text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <div className="flex h-40 w-full items-center justify-center bg-[linear-gradient(135deg,#f5efe7_0%,#e7dbc5_100%)] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {getKindLabel(item)}
               </div>
             )}
@@ -169,36 +169,36 @@ function SelectableGrid({
             <div className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-zinc-900">
+                  <h3 className="text-base font-semibold text-foreground">
                     {item.name}
                   </h3>
                   {item.prettyTitle ? (
-                    <p className="text-xs text-zinc-500">/{item.prettyTitle}</p>
+                    <p className="text-xs text-muted-foreground">/{item.prettyTitle}</p>
                   ) : null}
                 </div>
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
                     isSelected
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-100 text-zinc-600"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-accent text-muted-foreground"
                   }`}
                 >
                   {getKindLabel(item)}
                 </span>
               </div>
 
-              <p className="text-sm leading-relaxed text-zinc-600">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 {stripText(item.description).slice(0, 140) ||
                   "Noch keine Beschreibung hinterlegt."}
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {updatedAt ? <span>Aktualisiert: {updatedAt}</span> : null}
                 <span
                   className={`rounded-full px-2 py-1 font-semibold ${
                     item.socialMediaConsent
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
+                      ? "bg-success-soft text-success"
+                      : "bg-warning-soft text-warning"
                   }`}
                 >
                   {item.socialMediaConsent
@@ -463,10 +463,10 @@ export default function GenerateStoryClient({
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Admin: Storys erzeugen
         </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-zinc-600">
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Waehle eine Ressource oder ein Projekt, lasse kurze Story-Texte per
           OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als
           PNG herunter.
@@ -530,10 +530,10 @@ export default function GenerateStoryClient({
       >
         <div className="grid gap-4 lg:grid-cols-2">
           <FormField label="Ausgewaehlter Eintrag">
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+            <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
               {selectedItem ? (
                 <div className="space-y-1">
-                  <p className="font-semibold text-zinc-900">{selectedItem.name}</p>
+                  <p className="font-semibold text-foreground">{selectedItem.name}</p>
                   <p>
                     {getKindLabel(selectedItem)}
                     {selectedItem.socialMediaConsent
@@ -655,25 +655,25 @@ export default function GenerateStoryClient({
         </div>
 
         {submitError ? (
-          <div className="mt-4 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {submitError}
           </div>
         ) : null}
 
         {submitWarning ? (
-          <div className="mt-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
             {submitWarning}
           </div>
         ) : null}
 
         {layoutError ? (
-          <div className="mt-4 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {layoutError}
           </div>
         ) : null}
 
         {layoutWarning ? (
-          <div className="mt-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
             {layoutWarning}
           </div>
         ) : null}
@@ -690,7 +690,7 @@ export default function GenerateStoryClient({
                 <Button href={draft.source.path} kind="secondary" size="small">
                   Eintrag oeffnen
                 </Button>
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-muted-foreground">
                   {draft.source.name}
                 </span>
               </div>
@@ -698,9 +698,9 @@ export default function GenerateStoryClient({
               {draft.slides.map((slide, index) => (
                 <div
                   key={`${draft.source.id}-slide-${index}`}
-                  className="grid gap-4 rounded-2xl border border-zinc-200 p-4"
+                  className="grid gap-4 rounded-2xl border border-border p-4"
                 >
-                  <h3 className="text-base font-semibold text-zinc-900">
+                  <h3 className="text-base font-semibold text-foreground">
                     Slide {index + 1}
                   </h3>
                   <FormField label="Kicker">
@@ -742,11 +742,11 @@ export default function GenerateStoryClient({
             }
           >
             {!isGeneratedImageModel(renderModel) ? (
-              <div className="mb-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="mb-5 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
                 Textboxen koennen direkt im Canvas verschoben und skaliert werden. Texte lassen sich per Doppelklick im Fabric-Canvas bearbeiten. Fuer ein komplett neues Arrangement einfach "Layout neu anordnen" nutzen.
               </div>
             ) : (
-              <div className="mb-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="mb-5 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
                 Nanobanana Pro und Nanobanana 2 erzeugen fertige Story-Bilder mit eingebranntem Layout. Zum Aktualisieren nach Textaenderungen einfach "Bild neu erzeugen" nutzen.
               </div>
             )}
@@ -756,7 +756,7 @@ export default function GenerateStoryClient({
                 ? generatedImages.map((image) => (
                     <div
                       key={image.fileName}
-                      className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-50 shadow-sm"
+                      className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm"
                     >
                       <img
                         src={image.dataUrl}
@@ -765,10 +765,10 @@ export default function GenerateStoryClient({
                       />
                       <div className="flex items-center justify-between gap-3 p-4">
                         <div>
-                          <p className="text-sm font-semibold text-zinc-900">
+                          <p className="text-sm font-semibold text-foreground">
                             Slide {image.slideNumber}
                           </p>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-muted-foreground">
                             Generiertes Story-Bild
                           </p>
                         </div>
@@ -798,7 +798,7 @@ export default function GenerateStoryClient({
                     />
                   ))
                 : deferredDraft ? (
-                    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 lg:col-span-2">
+                    <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground lg:col-span-2">
                       {isGeneratedImageModel(renderModel)
                         ? "Es liegen noch keine generierten Story-Bilder vor. Wenn gleichzeitig eine Warnung erscheint, ist die Bildgenerierung fehlgeschlagen."
                         : "Es liegt noch kein Layout fuer den Editor vor. Wenn gleichzeitig eine OpenAI-Warnung erscheint, ist der Generator auf den Standardpfad gefallen oder das Layout wurde nicht gesetzt."}

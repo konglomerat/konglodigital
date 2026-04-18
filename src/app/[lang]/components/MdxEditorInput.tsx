@@ -117,7 +117,7 @@ export default function MdxEditorInput({
     : embedButtonLabel;
 
   return (
-    <div className="mdx-editor-input overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+    <div className="mdx-editor-input overflow-hidden rounded-2xl border border-border bg-card">
       <MDXEditor
         ref={editorRef}
         markdown={value}
@@ -159,7 +159,7 @@ export default function MdxEditorInput({
                   type="button"
                   onClick={() => setIsImagePickerOpen((current) => !current)}
                   disabled={readOnly || imageOptions.length === 0}
-                  className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400"
+                  className="rounded-md border border-input bg-card px-2 py-1 text-sm font-medium text-muted-foreground transition hover:border-primary-border hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/70"
                   title={imagePickerButtonLabel}
                   aria-label={imagePickerButtonLabel}
                 >
@@ -171,17 +171,17 @@ export default function MdxEditorInput({
         ]}
       />
 
-      <div className="border-t border-zinc-200 bg-zinc-50 px-3 py-3">
+      <div className="border-t border-border bg-muted px-3 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setIsImagePickerOpen((current) => !current)}
             disabled={readOnly || imageOptions.length === 0}
-            className="inline-flex items-center rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400"
+            className="inline-flex items-center rounded-full border border-input bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary-border hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/70"
           >
             {imagePickerButtonLabel}
           </button>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             {imageOptions.length > 0
               ? `${imageOptions.length} verfugbare Bilder`
               : emptyImageMessage}
@@ -196,21 +196,21 @@ export default function MdxEditorInput({
                   key={image.url}
                   type="button"
                   onClick={() => handleInsertImage(image.url, image.label)}
-                  className="overflow-hidden rounded-xl border border-zinc-200 bg-white text-left transition hover:border-blue-300 hover:shadow-sm"
+                  className="overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-primary-border hover:shadow-sm"
                 >
                   <img
                     src={image.thumbnailUrl}
                     alt={image.label}
                     className="h-28 w-full object-cover"
                   />
-                  <span className="block px-3 py-2 text-xs font-medium text-zinc-700">
+                  <span className="block px-3 py-2 text-xs font-medium text-foreground/85">
                     {image.label}
                   </span>
                 </button>
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-zinc-500">{emptyImageMessage}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{emptyImageMessage}</p>
           )
         ) : null}
       </div>

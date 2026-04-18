@@ -89,10 +89,10 @@ export default function ShareButton({
         {tx("Teilen", "de")}
       </Button>
       {status === "copied" ? (
-        <p className="text-xs text-emerald-700">{tx("Link kopiert.", "de")}</p>
+        <p className="text-xs text-success">{tx("Link kopiert.", "de")}</p>
       ) : null}
       {status === "error" ? (
-        <p className="text-xs text-rose-700">
+        <p className="text-xs text-destructive">
           {tx("Teilen war hier nicht möglich.", "de")}
         </p>
       ) : null}

@@ -639,12 +639,12 @@ export default function ProjectEditorClient({
       />
 
       {formError ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <section className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {formError}
         </section>
       ) : null}
       {formMessage ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <section className="rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
           {formMessage}
         </section>
       ) : null}
@@ -653,15 +653,15 @@ export default function ProjectEditorClient({
         className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]"
         onSubmit={handleSubmit(onSubmit)}
       >
-        <section className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Titel", "de")}
             </label>
             <input
               type="text"
               {...register("title", { required: true })}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950"
+              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
               placeholder={tx(
                 "z. B. Modulares Regal für die Holzwerkstatt",
                 "de",
@@ -670,7 +670,7 @@ export default function ProjectEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Beschreibung", "de")}
             </label>
             <textarea {...register("description")} className="hidden" />
@@ -695,7 +695,7 @@ export default function ProjectEditorClient({
                 "de",
               )}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {tx(
                 "Unterstutzt Uberschriften, Listen, Links, Hervorhebungen und eingebettete Bilder.",
                 "de",
@@ -705,10 +705,10 @@ export default function ProjectEditorClient({
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Medien", "de")}
               </label>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {tx(
                   "Mehrere Bilder, Videos und PDFs sind möglich. Bestehende Medien kannst du einzeln entfernen.",
                   "de",
@@ -719,7 +719,7 @@ export default function ProjectEditorClient({
               type="file"
               accept="image/*,video/*,.pdf,application/pdf"
               multiple
-              className="w-full rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm"
+              className="w-full rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-5 text-sm"
               onChange={(event) => {
                 void handleAddImages(event);
               }}
@@ -727,7 +727,7 @@ export default function ProjectEditorClient({
 
             {imageItems.length > 0 ? (
               <>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {tx(
                     "Ziehe Medien, um die Reihenfolge festzulegen. Das erste Medium wird als Titelmedium verwendet.",
                     "de",
@@ -751,19 +751,20 @@ export default function ProjectEditorClient({
                         stiffness: 420,
                         damping: 32,
                       }}
-                      className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-2xl border border-zinc-200 bg-zinc-100 p-3 active:cursor-grabbing"
+                      className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-2xl border border-border bg-accent p-3 active:cursor-grabbing"
                     >
-                      <div className="overflow-hidden rounded-xl bg-white">
+                      <div className="overflow-hidden rounded-xl bg-card">
                         {imageItem.mediaType === "video" ? (
                           <video
                             src={imageItem.previewUrl}
-                            className="h-28 w-full bg-zinc-950 object-cover"
+                            className="h-28 w-full bg-foreground object-cover"
                             muted
+                            loop
                             playsInline
                             preload="metadata"
                           />
                         ) : imageItem.mediaType === "document" ? (
-                          <div className="flex h-28 w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
+                          <div className="flex h-28 w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
                             <FontAwesomeIcon
                               icon={faFilePdf}
                               className="h-8 w-8"
@@ -781,7 +782,7 @@ export default function ProjectEditorClient({
                         )}
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-zinc-500">
+                        <p className="text-xs font-semibold text-muted-foreground">
                           {index === 0
                             ? tx("Titelmedium", "de")
                             : imageItem.mediaType === "video"
@@ -834,7 +835,7 @@ export default function ProjectEditorClient({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Links", "de")}
               </label>
               <Button
@@ -852,18 +853,18 @@ export default function ProjectEditorClient({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+                  className="grid gap-3 rounded-2xl border border-border bg-muted/50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
                 >
                   <input
                     type="text"
                     {...register(`links.${index}.label`)}
-                    className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
                     placeholder={tx("Linktitel", "de")}
                   />
                   <input
                     type="text"
                     {...register(`links.${index}.url`)}
-                    className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
                     placeholder="https://…"
                   />
                   <Button
@@ -887,18 +888,18 @@ export default function ProjectEditorClient({
           </div>
         </section>
 
-        <section className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Autor", "de")}
             </label>
             <input
               type="text"
               {...register("authorName")}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950"
+              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
               placeholder={tx("z. B. Anna Beispiel", "de")}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {initialProject?.author?.name && !initialProject?.authorName
                 ? `${tx("Wenn das Feld leer bleibt, wird aktuell ", "de")}${initialProject.author.name}${tx(" als Autor angezeigt.", "de")}`
                 : tx(
@@ -909,15 +910,15 @@ export default function ProjectEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Veröffentlichungsdatum", "de")}
             </label>
             <input
               type="date"
               {...register("publishDate")}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950"
+              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {tx(
                 "Dieses Datum steuert die Reihenfolge in der Projektübersicht.",
                 "de",
@@ -926,7 +927,7 @@ export default function ProjectEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Werkstatt", "de")}
             </label>
             <Controller
@@ -950,7 +951,7 @@ export default function ProjectEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Verwendete Ressourcen", "de")}
             </label>
             <Controller
@@ -977,21 +978,21 @@ export default function ProjectEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Tags", "de")}
             </label>
             <input type="hidden" {...register("tags")} />
-            <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 focus-within:border-zinc-400">
+            <div className="rounded-2xl border border-border bg-card px-4 py-3 focus-within:border-ring/80">
               <div className="flex flex-wrap items-center gap-2">
                 {projectTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-800"
+                    className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm text-foreground/90"
                   >
                     <span>{tag}</span>
                     <button
                       type="button"
-                      className="text-zinc-500 transition hover:text-zinc-900"
+                      className="text-muted-foreground transition hover:text-foreground"
                       aria-label={`${tx("Tag entfernen", "de")}: ${tag}`}
                       onClick={() => removeTag(tag)}
                     >
@@ -1007,7 +1008,7 @@ export default function ProjectEditorClient({
                   onBlur={() => addTags(tagDraft)}
                   onPaste={handleTagPaste}
                   autoComplete="off"
-                  className="min-w-[12rem] flex-1 border-0 bg-transparent py-1 text-sm text-zinc-950 outline-none"
+                  className="min-w-[12rem] flex-1 border-0 bg-transparent py-1 text-sm text-foreground outline-none"
                   placeholder={tx(
                     "z. B. cnc, ausstellung, projectofthemonth",
                     "de",
@@ -1015,16 +1016,16 @@ export default function ProjectEditorClient({
                 />
               </div>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {tx("Mit Enter, Komma oder Leerzeichen trennen.", "de")}
             </p>
           </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+          <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
             <input
               type="checkbox"
               {...register("socialMediaConsent")}
-              className="mt-1 h-4 w-4 rounded border-zinc-300"
+              className="mt-1 h-4 w-4 rounded border-input"
             />
             <span>
               {tx(

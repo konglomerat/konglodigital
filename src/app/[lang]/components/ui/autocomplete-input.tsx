@@ -182,21 +182,21 @@ export const AutocompleteInput = forwardRef<
 						<div
 							className={`cursor-pointer px-3 py-2 text-sm ${
 								active
-									? "bg-blue-50 text-blue-900"
-									: "text-zinc-900 hover:bg-zinc-50"
+									? "bg-primary-soft text-primary"
+									: "text-foreground hover:bg-muted/50"
 							}`}
 						>
 							<span className="font-medium">{option.suggestion.name}</span>
-							<span className="ml-2 text-xs text-zinc-400">
+							<span className="ml-2 text-xs text-muted-foreground/80">
 								{entityLabelSingular} #{option.suggestion.account}
 							</span>
 						</div>
 					) : (
 						<div
-							className={`cursor-pointer border-t border-zinc-100 px-3 py-2 text-sm ${
+							className={`cursor-pointer border-t border-border/60 px-3 py-2 text-sm ${
 								active
-									? "bg-emerald-50 text-emerald-900"
-									: "text-emerald-700 hover:bg-emerald-50"
+									? "bg-success-soft text-success"
+									: "text-success hover:bg-success-soft"
 							}`}
 						>
 							<span className="font-medium">

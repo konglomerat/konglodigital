@@ -48,11 +48,12 @@ const sizeClassName: Record<ButtonSize, string> = {
 };
 
 const kindClassName: Record<ButtonKind, string> = {
-  primary: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
-  secondary: "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
+  primary: "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
+  secondary: "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
   "danger-primary":
-    "border-transparent bg-rose-600 text-white hover:bg-rose-700",
-  "danger-secondary": "border-rose-200 bg-white text-rose-700 hover:bg-rose-50",
+    "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  "danger-secondary":
+    "border-destructive-border bg-card text-destructive hover:bg-destructive-soft",
 };
 
 export default function Button({

@@ -74,30 +74,30 @@ type ResourceFormProps = {
 
 const styles = {
   light: {
-    label: "text-xs font-semibold uppercase tracking-wide text-zinc-500",
+    label: "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
     input:
-      "rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400",
+      "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     select:
-      "rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900",
+      "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground",
     textarea:
-      "min-h-[90px] rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400",
+      "min-h-[90px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     fileInput:
-      "w-full cursor-pointer rounded-md border-2 border-dashed border-blue-600 bg-zinc-100 px-4 py-6 text-sm font-medium text-blue-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:border-blue-500 hover:bg-zinc-900/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40",
-    fileHelp: "text-xs text-zinc-500",
-    checkbox: "h-4 w-4 rounded-md border-zinc-300",
+      "w-full cursor-pointer rounded-md border-2 border-dashed border-primary bg-accent px-4 py-6 text-sm font-medium text-primary file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-primary-foreground hover:border-primary hover:bg-foreground/8 focus:outline-none focus:ring-2 focus:ring-ring/40",
+    fileHelp: "text-xs text-muted-foreground",
+    checkbox: "h-4 w-4 rounded-md border-input",
   },
   dark: {
-    label: "text-xs font-semibold uppercase tracking-wide text-zinc-500",
+    label: "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
     input:
-      "rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400",
+      "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     select:
-      "rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900",
+      "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground",
     textarea:
-      "min-h-[90px] rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400",
+      "min-h-[90px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     fileInput:
-      "w-full cursor-pointer rounded-md border-2 border-dashed border-blue-600 bg-zinc-100 px-4 py-6 text-sm font-medium text-blue-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:border-blue-500 hover:bg-zinc-900/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40",
-    fileHelp: "text-xs text-zinc-500",
-    checkbox: "h-4 w-4 rounded-md border-zinc-300",
+      "w-full cursor-pointer rounded-md border-2 border-dashed border-primary bg-accent px-4 py-6 text-sm font-medium text-primary file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-primary-foreground hover:border-primary hover:bg-foreground/8 focus:outline-none focus:ring-2 focus:ring-ring/40",
+    fileHelp: "text-xs text-muted-foreground",
+    checkbox: "h-4 w-4 rounded-md border-input",
   },
 };
 
@@ -232,8 +232,8 @@ export default function ResourceForm({
                     }}
                     className={`h-8 w-8 rounded-md border text-lg leading-none transition ${
                       active
-                        ? "border-amber-300 bg-amber-50 text-amber-500"
-                        : "border-zinc-200 bg-white text-zinc-300 hover:border-zinc-300 hover:text-zinc-500"
+                        ? "border-warning-border bg-warning-soft text-warning"
+                        : "border-border bg-card text-muted-foreground hover:border-input hover:text-foreground"
                     }`}
                   >
                     ★
@@ -341,7 +341,7 @@ export default function ResourceForm({
       {onGpsChange ? (
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className={themeStyles.label}>{tx("Location")}</label>
-          <div className="overflow-hidden rounded-xl border border-zinc-100">
+          <div className="overflow-hidden rounded-xl border border-border/60">
             <ResourceMapCrosshair
               gps={gpsLocation}
               onChange={onGpsChange}
@@ -386,7 +386,7 @@ export default function ResourceForm({
         <div className="flex items-center justify-between">
           <label className={themeStyles.label}>{fileLabel}</label>
           {fileSubLabel ? (
-            <span className="text-xs font-medium text-zinc-400">
+            <span className="text-xs font-medium text-muted-foreground/80">
               {fileSubLabel}
             </span>
           ) : null}
@@ -482,10 +482,10 @@ export default function ResourceForm({
                         onReorderImages(order);
                       }
                     }}
-                    className="flex shrink-0 items-center gap-3 rounded-xl border border-zinc-200 bg-white relative"
+                    className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-card relative"
                   >
                     {mediaKind === "document" ? (
-                      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+                      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-destructive-soft text-destructive">
                         <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6" />
                         <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
                           PDF
@@ -504,7 +504,7 @@ export default function ResourceForm({
                     <button
                       type="button"
                       onClick={() => onRemoveImage(previewIndex)}
-                      className="rounded-full bg-white w-6 h-6 text-[10px] font-semibold text-zinc-500 shadow absolute top-[-5px] right-[-5px] transition hover:bg-zinc-100 group-hover:opacity-100"
+                      className="rounded-full bg-card w-6 h-6 text-[10px] font-semibold text-muted-foreground shadow absolute top-[-5px] right-[-5px] transition hover:bg-accent group-hover:opacity-100"
                     >
                       ✕
                     </button>

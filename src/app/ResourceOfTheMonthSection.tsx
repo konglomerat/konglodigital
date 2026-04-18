@@ -6,7 +6,6 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import Button from "./[lang]/components/Button";
-import styles from "./ResourceOfTheMonthSection.module.css";
 
 type ResourceOfTheMonthRow = {
   id: string;
@@ -75,18 +74,9 @@ export default async function ResourceOfTheMonthSection() {
     <section className="overflow-hidden rounded-2xl bg-[#c8df8c]">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,460px)] lg:items-stretch">
         <div className="flex flex-col justify-center px-6 py-7 md:px-8 md:py-8">
-          <div className={styles.sparkleLabel}>
-            <p
-              className={`text-sm font-semibold uppercase tracking-[0.18em] text-lime-800 ${styles.sparkleText}`}
-            >
-              {tx("Ressource des Monats", "de")}
-            </p>
-            <span className={styles.sparkleCluster} aria-hidden="true">
-              <span className={`${styles.sparkle} ${styles.sparkleOne}`} />
-              <span className={`${styles.sparkle} ${styles.sparkleTwo}`} />
-              <span className={`${styles.sparkle} ${styles.sparkleThree}`} />
-            </span>
-          </div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-800">
+            {tx("Ressource des Monats", "de")}
+          </p>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950 md:text-4xl">
             {resourceOfTheMonth.name}
           </h2>
@@ -132,7 +122,7 @@ export default async function ResourceOfTheMonthSection() {
               )}
               kind="primary"
               size="medium"
-              className="bg-lime-800 text-white hover:!bg-lime-900"
+              className="!bg-lime-800 !text-white hover:!bg-lime-900"
               icon={faArrowRight}
               iconPosition="right"
             >
@@ -149,7 +139,7 @@ export default async function ResourceOfTheMonthSection() {
                 alt={resourceOfTheMonth.name}
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_140px_90px_-30px_#c8df8c] lg:shadow-[inset_160px_0_80px_-20px_#c8df8c]" />
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_160px_0_80px_-20px_#c8df8c]" />
             </>
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#f3f8d5_0%,transparent_34%),linear-gradient(160deg,#7c9a37_0%,#2f4f1f_100%)]" />

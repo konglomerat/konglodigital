@@ -237,14 +237,14 @@ function ComboboxInputInner<T>(
 
       {loading ? (
         <div className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-input border-t-blue-600" />
         </div>
       ) : null}
 
       {showToggleButton ? (
         <button
           type="button"
-          className="absolute inset-y-1 right-1 inline-flex w-8 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+          className="absolute inset-y-1 right-1 inline-flex w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground/80"
           aria-label={toggleAriaLabel}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -265,7 +265,7 @@ function ComboboxInputInner<T>(
           role="listbox"
           className={
             dropdownClassName ??
-            "absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+            "absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-card py-1 shadow-lg"
           }
         >
           {options.map((option, index) => (

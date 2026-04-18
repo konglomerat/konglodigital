@@ -59,26 +59,26 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Anmelden</h1>
-        <p className="mt-2 text-sm text-zinc-500">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Melde dich mit deinen Zugangsdaten an.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Email
             </label>
             <input
               name="email"
               type="email"
               required
-              className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-card px-4 py-2 text-sm text-foreground"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Passwort
             </label>
             <PasswordInput
@@ -86,19 +86,19 @@ function LoginForm() {
               required
               showLabel="Anzeigen"
               hideLabel="Ausblenden"
-              className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-card px-4 py-2 text-sm text-foreground"
             />
           </div>
-          <p className="text-right text-sm text-zinc-500">
+          <p className="text-right text-sm text-muted-foreground">
             <Link
-              className="font-semibold text-blue-600"
+              className="font-semibold text-primary hover:text-primary/80"
               href="/password-reset"
             >
               Passwort vergessen?
             </Link>
           </p>
           {error ? (
-            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
@@ -111,9 +111,9 @@ function LoginForm() {
             {isLoading ? "Anmeldung läuft ..." : "Anmelden"}
           </Button>
         </form>
-        <p className="mt-6 text-center text-sm text-zinc-500">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           Neu hier?{" "}
-          <Link className="font-semibold text-blue-600" href="/register">
+          <Link className="font-semibold text-primary hover:text-primary/80" href="/register">
             Konto erstellen
           </Link>
         </p>
@@ -126,10 +126,10 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
-          <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <h1 className="text-2xl font-semibold text-zinc-900">Anmelden</h1>
-            <p className="mt-2 text-sm text-zinc-500">Lädt ...</p>
+        <div className="flex min-h-screen items-center justify-center bg-background px-6">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+            <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Lädt ...</p>
           </div>
         </div>
       }

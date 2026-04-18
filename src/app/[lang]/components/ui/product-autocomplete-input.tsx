@@ -142,7 +142,7 @@ export const ProductAutocompleteInput = forwardRef<
         getOptionInputValue={(option) => option.name}
         showToggleButton
         toggleAriaLabel="Produktliste öffnen"
-        dropdownClassName="absolute left-0 top-full z-50 mt-1 max-h-56 w-[min(90vw,36rem)] min-w-full overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+        dropdownClassName="absolute left-0 top-full z-50 mt-1 max-h-56 w-[min(90vw,36rem)] min-w-full overflow-y-auto rounded-lg border border-border bg-card py-1 shadow-lg"
         renderOption={(suggestion, { active }) => {
           const amount = formatAmount(suggestion.unitAmount);
 
@@ -150,8 +150,8 @@ export const ProductAutocompleteInput = forwardRef<
             <div
               className={`cursor-pointer px-3 py-2 text-sm ${
                 active
-                  ? "bg-blue-50 text-blue-900"
-                  : "text-zinc-900 hover:bg-zinc-50"
+                  ? "bg-primary-soft text-primary"
+                  : "text-foreground hover:bg-muted/50"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -160,13 +160,13 @@ export const ProductAutocompleteInput = forwardRef<
                     {suggestion.name}
                   </p>
                   {suggestion.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                       {suggestion.description}
                     </p>
                   ) : null}
                 </div>
                 {amount ? (
-                  <span className="shrink-0 text-xs font-semibold text-zinc-600">
+                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
                     {amount}
                   </span>
                 ) : null}

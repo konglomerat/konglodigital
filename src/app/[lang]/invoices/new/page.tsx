@@ -859,7 +859,7 @@ export default function NewSimpleInvoicePage() {
             </div>
 
             {debtorAccount ? (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
                 <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                 <span>
                   Debitor <strong>#{debtorAccount}</strong>
@@ -867,7 +867,7 @@ export default function NewSimpleInvoicePage() {
                 </span>
                 <button
                   type="button"
-                  className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                  className="ml-auto rounded p-1 text-success hover:bg-success-soft"
                   onClick={resetDebtor}
                 >
                   <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
@@ -876,15 +876,15 @@ export default function NewSimpleInvoicePage() {
             ) : null}
 
             {showCreateDebtorPanel && !debtorAccount ? (
-              <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+              <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-blue-900">
+                  <p className="text-sm font-medium text-primary">
                     Neuen Debitor anlegen: &ldquo;{debtorName}&rdquo;
                   </p>
-                  <p className="text-sm text-blue-800">
+                  <p className="text-sm text-primary">
                     Für die Anlage werden die unten eingetragene Adresse und die E-Mail-Adresse verwendet.
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-primary">
                     Ausgewählte Zahlungsart: {paymentMethod
                       ? paymentMethods.find((item) => item.value === paymentMethod)?.label ?? paymentMethod
                       : "keine"}
@@ -892,7 +892,7 @@ export default function NewSimpleInvoicePage() {
                 </div>
 
                 {debtorError ? (
-                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
                     {debtorError}
                   </div>
                 ) : null}
@@ -925,8 +925,8 @@ export default function NewSimpleInvoicePage() {
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-2xl border border-zinc-200 p-3">
-              <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+            <div className="md:col-span-2 rounded-2xl border border-border p-3">
+              <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
                 <input
                   type="checkbox"
                   checked={sendByMail}
@@ -995,7 +995,7 @@ export default function NewSimpleInvoicePage() {
         >
           <div className="mb-4">
             <FormField label="Rechnungsgegenstand" required>
-              <p className="mb-2 text-xs text-zinc-500">
+              <p className="mb-2 text-xs text-muted-foreground">
                 Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang der Dienstleistung
               </p>
               <Input value={intro} onChange={(event) => setIntro(event.target.value)} />
@@ -1003,7 +1003,7 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           {showCostCenterWarning ? (
-            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <div className="mb-4 rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
               <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
                 <span>
@@ -1015,20 +1015,20 @@ export default function NewSimpleInvoicePage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-zinc-200 p-3">
+            <div className="rounded-2xl border border-border p-3">
               <div className="mb-2 hidden grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] gap-2 px-1 xl:grid">
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Name</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Einheit</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Menge</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Einzelbetrag €</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einheit</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menge</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einzelbetrag €</p>
                 <div
                   ref={taxHintContainerRef}
-                  className="group relative inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500"
+                  className="group relative inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   <span>Steuer</span>
                   <button
                     type="button"
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-zinc-400 transition hover:text-zinc-600"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground/80 transition hover:text-muted-foreground"
                     aria-label="Hinweis zu Steuercodes anzeigen"
                     aria-expanded={showTaxHint}
                     onClick={() => setShowTaxHint((prev) => !prev)}
@@ -1040,7 +1040,7 @@ export default function NewSimpleInvoicePage() {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                   </button>
                   <span
-                    className={`pointer-events-none absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-zinc-700 shadow-sm transition ${
+                    className={`pointer-events-none absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-foreground/80 shadow-sm transition ${
                       showTaxHint
                         ? "visible opacity-100"
                         : "invisible opacity-0 group-hover:visible group-hover:opacity-100"
@@ -1049,9 +1049,9 @@ export default function NewSimpleInvoicePage() {
                     19% für reguläre Dienstleistungen/Verkäufe, 7% nur für begünstigte Leistungen, 0% für steuerfreie Positionen.
                   </span>
                 </div>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Gesamtbetrag</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Bereich/Projekt</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-zinc-500">Aktion</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Gesamtbetrag</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bereich/Projekt</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Aktion</p>
               </div>
 
               <div className="space-y-2">
@@ -1066,7 +1066,7 @@ export default function NewSimpleInvoicePage() {
                   return (
                     <div
                       key={position.id}
-                      className="grid gap-3 rounded-xl border border-zinc-200 p-3 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end"
+                      className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end"
                     >
                       <FormField
                         label="Name"
@@ -1137,7 +1137,7 @@ export default function NewSimpleInvoicePage() {
                       </FormField>
 
                       <FormField label="Gesamtbetrag" labelClassName="whitespace-nowrap xl:hidden">
-                        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900">
+                        <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm font-medium text-foreground">
                           {rowEnteredTotal === null ? "-" : `€${(rowEnteredTotal / 100).toFixed(2)}`}
                         </div>
                       </FormField>
@@ -1167,12 +1167,12 @@ export default function NewSimpleInvoicePage() {
                       </FormField>
 
                       <div className="space-y-2 xl:space-y-0">
-                        <p className="block text-xs font-semibold uppercase tracking-wide text-zinc-500 xl:hidden">
+                        <p className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground xl:hidden">
                           Aktion
                         </p>
                         <button
                           type="button"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 xl:self-end"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-destructive-border bg-card text-destructive transition hover:bg-destructive-soft disabled:cursor-not-allowed disabled:opacity-60 xl:self-end"
                           aria-label="Position entfernen"
                           title="Position entfernen"
                           onClick={() => removePosition(position.id)}
@@ -1191,23 +1191,23 @@ export default function NewSimpleInvoicePage() {
               Position hinzufügen
             </Button>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3 text-sm text-zinc-700">
+                <div className="flex items-center justify-between gap-3 text-sm text-foreground/80">
                   <span>{isNet ? "Nettosumme" : "Bruttosumme"}</span>
-                  <span className="font-medium text-zinc-900">
+                  <span className="font-medium text-foreground">
                     €{(totals.enteredTotalCents / 100).toFixed(2)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-3 text-sm text-zinc-700">
+                <div className="flex items-center justify-between gap-3 text-sm text-foreground/80">
                   <span>{isNet ? "MwSt." : "Enthaltene MwSt."}</span>
-                  <span className="font-medium text-zinc-900">
+                  <span className="font-medium text-foreground">
                     €{(totals.taxTotalCents / 100).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-zinc-700">Gesamtbetrag</span>
-                  <span className="text-lg font-semibold text-zinc-900">
+                  <span className="text-sm font-medium text-foreground/80">Gesamtbetrag</span>
+                  <span className="text-lg font-semibold text-foreground">
                     €{(totals.grossTotalCents / 100).toFixed(2)}
                   </span>
                 </div>
@@ -1217,14 +1217,14 @@ export default function NewSimpleInvoicePage() {
 
           <div className="mt-4">
             <FormField label="Rechnungsart" required>
-              <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
+              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
                 <button
                   type="button"
                   onClick={() => setIsNet(true)}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                     isNet
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Nettopreise
@@ -1234,8 +1234,8 @@ export default function NewSimpleInvoicePage() {
                   onClick={() => setIsNet(false)}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                     !isNet
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Bruttopreise
@@ -1348,7 +1348,7 @@ export default function NewSimpleInvoicePage() {
               />
             </FormField>
             <FormField label="Status">
-              <label className="inline-flex h-10 items-center gap-2 text-sm text-zinc-700">
+              <label className="inline-flex h-10 items-center gap-2 text-sm text-foreground/80">
                 <input
                   type="checkbox"
                   checked={paid}
@@ -1374,22 +1374,22 @@ export default function NewSimpleInvoicePage() {
           </FormField>
         </FormSection>
 
-        <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+        <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
           <div className="flex flex-wrap items-center gap-3">
             {errorMessage ? (
-              <p className="text-sm text-rose-700">{errorMessage}</p>
+              <p className="text-sm text-destructive">{errorMessage}</p>
             ) : null}
             {successMessage ? (
-              <p className="text-sm text-emerald-700">{successMessage}</p>
+              <p className="text-sm text-success">{successMessage}</p>
             ) : null}
-            <p className="text-sm text-zinc-700">
-              Gültige Positionen: <span className="font-semibold text-zinc-900">{validPositions.length}</span>
+            <p className="text-sm text-foreground/80">
+              Gültige Positionen: <span className="font-semibold text-foreground">{validPositions.length}</span>
             </p>
-            <p className="text-sm text-zinc-700">
-              MwSt.: <span className="font-semibold text-zinc-900">€{(totals.taxTotalCents / 100).toFixed(2)}</span>
+            <p className="text-sm text-foreground/80">
+              MwSt.: <span className="font-semibold text-foreground">€{(totals.taxTotalCents / 100).toFixed(2)}</span>
             </p>
-            <p className="text-sm text-zinc-700">
-              Gesamtbetrag: <span className="font-semibold text-zinc-900">€{(totals.grossTotalCents / 100).toFixed(2)}</span>
+            <p className="text-sm text-foreground/80">
+              Gesamtbetrag: <span className="font-semibold text-foreground">€{(totals.grossTotalCents / 100).toFixed(2)}</span>
             </p>
 
             <Button

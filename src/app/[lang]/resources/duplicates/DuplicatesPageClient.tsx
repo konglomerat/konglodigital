@@ -253,12 +253,12 @@ const withUpdatedResource = (
 
 const scoreBadgeClassName = (score: number) => {
   if (score >= 0.95) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "border-destructive-border bg-destructive-soft text-destructive";
   }
   if (score >= 0.85) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-warning-border bg-warning-soft text-warning";
   }
-  return "border-sky-200 bg-sky-50 text-sky-700";
+  return "border-info-border bg-info-soft text-info";
 };
 
 export default function DuplicatesPageClient({
@@ -325,14 +325,14 @@ export default function DuplicatesPageClient({
   };
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-900">
+    <main className="min-h-screen bg-muted/50 text-foreground">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
               {tx("Duplicate resources")}
             </h1>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               {tx(
                 "Review likely duplicates and either keep one or merge photos.",
                 "en",
@@ -348,7 +348,7 @@ export default function DuplicatesPageClient({
           </Button>
         </header>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700">
+        <section className="rounded-2xl border border-border bg-card p-4 text-sm text-foreground/80">
           {tx(
             "Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown.",
             "en",
@@ -356,19 +356,19 @@ export default function DuplicatesPageClient({
         </section>
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
         {successMessage ? (
-          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          <section className="rounded-2xl border border-success-border bg-success-soft p-4 text-sm text-success">
             {successMessage}
           </section>
         ) : null}
 
         {duplicatePairs.length === 0 ? (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-sm text-zinc-600">
+          <section className="rounded-2xl border border-border bg-card p-8 text-sm text-muted-foreground">
             {tx("No high-confidence duplicates found.")}
           </section>
         ) : (
@@ -384,13 +384,13 @@ export default function DuplicatesPageClient({
               return (
                 <article
                   key={pair.id}
-                  className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+                  className="rounded-2xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-2 text-xs text-zinc-500">
+                    <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.18em]">
-                        <span className="text-zinc-700">{tx("Candidate")}</span>
-                        <span className="text-zinc-400">#{pair.id.slice(0, 8)}</span>
+                        <span className="text-foreground/80">{tx("Candidate")}</span>
+                        <span className="text-muted-foreground/80">#{pair.id.slice(0, 8)}</span>
                       </span>
                       <span
                         className={`rounded-full border px-2.5 py-1 font-semibold ${scoreBadgeClassName(pair.score)}`}
@@ -398,8 +398,8 @@ export default function DuplicatesPageClient({
                         {tx("score")} {(pair.score * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <div className="inline-flex items-center gap-1 text-xs text-zinc-500">
-                      <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1">
+                    <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="rounded-full border border-border bg-muted/50 px-2 py-1">
                         {pair.reasons.length > 0
                           ? pair.reasons
                               .map((reason) => tx(reason))
@@ -410,16 +410,16 @@ export default function DuplicatesPageClient({
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="rounded-xl border border-border bg-muted/50 p-3">
                       <div className="flex flex-col gap-3">
                         {leftImage ? (
                           <img
                             src={leftImage}
                             alt={pair.left.name}
-                            className="h-36 w-full rounded-lg border border-zinc-200 bg-white object-cover"
+                            className="h-36 w-full rounded-lg border border-border bg-card object-cover"
                           />
                         ) : (
-                          <div className="flex h-36 w-full items-center justify-center rounded-lg border border-zinc-200 bg-white text-xs uppercase tracking-[0.14em] text-zinc-400">
+                          <div className="flex h-36 w-full items-center justify-center rounded-lg border border-border bg-card text-xs uppercase tracking-[0.14em] text-muted-foreground/80">
                             {tx("No image")}
                           </div>
                         )}
@@ -432,12 +432,12 @@ export default function DuplicatesPageClient({
                               }),
                               locale,
                             )}
-                            className="text-sm font-semibold text-zinc-900 hover:underline"
+                            className="text-sm font-semibold text-foreground hover:underline"
                           >
                             {pair.left.name}
                           </a>
-                          <p className="mt-1 text-xs text-zinc-500">{pair.left.id}</p>
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-muted-foreground">{pair.left.id}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {collectImageUrls(pair.left).length} {tx("photo(s)")}
                           </p>
                         </div>
@@ -445,7 +445,7 @@ export default function DuplicatesPageClient({
                     </div>
 
                     <div className="flex items-center justify-center">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground/80">
                         <svg
                           viewBox="0 0 20 20"
                           className="h-4 w-4"
@@ -457,16 +457,16 @@ export default function DuplicatesPageClient({
                       </span>
                     </div>
 
-                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="rounded-xl border border-border bg-muted/50 p-3">
                       <div className="flex flex-col gap-3">
                         {rightImage ? (
                           <img
                             src={rightImage}
                             alt={pair.right.name}
-                            className="h-36 w-full rounded-lg border border-zinc-200 bg-white object-cover"
+                            className="h-36 w-full rounded-lg border border-border bg-card object-cover"
                           />
                         ) : (
-                          <div className="flex h-36 w-full items-center justify-center rounded-lg border border-zinc-200 bg-white text-xs uppercase tracking-[0.14em] text-zinc-400">
+                          <div className="flex h-36 w-full items-center justify-center rounded-lg border border-border bg-card text-xs uppercase tracking-[0.14em] text-muted-foreground/80">
                             {tx("No image")}
                           </div>
                         )}
@@ -479,12 +479,12 @@ export default function DuplicatesPageClient({
                               }),
                               locale,
                             )}
-                            className="text-sm font-semibold text-zinc-900 hover:underline"
+                            className="text-sm font-semibold text-foreground hover:underline"
                           >
                             {pair.right.name}
                           </a>
-                          <p className="mt-1 text-xs text-zinc-500">{pair.right.id}</p>
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-muted-foreground">{pair.right.id}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {collectImageUrls(pair.right).length} {tx("photo(s)")}
                           </p>
                         </div>

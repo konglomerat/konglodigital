@@ -21,9 +21,9 @@ export default async function AdminLayout({
 
   if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
     return (
-      <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-rose-900">Kein Zugriff</h1>
-        <p className="mt-2 text-sm text-rose-700">
+      <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold text-destructive">Kein Zugriff</h1>
+        <p className="mt-2 text-sm text-destructive">
           Dieser Bereich ist nur fuer Mitglieder mit der Rolle Admin verfuegbar.
         </p>
       </section>
@@ -32,36 +32,36 @@ export default async function AdminLayout({
 
   return (
     <div className="space-y-6">
-      <nav className="flex flex-wrap gap-2 rounded-3xl border border-zinc-200 bg-white p-2 shadow-sm">
+      <nav className="flex flex-wrap gap-2 rounded-3xl border border-border bg-card p-2 shadow-sm">
         <ActiveNavLink
           href={localizePathname("/admin/users", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Benutzer
         </ActiveNavLink>
         <ActiveNavLink
           href={localizePathname("/kofi", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           KoFi
         </ActiveNavLink>
         <ActiveNavLink
           href={localizePathname("/admin/generate-newsletter", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Newsletter erzeugen
         </ActiveNavLink>
         <ActiveNavLink
           href={localizePathname("/admin/generate-story", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-          activeClassName="bg-blue-600 text-white hover:bg-blue-600 hover:text-white"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Storys erzeugen
         </ActiveNavLink>

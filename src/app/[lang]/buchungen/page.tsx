@@ -665,14 +665,14 @@ export default function BuchungenPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
         <PageTitle
           title="Generator Buchungen"
           subTitle="Einbuchung von Rechnungen und Belegen für Einnahmen oder Ausgaben des Vereins, seiner Projekte und Werkbereiche."
         />
 
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Pflichtfelder sind mit * markiert.
         </p>
 
@@ -786,7 +786,7 @@ export default function BuchungenPage() {
                 />
                 {selectedEvidenceName ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       Ausgewählt: {selectedEvidenceName}
                     </p>
                     <Button
@@ -800,7 +800,7 @@ export default function BuchungenPage() {
                         ? "Beleg wird analysiert…"
                         : "PDF auslesen (GPT)"}
                     </Button>
-                    <label className="inline-flex items-center gap-2 text-xs text-zinc-600">
+                    <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                       <input
                         type="checkbox"
                         className="h-4 w-4 accent-blue-600"
@@ -812,7 +812,7 @@ export default function BuchungenPage() {
                       Nur leere Felder füllen
                     </label>
                     {extractMessage ? (
-                      <p className="text-xs text-zinc-600">{extractMessage}</p>
+                      <p className="text-xs text-muted-foreground">{extractMessage}</p>
                     ) : null}
                   </div>
                 ) : null}
@@ -823,14 +823,14 @@ export default function BuchungenPage() {
           <FormSection title="Einnahme oder Ausgabe" icon={faMoneyBillTransfer}>
             <div className="space-y-4">
               <input type="hidden" {...register("bookingType")} />
-              <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
+              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
                 <button
                   type="button"
                   onClick={() => setValue("bookingType", "ausgabe")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     selectedBookingType === "ausgabe"
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -846,8 +846,8 @@ export default function BuchungenPage() {
                   onClick={() => setValue("bookingType", "einnahme")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     selectedBookingType === "einnahme"
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -921,7 +921,7 @@ export default function BuchungenPage() {
                     <span className="flex items-center gap-2">
                       <FontAwesomeIcon
                         icon={option.icon}
-                        className="h-3.5 w-3.5 text-zinc-500"
+                        className="h-3.5 w-3.5 text-muted-foreground"
                       />
                       <span>{option.label}</span>
                     </span>
@@ -1020,23 +1020,23 @@ export default function BuchungenPage() {
             </div>
           </FormSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {submittedAt ? (
-                <p className="text-sm text-emerald-700">
+                <p className="text-sm text-success">
                   Formular lokal erfasst: {submittedAt}
                 </p>
               ) : null}
               {storeResult?.id ? (
-                <p className="text-sm text-emerald-700">
+                <p className="text-sm text-success">
                   In Campai gespeichert: {storeResult.id}
                 </p>
               ) : null}
               {storeResult?.warning ? (
-                <p className="text-sm text-amber-700">{storeResult.warning}</p>
+                <p className="text-sm text-warning">{storeResult.warning}</p>
               ) : null}
               {storeResult?.error ? (
-                <p className="text-sm text-rose-700">{storeResult.error}</p>
+                <p className="text-sm text-destructive">{storeResult.error}</p>
               ) : null}
 
               <Button

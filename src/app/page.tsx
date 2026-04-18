@@ -66,15 +66,15 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
       <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
         <div className="order-2 md:order-1">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-700">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
             {tx("Willkommen", "de")}
           </p>
-          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 md:text-5xl">
+          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-foreground md:text-5xl">
             Konglo
             <br />
             digital
           </h1>
-          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-600 md:text-base">
+          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-base">
             {tx(
               "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
               "de",
@@ -114,17 +114,17 @@ export default async function Home() {
       </section>
 
       {!isAuthenticated ? (
-        <section className="rounded-2xl bg-blue-700 p-5 shadow-sm ring-1 ring-blue-600 md:p-6">
-          <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">
+        <section className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-sm ring-1 ring-primary md:p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-primary-foreground md:text-2xl">
             {tx("Neu hier? So funktioniert die Registrierung", "de")}
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faUserPlus} className="h-4 w-4" />
                 <span>{tx("Wer kann sich registrieren?", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
                 {tx(
                   "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
                   "de",
@@ -133,28 +133,27 @@ export default async function Home() {
             </article>
 
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
                 <span>{tx("Automatische Freischaltung", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
                 {tx(
                   "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
                   "de",
                 )}
               </p>
             </article>
-
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
                 <span>{tx("Wenn es nicht klappt", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
                 {tx("Schreib uns an", "de")}{" "}
                 <a
                   href="mailto:vorstand@konglomerat.org"
-                  className="font-medium text-cyan-100 underline underline-offset-2 hover:text-white dark:text-blue-300 dark:hover:text-blue-200"
+                  className="font-medium text-primary-soft underline underline-offset-2 hover:text-primary-foreground"
                 >
                   vorstand@konglomerat.org
                 </a>{" "}
@@ -169,9 +168,9 @@ export default async function Home() {
           <div className="mt-5">
             <Button
               href="/register"
-              kind="primary"
+              kind="secondary"
               size="large"
-              className="w-full bg-blue-500 px-8 py-3 text-base font-bold shadow-lg shadow-blue-900/25 hover:!bg-[#3777ec]"
+              className="w-full border-transparent bg-background px-8 py-3 text-base font-bold text-primary shadow-lg shadow-black/10 hover:bg-background/90 hover:text-primary"
             >
               {tx("Jetzt registrieren", "de")}
             </Button>
@@ -182,7 +181,7 @@ export default async function Home() {
       <section>
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
               {tx("Schnellzugriff", "de")}
             </h2>
           </div>
@@ -194,7 +193,7 @@ export default async function Home() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-input hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {action.href === "/checkout" ? (
                   <div className="relative">
@@ -251,10 +250,10 @@ export default async function Home() {
                 ) : null}
 
                 <div className="px-5 pb-4">
-                  <h3 className="text-base font-semibold text-blue-600 group-hover:text-blue-700">
+                  <h3 className="text-base font-semibold text-primary group-hover:text-primary/80">
                     {action.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                     {action.description}
                   </p>
                 </div>
@@ -269,14 +268,14 @@ export default async function Home() {
       <ResourceOfTheMonthSection />
 
       <section className="pt-2">
-        <p className="mb-1 text-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
+        <p className="mb-1 text-center text-sm font-medium text-muted-foreground">
           {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>
         <a
           href="https://konglomerat.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-blue-700 underline underline-offset-4 transition hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-primary underline underline-offset-4 transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           konglomerat.org
         </a>

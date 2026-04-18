@@ -15,47 +15,47 @@ export const RESOURCE_TYPES = {
   place: {
     label: "Place",
     icon: faLocationDot,
-    color: "text-blue-500",
+    color: "text-primary",
   },
   person: {
     label: "Person",
     icon: faUser,
-    color: "text-emerald-500",
+    color: "text-success",
   },
   vehicle: {
     label: "Vehicle",
     icon: faCar,
-    color: "text-amber-500",
+    color: "text-warning",
   },
   tool: {
     label: "Tool",
     icon: faScrewdriverWrench,
-    color: "text-violet-500",
+    color: "text-chart-1",
   },
   project: {
     label: "Project",
     icon: faDiagramProject,
-    color: "text-sky-500",
+    color: "text-info",
   },
   clothing: {
     label: "Clothing",
     icon: faShirt,
-    color: "text-pink-500",
+    color: "text-chart-4",
   },
   furniture: {
     label: "Furniture",
     icon: faCouch,
-    color: "text-orange-500",
+    color: "text-chart-5",
   },
   object: {
     label: "Object",
     icon: faCube,
-    color: "text-slate-500",
+    color: "text-muted-foreground",
   },
   other: {
     label: "Other",
     icon: faEllipsis,
-    color: "text-zinc-500",
+    color: "text-muted-foreground",
   },
 } as const satisfies Record<
   string,

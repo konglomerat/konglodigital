@@ -18,11 +18,11 @@ type Printer = {
 };
 
 const statusStyles: Record<string, string> = {
-  idle: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  printing: "bg-blue-50 text-blue-700 ring-blue-200",
-  paused: "bg-amber-50 text-amber-700 ring-amber-200",
-  offline: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  error: "bg-rose-50 text-rose-700 ring-rose-200",
+  idle: "bg-success-soft text-success ring-success-border",
+  printing: "bg-primary-soft text-primary ring-primary-border",
+  paused: "bg-warning-soft text-warning ring-warning-border",
+  offline: "bg-accent text-muted-foreground ring-ring",
+  error: "bg-destructive-soft text-destructive ring-destructive-border",
 };
 
 const statusLabels: Record<string, string> = {
@@ -130,31 +130,31 @@ export default function PrinterEmptyingPage() {
       <header className="space-y-2">
         <PageTitle
           eyebrow="Printer Emptying"
-          eyebrowClassName="text-xs tracking-[0.3em] text-zinc-400"
+          eyebrowClassName="text-xs tracking-[0.3em] text-muted-foreground/80"
           title="Finished prints"
-          titleClassName="text-zinc-900"
+          titleClassName="text-foreground"
           subTitle="Every minute we check if a print has finished. When a printer is done, it is marked as needing to be emptied until you confirm it."
-          subTitleClassName="max-w-2xl text-zinc-500"
+          subTitleClassName="max-w-2xl text-muted-foreground"
           backLink={{
             href: "/printers/access-codes",
             label: "Zur Unterseite Zugangscodes",
           }}
         />
         {lastChecked ? (
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground/80">
             Last checked: {formatUpdated(lastChecked)}
           </p>
         ) : null}
       </header>
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Loading printers...
         </div>
       ) : null}
@@ -163,57 +163,57 @@ export default function PrinterEmptyingPage() {
         {printers.map((printer) => (
           <div
             key={printer.id}
-            className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
+            className="rounded-3xl border border-border bg-card p-6 shadow-sm"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-foreground">
                   {printer.name || "Unnamed printer"}
                 </h2>
-                <p className="text-xs text-zinc-400">{printer.model}</p>
+                <p className="text-xs text-muted-foreground/80">{printer.model}</p>
               </div>
               <span
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
                   statusStyles[printer.status] ??
-                  "bg-zinc-100 text-zinc-600 ring-zinc-200"
+                  "bg-accent text-muted-foreground ring-ring"
                 }`}
               >
                 {statusLabels[printer.status] ?? printer.status}
               </span>
             </div>
 
-            <div className="mt-4 space-y-2 text-sm text-zinc-500">
+            <div className="mt-4 space-y-2 text-sm text-muted-foreground">
               <p>
                 Job:{" "}
-                <span className="text-zinc-700">{printer.jobName ?? "-"}</span>
+                <span className="text-foreground/80">{printer.jobName ?? "-"}</span>
               </p>
               <p>
                 Progress:{" "}
-                <span className="text-zinc-700">{printer.progress}%</span>
+                <span className="text-foreground/80">{printer.progress}%</span>
               </p>
               <p>
                 Updated:{" "}
-                <span className="text-zinc-700">
+                <span className="text-foreground/80">
                   {formatUpdated(printer.updatedAt)}
                 </span>
               </p>
             </div>
 
             {printer.needsEmptying ? (
-              <div className="mt-5 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div className="mt-5 flex items-center justify-between rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
                 <span>Needs to be emptied</span>
                 <Button
                   type="button"
                   onClick={() => handleEmptied(printer.id)}
                   disabled={savingId === printer.id}
                   kind="secondary"
-                  className="border-amber-300 px-3 py-1 text-xs text-amber-700 hover:bg-amber-100"
+                  className="border-warning-border px-3 py-1 text-xs text-warning hover:bg-warning-soft"
                 >
                   {savingId === printer.id ? "Updating..." : "Is emptied now"}
                 </Button>
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <div className="mt-5 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
                 No emptying needed
               </div>
             )}
@@ -222,13 +222,13 @@ export default function PrinterEmptyingPage() {
       </section>
 
       {!loading && printers.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           No printers found.
         </div>
       ) : null}
 
       {needsEmptying.length > 0 ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
           {needsEmptying.length} printer{needsEmptying.length === 1 ? "" : "s"}{" "}
           need to be emptied.
         </div>

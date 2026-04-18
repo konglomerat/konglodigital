@@ -450,12 +450,12 @@ export default function ReimbursementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
         <PageTitle
           title={
             <span className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-sm">
                 <FontAwesomeIcon icon={faRotate} className="h-5 w-5" />
               </span>
               <span>Rückerstattungen einreichen</span>
@@ -464,10 +464,10 @@ export default function ReimbursementPage() {
           subTitle="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
         />
 
-        <p className="text-xs text-zinc-500">Pflichtfelder sind mit * markiert.</p>
+        <p className="text-xs text-muted-foreground">Pflichtfelder sind mit * markiert.</p>
 
         {costCentersError ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <div className="rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
             {costCentersError}
           </div>
         ) : null}
@@ -511,7 +511,7 @@ export default function ReimbursementPage() {
 
               {/* Creditor selected badge */}
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
                     Kreditor <strong>#{creditorAccount}</strong>{" "}
@@ -519,7 +519,7 @@ export default function ReimbursementPage() {
                   </span>
                   <button
                     type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                    className="ml-auto rounded p-1 text-success hover:bg-success-soft"
                     onClick={resetCreditor}
                   >
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
@@ -529,8 +529,8 @@ export default function ReimbursementPage() {
 
               {/* Create creditor panel */}
               {showCreatePanel && !creditorAccount ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
+                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
+                  <p className="text-sm font-medium text-primary">
                     Neuen Kreditor anlegen: &ldquo;{creditorName}&rdquo;
                   </p>
 
@@ -577,7 +577,7 @@ export default function ReimbursementPage() {
                   ) : null}
 
                   {creditorError ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
                       {creditorError}
                     </div>
                   ) : null}
@@ -688,7 +688,7 @@ export default function ReimbursementPage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-xl border border-zinc-200 p-3"
+                  className="space-y-3 rounded-xl border border-border p-3"
                 >
                   <div className="grid gap-3 md:grid-cols-3">
                     <FormField
@@ -789,7 +789,7 @@ export default function ReimbursementPage() {
                   aria-label="Ist die Rechnung bereits beglichen?"
                   className="flex flex-wrap gap-4"
                 >
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
                     <Input
                       type="radio"
                       value="offen"
@@ -798,7 +798,7 @@ export default function ReimbursementPage() {
                     />
                     <span>offen</span>
                   </label>
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
                     <Input
                       type="radio"
                       value="bezahlt"
@@ -820,20 +820,20 @@ export default function ReimbursementPage() {
             </div>
           </FormSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {result?.id ? (
-                <p className="text-sm text-emerald-700">
+                <p className="text-sm text-success">
                   In Campai gespeichert: {result.id}
                 </p>
               ) : null}
 
               {result?.uploadWarning ? (
-                <p className="text-sm text-amber-700">{result.uploadWarning}</p>
+                <p className="text-sm text-warning">{result.uploadWarning}</p>
               ) : null}
 
               {result?.error ? (
-                <p className="text-sm text-rose-700">{result.error}</p>
+                <p className="text-sm text-destructive">{result.error}</p>
               ) : null}
 
               <Button

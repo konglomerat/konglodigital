@@ -50,7 +50,7 @@ export default async function CalendarEventDetailPage({
         eyebrow="Kalender"
         title="Termin-Details"
         subTitle="Informationen zu einem ausgewählten Termin."
-        className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
+        className="rounded-3xl border border-border bg-card p-6 shadow-sm"
         backLink={{ href: "/calendar", label: "Zurück zur Übersicht" }}
         links={[
           {
@@ -60,38 +60,38 @@ export default async function CalendarEventDetailPage({
             rel: "noreferrer",
             size: "medium",
             className:
-              "rounded-full border-blue-600 text-blue-600 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600",
+              "rounded-full border-primary text-primary hover:border-primary hover:bg-primary-soft hover:text-primary",
           },
         ]}
       />
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {!errorMessage && !event ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           Dieser Termin ist nicht mehr in den nächsten 7 Tagen verfügbar.
         </div>
       ) : null}
 
       {event ? (
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-zinc-900">
+              <h2 className="text-2xl font-semibold text-foreground">
                 {event.summary}
               </h2>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-muted-foreground">
                 {dateFormatter.format(event.start)}
                 {event.allDay
                   ? " • Ganztägig"
                   : ` • ${getTimeRange(event.start, event.end)}`}
               </p>
               {event.location ? (
-                <p className="text-sm text-zinc-500">{event.location}</p>
+                <p className="text-sm text-muted-foreground">{event.location}</p>
               ) : null}
             </div>
             {tags.length > 0 ? (
@@ -114,10 +114,10 @@ export default async function CalendarEventDetailPage({
           </div>
 
           <div className="mt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Beschreibung
             </h3>
-            <p className="mt-2 whitespace-pre-line text-sm text-zinc-700">
+            <p className="mt-2 whitespace-pre-line text-sm text-foreground/80">
               {event.description || "Keine Beschreibung hinterlegt."}
             </p>
           </div>

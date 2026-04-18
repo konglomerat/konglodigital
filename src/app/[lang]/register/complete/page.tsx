@@ -196,18 +196,18 @@ export default function RegisterCompletePage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">
+    <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-foreground">
           Registrierung abschliessen
         </h1>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-muted-foreground">
           Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem
           Mitgliedskonto.
         </p>
 
         {isLoading ? (
-          <p className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          <p className="mt-6 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
             Registrierungslink wird geladen ...
           </p>
         ) : null}
@@ -218,7 +218,7 @@ export default function RegisterCompletePage() {
               <div className="space-y-2">
                 <label
                   htmlFor="register-complete-first-name"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
                 >
                   Vorname
                 </label>
@@ -227,13 +227,13 @@ export default function RegisterCompletePage() {
                   value={profile.firstName}
                   disabled
                   autoComplete="off"
-                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
               </div>
               <div className="space-y-2">
                 <label
                   htmlFor="register-complete-last-name"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
                 >
                   Nachname
                 </label>
@@ -242,7 +242,7 @@ export default function RegisterCompletePage() {
                   value={profile.lastName}
                   disabled
                   autoComplete="off"
-                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
               </div>
             </div>
@@ -250,7 +250,7 @@ export default function RegisterCompletePage() {
             <div className="space-y-2">
               <label
                 htmlFor="register-complete-member-number"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
               >
                 Mitgliedsnummer
               </label>
@@ -259,14 +259,14 @@ export default function RegisterCompletePage() {
                 value={profile.memberNumber}
                 disabled
                 autoComplete="off"
-                className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500"
+                className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
               />
             </div>
 
             <div className="space-y-2">
               <label
                 htmlFor="register-complete-password"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
               >
                 Passwort
               </label>
@@ -278,14 +278,14 @@ export default function RegisterCompletePage() {
                 autoComplete="new-password"
                 showLabel="Anzeigen"
                 hideLabel="Ausblenden"
-                className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
               />
             </div>
 
             <div className="space-y-2">
               <label
                 htmlFor="register-complete-password-confirmation"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
               >
                 Passwort wiederholen
               </label>
@@ -297,18 +297,18 @@ export default function RegisterCompletePage() {
                 autoComplete="new-password"
                 showLabel="Anzeigen"
                 hideLabel="Ausblenden"
-                className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
               />
             </div>
 
             {error ? (
-              <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 {error}
               </p>
             ) : null}
 
             {success ? (
-              <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <div className="space-y-2 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
                 <p>{success}</p>
                 <Link className="font-semibold underline" href="/login">
                   Zur Anmeldung
@@ -330,7 +330,7 @@ export default function RegisterCompletePage() {
         ) : null}
 
         {!isLoading && !profile && error ? (
-          <div className="mt-6 space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <div className="mt-6 space-y-3 rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-4 text-sm text-destructive">
             <p>{error}</p>
             <Link className="font-semibold underline" href="/register">
               Neue Registrierung starten

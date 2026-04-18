@@ -1035,12 +1035,12 @@ export default function EigenbelegPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
         <PageTitle
           title={
             <span className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-sm">
                 <FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />
               </span>
               <span>Generator Eigenbeleg</span>
@@ -1049,11 +1049,11 @@ export default function EigenbelegPage() {
           subTitle="Ein Eigenbeleg ist ein Ersatz für eine Rechnung bzw. Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
         />
 
-        <p className="text-xs text-zinc-500">Pflichtfelder sind mit * markiert.</p>
+        <p className="text-xs text-muted-foreground">Pflichtfelder sind mit * markiert.</p>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {errorCount > 0 ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               Bitte korrigiere {errorCount} Feld{errorCount === 1 ? "" : "er"}{" "}
               vor dem Speichern.
             </div>
@@ -1172,11 +1172,11 @@ export default function EigenbelegPage() {
                     })}
                   />
                   {selectedEvidenceName ? (
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       Ausgewählt: {selectedEvidenceName}
                     </p>
                   ) : null}
-                  <p className="text-xs text-zinc-500">{attachmentModeHint}</p>
+                  <p className="text-xs text-muted-foreground">{attachmentModeHint}</p>
                 </FormField>
               </div>
             </div>
@@ -1202,14 +1202,14 @@ export default function EigenbelegPage() {
               />
               <input type="hidden" autoComplete="off" {...register("counterpartyAccount")} />
 
-              <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
+              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
                 <button
                   type="button"
                   onClick={() => setValue("bookingType", "ausgabe")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     isExpenseFlow
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -1225,8 +1225,8 @@ export default function EigenbelegPage() {
                   onClick={() => setValue("bookingType", "einnahme")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     !isExpenseFlow
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -1367,7 +1367,7 @@ export default function EigenbelegPage() {
               </div>
 
               {counterpartyAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
                     {counterpartyEntityLabel} <strong>#{counterpartyAccount}</strong>
@@ -1375,7 +1375,7 @@ export default function EigenbelegPage() {
                   </span>
                   <button
                     type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                    className="ml-auto rounded p-1 text-success hover:bg-success-soft"
                     onClick={resetCounterparty}
                   >
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
@@ -1384,14 +1384,14 @@ export default function EigenbelegPage() {
               ) : null}
 
               {activeCounterpartyError ? (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
                   {activeCounterpartyError}
                 </div>
               ) : null}
 
               {showCreateCreditorPanel && !counterpartyAccount && isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
+                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
+                  <p className="text-sm font-medium text-primary">
                     Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
                   </p>
 
@@ -1462,12 +1462,12 @@ export default function EigenbelegPage() {
               ) : null}
 
               {showCreateDebtorPanel && !counterpartyAccount && !isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-900">
+                    <p className="text-sm font-medium text-primary">
                       Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
                     </p>
-                    <p className="text-sm text-blue-800">
+                    <p className="text-sm text-primary">
                       Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
                     </p>
                   </div>
@@ -1483,7 +1483,7 @@ export default function EigenbelegPage() {
                     </FormField>
 
                     <FormField label="Versand per E-Mail">
-                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-foreground/80">
                         <input
                           type="checkbox"
                           autoComplete="off"
@@ -1598,23 +1598,23 @@ export default function EigenbelegPage() {
             </div>
           </FormSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {submittedAt ? (
-                <p className="text-sm text-emerald-700">
+                <p className="text-sm text-success">
                   Formular lokal erfasst: {submittedAt}
                 </p>
               ) : null}
               {storeResult?.id ? (
-                <p className="text-sm text-emerald-700">
+                <p className="text-sm text-success">
                   In Campai gespeichert: {storeResult.id}
                 </p>
               ) : null}
               {storeResult?.warning ? (
-                <p className="text-sm text-amber-700">{storeResult.warning}</p>
+                <p className="text-sm text-warning">{storeResult.warning}</p>
               ) : null}
               {storeResult?.error ? (
-                <p className="text-sm text-rose-700">{storeResult.error}</p>
+                <p className="text-sm text-destructive">{storeResult.error}</p>
               ) : null}
 
               <Button

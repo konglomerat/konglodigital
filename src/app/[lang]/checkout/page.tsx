@@ -399,33 +399,33 @@ export default function CheckoutPage() {
         ]}
       />
 
-      {jobsError ? <p className="text-sm text-rose-600">{jobsError}</p> : null}
+      {jobsError ? <p className="text-sm text-destructive">{jobsError}</p> : null}
       {descriptionsError ? (
-        <p className="text-sm text-rose-600">{descriptionsError}</p>
+        <p className="text-sm text-destructive">{descriptionsError}</p>
       ) : null}
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Cart summary</h2>
-        <p className="mt-2 text-xs text-zinc-500">
+      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-foreground">Cart summary</h2>
+        <p className="mt-2 text-xs text-muted-foreground">
           {cartJobs.length} print(s) • {cartProducts.length} product(s)
         </p>
-        <p className="mt-2 text-base font-semibold text-zinc-900">
+        <p className="mt-2 text-base font-semibold text-foreground">
           €{(cartSummary.totalCents / 100).toFixed(2)} total
         </p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Prints estimate: {cartSummary.totalWeight}g • €
           {(cartSummary.jobsTotalCents / 100).toFixed(2)} at {priceRate}€/100g
         </p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Products: €{(cartSummary.productsTotalCents / 100).toFixed(2)}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Offer title
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.title}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -436,11 +436,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Contact email
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.email}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -451,11 +451,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Intro
             </label>
             <textarea
-              className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="min-h-[96px] w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.intro}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -466,11 +466,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Recipient name
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.details1}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -481,11 +481,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Address line
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.addressLine}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -496,11 +496,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               ZIP
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.zip}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -511,11 +511,11 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               City
             </label>
             <input
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={invoiceForm.city}
               onChange={(event) =>
                 setInvoiceForm((prev) => ({
@@ -526,19 +526,19 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Country
             </label>
-            <div className="w-full rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+            <div className="w-full rounded-full border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
               DE
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Price rate €/100g
             </label>
             <select
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={priceRate}
               onChange={(event) => setPriceRate(Number(event.target.value))}
             >
@@ -559,30 +559,30 @@ export default function CheckoutPage() {
             {creatingInvoice ? "Creating draft..." : "Create invoice draft"}
           </Button>
           {invoiceError ? (
-            <p className="text-sm text-rose-600">{invoiceError}</p>
+            <p className="text-sm text-destructive">{invoiceError}</p>
           ) : null}
           {invoiceSuccess ? (
-            <p className="text-sm text-emerald-700">{invoiceSuccess}</p>
+            <p className="text-sm text-success">{invoiceSuccess}</p>
           ) : null}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Cart items</h2>
+      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-foreground">Cart items</h2>
         <div className="mt-4 space-y-3">
           {cartJobs.length === 0 && cartProducts.length === 0 ? (
-            <p className="text-sm text-zinc-500">Cart is empty.</p>
+            <p className="text-sm text-muted-foreground">Cart is empty.</p>
           ) : null}
           {cartJobs.map((job) => (
             <div
               key={job.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/60 p-4"
             >
               <div>
-                <p className="text-sm font-semibold text-zinc-900">
+                <p className="text-sm font-semibold text-foreground">
                   {job.title}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {formatPriceRange(
                     estimatePrintedWeight(
                       job.weightGrams,
@@ -595,7 +595,7 @@ export default function CheckoutPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-muted-foreground">
                   {getJobStatusLabel(job.status)}
                 </span>
                 <Button
@@ -612,13 +612,13 @@ export default function CheckoutPage() {
           {cartProducts.map((product) => (
             <div
               key={`product-${product.id}`}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/60 p-4"
             >
               <div>
-                <p className="text-sm font-semibold text-zinc-900">
+                <p className="text-sm font-semibold text-foreground">
                   {product.title}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {product.unitAmount > 0
                     ? `€${(product.unitAmount / 100).toFixed(2)}`
                     : "Preis auf Anfrage"}
@@ -633,14 +633,14 @@ export default function CheckoutPage() {
                 >
                   −
                 </Button>
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-muted-foreground">
                   {product.quantity ?? 1}
                 </span>
                 <Button
                   type="button"
                   onClick={() => handleIncreaseProduct(product.id)}
                   kind="secondary"
-                  className="border-blue-200 px-3 py-1 text-xs text-blue-700"
+                  className="border-primary-border px-3 py-1 text-xs text-primary"
                 >
                   +
                 </Button>

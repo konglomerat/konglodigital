@@ -430,8 +430,8 @@ export default function FabricStorySlideEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-50 shadow-sm">
-      <div ref={canvasHostRef} className="relative aspect-[9/16] w-full overflow-hidden bg-zinc-100">
+    <div className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm">
+      <div ref={canvasHostRef} className="relative aspect-[9/16] w-full overflow-hidden bg-accent">
         <canvas
           ref={canvasElementRef}
           width={CANVAS_WIDTH}
@@ -439,7 +439,7 @@ export default function FabricStorySlideEditor({
           className="block"
         />
         {!isCanvasReady && !canvasError ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm text-zinc-500">
+          <div className="absolute inset-0 flex items-center justify-center bg-card/70 text-sm text-muted-foreground">
             Layout wird aufgebaut...
           </div>
         ) : null}
@@ -447,14 +447,14 @@ export default function FabricStorySlideEditor({
 
       <div className="flex items-center justify-between gap-3 p-4">
         <div>
-          <p className="text-sm font-semibold text-zinc-900">
+          <p className="text-sm font-semibold text-foreground">
             Slide {slideIndex + 1}
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Fabric.js Canvas, direkt bearbeitbar und als PNG exportierbar
           </p>
           {canvasError ? (
-            <p className="mt-1 text-xs text-rose-700">{canvasError}</p>
+            <p className="mt-1 text-xs text-destructive">{canvasError}</p>
           ) : null}
         </div>
         <Button

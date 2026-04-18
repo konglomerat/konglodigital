@@ -119,14 +119,14 @@ function SelectableGrid({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-zinc-900">{title}</h3>
-        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {selectedIds.size} ausgewaehlt
         </span>
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
           {emptyLabel}
         </div>
       ) : (
@@ -143,8 +143,8 @@ function SelectableGrid({
                 onClick={() => onToggle(item.id)}
                 className={`overflow-hidden rounded-2xl border text-left transition ${
                   isSelected
-                    ? "border-blue-600 bg-blue-50 shadow-sm"
-                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-sm"
+                    ? "border-primary bg-primary-soft shadow-sm"
+                    : "border-border bg-card hover:border-input hover:shadow-sm"
                 }`}
               >
                 {imageUrl ? (
@@ -154,7 +154,7 @@ function SelectableGrid({
                     className="h-40 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-40 w-full items-center justify-center bg-[linear-gradient(135deg,#eff6ff_0%,#fef3c7_100%)] text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  <div className="flex h-40 w-full items-center justify-center bg-[linear-gradient(135deg,#eff6ff_0%,#fef3c7_100%)] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {title}
                   </div>
                 )}
@@ -162,11 +162,11 @@ function SelectableGrid({
                 <div className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h4 className="text-base font-semibold text-zinc-900">
+                      <h4 className="text-base font-semibold text-foreground">
                         {item.name}
                       </h4>
                       {item.prettyTitle ? (
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           /{item.prettyTitle}
                         </p>
                       ) : null}
@@ -174,21 +174,21 @@ function SelectableGrid({
                     <span
                       className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold ${
                         isSelected
-                          ? "bg-blue-600 text-white"
-                          : "bg-zinc-100 text-zinc-600"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-accent text-muted-foreground"
                       }`}
                     >
                       {isSelected ? "Ja" : "Nein"}
                     </span>
                   </div>
 
-                  <p className="text-sm leading-relaxed text-zinc-600">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     {stripText(item.description).slice(0, 140) ||
                       "Noch keine Beschreibung hinterlegt."}
                   </p>
 
                   {updatedAt ? (
-                    <p className="text-xs font-medium text-zinc-500">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Aktualisiert: {updatedAt}
                     </p>
                   ) : null}
@@ -312,10 +312,10 @@ export default function GenerateNewsletterClient({
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Admin: Newsletter erzeugen
         </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-zinc-600">
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Waehle mehrere Ressourcen und Projekte aus und lege daraus einen neuen
           Rapidmail-Entwurf an. Gesendet wird hier nichts, es wird nur ein Draft
           in Rapidmail angelegt.
@@ -363,7 +363,7 @@ export default function GenerateNewsletterClient({
         </div>
 
         {rapidmailError ? (
-          <div className="mt-4 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {rapidmailError}
           </div>
         ) : null}
@@ -413,13 +413,13 @@ export default function GenerateNewsletterClient({
         </div>
       </FormSection>
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-zinc-900">
+            <h2 className="text-lg font-semibold text-foreground">
               Entwurf anlegen
             </h2>
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-muted-foreground">
               Ausgewaehlt: {selectedResourceIds.size} Ressourcen,{" "}
               {selectedProjectIds.size} Projekte.
             </p>
@@ -454,13 +454,13 @@ export default function GenerateNewsletterClient({
         </div>
 
         {submitError ? (
-          <div className="mt-4 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {submitError}
           </div>
         ) : null}
 
         {submitSuccess ? (
-          <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm">
+          <div className="mt-4 rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
             <p>{submitSuccess}</p>
             {createdDraftUrl ? (
               <p className="mt-2">
@@ -468,7 +468,7 @@ export default function GenerateNewsletterClient({
                   href={createdDraftUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-semibold text-emerald-800 underline underline-offset-2"
+                  className="font-semibold text-success underline underline-offset-2"
                 >
                   Entwurf in Rapidmail oeffnen
                 </a>

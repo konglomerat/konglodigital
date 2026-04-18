@@ -114,7 +114,7 @@ export default function ResourceDetailClient({
           ),
           label: tx("Edit"),
           icon: faPen,
-          className: "border-blue-200 text-blue-700",
+          className: "border-primary-border text-primary",
         },
         {
           href: localizePathname(
@@ -168,7 +168,7 @@ export default function ResourceDetailClient({
     : undefined;
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
         <PageTitle
           title={resource?.name ?? tx("Resource not found.")}
@@ -180,19 +180,19 @@ export default function ResourceDetailClient({
           links={pageTitleLinks}
         />
 
-        <p className="inline-flex max-w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800">
+        <p className="inline-flex max-w-fit rounded-full border border-warning-border bg-warning-soft px-3 py-1 text-xs text-warning">
           {tx("Images and text on this page were generated with AI.")}
         </p>
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
         <section>
           {!resource ? (
-            <p className="text-sm text-zinc-500">{tx("Resource not found.")}</p>
+            <p className="text-sm text-muted-foreground">{tx("Resource not found.")}</p>
           ) : (
             <div className="flex flex-col gap-6">
               <MediaLightboxGallery
@@ -221,14 +221,14 @@ export default function ResourceDetailClient({
                   />
                 ) : null}
               </div>
-              <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 {resourceTypeLabel ? (
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1">
+                  <span className="rounded-full border border-border bg-card px-3 py-1 text-foreground">
                     {resourceTypeLabel}
                   </span>
                 ) : null}
                 {resource.attachable !== undefined ? (
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1">
+                  <span className="rounded-full border border-border bg-card px-3 py-1 text-foreground">
                     {resource.attachable
                       ? tx("Attachable")
                       : tx("Not attachable")}
@@ -237,7 +237,7 @@ export default function ResourceDetailClient({
                 {resource.tags?.map((tag) => (
                   <span
                     key={`${resource.id}-${tag}`}
-                    className="rounded-full border border-zinc-200 bg-white px-3 py-1"
+                    className="rounded-full border border-border bg-card px-3 py-1 text-foreground"
                   >
                     #{tag}
                   </span>
@@ -245,14 +245,14 @@ export default function ResourceDetailClient({
               </div>
               {resource.categories && resource.categories.length > 0 ? (
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     {tx("Categories")}
                   </p>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
+                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {resource.categories.map((category, index) => (
                       <li
                         key={`${resource.id}-category-${index}`}
-                        className="rounded-full border border-zinc-200 bg-white px-3 py-1"
+                        className="rounded-full border border-border bg-card px-3 py-1 text-foreground"
                       >
                         {category.name ?? category.bookingCategoryId ?? ""}
                       </li>
@@ -263,10 +263,10 @@ export default function ResourceDetailClient({
               {resource.relatedResources &&
               resource.relatedResources.length > 0 ? (
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     {tx("Related resources")}
                   </p>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
+                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {resource.relatedResources.map((relatedResource) => (
                       <li key={`${resource.id}-related-${relatedResource.id}`}>
                         <a
@@ -277,7 +277,7 @@ export default function ResourceDetailClient({
                             }),
                             locale,
                           )}
-                          className="rounded-full border border-zinc-200 bg-white px-3 py-1 hover:border-zinc-300 hover:text-zinc-900"
+                          className="rounded-full border border-border bg-card px-3 py-1 text-foreground transition hover:border-input hover:text-foreground"
                         >
                           {relatedResource.name ?? relatedResource.id}
                         </a>
@@ -288,7 +288,7 @@ export default function ResourceDetailClient({
               ) : null}
               {resourceGps ? (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     {tx("Location")}
                   </p>
                   <div className="mt-3">
@@ -302,7 +302,7 @@ export default function ResourceDetailClient({
                     href={`https://www.google.com/maps?q=${resourceGps.latitude},${resourceGps.longitude}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-semibold text-blue-600 hover:underline"
+                    className="text-xs font-semibold text-primary hover:underline"
                   >
                     {tx("Open map")}
                   </a>

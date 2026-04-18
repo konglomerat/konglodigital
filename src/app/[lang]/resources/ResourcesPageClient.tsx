@@ -81,7 +81,7 @@ const highlightText = (text: string, term: string): ReactNode => {
     index % 2 === 1 ? (
       <mark
         key={`${part}-${index}`}
-        className="rounded bg-yellow-300 px-0.5 text-zinc-900 dark:!text-zinc-900"
+        className="rounded bg-highlight px-0.5 text-highlight-foreground"
       >
         {part}
       </mark>
@@ -211,10 +211,10 @@ const ResourceCard = ({
               {displayImages.map((image, index) => (
                 <div
                   key={`${resource.id}-slide-${index}`}
-                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-xl bg-zinc-100"
+                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-xl bg-accent"
                 >
                   {getResourceMediaKindFromUrl(images[index]) === "document" ? (
-                    <div className="flex h-full w-full flex-col items-center justify-center bg-rose-50 text-rose-700">
+                    <div className="flex h-full w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
                       <FontAwesomeIcon icon={faFilePdf} className="h-9 w-9" />
                       <span className="mt-3 text-xs font-semibold uppercase tracking-[0.2em]">
                         PDF
@@ -231,8 +231,8 @@ const ResourceCard = ({
               ))}
             </motion.div>
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-zinc-100">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+            <div className="flex h-full w-full items-center justify-center bg-accent">
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 {tx("No image")}
               </span>
             </div>
@@ -245,7 +245,7 @@ const ResourceCard = ({
               type="button"
               aria-label={tx("Previous image")}
               onClick={handlePrev}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/90 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-white"
+              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
             >
               <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
             </button>
@@ -253,7 +253,7 @@ const ResourceCard = ({
               type="button"
               aria-label={tx("Next image")}
               onClick={handleNext}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/90 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-white"
+              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
             >
               <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
             </button>
@@ -269,7 +269,7 @@ const ResourceCard = ({
                 aria-label={`${tx("Image")} ${index + 1}`}
                 onClick={(event) => handleDotClick(event, index)}
                 className={`pointer-events-auto h-1.5 w-1.5 rounded-full transition ${
-                  index === activeIndex ? "bg-white" : "bg-white/50"
+                  index === activeIndex ? "bg-card" : "bg-card/50"
                 }`}
               />
             ))}
@@ -279,10 +279,10 @@ const ResourceCard = ({
 
       <div className="flex flex-col gap-3 p-2">
         <div>
-          <h3 className="flex items-center justify-between gap-4 text-md font-semibold text-zinc-800">
+          <h3 className="flex items-center justify-between gap-4 text-md font-semibold text-foreground">
             <Link
               href={resourcePath}
-              className="inline-flex items-center gap-2 font-semibold text-zinc-1000 hover:underline"
+              className="inline-flex items-center gap-2 font-semibold text-foreground hover:underline"
               onClick={onNavigate}
             >
               {highlightText(resource.name, normalizedSearchTerm)}
@@ -290,14 +290,14 @@ const ResourceCard = ({
 
             <Link
               href={editPath}
-              className="font-normal text-zinc-500 hover:text-zinc-800"
+              className="font-normal text-muted-foreground hover:text-foreground"
             >
               {tx("Edit")}
             </Link>
           </h3>
 
           {resource.description ? (
-            <p className="mt-2 whitespace-pre-line text-sm text-zinc-500">
+            <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
               {highlightText(
                 truncateText(resource.description, 100),
                 normalizedSearchTerm,
@@ -305,18 +305,18 @@ const ResourceCard = ({
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-1 text-[11px] text-zinc-600">
+        <div className="flex flex-wrap gap-1 text-[11px] text-muted-foreground">
           {resource.tags?.slice(0, 3).map((tag) => (
             <span
               key={`${resource.id}-${tag}`}
-              className="rounded-full border border-zinc-200 bg-white px-2 py-1"
+              className="rounded-full border border-border bg-card px-2 py-1 text-foreground"
             >
               {highlightText(tag, normalizedSearchTerm)}
             </span>
           ))}
         </div>
         {resource.categories && resource.categories.length > 0 ? (
-          <div className="text-[11px] text-zinc-500">
+          <div className="text-[11px] text-muted-foreground">
             {tx("Categories")}:{" "}
             {resource.categories
               .map((category) =>
@@ -984,10 +984,10 @@ export default function ResourcesPageClient({
         <button
           type="button"
           onClick={() => setViewMode("list")}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
             viewMode === "list"
-              ? "bg-zinc-900 text-white"
-              : "bg-white text-zinc-500 hover:text-zinc-900"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card text-muted-foreground hover:text-foreground"
           }`}
         >
           <span className="inline-flex items-center gap-2">
@@ -998,10 +998,10 @@ export default function ResourcesPageClient({
         <button
           type="button"
           onClick={() => setViewMode("map")}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
             viewMode === "map"
-              ? "bg-zinc-900 text-white"
-              : "bg-white text-zinc-500 hover:text-zinc-900"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card text-muted-foreground hover:text-foreground"
           }`}
         >
           <span className="inline-flex items-center gap-2">
@@ -1012,7 +1012,7 @@ export default function ResourcesPageClient({
       </div>
 
       {errorMessage ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </section>
       ) : null}
@@ -1026,7 +1026,7 @@ export default function ResourcesPageClient({
               </label>
               <FontAwesomeIcon
                 icon={faMagnifyingGlass}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
               />
               <Input
                 id="resource-search"
@@ -1048,7 +1048,7 @@ export default function ResourcesPageClient({
                   type="button"
                   aria-label={tx("Clear search")}
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
                   <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
                 </button>
@@ -1064,7 +1064,7 @@ export default function ResourcesPageClient({
                       handleResourceTypeChange(event.target.value)
                     }
                     aria-label={tx("Filter by resource type")}
-                    className="py-2 text-xs font-semibold text-zinc-700"
+                    className="py-2 text-xs font-semibold text-foreground"
                   >
                     <option value="">{tx("All types")}</option>
                     {resourceTypeOptions.map((resourceType) => (
@@ -1078,7 +1078,7 @@ export default function ResourcesPageClient({
                   </Select>
                 </div>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={filterByMapView}
@@ -1092,7 +1092,7 @@ export default function ResourcesPageClient({
                         includeWithinPolygons,
                       );
                     }}
-                    className="h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 shadow-xs shadow-zinc-900/20 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1106,7 +1106,7 @@ export default function ResourcesPageClient({
                   </Tooltip>
                 </label>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={includeWithinPolygons}
@@ -1121,7 +1121,7 @@ export default function ResourcesPageClient({
                       );
                     }}
                     disabled={normalizedSearchTerm.length === 0}
-                    className="h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 shadow-xs shadow-zinc-900/20 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1136,10 +1136,10 @@ export default function ResourcesPageClient({
                 </label>
 
                 <div className="ml-auto hidden text-right md:block">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {tx("Results")}
                   </p>
-                  <p className="text-sm font-semibold text-zinc-900">
+                  <p className="text-sm font-semibold text-foreground">
                     {loading
                       ? tx("Loading...")
                       : `${visibleResources.length} ${tx("of")} ${count ?? searchAndTypeFilteredResources.length}`}
@@ -1151,11 +1151,11 @@ export default function ResourcesPageClient({
 
           <section className="relative mt-6">
             {visibleResources.length === 0 && loading ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 {tx("Loading resources...")}
               </p>
             ) : visibleResources.length === 0 ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 {tx("No resources found.")}
               </p>
             ) : (
@@ -1180,7 +1180,7 @@ export default function ResourcesPageClient({
                       type="button"
                       onClick={handleLoadMore}
                       disabled={loadingMore}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-input bg-card px-5 py-2 text-sm font-semibold text-foreground transition hover:border-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {loadingMore ? tx("Loading more...") : tx("Load more")}
                     </button>
@@ -1189,7 +1189,7 @@ export default function ResourcesPageClient({
               </>
             )}
             {loading ? (
-              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm">
+              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
                 {tx("Loading...")}
               </div>
             ) : null}
@@ -1207,7 +1207,7 @@ export default function ResourcesPageClient({
               onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
               className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-2xl lg:h-full"
             />
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {tx("Showing resources with saved locations.")}
             </p>
           </div>

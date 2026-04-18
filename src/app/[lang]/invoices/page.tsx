@@ -58,7 +58,7 @@ const renderPaymentBadge = (paymentStatus?: string) => {
 
   if (normalized === "paid") {
     return (
-      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+      <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success  ">
         paid
       </span>
     );
@@ -66,7 +66,7 @@ const renderPaymentBadge = (paymentStatus?: string) => {
 
   if (normalized === "unpaid") {
     return (
-      <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+      <span className="inline-flex items-center rounded-full bg-destructive-soft px-2.5 py-1 text-xs font-semibold text-destructive  ">
         unpaid
       </span>
     );
@@ -77,7 +77,7 @@ const renderPaymentBadge = (paymentStatus?: string) => {
   }
 
   return (
-    <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+    <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-foreground/80  ">
       {paymentStatus}
     </span>
   );
@@ -134,7 +134,7 @@ export default function InvoicesPage() {
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 md:px-0 md:py-0">
       <PageTitle
         title="Rechnungen"
-        titleClassName="dark:text-zinc-100"
+        titleClassName=""
         links={[
           {
             href: "/invoices/new",
@@ -145,31 +145,31 @@ export default function InvoicesPage() {
         ]}
       />
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-          <thead className="bg-zinc-50 dark:bg-zinc-900/80">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm  ">
+        <table className="min-w-full divide-y divide-border ">
+          <thead className="bg-muted/50 ">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Rechnungsnummer
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Datum
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Betrag
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Empfänger
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Payment Status
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground ">
                 Download
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <tbody className="divide-y divide-border ">
             {!hasLoaded ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12">
@@ -191,7 +191,7 @@ export default function InvoicesPage() {
               </tr>
             ) : errorMessage ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-sm text-rose-600">
+                <td colSpan={6} className="px-4 py-8 text-sm text-destructive">
                   <div className="flex flex-col items-center justify-center gap-4 text-center">
                     <span>{errorMessage}</span>
                     <Button
@@ -209,7 +209,7 @@ export default function InvoicesPage() {
               <tr>
                 <td
                   colSpan={6}
-                  className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-4 py-5 text-sm text-muted-foreground "
                 >
                   Keine Rechnungen gefunden.
                 </td>
@@ -217,19 +217,19 @@ export default function InvoicesPage() {
             ) : (
               sortedInvoices.map((invoice) => (
                 <tr key={invoice.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/90 ">
                     {invoice.receiptNumber || "-"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/90 ">
                     {formatDate(invoice.receiptDate)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/90 ">
                     {formatAmount(invoice)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="px-4 py-3 text-sm text-foreground/90 ">
                     {invoice.accountName || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="px-4 py-3 text-sm text-foreground/90 ">
                     {renderPaymentBadge(invoice.paymentStatus)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">

@@ -54,47 +54,47 @@ export const tagIconMap: Record<
   CNC: {
     icon: faGears,
     label: "CNC",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   HOLZ: {
     icon: faTree,
     label: "Holz",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   BETON: {
     icon: faIndustry,
     label: "Beton",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   LASER: {
     icon: faBolt,
     label: "Laser",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   ELEKTRONIK: {
     icon: faMicrochip,
     label: "Elektronik",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   MATERIALVERMITTLUNG: {
     icon: faBoxesStacked,
     label: "Materialvermittlung",
-    colorClassName: "text-zinc-600",
+    colorClassName: "text-muted-foreground",
   },
   INTRO: {
     icon: faHandshake,
     label: "Intro",
-    colorClassName: "text-blue-600",
+    colorClassName: "text-primary",
   },
   VHC: {
     icon: faHouse,
     label: "VHC",
-    colorClassName: "text-rose-600",
+    colorClassName: "text-destructive",
   },
   OFFENE_WS: {
     icon: faDoorOpen,
     label: "Offene WS",
-    colorClassName: "text-emerald-600",
+    colorClassName: "text-success",
   },
 };
 

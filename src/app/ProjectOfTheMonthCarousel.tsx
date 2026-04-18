@@ -47,21 +47,21 @@ export default function ProjectOfTheMonthCarousel({
   }
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,520px)]">
         <div className="flex flex-col justify-center px-6 py-6 md:px-8 md:py-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             Projekt des Monats
           </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950 md:text-4xl">
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
             {activeProject.name}
           </h2>
           {activeProject.workshopName ? (
-            <p className="mt-3 text-sm font-medium uppercase tracking-[0.14em] text-zinc-500">
+            <p className="mt-3 text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">
               {activeProject.workshopName}
             </p>
           ) : null}
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-600 md:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
             {truncate(
               activeProject.description?.trim() ||
                 "Ein ausgewähltes Projekt aus den Werkstätten des Konglomerat e.V.",
@@ -74,7 +74,7 @@ export default function ProjectOfTheMonthCarousel({
               {activeProject.tags.slice(0, 4).map((tag) => (
                 <span
                   key={`${activeProject.id}-${tag}`}
-                  className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700"
+                  className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-foreground/85"
                 >
                   #{tag}
                 </span>
@@ -124,9 +124,7 @@ export default function ProjectOfTheMonthCarousel({
                   type="button"
                   aria-label={`Gehe zu Slide ${index + 1}`}
                   className={`h-2.5 rounded-full transition ${
-                    index === activeIndex
-                      ? "w-8 bg-zinc-900"
-                      : "w-2.5 bg-zinc-300"
+                    index === activeIndex ? "w-8 bg-primary" : "w-2.5 bg-border"
                   }`}
                   onClick={() => setActiveIndex(index)}
                 />
@@ -141,9 +139,11 @@ export default function ProjectOfTheMonthCarousel({
               <video
                 src={activeProject.mediaUrl}
                 controls
+                autoPlay
+                muted
                 playsInline
                 preload="metadata"
-                className="absolute inset-0 h-full w-full bg-zinc-950 object-cover"
+                className="absolute inset-0 h-full w-full bg-foreground object-cover"
               />
             ) : (
               <img

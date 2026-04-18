@@ -74,7 +74,7 @@ export default function PrinterAccessCodesClient() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm md:p-5">
+      <section className="rounded-3xl border border-success-border bg-success-soft p-4 shadow-sm md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="mx-auto w-full max-w-[320px] md:mx-0 md:max-w-[320px]">
             <Image
@@ -84,7 +84,7 @@ export default function PrinterAccessCodesClient() {
               priority={false}
             />
           </div>
-          <div className="space-y-3 text-base text-emerald-950 md:text-lg">
+          <div className="space-y-3 text-base text-success md:text-lg">
             <p className="text-lg font-semibold md:text-xl">
               Kurzer Friendly Reminder
             </p>
@@ -100,20 +100,20 @@ export default function PrinterAccessCodesClient() {
       </section>
 
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground/80">
           3D-Druck
         </p>
-        <h1 className="text-3xl font-semibold text-zinc-900">
+        <h1 className="text-3xl font-semibold text-foreground">
           Bambu Lab Zugangscodes aus E-Mail
         </h1>
-        <p className="max-w-3xl text-sm text-zinc-500">
+        <p className="max-w-3xl text-sm text-muted-foreground">
           Diese Ansicht aktualisiert sich automatisch und zeigt weitergeleitete
           E-Mails mit Zugangscodes an.
         </p>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <Link
             href="/printers/emptying"
-            className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            className="rounded-full border border-border bg-card px-3 py-1.5 font-semibold text-foreground/80 transition hover:bg-muted/50"
           >
             Zurueck zu Druckerstatus
           </Link>
@@ -124,28 +124,28 @@ export default function PrinterAccessCodesClient() {
       </header>
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Lade E-Mails...
         </div>
       ) : null}
 
       {!loading && !errorMessage && entries.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Noch keine weitergeleiteten E-Mails gefunden.
         </div>
       ) : null}
 
       {entries.length > 0 ? (
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-zinc-200 text-sm">
-              <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Zeit</th>
                   <th className="px-4 py-3">Betreff</th>
@@ -153,25 +153,25 @@ export default function PrinterAccessCodesClient() {
                   <th className="px-4 py-3">E-Mail</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 bg-white">
+              <tbody className="divide-y divide-border/60 bg-card">
                 {entries.map((entry) => {
                   const isExpanded = expandedEntryId === entry.id;
                   return (
                     <Fragment key={entry.id}>
                       <tr className="align-top">
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {formatDateTime(entry.created_at)}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           {entry.subject ?? "-"}
                         </td>
                         <td className="px-4 py-4">
                           {entry.access_code ? (
-                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                            <span className="inline-flex rounded-full border border-primary-border bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
                               {entry.access_code}
                             </span>
                           ) : (
-                            <span className="text-zinc-400">Kein Treffer</span>
+                            <span className="text-muted-foreground/80">Kein Treffer</span>
                           )}
                         </td>
                         <td className="px-4 py-4">
@@ -182,20 +182,20 @@ export default function PrinterAccessCodesClient() {
                                 current === entry.id ? null : entry.id,
                               )
                             }
-                            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                            className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground/80 transition hover:bg-muted/50"
                           >
                             {isExpanded ? "Body ausblenden" : "Body anzeigen"}
                           </button>
                         </td>
                       </tr>
                       {isExpanded ? (
-                        <tr className="bg-zinc-50/70">
+                        <tr className="bg-muted/70">
                           <td colSpan={4} className="px-4 pb-4 pt-1">
-                            <div className="rounded-2xl border border-zinc-200 bg-white p-3">
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                            <div className="rounded-2xl border border-border bg-card p-3">
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Voller E-Mail-Body
                               </p>
-                              <pre className="whitespace-pre-wrap break-words text-xs text-zinc-700">
+                              <pre className="whitespace-pre-wrap break-words text-xs text-foreground/80">
                                 {entry.body_full ??
                                   entry.body_preview ??
                                   "Kein Body vorhanden."}

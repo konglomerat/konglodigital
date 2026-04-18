@@ -47,8 +47,8 @@ export default function LanguageSwitcher({
         onClick={() => switchToLocale(DEFAULT_LOCALE)}
         className={`${buttonClassName} ${
           currentLocale === DEFAULT_LOCALE
-            ? "border-blue-600 bg-blue-600 text-white"
-            : "border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
         }`}
         aria-current={currentLocale === DEFAULT_LOCALE ? "page" : undefined}
       >
@@ -59,8 +59,8 @@ export default function LanguageSwitcher({
         onClick={() => switchToLocale(ENGLISH_LOCALE)}
         className={`${buttonClassName} ${
           currentLocale === ENGLISH_LOCALE
-            ? "border-blue-600 bg-blue-600 text-white"
-            : "border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
         }`}
         aria-current={currentLocale === ENGLISH_LOCALE ? "page" : undefined}
       >

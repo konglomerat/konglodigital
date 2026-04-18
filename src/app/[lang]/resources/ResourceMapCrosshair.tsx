@@ -148,7 +148,7 @@ export default function ResourceMapCrosshair({
   if (mapboxError) {
     return (
       <div
-        className={`flex items-center justify-center bg-zinc-50 text-xs text-zinc-500 ${className}`}
+        className={`flex items-center justify-center bg-muted/50 text-xs text-muted-foreground ${className}`}
       >
         {mapboxError}
       </div>
@@ -161,12 +161,12 @@ export default function ResourceMapCrosshair({
       aria-label={tx("Location selector")}
     >
       <div ref={mapContainerRef} className="h-full w-full" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 shadow-[0_0_0_2px_rgba(37,99,235,0.8)]" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600 shadow" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background/90 shadow-[0_0_0_2px_var(--color-primary)]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow" />
       {/*<button
         type="button"
         onClick={() => setIsSatellite((prev) => !prev)}
-        className="absolute left-3 top-3 rounded-full border border-zinc-900/80 bg-zinc-900/90 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-zinc-900"
+        className="absolute left-3 top-3 rounded-full border border-foreground/80 bg-foreground/90 px-3 py-1 text-xs font-semibold text-background shadow-sm transition hover:bg-foreground"
       >
         {isSatellite ? "Karte" : "Satellit"}
       </button> */}

@@ -70,14 +70,14 @@ const formatCurrency = (cents: number) => {
 
 const numberClassName = (value: number) => {
   if (value < 0) {
-    return "text-rose-700";
+    return "text-destructive";
   }
 
   if (value > 0) {
-    return "text-emerald-800";
+    return "text-success";
   }
 
-  return "text-zinc-600";
+  return "text-muted-foreground";
 };
 
 const projectSeries = (months: number[], viewMode: ViewMode) => {
@@ -135,8 +135,8 @@ const SummaryCard = ({
   value: number;
   accent: string;
 }) => (
-  <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
       {label}
     </p>
     <p className={`mt-3 text-2xl font-semibold tabular-nums ${accent}`}>
@@ -174,23 +174,23 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     .join(", ");
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
-        <FontAwesomeIcon icon={faChartPie} className="h-4 w-4 text-zinc-500" />
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+        <FontAwesomeIcon icon={faChartPie} className="h-4 w-4 text-muted-foreground" />
         Kostenverteilung
       </div>
       <div className="mt-4 flex items-center gap-5">
         <div
-          className="relative h-28 w-28 rounded-full border border-zinc-200"
+          className="relative h-28 w-28 rounded-full border border-border"
           style={{
             background: gradient ? `conic-gradient(${gradient})` : "#f4f4f5",
           }}
         >
-          <div className="absolute inset-[18px] rounded-full bg-white" />
+          <div className="absolute inset-[18px] rounded-full bg-card" />
         </div>
         <div className="min-w-0 flex-1 space-y-2 text-sm">
           {slices.length === 0 ? (
-            <p className="text-zinc-500">
+            <p className="text-muted-foreground">
               Keine Kostendaten im gewählten Filter.
             </p>
           ) : (
@@ -200,10 +200,10 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: slice.color }}
                 />
-                <span className="min-w-0 flex-1 truncate text-zinc-700">
+                <span className="min-w-0 flex-1 truncate text-foreground/80">
                   {slice.label}
                 </span>
-                <span className="font-medium tabular-nums text-zinc-900">
+                <span className="font-medium tabular-nums text-foreground">
                   {formatCurrency(slice.value)}
                 </span>
               </div>
@@ -226,11 +226,11 @@ const CashflowChart = ({
   );
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faTableCellsLarge}
-          className="h-4 w-4 text-zinc-500"
+          className="h-4 w-4 text-muted-foreground"
         />
         Einnahmen vs. Ausgaben
       </div>
@@ -248,17 +248,17 @@ const CashflowChart = ({
             >
               <div className="flex h-28 items-end gap-1">
                 <div
-                  className="w-2 rounded-t bg-emerald-500"
+                  className="w-2 rounded-t bg-success-soft0"
                   style={{ height: `${incomeHeight}%` }}
                   title={`Einnahmen ${entry.label}: ${formatCurrency(entry.income)}`}
                 />
                 <div
-                  className="w-2 rounded-t bg-amber-500"
+                  className="w-2 rounded-t bg-warning-soft0"
                   style={{ height: `${expenseHeight}%` }}
                   title={`Ausgaben ${entry.label}: ${formatCurrency(entry.expense)}`}
                 />
               </div>
-              <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 {entry.label}
               </span>
             </div>
@@ -280,9 +280,9 @@ const MonthlyOverviewTable = ({
   );
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-600">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="border-b border-border bg-muted/50 px-4 py-3">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Monatsverlauf
         </h2>
       </div>
@@ -294,7 +294,7 @@ const MonthlyOverviewTable = ({
                 (label) => (
                   <th
                     key={label}
-                    className="border-b border-r border-zinc-200 bg-zinc-50 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 last:border-r-0"
+                    className="border-b border-r border-border bg-muted/50 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0"
                   >
                     {label}
                   </th>
@@ -306,24 +306,24 @@ const MonthlyOverviewTable = ({
             {monthlySummary.map((entry, index) => (
               <tr
                 key={entry.monthIndex}
-                className={index % 2 === 0 ? "bg-white" : "bg-zinc-50/60"}
+                className={index % 2 === 0 ? "bg-card" : "bg-muted/60"}
               >
-                <td className="border-b border-r border-zinc-200 px-4 py-2 font-medium text-zinc-800">
+                <td className="border-b border-r border-border px-4 py-2 font-medium text-foreground/90">
                   {entry.label}
                 </td>
-                <td className="border-b border-r border-zinc-200 px-4 py-2 text-right tabular-nums text-emerald-800">
+                <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-success">
                   {formatCurrency(entry.income)}
                 </td>
-                <td className="border-b border-r border-zinc-200 px-4 py-2 text-right tabular-nums text-amber-700">
+                <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-warning">
                   {formatCurrency(entry.expense)}
                 </td>
                 <td
-                  className={`border-b border-r border-zinc-200 px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
+                  className={`border-b border-r border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
                 >
                   {formatCurrency(entry.balance)}
                 </td>
                 <td
-                  className={`border-b border-zinc-200 px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
+                  className={`border-b border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
                   style={cumulativeCellStyle(entry.cumulative, maxMagnitude)}
                 >
                   {formatCurrency(entry.cumulative)}
@@ -358,8 +358,8 @@ const KoFiTable = ({
       ? "from-emerald-50 via-white to-white"
       : "from-zinc-100 via-white to-white";
   const headerTint =
-    kind === "funding" ? "bg-emerald-100/70" : "bg-zinc-200/80";
-  const sumTint = kind === "funding" ? "bg-emerald-200/70" : "bg-zinc-300/70";
+    kind === "funding" ? "bg-success-soft/70" : "bg-accent/80";
+  const sumTint = kind === "funding" ? "bg-success-soft/70" : "bg-muted/70";
   const summarySeries = projectSeries(
     block.groups.reduce(
       (accumulator, group) =>
@@ -371,10 +371,10 @@ const KoFiTable = ({
 
   return (
     <section
-      className={`rounded-3xl border border-zinc-200 bg-gradient-to-br ${sectionTint} shadow-sm`}
+      className={`rounded-3xl border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
     >
-      <div className="border-b border-zinc-200 px-5 py-4">
-        <h2 className="text-lg font-semibold tracking-[0.16em] text-zinc-800">
+      <div className="border-b border-border px-5 py-4">
+        <h2 className="text-lg font-semibold tracking-[0.16em] text-foreground/90">
           {title}
         </h2>
       </div>
@@ -382,21 +382,21 @@ const KoFiTable = ({
         <table className="min-w-[1120px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 min-w-[300px] border-b border-r border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <th className="sticky left-0 top-0 z-30 min-w-[300px] border-b border-r border-border bg-muted/50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Kategorie
               </th>
               {periodLabels.map((label) => (
                 <th
                   key={label}
-                  className="sticky top-0 z-20 border-b border-r border-zinc-200 bg-zinc-50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500"
+                  className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   {label}
                 </th>
               ))}
-              <th className="sticky top-0 z-20 border-b border-r border-zinc-200 bg-zinc-50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <th className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Gesamt
               </th>
-              <th className="sticky top-0 z-20 border-b border-zinc-200 bg-zinc-50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <th className="sticky top-0 z-20 border-b border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Durchschnitt / Monat
               </th>
             </tr>
@@ -406,7 +406,7 @@ const KoFiTable = ({
               <tr>
                 <td
                   colSpan={periodLabels.length + 3}
-                  className="px-4 py-10 text-center text-sm text-zinc-500"
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   Keine Daten für diesen Abschnitt im gewählten Filter.
                 </td>
@@ -420,16 +420,16 @@ const KoFiTable = ({
                   <Fragment key={group.key}>
                     <tr className={headerTint}>
                       <td
-                        className={`sticky left-0 z-10 border-b border-r border-zinc-200 px-4 py-3 ${headerTint}`}
+                        className={`sticky left-0 z-10 border-b border-r border-border px-4 py-3 ${headerTint}`}
                       >
                         <button
                           type="button"
                           onClick={() => onToggleGroup(group.key)}
-                          className="flex items-center gap-2 font-semibold text-zinc-800"
+                          className="flex items-center gap-2 font-semibold text-foreground/90"
                         >
                           <FontAwesomeIcon
                             icon={isCollapsed ? faChevronRight : faChevronDown}
-                            className="h-3 w-3 text-zinc-500"
+                            className="h-3 w-3 text-muted-foreground"
                           />
                           <span>{group.label}</span>
                         </button>
@@ -437,18 +437,18 @@ const KoFiTable = ({
                       {projectedGroup.map((value, index) => (
                         <td
                           key={`${group.key}:${periodLabels[index]}`}
-                          className={`border-b border-r border-zinc-200 px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
+                          className={`border-b border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
                         >
                           {formatCurrency(value)}
                         </td>
                       ))}
                       <td
-                        className={`border-b border-r border-zinc-200 px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.total)}`}
+                        className={`border-b border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.total)}`}
                       >
                         {formatCurrency(group.total)}
                       </td>
                       <td
-                        className={`border-b border-zinc-200 px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.average)}`}
+                        className={`border-b border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.average)}`}
                       >
                         {formatCurrency(group.average)}
                       </td>
@@ -460,32 +460,32 @@ const KoFiTable = ({
                           viewMode,
                         );
                         const rowClassName =
-                          index % 2 === 0 ? "bg-white" : "bg-zinc-50/65";
+                          index % 2 === 0 ? "bg-card" : "bg-muted/65";
 
                         return (
                           <tr key={child.key} className={rowClassName}>
                             <td
-                              className={`sticky left-0 z-10 border-b border-r border-zinc-200 px-4 py-2.5 ${rowClassName}`}
+                              className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 ${rowClassName}`}
                             >
-                              <div className="pl-6 text-zinc-700">
+                              <div className="pl-6 text-foreground/80">
                                 {child.label}
                               </div>
                             </td>
                             {projectedChild.map((value, valueIndex) => (
                               <td
                                 key={`${child.key}:${periodLabels[valueIndex]}`}
-                                className={`border-b border-r border-zinc-200 px-3 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
+                                className={`border-b border-r border-border px-3 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
                               >
                                 {formatCurrency(value)}
                               </td>
                             ))}
                             <td
-                              className={`border-b border-r border-zinc-200 px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
+                              className={`border-b border-r border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
                             >
                               {formatCurrency(child.total)}
                             </td>
                             <td
-                              className={`border-b border-zinc-200 px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.average)}`}
+                              className={`border-b border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.average)}`}
                             >
                               {formatCurrency(child.average)}
                             </td>
@@ -498,20 +498,20 @@ const KoFiTable = ({
             )}
             <tr className={sumTint}>
               <td
-                className={`sticky left-0 z-10 border-r border-zinc-200 px-4 py-3 font-semibold ${sumTint}`}
+                className={`sticky left-0 z-10 border-r border-border px-4 py-3 font-semibold ${sumTint}`}
               >
                 {kind === "costs" ? "SUMME KOSTEN" : "SUMME FINANZIERUNG"}
               </td>
               {summarySeries.map((value, index) => (
                 <td
                   key={`sum:${title}:${periodLabels[index]}`}
-                  className={`border-r border-zinc-200 px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
+                  className={`border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
                 >
                   {formatCurrency(value)}
                 </td>
               ))}
               <td
-                className={`border-r border-zinc-200 px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(block.total)}`}
+                className={`border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(block.total)}`}
               >
                 {formatCurrency(block.total)}
               </td>
@@ -616,26 +616,26 @@ export default function KoFiPage() {
         eyebrow="Campai / SKR 42"
         title="KoFi Kosten- und Finanzierungsplan"
         subTitle="Tabellenansicht mit Monats-, Quartals- und Jahresperspektive direkt aus den Campai-Belegen, Konten und Kostenstellen."
-        className="border-b border-zinc-200 pb-6"
-        eyebrowClassName="text-xs tracking-[0.26em] text-zinc-500"
-        titleClassName="mt-2 text-zinc-900 md:text-4xl"
+        className="border-b border-border pb-6"
+        eyebrowClassName="text-xs tracking-[0.26em] text-muted-foreground"
+        titleClassName="mt-2 text-foreground md:text-4xl"
         subTitleClassName="mt-3 max-w-3xl leading-6"
       />
 
-      <section className="mt-6 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
-          <FontAwesomeIcon icon={faFilter} className="h-4 w-4 text-zinc-500" />
+      <section className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+          <FontAwesomeIcon icon={faFilter} className="h-4 w-4 text-muted-foreground" />
           Filter
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
-          <label className="block text-sm text-zinc-700">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <label className="block text-sm text-foreground/80">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Jahr
             </span>
             <select
               value={year}
               onChange={(event) => setYear(Number(event.target.value))}
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500"
+              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               {Array.from({ length: 6 }, (_, index) => currentYear - index).map(
                 (optionYear) => (
@@ -647,14 +647,14 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-zinc-700">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <label className="block text-sm text-foreground/80">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Kostenstelle
             </span>
             <select
               value={costCenter}
               onChange={(event) => setCostCenter(event.target.value)}
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500"
+              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               <option value="">Alle Kostenstellen</option>
               {data?.filters.costCenters.map((option) => (
@@ -665,14 +665,14 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-zinc-700">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <label className="block text-sm text-foreground/80">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               SKR-42-Konto
             </span>
             <select
               value={account}
               onChange={(event) => setAccount(event.target.value)}
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500"
+              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               <option value="">Alle Konten</option>
               {data?.filters.accounts.map((option) => (
@@ -683,8 +683,8 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-zinc-700">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <label className="block text-sm text-foreground/80">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Buchungstext oder Kategorie
             </span>
             <input
@@ -692,7 +692,7 @@ export default function KoFiPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="z. B. Miete, Fördermittel, Kulturamt"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-500"
+              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/80 focus:border-ring"
             />
           </label>
         </div>
@@ -705,8 +705,8 @@ export default function KoFiPage() {
               onClick={() => setViewMode(option.value)}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                 viewMode === option.value
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-input bg-card text-foreground/80 hover:border-ring/80"
               }`}
             >
               {option.buttonLabel}
@@ -716,13 +716,13 @@ export default function KoFiPage() {
       </section>
 
       {error ? (
-        <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mt-6 rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className="mt-8 flex items-center justify-center gap-3 rounded-3xl border border-zinc-200 bg-white px-6 py-16 text-zinc-500 shadow-sm">
+        <div className="mt-8 flex items-center justify-center gap-3 rounded-3xl border border-border bg-card px-6 py-16 text-muted-foreground shadow-sm">
           <FontAwesomeIcon icon={faSpinner} spin className="h-5 w-5" />
           KoFi-Daten werden geladen…
         </div>
@@ -735,12 +735,12 @@ export default function KoFiPage() {
               <SummaryCard
                 label="Gesamtkosten"
                 value={data.summary.totalCosts}
-                accent="text-amber-700"
+                accent="text-warning"
               />
               <SummaryCard
                 label="Gesamtfinanzierung"
                 value={data.summary.totalFunding}
-                accent="text-emerald-800"
+                accent="text-success"
               />
               <SummaryCard
                 label="Fehl-/Mehrbetrag"
@@ -750,7 +750,7 @@ export default function KoFiPage() {
               <SummaryCard
                 label="Liquiditätsreserve"
                 value={data.summary.liquidityReserve}
-                accent="text-zinc-900"
+                accent="text-foreground"
               />
             </div>
 
@@ -781,19 +781,19 @@ export default function KoFiPage() {
             onToggleGroup={toggleGroup}
           />
 
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <span className="inline-flex items-center gap-2">
                 <FontAwesomeIcon
                   icon={faArrowTrendUp}
-                  className="h-4 w-4 text-emerald-700"
+                  className="h-4 w-4 text-success"
                 />
                 Positive Werte werden grün hervorgehoben.
               </span>
               <span className="inline-flex items-center gap-2">
                 <FontAwesomeIcon
                   icon={faArrowTrendDown}
-                  className="h-4 w-4 text-rose-700"
+                  className="h-4 w-4 text-destructive"
                 />
                 Negative Salden werden rot hervorgehoben.
               </span>

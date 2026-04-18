@@ -229,7 +229,7 @@ export default function MonatsbeitragPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
         <PageTitle
           title="Zugangskarte"
@@ -237,31 +237,31 @@ export default function MonatsbeitragPage() {
           backLink={{ href: "/", label: "Back to dashboard" }}
         />
 
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Aktuell aktiv: {currentPlan === "none" ? "Keine Zugangskarte" : (currentPlanInfo?.title ?? "—")}
         </p>
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="grid gap-4 md:grid-cols-3">
             {accessCardOptions.map((option) => (
               <label
                 key={option.id}
                 className={`flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
                   selectedOption === option.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
+                    ? "border-primary bg-primary-soft"
+                    : "border-border bg-muted/50 hover:border-input"
                 }`}
               >
                 <div>
-                  <p className="text-base font-semibold text-zinc-900">
+                  <p className="text-base font-semibold text-foreground">
                     {option.title}
                   </p>
-                  <p className="mt-2 text-sm text-zinc-600">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     {option.description}
                   </p>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-muted-foreground">
                     {selectedOption === option.id ? "Ausgewählt" : "Auswählen"}
                   </span>
                   <input
@@ -279,17 +279,17 @@ export default function MonatsbeitragPage() {
         </section>
 
         {selectedOption === "subscription" ? (
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 Abokarte auswählen
               </h2>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Wähle aus wieviele Zugänge du pro Monat benötigst. Du kannst deine Auswahl jederzeit ändern, die Änderung wird aber immer erst ab dem nächsten Monat wirksam.
               </p>
             </div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-muted-foreground">
               Ausgewählt: {draftPlanInfo?.priceLabel ?? "—"}
             </div>
           </div>
@@ -300,27 +300,27 @@ export default function MonatsbeitragPage() {
                 key={plan.id}
                 className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
                   draftPlan === plan.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
+                    ? "border-primary bg-primary-soft"
+                    : "border-border bg-muted/50 hover:border-input"
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-zinc-900">
+                      <p className="text-sm font-semibold text-foreground">
                         {plan.title}
                       </p>
-                      <p className="mt-2 text-xs text-zinc-600">
+                      <p className="mt-2 text-xs text-muted-foreground">
                         {plan.description}
                       </p>
                     </div>
-                    <span className="whitespace-nowrap text-sm font-semibold text-zinc-900">
+                    <span className="whitespace-nowrap text-sm font-semibold text-foreground">
                       {plan.priceLabel}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-muted-foreground">
                     {draftPlan === plan.id ? "Zur Bestätigung markiert" : "Auswählen"}
                   </span>
                   <input
@@ -343,11 +343,11 @@ export default function MonatsbeitragPage() {
 
           <div className="mt-6 space-y-3">
             {submittedChange ? (
-              <p className="text-sm text-amber-700">
+              <p className="text-sm text-warning">
                 Bereits eingereicht: {formatPlanName(submittedChange.requestedPlan)} – wirksam ab nächstem Monat.
               </p>
             ) : null}
-            {saveStatus ? <p className="text-sm text-emerald-700">{saveStatus}</p> : null}
+            {saveStatus ? <p className="text-sm text-success">{saveStatus}</p> : null}
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -363,21 +363,21 @@ export default function MonatsbeitragPage() {
         ) : null}
 
         {selectedOption === "ten-visit" ? (
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 10er Karte buchen
               </h2>
-              <p className="mt-2 text-sm text-zinc-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {tenVisitCard.details}
               </p>
             </div>
-            <div className="text-xs text-zinc-500">Einmalzahlung: 50 €</div>
+            <div className="text-xs text-muted-foreground">Einmalzahlung: 50 €</div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-muted-foreground">
               {tenVisitInCart
                 ? `Im Warenkorb × ${tenVisitInCart.quantity ?? 1}`
                 : "Noch nicht im Warenkorb"}

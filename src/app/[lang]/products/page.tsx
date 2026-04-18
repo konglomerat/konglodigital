@@ -42,11 +42,11 @@ const defaultProductVisual: ProductVisual = {
 const productVisualLookup: Record<string, ProductVisual> = {
   "3d druck - arbeitszeit": {
     icon: faClock,
-    accentClassName: "bg-sky-100 text-sky-700 ring-sky-200",
+    accentClassName: "bg-info-soft text-info ring-info-border",
   },
   "3d druck - materialkosten (petg)": {
     icon: faCubesStacked,
-    accentClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+    accentClassName: "bg-success-soft text-success ring-success-border",
   },
   "3d druck - nutzungsgebuhr je buildplate": {
     icon: faLayerGroup,
@@ -54,15 +54,15 @@ const productVisualLookup: Record<string, ProductVisual> = {
   },
   "cnc arbeitszeit": {
     icon: faHammer,
-    accentClassName: "bg-amber-100 text-amber-800 ring-amber-200",
+    accentClassName: "bg-warning-soft text-warning ring-warning-border",
   },
   "cnc maschinenlaufzeit": {
     icon: faGear,
-    accentClassName: "bg-zinc-200 text-zinc-700 ring-zinc-300",
+    accentClassName: "bg-accent text-foreground/80 ring-input",
   },
   "maschinenlaufzeit cnc (ermassigt)": {
     icon: faGear,
-    accentClassName: "bg-zinc-200 text-zinc-700 ring-zinc-300",
+    accentClassName: "bg-accent text-foreground/80 ring-input",
   },
   "hw materialbestellung": {
     icon: faBoxOpen,
@@ -70,7 +70,7 @@ const productVisualLookup: Record<string, ProductVisual> = {
   },
   "overhead verein": {
     icon: faPercent,
-    accentClassName: "bg-rose-100 text-rose-700 ring-rose-200",
+    accentClassName: "bg-destructive-soft text-destructive ring-destructive-border",
   },
   "teilnahme an cnc-workshop": {
     icon: faGraduationCap,
@@ -106,20 +106,20 @@ const getProductVisual = (title: string): ProductVisual => {
     if (normalizedTitle.includes("supporter")) {
       return {
         icon: faCalendarDays,
-        accentClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+        accentClassName: "bg-success-soft text-success ring-success-border",
       };
     }
 
     if (normalizedTitle.includes("reduced")) {
       return {
         icon: faCalendarDays,
-        accentClassName: "bg-amber-100 text-amber-800 ring-amber-200",
+        accentClassName: "bg-warning-soft text-warning ring-warning-border",
       };
     }
 
     return {
       icon: faCalendarDays,
-      accentClassName: "bg-sky-100 text-sky-700 ring-sky-200",
+      accentClassName: "bg-info-soft text-info ring-info-border",
     };
   }
 
@@ -232,7 +232,7 @@ export default function CampaiProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
         <PageTitle
           title="Produkte"
@@ -240,30 +240,30 @@ export default function CampaiProductsPage() {
         />
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">Produkte</h2>
-              <p className="text-sm text-zinc-500">
+              <h2 className="text-lg font-semibold text-foreground">Produkte</h2>
+              <p className="text-sm text-muted-foreground">
                 {loading ? "Lädt ..." : `${products.length} Artikel`}
               </p>
             </div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-muted-foreground">
               Im Warenkorb: {cartProducts.length}
             </div>
           </div>
 
           {loading ? (
-            <p className="mt-4 text-sm text-zinc-500">
+            <p className="mt-4 text-sm text-muted-foreground">
               Produkte werden geladen ...
             </p>
           ) : products.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">
+            <p className="mt-4 text-sm text-muted-foreground">
               Keine Produkte gefunden.
             </p>
           ) : (
@@ -274,7 +274,7 @@ export default function CampaiProductsPage() {
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
+                    className="flex h-full gap-4 rounded-2xl border border-border/60 bg-muted/60 p-4"
                   >
                     <span
                       className={`flex h-16 w-16 shrink-0 items-center justify-center self-start rounded-2xl ring-1 ${productVisual.accentClassName}`}
@@ -289,23 +289,23 @@ export default function CampaiProductsPage() {
                       <div className="min-w-0">
                         <Link
                           href={`/products/${product.id}`}
-                          className="text-sm font-semibold text-zinc-900 hover:underline"
+                          className="text-sm font-semibold text-foreground hover:underline"
                         >
                           {product.title}
                         </Link>
                         {product.details ? (
-                          <p className="mt-2 text-xs text-zinc-500">
+                          <p className="mt-2 text-xs text-muted-foreground">
                             {product.details}
                           </p>
                         ) : null}
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-sm font-semibold text-zinc-900">
+                        <span className="text-sm font-semibold text-foreground">
                           €{(product.unitAmount / 100).toFixed(2)}
                         </span>
                         <div className="flex items-center gap-2">
                           {inCart ? (
-                            <span className="text-xs text-blue-600">
+                            <span className="text-xs text-primary">
                               Im Warenkorb × {inCart.quantity ?? 1}
                             </span>
                           ) : null}
@@ -323,7 +323,7 @@ export default function CampaiProductsPage() {
                             type="button"
                             onClick={() => handleAddProduct(product)}
                             kind="secondary"
-                            className="border-blue-200 px-3 py-1 text-xs text-blue-700"
+                            className="border-primary-border px-3 py-1 text-xs text-primary"
                           >
                             +
                           </Button>
@@ -332,7 +332,7 @@ export default function CampaiProductsPage() {
                       <div className="flex justify-end">
                         <Link
                           href={`/products/${product.id}`}
-                          className="text-xs font-semibold text-zinc-500 hover:text-zinc-800"
+                          className="text-xs font-semibold text-muted-foreground hover:text-foreground/90"
                         >
                           Details ansehen
                         </Link>

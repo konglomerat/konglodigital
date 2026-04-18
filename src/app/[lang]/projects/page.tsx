@@ -36,7 +36,6 @@ export default async function ProjectsPage() {
     openProjectLabel: tx("Zum Projekt", "de"),
     projectLabel: tx("Projekt", "de"),
     projectOfTheMonthLabel: tx("Projekt des Monats", "de"),
-    videoLabel: tx("Video", "de"),
   };
   const orderedProjectEntries = orderedProjects.map((project) => ({
     project,
@@ -98,7 +97,7 @@ export default async function ProjectsPage() {
       />
 
       {projects.length === 0 ? (
-        <section className="rounded-3xl border border-dashed border-zinc-300 bg-white px-6 py-10 text-center text-sm text-zinc-600 shadow-sm">
+        <section className="rounded-3xl border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground shadow-sm   ">
           {tx("Es gibt noch keine Projekte.", "de")}
         </section>
       ) : (

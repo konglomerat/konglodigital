@@ -72,21 +72,21 @@ export default function PageTitle({
     ? `flex flex-col gap-4 ${className}`
     : "flex flex-col gap-4";
   const resolvedEyebrowClassName = eyebrowClassName
-    ? `text-sm font-semibold uppercase tracking-widest text-blue-600 ${eyebrowClassName}`
-    : "text-sm font-semibold uppercase tracking-widest text-blue-600";
+    ? `text-sm font-semibold uppercase tracking-widest text-primary ${eyebrowClassName}`
+    : "text-sm font-semibold uppercase tracking-widest text-primary";
   const resolvedTitleClassName = titleClassName
-    ? `text-4xl font-extrabold tracking-tight text-zinc-950 md:text-5xl ${titleClassName}`
-    : "text-4xl font-extrabold tracking-tight text-zinc-950 md:text-5xl";
+    ? `text-4xl font-extrabold tracking-tight text-foreground md:text-5xl ${titleClassName}`
+    : "text-4xl font-extrabold tracking-tight text-foreground md:text-5xl";
   const resolvedSubTitleClassName = subTitleClassName
-    ? `mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 ${subTitleClassName}`
-    : "mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600";
+    ? `mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground ${subTitleClassName}`
+    : "mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground";
 
   return (
     <header className={wrapperClassName}>
       {backLink ? (
         <Link
           href={backLink.href}
-          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-blue-700 transition hover:text-blue-800"
+          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-primary transition hover:text-primary/80"
         >
           <FontAwesomeIcon
             icon={backLink.icon ?? faArrowLeft}

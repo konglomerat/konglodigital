@@ -18,7 +18,6 @@ export type ProjectCardCopy = {
   openProjectLabel: string;
   projectLabel: string;
   projectOfTheMonthLabel: string;
-  videoLabel: string;
 };
 
 export type ProjectCardProps = {
@@ -63,7 +62,7 @@ export const getProjectPreviewText = (
 type ProjectCardMediaProps = {
   articleLink: string;
   project: ProjectRecord;
-  copy: Pick<ProjectCardCopy, "projectLabel" | "videoLabel">;
+  copy: Pick<ProjectCardCopy, "projectLabel">;
   featured?: boolean;
 };
 
@@ -73,9 +72,21 @@ export function ProjectCardMedia({
   copy,
   featured = false,
 }: ProjectCardMediaProps) {
-  const heroMediaUrl = project.images?.find(Boolean) ?? project.image ?? null;
+  const mediaItems =
+    project.images?.filter(
+      (media): media is string => typeof media === "string" && Boolean(media),
+    ) ?? (project.image ? [project.image] : []);
+  const heroMediaUrl = mediaItems[0] ?? null;
+  const hoverMediaUrl = mediaItems[1] ?? null;
   const heroMediaKind = getResourceMediaKindFromUrl(heroMediaUrl);
+  const hoverMediaKind = getResourceMediaKindFromUrl(hoverMediaUrl);
   const heroMediaIsVideo = isVideoUrl(heroMediaUrl);
+  const canRenderHeroImage =
+    heroMediaKind !== "video" && heroMediaKind !== "document";
+  const canRenderHoverImage =
+    hoverMediaKind !== "video" && hoverMediaKind !== "document";
+  const hasHoverImage =
+    canRenderHeroImage && canRenderHoverImage && Boolean(hoverMediaUrl);
   const heroThumbnailUrl =
     heroMediaUrl && heroMediaKind === "image"
       ? getSupabaseRenderedImageUrl(heroMediaUrl, {
@@ -83,6 +94,15 @@ export function ProjectCardMedia({
           resize: "cover",
         })
       : heroMediaUrl;
+  const hoverThumbnailUrl =
+    hasHoverImage && hoverMediaUrl
+      ? hoverMediaKind === "image"
+        ? getSupabaseRenderedImageUrl(hoverMediaUrl, {
+            width: 960,
+            resize: "cover",
+          })
+        : hoverMediaUrl
+      : null;
 
   return (
     <Link
@@ -93,30 +113,27 @@ export function ProjectCardMedia({
         <div
           className={`relative ${
             featured
-              ? "h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0)_45%),linear-gradient(135deg,rgba(14,165,233,0.2)_0%,rgba(251,191,36,0.18)_100%)]"
+              ? "h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0)_45%),linear-gradient(135deg,rgba(14,165,233,0.2)_0%,rgba(251,191,36,0.18)_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(224,242,254,0.12)_0%,rgba(224,242,254,0)_45%),linear-gradient(135deg,rgba(2,132,199,0.18)_0%,rgba(8,47,73,0.32)_100%)]"
               : ""
           }`}
         >
           {heroMediaIsVideo ? (
-            <>
-              <video
-                src={heroMediaUrl}
-                className={`${
-                  featured
-                    ? "h-full min-h-[260px] w-full bg-zinc-950 object-cover"
-                    : "aspect-[4/3] w-full bg-zinc-950 object-cover"
-                }`}
-                muted
-                playsInline
-                preload="metadata"
-              />
-              <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-700">
-                {copy.videoLabel}
-              </span>
-            </>
+            <video
+              src={heroMediaUrl}
+              className={`${
+                featured
+                  ? "h-full min-h-[260px] w-full bg-foreground object-cover"
+                  : "aspect-[4/3] w-full bg-foreground object-cover"
+              }`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            />
           ) : heroMediaKind === "document" ? (
             <div
-              className={`flex w-full flex-col items-center justify-center bg-rose-50 text-rose-700 ${
+              className={`flex w-full flex-col items-center justify-center bg-destructive-soft text-destructive ${
                 featured ? "h-full min-h-[260px]" : "aspect-[4/3]"
               }`}
             >
@@ -126,23 +143,37 @@ export function ProjectCardMedia({
               </span>
             </div>
           ) : (
-            <img
-              src={heroThumbnailUrl ?? heroMediaUrl}
-              alt={project.name}
-              className={`${
-                featured
-                  ? "h-full min-h-[260px] w-full object-cover"
-                  : "aspect-[4/3] w-full object-cover"
-              }`}
-            />
+            <div className="relative">
+              <img
+                src={heroThumbnailUrl ?? heroMediaUrl}
+                alt={project.name}
+                className={`${
+                  featured
+                    ? "h-full min-h-[260px] w-full object-cover"
+                    : "aspect-[4/3] w-full object-cover"
+                }`}
+              />
+              {hasHoverImage && hoverThumbnailUrl ? (
+                <img
+                  src={hoverThumbnailUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className={`absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 ${
+                    featured
+                      ? "h-full min-h-[260px] w-full object-cover"
+                      : "aspect-[4/3] w-full object-cover"
+                  }`}
+                />
+              ) : null}
+            </div>
           )}
         </div>
       ) : (
         <div
           className={`flex w-full items-center justify-center text-xs font-semibold uppercase tracking-[0.24em] ${
             featured
-              ? "h-full min-h-[260px] bg-[radial-gradient(circle_at_top_left,#ffffff_0%,transparent_38%),linear-gradient(135deg,#dbeafe_0%,#fef3c7_52%,#dcfce7_100%)] text-sky-900/70"
-              : "aspect-[4/3] bg-[linear-gradient(135deg,#e6f0ff_0%,#fdf7e8_100%)] text-zinc-500"
+              ? "h-full min-h-[260px] bg-[radial-gradient(circle_at_top_left,#ffffff_0%,transparent_38%),linear-gradient(135deg,#dbeafe_0%,#fef3c7_52%,#dcfce7_100%)] text-foreground/70 dark:bg-[radial-gradient(circle_at_top_left,rgba(224,242,254,0.12)_0%,transparent_38%),linear-gradient(135deg,#0f172a_0%,#082f49_52%,#164e63_100%)] dark:text-foreground/80"
+              : "aspect-[4/3] bg-[linear-gradient(135deg,#e6f0ff_0%,#fdf7e8_100%)] text-muted-foreground dark:bg-[linear-gradient(135deg,#172033_0%,#251710_100%)] dark:text-muted-foreground"
           }`}
         >
           {copy.projectLabel}

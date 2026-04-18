@@ -14,11 +14,11 @@ import {
 } from "@/lib/cart";
 
 const statusStyles: Record<PrinterStatus, string> = {
-  idle: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  printing: "bg-blue-50 text-blue-700 ring-blue-200",
-  paused: "bg-amber-50 text-amber-700 ring-amber-200",
-  offline: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  error: "bg-rose-50 text-rose-700 ring-rose-200",
+  idle: "bg-success-soft text-success ring-success-border",
+  printing: "bg-primary-soft text-primary ring-primary-border",
+  paused: "bg-warning-soft text-warning ring-warning-border",
+  offline: "bg-accent text-muted-foreground ring-ring",
+  error: "bg-destructive-soft text-destructive ring-destructive-border",
 };
 
 const statusLabels: Record<PrinterStatus, string> = {
@@ -444,7 +444,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-muted/50 text-foreground">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
         <PageTitle
           title="3D Printer Dashboard"
@@ -461,7 +461,7 @@ export default function Home() {
         />
 
         {errorMessage ? (
-          <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+          <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive">
             <p className="font-semibold">Cloud connection failed</p>
             <p className="mt-2">{errorMessage}</p>
             <p className="mt-2">
@@ -476,30 +476,30 @@ export default function Home() {
             ? Array.from({ length: 2 }).map((_, index) => (
                 <article
                   key={`printer-skeleton-${index}`}
-                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
+                  className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 shadow-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-xl border border-zinc-200 bg-zinc-100 animate-pulse" />
+                      <div className="h-16 w-16 rounded-xl border border-border bg-accent animate-pulse" />
                       <div className="space-y-2">
-                        <div className="h-4 w-40 rounded-full bg-zinc-100 animate-pulse" />
-                        <div className="h-3 w-32 rounded-full bg-zinc-100 animate-pulse" />
+                        <div className="h-4 w-40 rounded-full bg-accent animate-pulse" />
+                        <div className="h-3 w-32 rounded-full bg-accent animate-pulse" />
                       </div>
                     </div>
-                    <div className="h-6 w-20 rounded-full bg-zinc-100 animate-pulse" />
+                    <div className="h-6 w-20 rounded-full bg-accent animate-pulse" />
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-zinc-600">
-                      <span className="h-3 w-24 rounded-full bg-zinc-100 animate-pulse" />
-                      <span className="h-3 w-10 rounded-full bg-zinc-100 animate-pulse" />
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span className="h-3 w-24 rounded-full bg-accent animate-pulse" />
+                      <span className="h-3 w-10 rounded-full bg-accent animate-pulse" />
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                      <div className="h-full w-2/3 rounded-full bg-zinc-200 animate-pulse" />
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-accent">
+                      <div className="h-full w-2/3 rounded-full bg-accent animate-pulse" />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <div className="h-3 w-52 rounded-full bg-zinc-100 animate-pulse" />
-                      <div className="h-3 w-36 rounded-full bg-zinc-100 animate-pulse" />
+                      <div className="h-3 w-52 rounded-full bg-accent animate-pulse" />
+                      <div className="h-3 w-36 rounded-full bg-accent animate-pulse" />
                     </div>
                   </div>
                 </article>
@@ -507,7 +507,7 @@ export default function Home() {
             : printers.map((printer) => (
                 <article
                   key={printer.id}
-                  className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
+                  className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 shadow-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
@@ -515,14 +515,14 @@ export default function Home() {
                         <img
                           src={getPrinterImage(printer.name)?.url}
                           alt={getPrinterImage(printer.name)?.alt}
-                          className="h-16 w-16 rounded-xl border border-zinc-200 object-cover"
+                          className="h-16 w-16 rounded-xl border border-border object-cover"
                         />
                       ) : null}
                       <div>
-                        <h2 className="text-lg font-semibold text-zinc-900">
+                        <h2 className="text-lg font-semibold text-foreground">
                           {printer.name}
                         </h2>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-muted-foreground">
                           {printer.model} • {printer.serial}
                         </p>
                       </div>
@@ -537,19 +537,19 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-zinc-600">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>Job progress</span>
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-foreground">
                         {printer.progress}%
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-accent">
                       <div
-                        className="h-full rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
+                        className="h-full rounded-full bg-primary shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
                         style={{ width: `${printer.progress}%` }}
                       />
                     </div>
-                    <div className="flex flex-col gap-1 text-sm text-zinc-600">
+                    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                       <span>
                         Current job: {printer.jobName ?? "No active job"}
                       </span>
@@ -562,13 +562,13 @@ export default function Home() {
               ))}
         </section>
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-zinc-900">
+              <h3 className="text-lg font-semibold text-foreground">
                 Recent print jobs
               </h3>
-              <p className="text-sm text-zinc-500">{jobs.length} jobs</p>
+              <p className="text-sm text-muted-foreground">{jobs.length} jobs</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" onClick={handleToggleAll} kind="secondary">
@@ -605,25 +605,25 @@ export default function Home() {
           </div>
 
           {claimMessage ? (
-            <p className="mt-4 text-sm text-zinc-600">{claimMessage}</p>
+            <p className="mt-4 text-sm text-muted-foreground">{claimMessage}</p>
           ) : null}
 
           {cartMessage ? (
-            <p className="mt-2 text-sm text-zinc-600">{cartMessage}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{cartMessage}</p>
           ) : null}
 
           {jobsError ? (
-            <p className="mt-4 text-sm text-rose-600">{jobsError}</p>
+            <p className="mt-4 text-sm text-destructive">{jobsError}</p>
           ) : descriptionsError ? (
-            <p className="mt-4 text-sm text-rose-600">{descriptionsError}</p>
+            <p className="mt-4 text-sm text-destructive">{descriptionsError}</p>
           ) : jobs.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">No jobs found.</p>
+            <p className="mt-4 text-sm text-muted-foreground">No jobs found.</p>
           ) : (
             <div className="mt-4 space-y-3">
               {jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex flex-col gap-2 rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4"
+                  className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-muted/60 p-4"
                 >
                   {(() => {
                     const estimatedWeight = estimatePrintedWeight(
@@ -657,11 +657,11 @@ export default function Home() {
                                 <img
                                   src={job.imageUrl}
                                   alt={`${job.title} preview`}
-                                  className="h-full w-full rounded-2xl border border-zinc-200 object-cover"
+                                  className="h-full w-full rounded-2xl border border-border object-cover"
                                   loading="lazy"
                                 />
                               ) : (
-                                <div className="flex h-full w-full items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white text-[10px] font-semibold uppercase text-zinc-400">
+                                <div className="flex h-full w-full items-center justify-center rounded-2xl border border-dashed border-input bg-card text-[10px] font-semibold uppercase text-muted-foreground/80">
                                   No image
                                 </div>
                               )}
@@ -669,25 +669,25 @@ export default function Home() {
                           </div>
                           <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
                             <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-xs text-zinc-500">
+                              <label className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => handleToggleJob(job.id)}
-                                  className="h-4 w-4 rounded-md border-zinc-300"
+                                  className="h-4 w-4 rounded-md border-input"
                                 />
                                 Select
                               </label>
                               <div>
-                                <p className="text-sm font-semibold text-zinc-900">
+                                <p className="text-sm font-semibold text-foreground">
                                   {job.title}
                                 </p>
-                                <p className="text-xs text-zinc-500">
+                                <p className="text-xs text-muted-foreground">
                                   Status: {statusLabel}
                                   {job.mode ? ` • ${job.mode}` : ""}
                                 </p>
                               </div>
-                              <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                                 <span>Device: {job.deviceId ?? "-"}</span>
                                 <span>
                                   Start:{" "}
@@ -717,18 +717,18 @@ export default function Home() {
                                   name="jobId"
                                   value={job.id}
                                 />
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                                   Description
                                 </label>
                                 {ownerId ? (
-                                  <p className="text-xs text-zinc-400">
+                                  <p className="text-xs text-muted-foreground/80">
                                     Owner:{" "}
                                     {ownerId === currentUserId
                                       ? "You"
                                       : ownerId}
                                   </p>
                                 ) : (
-                                  <p className="text-xs text-emerald-600">
+                                  <p className="text-xs text-success">
                                     Unclaimed — save to claim this print.
                                   </p>
                                 )}
@@ -738,7 +738,7 @@ export default function Home() {
                                     defaultValue={description}
                                     placeholder="Add a short description"
                                     maxLength={160}
-                                    className="flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm"
+                                    className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground/80 shadow-sm"
                                     disabled={!canEdit}
                                   />
                                   <Button
@@ -754,12 +754,12 @@ export default function Home() {
                                   </Button>
                                 </div>
                                 {saveError && saveErrorJobId === job.id ? (
-                                  <p className="text-xs text-rose-500">
+                                  <p className="text-xs text-destructive">
                                     {saveError}
                                   </p>
                                 ) : null}
                                 {!canEdit ? (
-                                  <p className="text-xs text-rose-500">
+                                  <p className="text-xs text-destructive">
                                     You can view this description, but only the
                                     owner can edit it.
                                   </p>
@@ -768,11 +768,11 @@ export default function Home() {
                             </div>
                             <div className="flex flex-col items-end gap-2 self-start">
                               <div className="flex items-center gap-3">
-                                <div className="text-xs text-zinc-500">
+                                <div className="text-xs text-muted-foreground">
                                   Duration:{" "}
                                   {formatDuration(job.durationSeconds)}
                                 </div>
-                                <div className="rounded-full bg-zinc-900 px-3 py-1 text-sm font-semibold text-white">
+                                <div className="rounded-full bg-foreground px-3 py-1 text-sm font-semibold text-background">
                                   {priceRange}
                                 </div>
                               </div>
@@ -789,7 +789,7 @@ export default function Home() {
                                     className={
                                       isInCart
                                         ? "px-3 py-1 text-xs"
-                                        : "border-blue-200 px-3 py-1 text-xs text-blue-700"
+                                        : "border-primary-border px-3 py-1 text-xs text-primary"
                                     }
                                   >
                                     {isInCart

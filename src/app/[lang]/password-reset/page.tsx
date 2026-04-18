@@ -51,12 +51,12 @@ export default function PasswordResetPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">
+    <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-foreground">
           Passwort zuruecksetzen
         </h1>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-muted-foreground">
           Gib deine Mailadresse ein. Wir senden dir einen Link, mit dem du ein
           neues Passwort setzen kannst.
         </p>
@@ -65,7 +65,7 @@ export default function PasswordResetPage() {
           <div className="space-y-2">
             <label
               htmlFor="password-reset-email"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
             >
               Email
             </label>
@@ -75,18 +75,18 @@ export default function PasswordResetPage() {
               type="email"
               required
               autoComplete="email"
-              className="w-full rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
             />
           </div>
 
           {error ? (
-            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div className="space-y-2 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
               <p>{success}</p>
               <Link className="font-semibold underline" href="/login">
                 Zur Anmeldung
@@ -104,9 +104,9 @@ export default function PasswordResetPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-zinc-500">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           Zurueck zur{" "}
-          <Link className="font-semibold text-blue-600" href="/login">
+          <Link className="font-semibold text-primary" href="/login">
             Anmeldung
           </Link>
         </p>

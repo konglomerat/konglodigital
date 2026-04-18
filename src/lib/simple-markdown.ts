@@ -7,41 +7,40 @@ const escapeHtml = (value: string) =>
     .replace(/'/g, "&#39;");
 
 const HEADING_CLASSES = {
-  1: "mt-8 mb-4 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white",
-  2: "mt-8 mb-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white",
-  3: "mt-6 mb-3 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white",
-  4: "mt-6 mb-3 text-lg font-semibold text-zinc-950 dark:text-white",
-  5: "mt-5 mb-2 text-base font-semibold text-zinc-950 dark:text-white",
-  6: "mt-5 mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-zinc-700 dark:text-zinc-200",
+  1: "mt-8 mb-4 text-4xl font-semibold tracking-tight text-foreground",
+  2: "mt-8 mb-4 text-2xl font-semibold tracking-tight text-foreground",
+  3: "mt-6 mb-3 text-xl font-semibold tracking-tight text-foreground",
+  4: "mt-6 mb-3 text-lg font-semibold text-foreground",
+  5: "mt-5 mb-2 text-base font-semibold text-foreground",
+  6: "mt-5 mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground",
 } as const;
 
-const PARAGRAPH_CLASS =
-  "mb-4 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+const PARAGRAPH_CLASS = "mb-4 text-base leading-7 text-muted-foreground";
 
 const INLINE_CODE_CLASS =
-  "rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.95em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100";
+  "rounded bg-accent px-1 py-0.5 font-mono text-[0.95em] text-foreground";
 
 const LINK_CLASS =
-  "text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300";
+  "text-primary underline underline-offset-2 hover:text-primary/80";
 
-const IMAGE_CLASS = "w-full rounded-2xl border border-zinc-200";
+const IMAGE_CLASS = "w-full rounded-2xl border border-border";
 
-const STRONG_CLASS = "font-semibold text-zinc-950 dark:text-white";
+const STRONG_CLASS = "font-semibold text-foreground";
 
 const EMPHASIS_CLASS = "italic";
 
 const BLOCKQUOTE_CLASS =
-  "my-6 border-l-4 border-zinc-300 pl-4 italic text-zinc-600 dark:border-zinc-700 dark:text-zinc-300";
+  "my-6 border-l-4 border-border pl-4 italic text-muted-foreground";
 
 const UNORDERED_LIST_CLASS =
-  "mb-4 list-disc space-y-2 pl-6 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+  "mb-4 list-disc space-y-2 pl-6 text-base leading-7 text-muted-foreground";
 
 const ORDERED_LIST_CLASS =
-  "mb-4 list-decimal space-y-2 pl-6 text-base leading-7 text-zinc-700 dark:text-zinc-300";
+  "mb-4 list-decimal space-y-2 pl-6 text-base leading-7 text-muted-foreground";
 
 const LIST_ITEM_CLASS = "pl-1";
 
-const HR_CLASS = "my-8 border-zinc-200 dark:border-zinc-800";
+const HR_CLASS = "my-8 border-border";
 
 const withClass = (tag: string, className: string, content: string) =>
   `<${tag} class="${className}">${content}</${tag}>`;

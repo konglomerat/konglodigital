@@ -53,13 +53,13 @@ export default async function CalendarPage() {
             rel: "noreferrer",
             size: "medium",
             className:
-              "rounded-full border-blue-600 text-blue-600 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600",
+              "rounded-full border-primary text-primary hover:border-primary hover:bg-primary-soft hover:text-primary",
           },
         ]}
       />
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
@@ -68,16 +68,16 @@ export default async function CalendarPage() {
         {days.map((day) => (
           <section
             key={day.key}
-            className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-zinc-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 {day.label}
               </h2>
             </div>
-            <ul className="mt-3 divide-y divide-zinc-200/20">
+            <ul className="mt-3 divide-y divide-border/20">
               {day.events.length === 0 ? (
-                <li className="py-3 text-sm text-zinc-500">
+                <li className="py-3 text-sm text-muted-foreground">
                   Leider keine Termine
                 </li>
               ) : (
@@ -113,18 +113,18 @@ export default async function CalendarPage() {
                         <div>
                           <Link
                             href={`/calendar/${encodeURIComponent(event.id)}`}
-                            className="font-medium text-zinc-900 transition hover:text-blue-600"
+                            className="font-medium text-foreground transition hover:text-primary"
                           >
                             {event.summary}
                           </Link>
                           {event.location ? (
-                            <p className="text-sm text-zinc-500">
+                            <p className="text-sm text-muted-foreground">
                               {event.location}
                             </p>
                           ) : null}
                         </div>
                       </div>
-                      <div className="text-sm text-zinc-600">
+                      <div className="text-sm text-muted-foreground">
                         {event.allDay
                           ? "Ganztägig"
                           : getTimeRange(event.start, event.end)}
