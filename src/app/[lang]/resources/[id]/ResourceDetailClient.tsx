@@ -105,77 +105,76 @@ export default function ResourceDetailClient({
     [resource?.description],
   );
 
+  const pageTitleLinks = resource
+    ? [
+        {
+          href: localizePathname(
+            `/resources/features?resourceId=${resourceId}`,
+            locale,
+          ),
+          label: tx("Edit"),
+          icon: faPen,
+          className: "border-blue-200 text-blue-700",
+        },
+        {
+          href: localizePathname(
+            `/resources/features?resourceId=${resourceId}`,
+            locale,
+          ),
+          label: tx("Map features"),
+          icon: faLayerGroup,
+        },
+        {
+          label: deleting ? tx("Deleting…") : tx("Delete"),
+          onClick: async () => {
+            if (deleting) {
+              return;
+            }
+            const confirmed = window.confirm(
+              tx("Really delete this resource? This cannot be undone."),
+            );
+            if (!confirmed) {
+              return;
+            }
+            setDeleting(true);
+            setErrorMessage(null);
+            try {
+              const response = await fetch(`/api/campai/resources/${resourceId}`, {
+                method: "DELETE",
+              });
+              const data = (await response.json()) as { error?: string };
+              if (!response.ok) {
+                throw new Error(data.error ?? tx("Unable to delete resource."));
+              }
+              router.push(localizePathname("/resources", locale));
+            } catch (error) {
+              setErrorMessage(
+                error instanceof Error
+                  ? error.message
+                  : tx("Unable to delete resource."),
+              );
+            } finally {
+              setDeleting(false);
+            }
+          },
+          disabled: deleting,
+          icon: faTrash,
+          kind: "danger-secondary" as const,
+        },
+      ]
+    : undefined;
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
         <PageTitle
-          title={resource.name}
+          title={resource?.name ?? tx("Resource not found.")}
           backLink={{
             href: localizePathname("/resources", locale),
             label: tx("Back to resources"),
             icon: faArrowLeft,
           }}
-          links={[
-            {
-              href: localizePathname(
-                `/resources/features?resourceId=${resourceId}`,
-                locale,
-              ),
-              label: tx("Edit"),
-              icon: faPen,
-              className: "border-blue-200 text-blue-700",
-            },
-            {
-              href: localizePathname(
-                `/resources/features?resourceId=${resourceId}`,
-                locale,
-              ),
-              label: tx("Map features"),
-              icon: faLayerGroup,
-            },
-            {
-              label: deleting ? tx("Deleting…") : tx("Delete"),
-              onClick: async () => {
-                if (deleting) {
-                  return;
-                }
-                const confirmed = window.confirm(
-                  tx("Really delete this resource? This cannot be undone."),
-                );
-                if (!confirmed) {
-                  return;
-                }
-                setDeleting(true);
-                setErrorMessage(null);
-                try {
-                  const response = await fetch(
-                    `/api/campai/resources/${resourceId}`,
-                    {
-                      method: "DELETE",
-                    },
-                  );
-                  const data = (await response.json()) as { error?: string };
-                  if (!response.ok) {
-                    throw new Error(
-                      data.error ?? tx("Unable to delete resource."),
-                    );
-                  }
-                  router.push(localizePathname("/resources", locale));
-                } catch (error) {
-                  setErrorMessage(
-                    error instanceof Error
-                      ? error.message
-                      : tx("Unable to delete resource."),
-                  );
-                } finally {
-                  setDeleting(false);
-                }
-              },
-              disabled: deleting,
-              icon: faTrash,
-              kind: "danger-secondary",
-            },
-          ]}
+          links={pageTitleLinks}
         />
 
         <p className="inline-flex max-w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800">

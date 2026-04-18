@@ -137,8 +137,11 @@ const getRelatedResourcesMap = async (
           prettyTitle: row.pretty_title ?? null,
           image:
             row.images?.find(
-              (image): image is string => typeof image === "string" && Boolean(image),
-            ) ?? row.image ?? null,
+              (image): image is string =>
+                typeof image === "string" && Boolean(image),
+            ) ??
+            row.image ??
+            null,
         },
       ]),
   );
@@ -320,13 +323,11 @@ export const loadProjects = async (limit = 60) => {
 
   const rows = (data ?? []) as ProjectRow[];
   const workshopById = await getWorkshopResourcesMap(
-      supabase,
-      rows.map((row) => row.workshop_resource_id ?? null),
-    );
-
-  return rows.map((row) =>
-    toProjectRecord(row, [], workshopById, null),
+    supabase,
+    rows.map((row) => row.workshop_resource_id ?? null),
   );
+
+  return rows.map((row) => toProjectRecord(row, [], workshopById, null));
 };
 
 export const loadProjectByIdentifier = async (identifier: string) => {
