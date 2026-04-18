@@ -139,9 +139,12 @@ export default function ResourceDetailClient({
             setDeleting(true);
             setErrorMessage(null);
             try {
-              const response = await fetch(`/api/campai/resources/${resourceId}`, {
-                method: "DELETE",
-              });
+              const response = await fetch(
+                `/api/campai/resources/${resourceId}`,
+                {
+                  method: "DELETE",
+                },
+              );
               const data = (await response.json()) as { error?: string };
               if (!response.ok) {
                 throw new Error(data.error ?? tx("Unable to delete resource."));

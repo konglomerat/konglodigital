@@ -346,18 +346,16 @@ export default async function ProjectDetailPage({
                 </div>
 
                 <p className="text-sm leading-relaxed text-zinc-600">
-                  {project.author.bio}
-                  {/*project.author.bio ??
+                  {project.author.bio ??
                     (project.authorName
                       ? tx(
                           "Dieser Name wurde manuell für das Projekt hinterlegt.",
                           "de",
                         )
-                      : null) ??
-                    tx(
-                      "Für dieses Profil ist noch keine Kurzbiografie hinterlegt.",
-                      "de",
-                    ) */}
+                      : tx(
+                          "Für dieses Profil ist noch keine Kurzbiografie hinterlegt.",
+                          "de",
+                        ))}
                 </p>
               </div>
             ) : (
