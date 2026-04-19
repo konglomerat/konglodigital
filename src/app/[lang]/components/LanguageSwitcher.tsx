@@ -17,9 +17,7 @@ type LanguageSwitcherProps = {
 const buttonClassName =
   "rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition";
 
-export default function LanguageSwitcher({
-  className,
-}: LanguageSwitcherProps) {
+export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const searchParams = useSearchParams();
@@ -30,7 +28,10 @@ export default function LanguageSwitcher({
   const search = searchParams.toString();
 
   const buildHref = (targetLocale: "de" | "en") => {
-    const localizedPathname = localizePathname(normalizedPathname, targetLocale);
+    const localizedPathname = localizePathname(
+      normalizedPathname,
+      targetLocale,
+    );
     return search ? `${localizedPathname}?${search}` : localizedPathname;
   };
 

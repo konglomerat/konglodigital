@@ -140,7 +140,10 @@ const buildDuplicatePair = (
   const rightPrettyTitle = normalizeText(right.prettyTitle);
 
   const nameSimilarity = diceSimilarity(leftName, rightName);
-  const tokenSimilarity = jaccardSimilarity(tokenize(left.name), tokenize(right.name));
+  const tokenSimilarity = jaccardSimilarity(
+    tokenize(left.name),
+    tokenize(right.name),
+  );
 
   let score = 0;
 
@@ -157,7 +160,11 @@ const buildDuplicatePair = (
     }
   }
 
-  if (leftPrettyTitle && rightPrettyTitle && leftPrettyTitle === rightPrettyTitle) {
+  if (
+    leftPrettyTitle &&
+    rightPrettyTitle &&
+    leftPrettyTitle === rightPrettyTitle
+  ) {
     score += 0.45;
     reasons.push("same pretty title");
   }
@@ -190,7 +197,9 @@ const buildDuplicatePair = (
   const strongestSignal =
     leftName === rightName ||
     sharedImages.length > 0 ||
-    (leftPrettyTitle && rightPrettyTitle && leftPrettyTitle === rightPrettyTitle) ||
+    (leftPrettyTitle &&
+      rightPrettyTitle &&
+      leftPrettyTitle === rightPrettyTitle) ||
     nameSimilarity >= 0.9;
 
   if (!strongestSignal) {
@@ -244,7 +253,9 @@ const withUpdatedResource = (
         ...resource,
         image: keptResource.image,
         images: Array.isArray(keptResource.images)
-          ? keptResource.images.filter((url): url is string => typeof url === "string")
+          ? keptResource.images.filter(
+              (url): url is string => typeof url === "string",
+            )
           : [],
       };
     })
@@ -270,7 +281,10 @@ export default function DuplicatesPageClient({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const duplicatePairs = useMemo(() => buildDuplicatePairs(resources), [resources]);
+  const duplicatePairs = useMemo(
+    () => buildDuplicatePairs(resources),
+    [resources],
+  );
 
   const runResolve = async (
     payload: ResolvePayload,
@@ -310,7 +324,11 @@ export default function DuplicatesPageClient({
       }
 
       setResources((previous) =>
-        withUpdatedResource(previous, data.keptResource, payload.removeResourceId),
+        withUpdatedResource(
+          previous,
+          data.keptResource,
+          payload.removeResourceId,
+        ),
       );
       setSuccessMessage(actionLabel);
     } catch (error) {
@@ -389,8 +407,12 @@ export default function DuplicatesPageClient({
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.18em]">
-                        <span className="text-foreground/80">{tx("Candidate")}</span>
-                        <span className="text-muted-foreground/80">#{pair.id.slice(0, 8)}</span>
+                        <span className="text-foreground/80">
+                          {tx("Candidate")}
+                        </span>
+                        <span className="text-muted-foreground/80">
+                          #{pair.id.slice(0, 8)}
+                        </span>
                       </span>
                       <span
                         className={`rounded-full border px-2.5 py-1 font-semibold ${scoreBadgeClassName(pair.score)}`}
@@ -401,9 +423,7 @@ export default function DuplicatesPageClient({
                     <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <span className="rounded-full border border-border bg-muted/50 px-2 py-1">
                         {pair.reasons.length > 0
-                          ? pair.reasons
-                              .map((reason) => tx(reason))
-                              .join(" + ")
+                          ? pair.reasons.map((reason) => tx(reason)).join(" + ")
                           : tx("similar metadata")}
                       </span>
                     </div>
@@ -436,9 +456,12 @@ export default function DuplicatesPageClient({
                           >
                             {pair.left.name}
                           </a>
-                          <p className="mt-1 text-xs text-muted-foreground">{pair.left.id}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {collectImageUrls(pair.left).length} {tx("photo(s)")}
+                            {pair.left.id}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {collectImageUrls(pair.left).length}{" "}
+                            {tx("photo(s)")}
                           </p>
                         </div>
                       </div>
@@ -483,9 +506,12 @@ export default function DuplicatesPageClient({
                           >
                             {pair.right.name}
                           </a>
-                          <p className="mt-1 text-xs text-muted-foreground">{pair.right.id}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {collectImageUrls(pair.right).length} {tx("photo(s)")}
+                            {pair.right.id}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {collectImageUrls(pair.right).length}{" "}
+                            {tx("photo(s)")}
                           </p>
                         </div>
                       </div>

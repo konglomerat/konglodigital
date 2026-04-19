@@ -98,14 +98,12 @@ export default function PageTitle({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          {eyebrow ? <p className={resolvedEyebrowClassName}>{eyebrow}</p> : null}
-          <h1 className={resolvedTitleClassName}>
-            {title}
-          </h1>
+          {eyebrow ? (
+            <p className={resolvedEyebrowClassName}>{eyebrow}</p>
+          ) : null}
+          <h1 className={resolvedTitleClassName}>{title}</h1>
           {subTitle ? (
-            <p className={resolvedSubTitleClassName}>
-              {subTitle}
-            </p>
+            <p className={resolvedSubTitleClassName}>{subTitle}</p>
           ) : null}
         </div>
 

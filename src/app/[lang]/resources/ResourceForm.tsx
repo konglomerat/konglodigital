@@ -74,7 +74,8 @@ type ResourceFormProps = {
 
 const styles = {
   light: {
-    label: "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+    label:
+      "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
     input:
       "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     select:
@@ -87,7 +88,8 @@ const styles = {
     checkbox: "h-4 w-4 rounded-md border-input",
   },
   dark: {
-    label: "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+    label:
+      "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
     input:
       "rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80",
     select:

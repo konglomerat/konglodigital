@@ -113,7 +113,10 @@ function LoginForm() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Neu hier?{" "}
-          <Link className="font-semibold text-primary hover:text-primary/80" href="/register">
+          <Link
+            className="font-semibold text-primary hover:text-primary/80"
+            href="/register"
+          >
             Konto erstellen
           </Link>
         </p>

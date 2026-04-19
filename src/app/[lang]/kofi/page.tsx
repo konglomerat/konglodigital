@@ -176,7 +176,10 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-        <FontAwesomeIcon icon={faChartPie} className="h-4 w-4 text-muted-foreground" />
+        <FontAwesomeIcon
+          icon={faChartPie}
+          className="h-4 w-4 text-muted-foreground"
+        />
         Kostenverteilung
       </div>
       <div className="mt-4 flex items-center gap-5">
@@ -357,8 +360,7 @@ const KoFiTable = ({
     kind === "funding"
       ? "from-emerald-50 via-white to-white"
       : "from-zinc-100 via-white to-white";
-  const headerTint =
-    kind === "funding" ? "bg-success-soft/70" : "bg-accent/80";
+  const headerTint = kind === "funding" ? "bg-success-soft/70" : "bg-accent/80";
   const sumTint = kind === "funding" ? "bg-success-soft/70" : "bg-muted/70";
   const summarySeries = projectSeries(
     block.groups.reduce(
@@ -624,7 +626,10 @@ export default function KoFiPage() {
 
       <section className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-          <FontAwesomeIcon icon={faFilter} className="h-4 w-4 text-muted-foreground" />
+          <FontAwesomeIcon
+            icon={faFilter}
+            className="h-4 w-4 text-muted-foreground"
+          />
           Filter
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">

@@ -39,17 +39,19 @@ type ButtonAsLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
 type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 
 const baseClassName =
-  "inline-flex items-center justify-center gap-2 rounded-md border font-semibold transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-md border font-bold transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60";
 
 const sizeClassName: Record<ButtonSize, string> = {
-  small: "px-4 py-2 text-xs",
-  medium: "px-4 py-2 text-sm",
+  small: "px-4 py-2 text-sm",
+  medium: "px-4 py-2 text-md",
   large: "px-5 py-2.5 text-lg",
 };
 
 const kindClassName: Record<ButtonKind, string> = {
-  primary: "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
-  secondary: "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+  primary:
+    "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
+  secondary:
+    "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
   "danger-primary":
     "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90",
   "danger-secondary":

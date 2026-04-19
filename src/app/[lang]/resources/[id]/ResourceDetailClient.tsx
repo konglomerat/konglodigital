@@ -180,7 +180,7 @@ export default function ResourceDetailClient({
           links={pageTitleLinks}
         />
 
-        <p className="inline-flex max-w-fit rounded-full border border-warning-border bg-warning-soft px-3 py-1 text-xs text-warning">
+        <p className="inline-flex max-w-fit rounded-full bg-warning-soft px-3 py-1 text-xs text-warning">
           {tx("Images and text on this page were generated with AI.")}
         </p>
 
@@ -192,7 +192,9 @@ export default function ResourceDetailClient({
 
         <section>
           {!resource ? (
-            <p className="text-sm text-muted-foreground">{tx("Resource not found.")}</p>
+            <p className="text-sm text-muted-foreground">
+              {tx("Resource not found.")}
+            </p>
           ) : (
             <div className="flex flex-col gap-6">
               <MediaLightboxGallery

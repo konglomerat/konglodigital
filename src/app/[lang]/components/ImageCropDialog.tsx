@@ -401,7 +401,9 @@ export default function ImageCropDialog({
                 onChange={(event) => setZoom(Number(event.target.value))}
                 className="w-full"
               />
-              <p className="text-sm text-muted-foreground">{zoom.toFixed(2)}x</p>
+              <p className="text-sm text-muted-foreground">
+                {zoom.toFixed(2)}x
+              </p>
             </div>
 
             {errorMessage ? (

@@ -210,7 +210,9 @@ export default function MdxEditorInput({
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">{emptyImageMessage}</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {emptyImageMessage}
+            </p>
           )
         ) : null}
       </div>
