@@ -38,22 +38,6 @@ const quickActions: QuickAction[] = [
     title: "Kalender öffnen",
     description: "Termine, Workshops und Belegungen prüfen.",
   },
-  /*
-  {
-    href: "/products",
-    title: "Produkte finden",
-    description: "Materialien und Services schnell auswählen.",
-  },
-  {
-    href: "/account",
-    title: "Mein Profil",
-    description: "Persönliche Daten und Einstellungen verwalten.",
-  },
-  {
-    href: "/invoices",
-    title: "Rechnungen",
-    description: "Rechnungen und Abrechnungen an einem Ort.",
-  },*/
 ];
 
 const workflowSteps = [

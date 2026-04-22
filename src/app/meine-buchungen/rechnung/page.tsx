@@ -709,7 +709,7 @@ export default function NewSimpleInvoicePage() {
     setSubmitting(true);
     try {
       const response = await fetchJson<{ id: string | null }>(
-        "/api/campai/invoices/create",
+        "/api/campai/receipts/invoice",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -973,33 +973,33 @@ export default function EigenbelegPage() {
     const receiptFileName = attachment.fileName;
     const receiptFileContentType = attachment.contentType;
 
-    const storeResponse = await fetch("/api/campai/receipts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const storeResponse = await fetch(
+      `/api/campai/receipts/${values.bookingType === "einnahme" ? "revenue" : "expense"}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: values.reason,
+          occasion: receiptValues.occasion,
+          notes: receiptValues.notes,
+          transactionDate: receiptValues.transactionDate,
+          income: receiptValues.income,
+          expense: receiptValues.expense,
+          transferAmount: receiptValues.transferAmount,
+          senderName: receiptValues.senderName,
+          receiverName: receiptValues.receiverName,
+          counterpartyAccount: values.counterpartyAccount,
+          counterpartyName: values.counterpartyName,
+          costCenter2: values.associationArea,
+          invoiceStatus: values.invoiceStatus,
+          receiptFileBase64,
+          receiptFileName,
+          receiptFileContentType,
+        }),
       },
-      body: JSON.stringify({
-        reason: values.reason,
-        occasion: receiptValues.occasion,
-        notes: receiptValues.notes,
-        transactionDate: receiptValues.transactionDate,
-        income: receiptValues.income,
-        expense: receiptValues.expense,
-        transferAmount: receiptValues.transferAmount,
-        senderName: receiptValues.senderName,
-        receiverName: receiptValues.receiverName,
-        senderArea: receiptValues.senderArea,
-        receiverArea: receiptValues.receiverArea,
-        bookingType: values.bookingType,
-        counterpartyAccount: values.counterpartyAccount,
-        counterpartyName: values.counterpartyName,
-        costCenter2: values.associationArea,
-        invoiceStatus: values.invoiceStatus,
-        receiptFileBase64,
-        receiptFileName,
-        receiptFileContentType,
-      }),
-    });
+    );
 
     if (storeResponse.ok) {
       const payload = (await storeResponse.json().catch(() => ({}))) as {

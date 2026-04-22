@@ -221,11 +221,10 @@ export default function EinnahmePage() {
             selectedFile.type || "application/octet-stream",
         };
       }
-      const response = await fetch("/api/campai/receipts", {
+      const response = await fetch("/api/campai/receipts/revenue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bookingType: "einnahme",
           description: values.beschreibung,
           transactionDate: values.belegdatum,
           receiptNumber: values.belegnummer || undefined,

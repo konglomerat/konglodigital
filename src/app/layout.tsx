@@ -347,42 +347,6 @@ export default async function RootLayout({
                         Meine Buchungen
                       </ProtectedNavItem>
                       <ProtectedNavItem
-                        href="/invoices"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={canAccessInvoices}
-                        tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-                      >
-                        Rechnungen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/reimbursement"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Rückerstattung von Auslagen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/eigenbeleg"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Eigenbeleg erstellen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
-                        href="/buchungen"
-                        className={navLinkClassName}
-                        icon={faFolderOpen}
-                        isAccessible={isAuthenticated}
-                        tooltip={membersOnlyTooltip}
-                      >
-                        Beleg einbuchen
-                      </ProtectedNavItem>
-                      <ProtectedNavItem
                         href="/budget"
                         className={navLinkClassName}
                         icon={faChartPie}
@@ -588,42 +552,6 @@ export default async function RootLayout({
                 tooltip={membersOnlyTooltip}
               >
                 Meine Buchungen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/invoices"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={canAccessInvoices}
-                tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-              >
-                Rechnungen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/reimbursement"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Rückerstattung von Auslagen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/eigenbeleg"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Eigenbeleg erstellen
-              </ProtectedNavItem>
-              <ProtectedNavItem
-                href="/buchungen"
-                className={navItemClassName}
-                icon={faFolderOpen}
-                isAccessible={isAuthenticated}
-                tooltip={membersOnlyTooltip}
-              >
-                Beleg einbuchen
               </ProtectedNavItem>
               <ProtectedNavItem
                 href="/budget"
