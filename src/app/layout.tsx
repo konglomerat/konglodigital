@@ -26,6 +26,7 @@ import {
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 import { signOut } from "./actions";
+import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getUserRole, roleCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./components/Button";
@@ -159,6 +160,9 @@ export default async function RootLayout({
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
+  const currentUserDisplayName = userData.user
+    ? getCampaiBookingDisplayName(userData.user)
+    : null;
   const userRole = await getUserRole(supabase, userData.user);
   const canAccessAdmin = isAuthenticated && userRole === "admin";
   const canAccessInvoices =
@@ -275,7 +279,9 @@ export default async function RootLayout({
                         isAccessible={isAuthenticated}
                         tooltip={membersOnlyTooltip}
                       >
-                        Profil
+                        {currentUserDisplayName
+                          ? `Profil (${currentUserDisplayName})`
+                          : "Profil"}
                       </ProtectedNavItem>
 
                       <p className={navSectionTitleClassName}>Verein</p>
@@ -331,6 +337,15 @@ export default async function RootLayout({
                         Lagerplatz
                       </ComingSoonNavItem>
                       <p className={navSectionTitleClassName}>buchhaltung</p>
+                      <ProtectedNavItem
+                        href="/meine-buchungen"
+                        className={navLinkClassName}
+                        icon={faFolderOpen}
+                        isAccessible={isAuthenticated}
+                        tooltip={membersOnlyTooltip}
+                      >
+                        Meine Buchungen
+                      </ProtectedNavItem>
                       <ProtectedNavItem
                         href="/invoices"
                         className={navLinkClassName}
@@ -506,7 +521,9 @@ export default async function RootLayout({
                 isAccessible={isAuthenticated}
                 tooltip={membersOnlyTooltip}
               >
-                Profil
+                {currentUserDisplayName
+                  ? `Profil (${currentUserDisplayName})`
+                  : "Profil"}
               </ProtectedNavItem>
 
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -563,6 +580,15 @@ export default async function RootLayout({
               <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 buchhaltung
               </p>
+              <ProtectedNavItem
+                href="/meine-buchungen"
+                className={navItemClassName}
+                icon={faFolderOpen}
+                isAccessible={isAuthenticated}
+                tooltip={membersOnlyTooltip}
+              >
+                Meine Buchungen
+              </ProtectedNavItem>
               <ProtectedNavItem
                 href="/invoices"
                 className={navItemClassName}
