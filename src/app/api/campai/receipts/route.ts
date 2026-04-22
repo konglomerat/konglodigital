@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
-import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -80,172 +80,6 @@ const toIsoDate = (value: unknown): string => {
     return new Date().toISOString().slice(0, 10);
   }
   return date.toISOString().slice(0, 10);
-};
-
-const extractUploadId = (payload: unknown): string | null => {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const record = payload as Record<string, unknown>;
-  const direct = record._id ?? record.id ?? record.fileId ?? record.documentId;
-  if (typeof direct === "string" && direct.trim()) {
-    return direct;
-  }
-
-  const data = record.data;
-  if (data && typeof data === "object") {
-    return extractUploadId(data);
-  }
-
-  const result = record.result;
-  if (result && typeof result === "object") {
-    return extractUploadId(result);
-  }
-
-  return null;
-};
-
-const uploadViaStorageUploadUrl = async (params: {
-  apiKey: string;
-  fileBytes: Uint8Array;
-  fileName: string;
-  fileContentType: string;
-}) => {
-  const { apiKey, fileBytes, fileName, fileContentType } = params;
-
-  const uploadUrlResponse = await fetch(
-    "https://cloud.campai.com/api/storage/uploadUrl",
-    {
-      method: "GET",
-      headers: {
-        "X-API-Key": apiKey,
-      },
-    },
-  );
-
-  if (!uploadUrlResponse.ok) {
-    return null;
-  }
-
-  const uploadUrlPayload = (await uploadUrlResponse
-    .json()
-    .catch(() => null)) as { id?: string; url?: string } | null;
-
-  const uploadId =
-    typeof uploadUrlPayload?.id === "string" ? uploadUrlPayload.id : "";
-  const uploadUrl =
-    typeof uploadUrlPayload?.url === "string" ? uploadUrlPayload.url : "";
-
-  if (!uploadId || !uploadUrl) {
-    return null;
-  }
-
-  const normalizedBytes = new Uint8Array(fileBytes);
-  const fileArrayBuffer = normalizedBytes.buffer;
-  const fileBlob = new Blob([fileArrayBuffer], {
-    type: fileContentType || "application/octet-stream",
-  });
-
-  const putResponse = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": fileContentType || "application/octet-stream",
-      "Content-Disposition": `inline; filename="${fileName || "nachweis.dat"}"`,
-    },
-    body: fileBlob,
-  });
-
-  if (putResponse.ok) {
-    return uploadId;
-  }
-
-  const formData = new FormData();
-  formData.append("file", fileBlob, fileName || "nachweis.dat");
-  const postResponse = await fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-  });
-
-  return postResponse.ok ? uploadId : null;
-};
-
-const tryUploadReceiptFile = async (params: {
-  apiKey: string;
-  baseUrl: string;
-  endpointOverride?: string;
-  fileBase64: string;
-  fileName: string;
-  fileContentType: string;
-}) => {
-  const {
-    apiKey,
-    baseUrl,
-    endpointOverride,
-    fileBase64,
-    fileName,
-    fileContentType,
-  } = params;
-  if (!fileBase64) {
-    return {
-      receiptFileId: null as string | null,
-      uploadWarning: undefined as string | undefined,
-    };
-  }
-
-  const candidates = endpointOverride
-    ? [endpointOverride]
-    : [
-        `${baseUrl}/files/upload`,
-        `${baseUrl}/documents/upload`,
-        `${baseUrl}/finance/files/upload`,
-        `${baseUrl}/finance/receipts/files/upload`,
-      ];
-
-  const bytes = Uint8Array.from(Buffer.from(fileBase64, "base64"));
-
-  const storageUploadId = await uploadViaStorageUploadUrl({
-    apiKey,
-    fileBytes: bytes,
-    fileName,
-    fileContentType,
-  });
-
-  if (storageUploadId) {
-    return { receiptFileId: storageUploadId, uploadWarning: undefined };
-  }
-
-  const fileBlob = new Blob([bytes], {
-    type: fileContentType || "application/octet-stream",
-  });
-
-  for (const endpoint of candidates) {
-    const formData = new FormData();
-    formData.append("file", fileBlob, fileName || "nachweis.dat");
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "X-API-Key": apiKey,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      continue;
-    }
-
-    const payload = (await response.json().catch(() => null)) as unknown;
-    const fileId = extractUploadId(payload);
-    if (fileId) {
-      return { receiptFileId: fileId, uploadWarning: undefined };
-    }
-  }
-
-  return {
-    receiptFileId: null,
-    uploadWarning:
-      "Upload von 'Nachweis über Vorgang' zu Campai fehlgeschlagen. Beleg wurde ohne Dateianhang erstellt.",
-  };
 };
 
 const addReceiptNote = async (params: {
@@ -459,7 +293,7 @@ export const POST = async (request: NextRequest) => {
       process.env.CAMPAI_RECEIPT_FILE_UPLOAD_ENDPOINT,
     );
 
-    const { receiptFileId, uploadWarning } = await tryUploadReceiptFile({
+    const { receiptFileId, uploadWarning } = await uploadCampaiReceiptFile({
       apiKey,
       baseUrl,
       endpointOverride: uploadEndpointOverride || undefined,

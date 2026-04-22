@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowTrendDown,
   faCheck,
+  faFileImport,
   faFolderOpen,
   faList,
   faPlus,
@@ -54,6 +55,7 @@ export default function AusgabePage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
@@ -90,6 +92,9 @@ export default function AusgabePage() {
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
     setCreditorAccount(suggestion.account);
@@ -199,6 +204,75 @@ export default function AusgabePage() {
     };
   }, []);
 
+  const handleScanReceipt = useCallback(async () => {
+    if (!selectedFile) {
+      return;
+    }
+
+    setIsScanningReceipt(true);
+    setScanFeedback(null);
+    setScanError(null);
+    setResult(null);
+
+    try {
+      const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+      const response = await fetch("/api/campai/receipts/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptType: "expense",
+          refund: false,
+          receiptFileBase64: bytesToBase64(bytes),
+          receiptFileName: selectedFile.name,
+          receiptFileContentType:
+            selectedFile.type || "application/octet-stream",
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        receiptDate?: string | null;
+        receiptNumber?: string | null;
+        totalGrossAmount?: number | null;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setScanError(payload.error ?? "Beleg konnte nicht ausgelesen werden.");
+        return;
+      }
+
+      setValue("belegdatum", payload.receiptDate ?? "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setValue(
+        "betragEuro",
+        typeof payload.totalGrossAmount === "number"
+          ? `${(payload.totalGrossAmount / 100).toFixed(2)}`.replace(".", ",")
+          : "",
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        },
+      );
+      setValue("belegnummer", payload.receiptNumber ?? "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setValue("beschreibung", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setScanFeedback("Belegdaten wurden übernommen.");
+    } catch (error) {
+      setScanError(
+        error instanceof Error ? error.message : "Unbekannter Fehler",
+      );
+    } finally {
+      setIsScanningReceipt(false);
+    }
+  }, [selectedFile, setValue]);
+
   const onSubmit = async (values: FormValues) => {
     if (!creditorAccount) {
       setResult({ error: "Bitte einen Kreditor auswählen." });
@@ -260,6 +334,8 @@ export default function AusgabePage() {
       setCreditorKontoinhaber("");
       setCreditorError(null);
       setSelectedFile(null);
+      setScanFeedback(null);
+      setScanError(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -507,12 +583,31 @@ export default function AusgabePage() {
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) =>
-                  setSelectedFile(event.target.files?.item(0) ?? null)
-                }
+                onChange={(event) => {
+                  setSelectedFile(event.target.files?.item(0) ?? null);
+                  setScanFeedback(null);
+                  setScanError(null);
+                }}
               />
               {selectedFile ? (
                 <p className="text-xs text-zinc-500">{selectedFile.name}</p>
+              ) : null}
+              <div className="mt-3 flex items-center gap-3">
+                <Button
+                  type="button"
+                  kind="secondary"
+                  icon={faFileImport}
+                  disabled={!selectedFile || isScanningReceipt}
+                  onClick={handleScanReceipt}
+                >
+                  {isScanningReceipt ? "Beleg wird ausgelesen…" : "Beleg auslesen"}
+                </Button>
+                {scanFeedback ? (
+                  <p className="text-sm text-emerald-700">{scanFeedback}</p>
+                ) : null}
+              </div>
+              {scanError ? (
+                <p className="mt-2 text-sm text-rose-700">{scanError}</p>
               ) : null}
             </FormField>
           </FormSection>
