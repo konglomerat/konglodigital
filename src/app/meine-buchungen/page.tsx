@@ -72,18 +72,64 @@ export default async function MeineBuchungenPage({
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
           Belege aus Campai, deren Tag deinem Campai-Anzeigenamen entspricht.
         </p>
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="grid gap-3 pt-2 sm:grid-cols-2">
           <Link
             href="/meine-buchungen/ausgabe"
-            className="inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-zinc-50"
+            className="group flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-rose-900/60 dark:hover:bg-rose-950/30"
           >
-            ↓ Ausgabe erfassen
+            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-rose-100 text-rose-600 transition group-hover:bg-rose-200 dark:bg-rose-950/60 dark:text-rose-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14" />
+                <path d="m19 12-7 7-7-7" />
+              </svg>
+            </span>
+            <span className="flex flex-col text-left">
+              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                Ausgabe erfassen
+              </span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Beleg für eine Ausgabe hinzufügen
+              </span>
+            </span>
           </Link>
           <Link
             href="/meine-buchungen/einnahme"
-            className="inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-600 shadow-sm transition hover:bg-zinc-50"
+            className="group flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-900/60 dark:hover:bg-emerald-950/30"
           >
-            ↑ Einnahme erfassen
+            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-emerald-100 text-emerald-600 transition group-hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path d="M12 19V5" />
+                <path d="m5 12 7-7 7 7" />
+              </svg>
+            </span>
+            <span className="flex flex-col text-left">
+              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                Einnahme erfassen
+              </span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Beleg für eine Einnahme hinzufügen
+              </span>
+            </span>
           </Link>
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   faFileImport,
   faFolderOpen,
   faList,
+  faPenToSquare,
   faPlus,
   faUser,
   faXmark,
@@ -25,6 +26,7 @@ import {
   FormSection,
   Input,
   Select,
+  Textarea,
 } from "../../components/ui/form";
 
 type CostCenterOption = { value: string; label: string };
@@ -36,6 +38,7 @@ type FormValues = {
   betragEuro: string;
   costCenter2: string;
   kreditorName: string;
+  notes: string;
 };
 
 const euroAmountPattern = /^\d+(,\d{1,2})?$/;
@@ -65,6 +68,7 @@ export default function AusgabePage() {
       betragEuro: "",
       costCenter2: "",
       kreditorName: "",
+      notes: "",
     },
   });
 
@@ -274,8 +278,12 @@ export default function AusgabePage() {
   }, [selectedFile, setValue]);
 
   const onSubmit = async (values: FormValues) => {
+    if (!selectedFile) {
+      setResult({ error: "Bitte einen Beleg hochladen." });
+      return;
+    }
     if (!creditorAccount) {
-      setResult({ error: "Bitte einen Kreditor auswählen." });
+      setResult({ error: "Bitte einen Zahlungsempfänger auswählen." });
       return;
     }
     setIsSubmitting(true);
@@ -307,6 +315,7 @@ export default function AusgabePage() {
           counterpartyName: creditorName,
           expense: values.betragEuro,
           costCenter2: values.costCenter2,
+          notes: values.notes || undefined,
           ...fileData,
         }),
       });
@@ -343,20 +352,26 @@ export default function AusgabePage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto w-full max-w-3xl space-y-6 px-6 py-10">
+      <div className="mx-auto w-full max-w-3xl px-6 pt-8">
+        <Link
+          href="/meine-buchungen"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 hover:text-zinc-900"
+        >
+          ← Meine Buchungen
+        </Link>
+      </div>
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
         <header className="space-y-3">
-          <Link
-            href="/meine-buchungen"
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
-            ← Meine Buchungen
-          </Link>
           <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-rose-600 shadow-sm">
               <FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />
             </span>
             <span>Ausgabe erfassen</span>
           </h1>
+          <p className="text-sm leading-relaxed text-zinc-600">
+            Einbuchung von Rechnungen/Belegen die durch Ausgaben des Vereins
+            oder einer seiner Projekte/Werkbereiche entstanden sind
+          </p>
           <p className="text-xs text-zinc-500">
             Pflichtfelder sind mit * markiert.
           </p>
@@ -368,28 +383,52 @@ export default function AusgabePage() {
           </div>
         ) : null}
 
-        {result?.id ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <p className="font-medium">Ausgabe gespeichert!</p>
-            <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
-            {result.uploadWarning ? (
-              <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {result?.error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {result.error}
-          </div>
-        ) : null}
-
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* Kreditor */}
-          <FormSection title="Kreditor" icon={faUser}>
+          {/* Beleg hochladen */}
+          <FormSection title="Beleg hochladen" icon={faFolderOpen}>
+            <FormField label="Belegdatei" required hint="PDF, JPG oder PNG">
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
+                onChange={(event) => {
+                  setSelectedFile(event.target.files?.item(0) ?? null);
+                  setScanFeedback(null);
+                  setScanError(null);
+                }}
+              />
+              {selectedFile ? (
+                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
+              ) : null}
+              <div className="mt-3 space-y-2">
+                <Button
+                  type="button"
+                  kind="secondary"
+                  icon={faFileImport}
+                  disabled={!selectedFile || isScanningReceipt}
+                  onClick={handleScanReceipt}
+                >
+                  {isScanningReceipt ? "Beleg wird ausgelesen…" : "Beleg auslesen"}
+                </Button>
+                <p className="text-xs text-zinc-500">
+                  Liest Datum, Betrag und Belegnummer automatisch aus dem Beleg
+                  und überträgt sie ins Formular.
+                </p>
+                {scanFeedback ? (
+                  <p className="text-sm text-emerald-700">{scanFeedback}</p>
+                ) : null}
+              </div>
+              {scanError ? (
+                <p className="mt-2 text-sm text-rose-700">{scanError}</p>
+              ) : null}
+            </FormField>
+          </FormSection>
+
+          {/* Zahlungsempfänger */}
+          <FormSection title="Zahlungsempfänger" icon={faUser}>
             <div className="space-y-4">
               <FormField
-                label="Kreditor"
+                label="Empfänger auswählen oder neu anlegen"
                 required
                 error={errors.kreditorName?.message}
               >
@@ -399,7 +438,7 @@ export default function AusgabePage() {
                   onSelect={handleCreditorSelect}
                   onCreateNew={handleCreateNew}
                   {...register("kreditorName", {
-                    required: "Bitte einen Kreditor auswählen.",
+                    required: "Bitte einen Zahlungsempfänger auswählen.",
                   })}
                 />
               </FormField>
@@ -408,7 +447,7 @@ export default function AusgabePage() {
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
-                    Kreditor <strong>#{creditorAccount}</strong>
+                    Empfänger <strong>#{creditorAccount}</strong>
                     {creditorName ? ` (${creditorName})` : ""} ausgewählt
                   </span>
                   <button
@@ -424,7 +463,7 @@ export default function AusgabePage() {
               {showCreatePanel && !creditorAccount ? (
                 <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
                   <p className="text-sm font-medium text-blue-900">
-                    Neuen Kreditor anlegen: &ldquo;{creditorName}&rdquo;
+                    Neuen Empfänger anlegen: &ldquo;{creditorName}&rdquo;
                   </p>
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField label="Zahlungsart" required>
@@ -481,7 +520,7 @@ export default function AusgabePage() {
                       }
                       onClick={createCreditor}
                     >
-                      {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
+                      {isCreatingCreditor ? "Wird angelegt…" : "Empfänger anlegen"}
                     </Button>
                     <Button
                       type="button"
@@ -500,14 +539,17 @@ export default function AusgabePage() {
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="space-y-4">
               <FormField
-                label="Beschreibung"
+                label="Buchungstext"
                 required
                 error={errors.beschreibung?.message}
               >
+                <p className="text-xs text-zinc-500">
+                  Kurze Beschreibung wofür die Ausgabe getätigt wurde
+                </p>
                 <Input
                   placeholder="z. B. Materialkosten Werkstatt"
                   {...register("beschreibung", {
-                    required: "Beschreibung ist erforderlich.",
+                    required: "Buchungstext ist erforderlich.",
                   })}
                 />
               </FormField>
@@ -576,41 +618,35 @@ export default function AusgabePage() {
             </div>
           </FormSection>
 
-          {/* Anhang */}
-          <FormSection title="Anhang" icon={faFolderOpen}>
-            <FormField label="Belegdatei" hint="Optional – PDF, JPG oder PNG">
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) => {
-                  setSelectedFile(event.target.files?.item(0) ?? null);
-                  setScanFeedback(null);
-                  setScanError(null);
-                }}
+          {/* Interne Notiz */}
+          <FormSection title="Interne Notiz" icon={faPenToSquare}>
+            <FormField
+              label="Notiz"
+              hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar."
+            >
+              <Textarea
+                placeholder="z. B. Genehmigt durch Vorstand am …"
+                rows={3}
+                {...register("notes")}
               />
-              {selectedFile ? (
-                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
-              ) : null}
-              <div className="mt-3 flex items-center gap-3">
-                <Button
-                  type="button"
-                  kind="secondary"
-                  icon={faFileImport}
-                  disabled={!selectedFile || isScanningReceipt}
-                  onClick={handleScanReceipt}
-                >
-                  {isScanningReceipt ? "Beleg wird ausgelesen…" : "Beleg auslesen"}
-                </Button>
-                {scanFeedback ? (
-                  <p className="text-sm text-emerald-700">{scanFeedback}</p>
-                ) : null}
-              </div>
-              {scanError ? (
-                <p className="mt-2 text-sm text-rose-700">{scanError}</p>
-              ) : null}
             </FormField>
           </FormSection>
+
+          {result?.id ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-medium">Ausgabe gespeichert!</p>
+              <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
+              {result.uploadWarning ? (
+                <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {result?.error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {result.error}
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-3">
             <Button
