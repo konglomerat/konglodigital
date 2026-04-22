@@ -5,6 +5,8 @@ import {
   type CampaiPaymentMethodType,
   isCampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -321,6 +323,8 @@ export const POST = async (request: NextRequest) => {
   if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const tags = buildCampaiBookingTags(data.user);
 
   const body = (await request.json()) as {
     invoiceId?: string;
@@ -642,7 +646,7 @@ export const POST = async (request: NextRequest) => {
     positions,
     doNotSendReceipt: !sendByMail,
     queueReceiptDocument: sendByMail,
-    tags: ["API"],
+    tags,
   };
 
   console.info("Campai invoice payload debug", {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -246,12 +248,67 @@ const tryUploadReceiptFile = async (params: {
   };
 };
 
+const addReceiptNote = async (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  receiptId: string;
+  content: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> => {
+  const { apiKey, organizationId, mandateId, receiptId, content } = params;
+
+  if (!content) {
+    return { ok: true };
+  }
+
+  const url = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/${receiptId}/notes`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({ content }),
+    });
+  } catch (fetchError) {
+    const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    return { ok: false, error: `Netzwerkfehler: ${msg}` };
+  }
+
+  if (!response.ok) {
+    if (response.status === 403) {
+      return { ok: true };
+    }
+
+    const body = await response.text().catch(() => "");
+    return {
+      ok: false,
+      error: `HTTP ${response.status}: ${body || "Campai note endpoint failed"}`,
+    };
+  }
+
+  return { ok: true };
+};
+
+const buildReceiptUserNote = (params: {
+  userId: string;
+  noteText: string;
+}) =>
+  [params.noteText, `Benutzer-ID: ${params.userId}`]
+    .filter(Boolean)
+    .join("\n");
+
 export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const tags = buildCampaiBookingTags(data.user);
 
   try {
     const apiKey = requiredEnv("CAMPAI_API_KEY");
@@ -353,6 +410,10 @@ export const POST = async (request: NextRequest) => {
     const reason = compactText(body.reason, "Eigenbeleg");
     const occasion = compactText(body.occasion, "Eigenbeleg");
     const notes = compactText(body.notes);
+    const receiptNote = buildReceiptUserNote({
+      userId: data.user.id,
+      noteText: notes,
+    });
     const senderName = compactText(body.senderName);
     const receiverName = compactText(body.receiverName);
     const counterpartyName = compactText(
@@ -365,19 +426,23 @@ export const POST = async (request: NextRequest) => {
       .toISOString()
       .replace(/[-:TZ.]/g, "")
       .slice(0, 14);
-    const receiptNumber = `EB-${timeStamp}`.slice(0, 30);
+    const receiptNumberOverride = compactText(body.receiptNumber);
+    const autoPrefix = body.reason ? "EB" : "BEL";
+    const receiptNumber = (receiptNumberOverride || `${autoPrefix}-${timeStamp}`).slice(0, 30);
 
-    const description = [
-      `${reason}: ${occasion}`,
-      senderName ? `Von: ${senderName}` : "",
-      receiverName ? `An: ${receiverName}` : "",
-      notes ? `Notiz: ${notes}` : "",
-    ]
-      .filter(Boolean)
-      .join(" | ")
-      .slice(0, 140);
-
-    const tags = ["API"];
+    // Callers can send a top-level `description` to skip the reason:occasion format.
+    const descriptionOverride = compactText(body.description);
+    const description = descriptionOverride
+      ? descriptionOverride.slice(0, 140)
+      : [
+          `${reason}: ${occasion}`,
+          senderName ? `Von: ${senderName}` : "",
+          receiverName ? `An: ${receiverName}` : "",
+          notes ? `Notiz: ${notes}` : "",
+        ]
+          .filter(Boolean)
+          .join(" | ")
+          .slice(0, 140);
 
     const receiptFileBase64 = compactText(
       body.receiptFileBase64 ?? body.pdfBase64,
@@ -444,7 +509,7 @@ export const POST = async (request: NextRequest) => {
         {
           account: positionAccount,
           amount,
-          description: occasion.slice(0, 140),
+          description: (descriptionOverride || occasion).slice(0, 140),
           costCenter1,
           costCenter2,
           taxCode: null,
@@ -499,10 +564,28 @@ export const POST = async (request: NextRequest) => {
       alreadyCollected?: boolean;
     };
 
+    let noteWarning: string | undefined;
+    const receiptId = dataResponse._id ?? null;
+    if (!receiptId) {
+      noteWarning = "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
+    } else {
+      const noteResult = await addReceiptNote({
+        apiKey,
+        organizationId,
+        mandateId,
+        receiptId,
+        content: receiptNote,
+      });
+
+      if (!noteResult.ok) {
+        noteWarning = `Beleg erstellt, aber die Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
+      }
+    }
+
     return NextResponse.json({
-      id: dataResponse._id ?? null,
+      id: receiptId,
       alreadyCollected: dataResponse.alreadyCollected ?? false,
-      uploadWarning,
+      uploadWarning: uploadWarning ?? noteWarning,
       receiptFileId,
     });
   } catch (error) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -194,6 +196,17 @@ const addReceiptNote = async (params: {
 	return { ok: true };
 };
 
+const buildReceiptUserNote = (params: {
+	userId: string;
+	lines: string[];
+}) =>
+	[
+		...params.lines.filter(Boolean),
+		`Benutzer-ID: ${params.userId}`,
+	]
+		.filter(Boolean)
+		.join("\n");
+
 export const POST = async (request: NextRequest) => {
 	const { supabase } = createSupabaseRouteClient(request);
 	const { data } = await supabase.auth.getUser();
@@ -201,6 +214,8 @@ export const POST = async (request: NextRequest) => {
 	if (!data.user) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
+
+	const tags = buildCampaiBookingTags(data.user);
 
 	try {
 		const apiKey = requiredEnv("CAMPAI_API_KEY");
@@ -358,14 +373,17 @@ export const POST = async (request: NextRequest) => {
 			.join(" | ")
 			.slice(0, 140);
 
-		const noteContent = [
+		const noteLines = [
 			empfaengerName ? `Empfänger: ${empfaengerName}` : "",
 			empfaengerEmail ? `E-Mail: ${empfaengerEmail}` : "",
 			bereitsBeglichen ? "Status: Rechnung bereits beglichen" : "Status: offen",
 			notiz ? `Notiz: ${notiz}` : "",
-		]
-			.filter(Boolean)
-			.join("\n");
+		];
+
+		const noteContent = buildReceiptUserNote({
+			userId: data.user.id,
+			lines: noteLines,
+		});
 
 		// ── Kreditor-Konto: vom Client übergeben oder Fallback auf Env ──
 		const finalCreditorAccount = clientCreditorAccount ?? creditorAccount;
@@ -384,7 +402,7 @@ export const POST = async (request: NextRequest) => {
 			description,
 			refund: false,
 			positions,
-			tags: ["API"],
+			tags,
 			queueReceiptDocument: false,
 			electronic: false,
 			receiptFileId,

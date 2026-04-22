@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
@@ -205,6 +207,8 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const tags = buildCampaiBookingTags(data.user);
+
   const body = (await request.json()) as {
     address?: AddressPayload;
     email?: string;
@@ -399,7 +403,7 @@ export const POST = async (request: NextRequest) => {
     positions,
     doNotSendReceipt: !sendByMail,
     queueReceiptDocument: sendByMail,
-    tags: ["API"],
+    tags,
   };
 
   const response = await fetch(
