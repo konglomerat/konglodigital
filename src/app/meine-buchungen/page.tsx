@@ -96,6 +96,12 @@ export default async function MeineBuchungenPage({
                 Datum
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Beleg
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Betrag
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
                 Beschreibung
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
@@ -107,8 +113,8 @@ export default async function MeineBuchungenPage({
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
                 Status
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
-                Betrag
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Sender/Empfänger
               </th>
             </tr>
           </thead>
@@ -116,7 +122,7 @@ export default async function MeineBuchungenPage({
             {receipts.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-4 py-8 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Keine Buchungen gefunden.
@@ -127,6 +133,12 @@ export default async function MeineBuchungenPage({
                 <tr key={receipt.id}>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {formatDate(receipt.date)}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {receipt.receiptNumber || "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-zinc-800 dark:text-zinc-100">
+                    {formatAmount(receipt.amountInCents, receipt.currency)}
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {receipt.description || "—"}
@@ -140,8 +152,8 @@ export default async function MeineBuchungenPage({
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {receipt.status || "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-zinc-800 dark:text-zinc-100">
-                    {formatAmount(receipt.amountInCents, receipt.currency)}
+                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {receipt.accountName || "—"}
                   </td>
                 </tr>
               ))

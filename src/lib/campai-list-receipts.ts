@@ -9,12 +9,14 @@ const CAMPAI_RECEIPTS_MAX_PAGES = 10;
 export type CampaiUserReceipt = {
   id: string;
   date: string | null;
+  receiptNumber: string | null;
   description: string | null;
   type: string | null;
   workArea: string | null;
   status: string | null;
   amountInCents: number | null;
   currency: string | null;
+  accountName: string | null;
 };
 
 export type CampaiReceiptsDebugEntry = {
@@ -31,11 +33,13 @@ type RawReceiptPosition = {
 type RawReceipt = {
   _id?: string;
   receiptDate?: string | null;
+  receiptNumber?: string | null;
   description?: string | null;
   type?: string | null;
   paymentStatus?: string | null;
   totalGrossAmount?: number | null;
   currency?: string | null;
+  accountName?: string | null;
   positions?: RawReceiptPosition[];
 };
 
@@ -156,12 +160,14 @@ const normalizeReceipt = (
   return {
     id,
     date: normalizeDate(item.receiptDate),
+    receiptNumber: normalizeString(item.receiptNumber),
     description: normalizeString(item.description),
     type: extractReceiptType(item),
     workArea: extractWorkArea(item, costCenterLabels),
     status: extractStatus(item),
     amountInCents: normalizeAmountInCents(item.totalGrossAmount),
     currency: normalizeString(item.currency),
+    accountName: normalizeString(item.accountName),
   } satisfies CampaiUserReceipt;
 };
 
