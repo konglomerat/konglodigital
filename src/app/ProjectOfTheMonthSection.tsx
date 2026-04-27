@@ -3,6 +3,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { buildProjectPath } from "@/lib/project-path";
+import {
+  getResourcePosterUrl,
+  getResourcePreviewUrl,
+  normalizeResourceMediaPosters,
+  normalizeResourceMediaPreviews,
+} from "@/lib/resource-media";
 
 type ProjectOfTheMonthRow = {
   id: string;
@@ -11,6 +17,8 @@ type ProjectOfTheMonthRow = {
   description: string | null;
   image: string | null;
   images: string[] | null;
+  media_previews?: unknown;
+  media_posters?: unknown;
   tags: string[] | null;
   workshop_resource_id: string | null;
 };
@@ -23,7 +31,7 @@ const loadProjectsOfTheMonth = async () => {
     const { data } = await supabase
       .from("resources")
       .select(
-        "id, pretty_title, name, description, image, images, tags, workshop_resource_id",
+        "id, pretty_title, name, description, image, images, media_previews, media_posters, tags, workshop_resource_id",
       )
       .ilike("type", "project")
       .contains("tags", [PROJECT_OF_THE_MONTH_TAG])
@@ -57,12 +65,22 @@ const loadProjectsOfTheMonth = async () => {
         .map((row) => [row.id, row.name ?? null]),
     );
 
-    return rows.map((row) => ({
+    return rows.map((row) => {
+      const mediaUrl = row.images?.find(Boolean) ?? row.image;
+      return {
       id: row.id,
       prettyTitle: row.pretty_title,
       name: row.name,
       description: row.description ?? undefined,
-      mediaUrl: row.images?.find(Boolean) ?? row.image,
+      mediaUrl,
+      previewMediaUrl: getResourcePreviewUrl(
+        mediaUrl,
+        normalizeResourceMediaPreviews(row.media_previews),
+      ),
+      posterUrl: getResourcePosterUrl(
+        mediaUrl,
+        normalizeResourceMediaPosters(row.media_posters),
+      ),
       workshopName:
         row.workshop_resource_id != null
           ? (workshopById.get(row.workshop_resource_id) ?? null)
@@ -71,7 +89,8 @@ const loadProjectsOfTheMonth = async () => {
         row.tags?.filter(
           (tag) => tag.trim().toLowerCase() !== PROJECT_OF_THE_MONTH_TAG,
         ) ?? [],
-    }));
+      };
+    });
   } catch {
     return [] as Array<{
       id: string;
@@ -79,6 +98,8 @@ const loadProjectsOfTheMonth = async () => {
       name: string;
       description?: string;
       mediaUrl?: string | null;
+      previewMediaUrl?: string | null;
+      posterUrl?: string | null;
       workshopName?: string | null;
       tags?: string[];
     }>;

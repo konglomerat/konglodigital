@@ -349,16 +349,7 @@ export default async function ProjectDetailPage({
                 </div>
 
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  {project.author.bio ??
-                    (project.authorName
-                      ? tx(
-                          "Dieser Name wurde manuell für das Projekt hinterlegt.",
-                          "de",
-                        )
-                      : tx(
-                          "Für dieses Profil ist noch keine Kurzbiografie hinterlegt.",
-                          "de",
-                        ))}
+                  {project.author?.bio}
                 </p>
               </div>
             ) : (
@@ -411,7 +402,9 @@ export default async function ProjectDetailPage({
                 <p className="font-semibold text-foreground">
                   {tx("Aktualisiert", "de")}
                 </p>
-                <p className="mt-1 text-muted-foreground">{updatedDateLabel ?? "-"}</p>
+                <p className="mt-1 text-muted-foreground">
+                  {updatedDateLabel ?? "-"}
+                </p>
               </div>
             </div>
           </section>

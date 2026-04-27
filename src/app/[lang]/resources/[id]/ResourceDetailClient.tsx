@@ -19,6 +19,7 @@ import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
 import { getPointFeatures } from "../map-features";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
+import CampaiRentalPanel from "./CampaiRentalPanel";
 
 type Resource = ResourcePayload;
 
@@ -205,6 +206,17 @@ export default function ResourceDetailClient({
                       ? [resource.image]
                       : []
                 }
+                previewMedia={
+                  (resource.images?.length
+                    ? resource.images
+                    : resource.image
+                      ? [resource.image]
+                      : []
+                  ).map(
+                    (mediaUrl) =>
+                      mediaUrl,
+                  )
+                }
                 title={resource.name}
                 closeLabel={tx("Close")}
                 previousLabel={tx("Prev")}
@@ -310,6 +322,7 @@ export default function ResourceDetailClient({
                   </a>
                 </div>
               ) : null}
+              <CampaiRentalPanel resourceId={resourceId} tx={tx} />
             </div>
           )}
         </section>

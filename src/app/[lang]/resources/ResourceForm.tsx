@@ -12,10 +12,10 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Reorder } from "motion/react";
-import Select from "react-select";
 
 import Button from "../components/Button";
 import MdxEditorInput from "../components/MdxEditorInput";
+import ReactSelect from "../components/ui/react-select";
 import ResourceMapCrosshair from "./ResourceMapCrosshair";
 import { RESOURCE_TYPES, type ResourceType } from "./resource-types";
 import { useI18n } from "@/i18n/client";
@@ -137,7 +137,10 @@ export default function ResourceForm({
   const themeStyles = styles[theme];
   const helpText =
     fileHelpText ??
-    tx("Choose one or more images or PDFs (JPG/PNG/WebP/PDF).", "en");
+    tx(
+      "Choose one or more images, videos or PDFs (JPG/PNG/WebP/MP4/PDF).",
+      "en",
+    );
   const resizeWidth = maxImageWidth ?? 2000;
   const selectedRelatedResourceIds = watch("relatedResourceIds") ?? "";
   const selectedPriority = watch("priority") ?? "3";
@@ -299,7 +302,7 @@ export default function ResourceForm({
       <div className="flex flex-col gap-2 md:col-span-2">
         <label className={themeStyles.label}>{tx("Related resources")}</label>
         <input type="hidden" {...register("relatedResourceIds")} />
-        <Select<RelatedResourceSelectOption, true>
+        <ReactSelect<RelatedResourceSelectOption, true>
           isMulti
           options={relatedResourceOptions}
           value={relatedResourceValue}
@@ -395,7 +398,7 @@ export default function ResourceForm({
         </div>
         <input
           type="file"
-          accept="image/*,.pdf,application/pdf"
+          accept="image/*,video/*,.pdf,application/pdf"
           multiple
           onChange={async (event) => {
             const files = Array.from(event.target.files ?? []);
@@ -494,13 +497,24 @@ export default function ResourceForm({
                         </span>
                       </div>
                     ) : (
-                      <img
-                        src={preview}
-                        alt={`Preview ${renderIndex + 1}`}
-                        draggable={false}
-                        onDragStart={(event) => event.preventDefault()}
-                        className="h-16 w-16 rounded-xl object-cover"
-                      />
+                      mediaKind === "video" ? (
+                        <video
+                          src={preview}
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          className="h-16 w-16 rounded-xl bg-foreground object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={preview}
+                          alt={`Preview ${renderIndex + 1}`}
+                          draggable={false}
+                          onDragStart={(event) => event.preventDefault()}
+                          className="h-16 w-16 rounded-xl object-cover"
+                        />
+                      )
                     )}
 
                     <button
@@ -518,20 +532,28 @@ export default function ResourceForm({
       </div>
 
       {showSubmitButton ? (
-        <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-          <Button
-            type="submit"
-            kind="primary"
-            size="large"
-            icon={submitIcon}
-            disabled={saving || isProcessingImages}
-          >
-            {isProcessingImages
-              ? tx("Loading location data...")
-              : saving
-                ? tx("Saving...")
-                : submitLabel}
-          </Button>
+        <div className="md:col-span-2">
+          <p className="mb-3 text-sm text-muted-foreground">
+            {tx(
+              "Bitte stelle sicher, dass alle Rechte am Material hast. Danke!",
+              "de",
+            )}
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="submit"
+              kind="primary"
+              size="large"
+              icon={submitIcon}
+              disabled={saving || isProcessingImages}
+            >
+              {isProcessingImages
+                ? tx("Loading location data...")
+                : saving
+                  ? tx("Saving...")
+                  : submitLabel}
+            </Button>
+          </div>
         </div>
       ) : null}
     </form>

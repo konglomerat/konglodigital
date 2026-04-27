@@ -99,6 +99,8 @@ create table if not exists public.resources (
   description text,
   image text,
   images text[],
+  media_previews jsonb,
+  media_posters jsonb,
   project_links jsonb,
   social_media_consent boolean not null default false,
   workshop_resource_id uuid references public.resources (id) on delete set null,
@@ -122,11 +124,20 @@ alter table public.resources add column if not exists gps_altitude double precis
 alter table public.resources add column if not exists priority smallint not null default 3;
 alter table public.resources add column if not exists map_features jsonb;
 alter table public.resources add column if not exists pretty_title text;
+alter table public.resources add column if not exists media_previews jsonb;
+alter table public.resources add column if not exists media_posters jsonb;
 alter table public.resources add column if not exists project_links jsonb;
 alter table public.resources add column if not exists social_media_consent boolean not null default false;
 alter table public.resources add column if not exists workshop_resource_id uuid references public.resources (id) on delete set null;
 alter table public.resources add column if not exists author_name text;
 alter table public.resources add column if not exists publish_date date;
+alter table public.resources add column if not exists campai_resource_id text;
+alter table public.resources add column if not exists campai_offer_id text;
+alter table public.resources add column if not exists campai_default_rate_id text;
+alter table public.resources add column if not exists campai_site_id text;
+alter table public.resources add column if not exists campai_sync_status text not null default 'pending';
+alter table public.resources add column if not exists campai_last_synced_at timestamptz;
+alter table public.resources add column if not exists campai_sync_error text;
 
 create table if not exists public.resource_pretty_titles (
   resource_id uuid not null references public.resources (id) on delete cascade,

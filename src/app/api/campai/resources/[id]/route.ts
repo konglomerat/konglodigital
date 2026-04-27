@@ -8,18 +8,32 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
+import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   normalizeProjectLinks,
   parseProjectLinksJson,
   type ProjectLink,
 } from "@/lib/project-links";
-import { isImageMimeType, isImageUrl } from "@/lib/resource-media";
+import {
+  isImageMimeType,
+  isImageUrl,
+  isVideoMimeType,
+  normalizeResourceMediaPosters,
+  normalizeResourceMediaPreviews,
+  type ResourceMediaPosterMap,
+  type ResourceMediaPreviewMap,
+} from "@/lib/resource-media";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
   upsertGpsPointFeature,
 } from "@/app/[lang]/resources/map-features";
+import {
+  generateVideoPosterBuffer,
+  generateVideoPreviewBuffer,
+} from "@/lib/video-preview";
+import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
 
 const splitList = (value: string) =>
   value
@@ -48,6 +62,8 @@ const toPriority = (value: unknown) => {
 
 const parseRelatedResourceIds = (value: string) =>
   Array.from(new Set(splitList(value))).slice(0, 30);
+
+const PROJECT_RESOURCE_TYPE = "project";
 
 const resolveRelatedResourceIds = async (
   supabase: ReturnType<typeof createSupabaseRouteClient>["supabase"],
@@ -727,6 +743,8 @@ type ResourceRow = {
   description: string | null;
   image: string | null;
   images?: string[] | null;
+  media_previews?: unknown;
+  media_posters?: unknown;
   project_links?: StoredProjectLink[] | null;
   social_media_consent?: boolean | null;
   workshop_resource_id?: string | null;
@@ -766,6 +784,8 @@ const toResourcePayload = (
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
+    mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
+  mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
   publishDate: row.publish_date ?? null,
   projectLinks: normalizeProjectLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
@@ -811,6 +831,102 @@ const uploadResourceMedia = async (
   }
   if (!data?.path) {
     throw new Error("Supabase image upload failed.");
+  }
+
+  return data.path;
+};
+
+const buildPreviewVideoPath = (path: string) => {
+  const lastDotIndex = path.lastIndexOf(".");
+  return lastDotIndex === -1
+    ? `${path}-preview.mp4`
+    : `${path.slice(0, lastDotIndex)}-preview.mp4`;
+};
+
+const buildPosterImagePath = (path: string) => {
+  const lastDotIndex = path.lastIndexOf(".");
+  return lastDotIndex === -1
+    ? `${path}-poster.jpg`
+    : `${path.slice(0, lastDotIndex)}-poster.jpg`;
+};
+
+const filterMediaPreviews = (
+  mediaPreviews: ResourceMediaPreviewMap,
+  mediaUrls: string[],
+) =>
+  Object.fromEntries(
+    Object.entries(mediaPreviews).filter(([originalUrl]) =>
+      mediaUrls.includes(originalUrl),
+    ),
+  ) as ResourceMediaPreviewMap;
+
+const filterMediaPosters = (
+  mediaPosters: ResourceMediaPosterMap,
+  mediaUrls: string[],
+) =>
+  Object.fromEntries(
+    Object.entries(mediaPosters).filter(([originalUrl]) =>
+      mediaUrls.includes(originalUrl),
+    ),
+  ) as ResourceMediaPosterMap;
+
+const uploadVideoPreview = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  file: File,
+  bucket: string,
+  originalPath: string,
+) => {
+  const preview = await generateVideoPreviewBuffer(file);
+  if (!preview) {
+    return null;
+  }
+
+  const previewPath = buildPreviewVideoPath(originalPath);
+  const { data, error } = await supabase.storage.from(bucket).upload(
+    previewPath,
+    preview.data,
+    {
+      contentType: preview.contentType,
+      upsert: true,
+    },
+  );
+
+  if (error) {
+    throw new Error(error.message || "Supabase video preview upload failed.");
+  }
+  if (!data?.path) {
+    throw new Error("Supabase video preview upload failed.");
+  }
+
+  return data.path;
+};
+
+const uploadVideoPoster = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  file: File,
+  bucket: string,
+  originalPath: string,
+) => {
+  const poster = await generateVideoPosterBuffer(file);
+  if (!poster) {
+    return null;
+  }
+
+  const posterPath = buildPosterImagePath(originalPath);
+  const { data, error } = await supabase.storage.from(bucket).upload(
+    posterPath,
+    poster.data,
+    {
+      contentType: poster.contentType,
+      upsert: true,
+    },
+  );
+
+  if (error) {
+    throw new Error(error.message || "Supabase video poster upload failed.");
+  }
+  if (!data?.path) {
+    throw new Error("Supabase video poster upload failed.");
   }
 
   return data.path;
@@ -887,7 +1003,9 @@ export const PUT = async (
   const { data: existingResource, error: existingResourceError } =
     await supabase
       .from("resources")
-      .select("owner_id, map_features, image, images, workshop_resource_id")
+      .select(
+        "owner_id, map_features, image, images, media_previews, media_posters, workshop_resource_id",
+      )
       .eq("id", params.id)
       .maybeSingle();
 
@@ -964,6 +1082,10 @@ export const PUT = async (
       : existingImageUrl
         ? [existingImageUrl]
         : [];
+  const existingMediaPreviews =
+    normalizeResourceMediaPreviews(existingResource.media_previews) ?? {};
+  const existingMediaPosters =
+    normalizeResourceMediaPosters(existingResource.media_posters) ?? {};
 
   const hasExplicitImageUrl = payload.imageUrl !== undefined;
   const hasExplicitImageUrls = payload.imageUrls !== undefined;
@@ -984,6 +1106,8 @@ export const PUT = async (
 
   let imageUpdated =
     payload.imageFiles.length > 0 || imageUrlChanged || imageUrlsChanged;
+  let nextMediaPreviews = existingMediaPreviews;
+  let nextMediaPosters = existingMediaPosters;
 
   if (
     imageUpdated &&
@@ -1000,6 +1124,8 @@ export const PUT = async (
     const baseImages = payload.imageUrls ?? [];
     const maxImageWidth = payload.maxImageWidth ?? 2000;
     const uploadedUrls: string[] = [];
+    const uploadedMediaPreviews: ResourceMediaPreviewMap = {};
+    const uploadedMediaPosters: ResourceMediaPosterMap = {};
     for (const file of payload.imageFiles) {
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${params.id}/${crypto.randomUUID()}-${safeName}`;
@@ -1010,14 +1136,48 @@ export const PUT = async (
         path,
         maxImageWidth,
       );
-      uploadedUrls.push(
-        supabase.storage.from(storageBucket).getPublicUrl(storedPath).data
-          .publicUrl,
-      );
+      const publicUrl = supabase.storage
+        .from(storageBucket)
+        .getPublicUrl(storedPath).data.publicUrl;
+      uploadedUrls.push(publicUrl);
+
+      if (isVideoMimeType(file.type)) {
+        const previewPath = await uploadVideoPreview(
+          adminSupabase,
+          file,
+          storageBucket,
+          path,
+        );
+        if (previewPath) {
+          uploadedMediaPreviews[publicUrl] = supabase.storage
+            .from(storageBucket)
+            .getPublicUrl(previewPath).data.publicUrl;
+        }
+
+        const posterPath = await uploadVideoPoster(
+          adminSupabase,
+          file,
+          storageBucket,
+          path,
+        );
+        if (posterPath) {
+          uploadedMediaPosters[publicUrl] = supabase.storage
+            .from(storageBucket)
+            .getPublicUrl(posterPath).data.publicUrl;
+        }
+      }
     }
     imageUrls = [...baseImages, ...uploadedUrls];
     imageUrl = imageUrls[0] ?? null;
     imageUpdated = true;
+    nextMediaPreviews = {
+      ...filterMediaPreviews(existingMediaPreviews, baseImages),
+      ...uploadedMediaPreviews,
+    };
+    nextMediaPosters = {
+      ...filterMediaPosters(existingMediaPosters, baseImages),
+      ...uploadedMediaPosters,
+    };
     if (imageFiles.length > 0) {
       const vision = await describeImage(request, imageFiles).catch(() => null);
       if (vision) {
@@ -1032,6 +1192,22 @@ export const PUT = async (
         }
       }
     }
+  }
+
+  if (imageUpdated && payload.imageFiles.length === 0) {
+    const nextMediaUrls = Array.isArray(imageUrls)
+      ? imageUrls.filter(
+          (entry): entry is string =>
+            typeof entry === "string" && entry.length > 0,
+        )
+      : imageUrl
+        ? [imageUrl]
+        : [];
+    nextMediaPreviews = filterMediaPreviews(
+      existingMediaPreviews,
+      nextMediaUrls,
+    );
+    nextMediaPosters = filterMediaPosters(existingMediaPosters, nextMediaUrls);
   }
 
   if (imageUpdated) {
@@ -1084,6 +1260,10 @@ export const PUT = async (
   if (imageUpdated) {
     updateData.image = imageUrl ?? null;
     updateData.images = imageUrls ?? null;
+    updateData.media_previews =
+      Object.keys(nextMediaPreviews).length > 0 ? nextMediaPreviews : null;
+    updateData.media_posters =
+      Object.keys(nextMediaPosters).length > 0 ? nextMediaPosters : null;
     updateData.gps_altitude = gpsData?.altitude ?? null;
     updateData.map_features = upsertGpsPointFeature({
       features: normalizeResourceMapFeatures(existingResource.map_features),
@@ -1126,8 +1306,15 @@ export const PUT = async (
   resource.relatedResources =
     (await getRelatedResourcesMap(supabase, [resource.id])).get(resource.id) ??
     [];
+  const syncResult = await syncResourceToCampai(
+    adminSupabase,
+    updated as ResourceSyncRecord,
+  );
   revalidateTag("resources", { expire: 0 });
-  return NextResponse.json({ resource });
+  if (resource.type === PROJECT_RESOURCE_TYPE) {
+    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  }
+  return NextResponse.json({ resource, campaiSync: syncResult });
 };
 
 export const DELETE = async (
@@ -1151,7 +1338,7 @@ export const DELETE = async (
 
   const { data: row, error: fetchError } = await supabase
     .from("resources")
-    .select("name, image, images, owner_id")
+    .select("name, image, images, media_previews, media_posters, owner_id, type")
     .eq("id", params.id)
     .single();
 
@@ -1200,6 +1387,14 @@ export const DELETE = async (
   if (Array.isArray(row.images)) {
     urls.push(...row.images.filter((value) => typeof value === "string"));
   }
+  const mediaPreviews = normalizeResourceMediaPreviews(row.media_previews);
+  if (mediaPreviews) {
+    urls.push(...Object.values(mediaPreviews));
+  }
+  const mediaPosters = normalizeResourceMediaPosters(row.media_posters);
+  if (mediaPosters) {
+    urls.push(...Object.values(mediaPosters));
+  }
   const paths = urls
     .map((url) => extractStoragePath(url, storageBucket))
     .filter((path): path is string => Boolean(path));
@@ -1209,5 +1404,8 @@ export const DELETE = async (
   }
 
   revalidateTag("resources", { expire: 0 });
+  if (typeof row.type === "string" && row.type.toLowerCase() === PROJECT_RESOURCE_TYPE) {
+    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  }
   return NextResponse.json({ success: true });
 };

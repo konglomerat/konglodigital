@@ -43,7 +43,8 @@ const config: ModeConfig = {
   submitLabel: "Create resource",
   submitIcon: faPlus,
   theme: "dark",
-  fileHelpText: "Choose one or more images or PDFs (JPG/PNG/WebP/PDF).",
+  fileHelpText:
+    "Choose one or more images, videos or PDFs (JPG/PNG/WebP/MP4/PDF).",
   maxImageWidth: 2000,
   backLink: {
     href: "/resources",

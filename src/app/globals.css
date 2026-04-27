@@ -318,9 +318,116 @@ input[type="search"]::-webkit-search-cancel-button {
   min-height: 2rem;
 }
 
+.mdx-editor-input .mdxeditor {
+  --accentBase: color-mix(in srgb, var(--primary-soft) 45%, var(--card));
+  --accentBgSubtle: color-mix(in srgb, var(--primary-soft) 60%, var(--card));
+  --accentBg: color-mix(in srgb, var(--primary-soft) 78%, var(--card));
+  --accentBgHover: color-mix(in srgb, var(--primary-soft) 88%, var(--card));
+  --accentBgActive: color-mix(in srgb, var(--primary-soft) 96%, var(--card));
+  --accentLine: var(--primary-border);
+  --accentBorder: var(--primary-border);
+  --accentBorderHover: var(--primary);
+  --accentSolid: var(--primary);
+  --accentSolidHover: color-mix(in srgb, var(--primary) 88%, var(--foreground));
+  --accentText: var(--primary);
+  --accentTextContrast: var(--foreground);
+  --basePageBg: var(--card);
+  --baseBase: var(--card);
+  --baseBgSubtle: color-mix(in srgb, var(--muted) 58%, var(--card));
+  --baseBg: color-mix(in srgb, var(--muted) 78%, var(--card));
+  --baseBgHover: color-mix(in srgb, var(--muted) 88%, var(--card));
+  --baseBgActive: var(--muted);
+  --baseLine: var(--border);
+  --baseBorder: var(--border);
+  --baseBorderHover: var(--input);
+  --baseSolid: var(--muted-foreground);
+  --baseSolidHover: var(--foreground);
+  --baseText: var(--muted-foreground);
+  --baseTextContrast: var(--foreground);
+  --error-color: var(--destructive);
+}
+
+.mdx-editor-input .mdxeditor-root-contenteditable,
+.mdx-editor-input .mdxeditor-popup-container {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.mdx-editor-input .mdxeditor-toolbar button,
+.mdx-editor-input .mdxeditor-toolbar [role="button"] {
+  border-radius: 0.5rem;
+  color: var(--foreground);
+}
+
+.mdx-editor-input .mdxeditor-toolbar button:focus-visible,
+.mdx-editor-input .mdxeditor-toolbar [role="button"]:focus-visible,
+.mdx-editor-input .mdxeditor-select-content [role="option"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.mdx-editor-input [class*="_toolbarNodeKindSelectTrigger_"],
+.mdx-editor-input [class*="_toolbarButtonSelectTrigger_"],
+.mdx-editor-input [class*="_selectTrigger_"],
+.mdx-editor-input [class*="_linkDialogInputWrapper_"] {
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.mdx-editor-input [class*="_toolbarNodeKindSelectContainer_"],
+.mdx-editor-input [class*="_toolbarButtonDropdownContainer_"],
+.mdx-editor-input [class*="_toolbarCodeBlockLanguageSelectContent_"],
+.mdx-editor-input [class*="_selectContainer_"],
+.mdx-editor-input [class*="_dialogContent_"],
+.mdx-editor-input [class*="_largeDialogContent_"],
+.mdx-editor-input [class*="_popoverContent_"],
+.mdx-editor-input [class*="_linkDialogPopoverContent_"] {
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--foreground);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.mdx-editor-input [class*="_linkDialogInput_"],
+.mdx-editor-input [class*="_dialogInput_"] {
+  color: var(--foreground);
+  caret-color: var(--foreground);
+}
+
+.mdx-editor-input [class*="_linkDialogInput_"]::placeholder,
+.mdx-editor-input [class*="_dialogInput_"]::placeholder {
+  color: var(--muted-foreground);
+}
+
+.mdx-editor-input [class*="_primaryActionButton_"],
+.mdx-editor-input [class*="_primaryButton_"] {
+  background: var(--primary);
+  border-color: var(--primary-border);
+  color: var(--primary-foreground);
+}
+
+.mdx-editor-input [class*="_secondaryButton_"] {
+  background: var(--muted);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.mdx-editor-input [class*="_toolbarNodeKindSelectTrigger_"]:focus-visible,
+.mdx-editor-input [class*="_toolbarButtonSelectTrigger_"]:focus-visible,
+.mdx-editor-input [class*="_selectTrigger_"]:focus-visible,
+.mdx-editor-input [class*="_linkDialogInputWrapper_"]:focus-within,
+.mdx-editor-input [class*="_primaryButton_"]:focus-visible,
+.mdx-editor-input [class*="_secondaryButton_"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 70%, transparent);
+  outline-offset: 2px;
+}
+
 .mdx-editor-input__content {
   min-height: 18rem;
   padding: 1rem;
+  background: var(--card);
+  caret-color: var(--foreground);
   color: var(--foreground);
   font-size: 0.95rem;
   line-height: 1.65;

@@ -7,6 +7,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { localizePathname, type Locale } from "@/i18n/config";
 import { buildProjectPath } from "@/lib/project-path";
 import {
+  getResourcePosterUrl,
+  getResourcePreviewUrl,
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
   isVideoUrl,
@@ -78,6 +80,14 @@ export function ProjectCardMedia({
     ) ?? (project.image ? [project.image] : []);
   const heroMediaUrl = mediaItems[0] ?? null;
   const hoverMediaUrl = mediaItems[1] ?? null;
+  const heroPreviewUrl = getResourcePreviewUrl(
+    heroMediaUrl,
+    project.mediaPreviews,
+  );
+  const heroPosterUrl = getResourcePosterUrl(
+    heroMediaUrl,
+    project.mediaPosters,
+  );
   const heroMediaKind = getResourceMediaKindFromUrl(heroMediaUrl);
   const hoverMediaKind = getResourceMediaKindFromUrl(hoverMediaUrl);
   const heroMediaIsVideo = isVideoUrl(heroMediaUrl);
@@ -93,7 +103,7 @@ export function ProjectCardMedia({
           width: 960,
           resize: "cover",
         })
-      : heroMediaUrl;
+      : heroPreviewUrl;
   const hoverThumbnailUrl =
     hasHoverImage && hoverMediaUrl
       ? hoverMediaKind === "image"
@@ -119,7 +129,8 @@ export function ProjectCardMedia({
         >
           {heroMediaIsVideo ? (
             <video
-              src={heroMediaUrl}
+              src={heroPreviewUrl ?? heroMediaUrl}
+              poster={heroPosterUrl ?? undefined}
               className={`${
                 featured
                   ? "h-full min-h-[260px] w-full bg-foreground object-cover"

@@ -39,7 +39,11 @@ import {
 } from "../components/ui/tooltip";
 import ResourcesMapView from "./ResourcesMapView";
 import { RESOURCE_TYPES } from "./resource-types";
-import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
+import {
+  getResourcePosterUrl,
+  getResourceMediaKindFromUrl,
+  getResourcePreviewUrl,
+} from "@/lib/resource-media";
 
 type Resource = ResourcePayload;
 
@@ -149,11 +153,20 @@ const ResourceCard = ({
       : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const hasCarousel = images.length > 1;
-  const displayImages = images.map((image) =>
-    getResourceMediaKindFromUrl(image) === "image"
-      ? getSupabaseThumbnailUrl(image, 900)
-      : image,
-  );
+  const displayImages = images.map((image) => {
+    const mediaKind = getResourceMediaKindFromUrl(image);
+    if (mediaKind === "image") {
+      return getSupabaseThumbnailUrl(image, 900);
+    }
+    if (mediaKind === "video") {
+      return (
+        getResourcePosterUrl(image, resource.mediaPosters) ??
+        getResourcePreviewUrl(image, resource.mediaPreviews) ??
+        image
+      );
+    }
+    return getResourcePreviewUrl(image, resource.mediaPreviews) ?? image;
+  });
   const slideWidth = "100%";
   const slideGap = "0rem";
   const trackOffset = `calc(-${activeIndex} * (${slideWidth} + ${slideGap}))`;
@@ -220,6 +233,12 @@ const ResourceCard = ({
                         PDF
                       </span>
                     </div>
+                  ) : getResourceMediaKindFromUrl(images[index]) === "video" ? (
+                    <img
+                      src={image}
+                      alt={resource.name}
+                      className="block h-full w-full object-cover"
+                    />
                   ) : (
                     <img
                       src={image}
@@ -373,6 +392,7 @@ export default function ResourcesPageClient({
     initialErrorMessage,
   );
   const [loadingMore, setLoadingMore] = useState(false);
+  const [syncingCampai, setSyncingCampai] = useState(false);
   const normalizedSearchTerm = searchTerm.trim();
   const loading = false;
   const resourceTypes = useMemo(
@@ -947,6 +967,28 @@ export default function ResourcesPageClient({
     tx,
   ]);
 
+  const syncAllToCampai = useCallback(async () => {
+    setSyncingCampai(true);
+    try {
+      const response = await fetch("/api/campai/resources/sync", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? tx("Campai sync failed.", "en"));
+      }
+      setErrorMessage(null);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : tx("Campai sync failed.", "en"),
+      );
+    } finally {
+      setSyncingCampai(false);
+    }
+  }, [tx]);
+
   return (
     <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
       <PageTitle
@@ -976,6 +1018,13 @@ export default function ResourcesPageClient({
             label: tx("New resource"),
             icon: faPlus,
             kind: "primary",
+          },
+          {
+            label: syncingCampai
+              ? tx("Syncing…", "en")
+              : tx("Sync all to Campai", "en"),
+            onClick: syncAllToCampai,
+            disabled: syncingCampai,
           },
         ]}
       />

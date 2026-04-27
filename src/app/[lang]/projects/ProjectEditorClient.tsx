@@ -13,7 +13,6 @@ import {
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Reorder } from "motion/react";
-import Select from "react-select";
 import {
   faFilePdf,
   faFloppyDisk,
@@ -24,6 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import ReactSelect from "../components/ui/react-select";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
@@ -697,7 +697,7 @@ export default function ProjectEditorClient({
             />
             <p className="text-xs text-muted-foreground">
               {tx(
-                "Unterstutzt Uberschriften, Listen, Links, Hervorhebungen und eingebettete Bilder.",
+                "Unterstützt Überschriften, Listen, Links, Hervorhebungen und eingebettete Bilder.",
                 "de",
               )}
             </p>
@@ -934,7 +934,7 @@ export default function ProjectEditorClient({
               control={control}
               name="workshopResourceId"
               render={() => (
-                <Select<ResourceOption, false>
+                <ReactSelect<ResourceOption, false>
                   options={workshopOptions}
                   value={selectedWorkshopOption}
                   isLoading={optionsLoading}
@@ -958,7 +958,7 @@ export default function ProjectEditorClient({
               control={control}
               name="usedResourceIds"
               render={() => (
-                <Select<ResourceOption, true>
+                <ReactSelect<ResourceOption, true>
                   isMulti
                   options={usedResourceOptions}
                   value={selectedUsedResourceOptions}
@@ -1035,20 +1035,28 @@ export default function ProjectEditorClient({
             </span>
           </label>
 
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button
-              type="submit"
-              kind="primary"
-              size="medium"
-              icon={mode === "edit" ? faFloppyDisk : faPlus}
-              disabled={saving}
-            >
-              {saving
-                ? tx("Speichert…", "de")
-                : mode === "edit"
-                  ? tx("Projekt speichern", "de")
-                  : tx("Projekt erstellen", "de")}
-            </Button>
+          <div className="pt-2">
+            <p className="mb-3 text-sm text-muted-foreground">
+              {tx(
+                "Bitte stelle sicher, dass alle Rechte am Material hast. Danke!",
+                "de",
+              )}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="submit"
+                kind="primary"
+                size="medium"
+                icon={mode === "edit" ? faFloppyDisk : faPlus}
+                disabled={saving}
+              >
+                {saving
+                  ? tx("Speichert…", "de")
+                  : mode === "edit"
+                    ? tx("Projekt speichern", "de")
+                    : tx("Projekt erstellen", "de")}
+              </Button>
+            </div>
           </div>
         </section>
       </form>

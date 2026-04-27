@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getMemberProfileByUserId,
@@ -12,6 +14,10 @@ import {
   getProjectAuthorName,
 } from "@/lib/project-authors";
 import { resolveResourceIdByPrettyTitle } from "@/lib/resource-pretty-title";
+import {
+  normalizeResourceMediaPosters,
+  normalizeResourceMediaPreviews,
+} from "@/lib/resource-media";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
@@ -31,6 +37,8 @@ type ProjectRow = {
   description: string | null;
   image: string | null;
   images?: string[] | null;
+  media_previews?: unknown;
+  media_posters?: unknown;
   project_links?: StoredProjectLink[] | null;
   social_media_consent?: boolean | null;
   workshop_resource_id?: string | null;
@@ -58,6 +66,8 @@ export type ProjectRecord = ResourcePayload & {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const PROJECTS_CACHE_TAG = "projects";
 
 const getRelatedResourcesMap = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
@@ -291,6 +301,8 @@ const toProjectRecord = (
     description: row.description ?? undefined,
     image: row.image ?? null,
     images: row.images ?? (row.image ? [row.image] : undefined),
+    mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
+    mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
     publishDate: row.publish_date ?? null,
     gpsLatitude: pointFeature?.point[1] ?? null,
     gpsLongitude: pointFeature?.point[0] ?? null,
@@ -324,12 +336,12 @@ const resolveProjectId = async (
   return resolved?.resourceId ?? null;
 };
 
-export const loadProjects = async (limit = 60) => {
+const loadProjectsFromDb = async (limit = 60) => {
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase
     .from("resources")
     .select(
-      "id, pretty_title, owner_id, author_name, name, description, image, images, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
+      "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
     )
     .ilike("type", "project")
     .order("publish_date", { ascending: false, nullsFirst: false })
@@ -346,7 +358,14 @@ export const loadProjects = async (limit = 60) => {
   return rows.map((row) => toProjectRecord(row, [], workshopById, null));
 };
 
-export const loadProjectByIdentifier = async (identifier: string) => {
+const getCachedProjects = unstable_cache(loadProjectsFromDb, ["projects-list-v1"], {
+  revalidate: 60 * 60 * 24 * 7,
+  tags: [PROJECTS_CACHE_TAG],
+});
+
+export const loadProjects = async (limit = 60) => getCachedProjects(limit);
+
+const loadProjectByIdentifierFromDb = async (identifier: string) => {
   const supabase = createSupabaseAdminClient();
   const projectId = await resolveProjectId(supabase, identifier);
   if (!projectId) {
@@ -356,7 +375,7 @@ export const loadProjectByIdentifier = async (identifier: string) => {
   const { data } = await supabase
     .from("resources")
     .select(
-      "id, pretty_title, owner_id, author_name, name, description, image, images, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features, type",
+      "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features, type",
     )
     .eq("id", projectId)
     .ilike("type", "project")
@@ -380,3 +399,15 @@ export const loadProjectByIdentifier = async (identifier: string) => {
     author,
   );
 };
+
+const getCachedProjectByIdentifier = unstable_cache(
+  loadProjectByIdentifierFromDb,
+  ["projects-by-identifier-v1"],
+  {
+    revalidate: 60 * 60 * 24 * 7,
+    tags: [PROJECTS_CACHE_TAG],
+  },
+);
+
+export const loadProjectByIdentifier = async (identifier: string) =>
+  getCachedProjectByIdentifier(identifier);

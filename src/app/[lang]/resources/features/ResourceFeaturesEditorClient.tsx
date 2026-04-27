@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Select from "react-select";
 import { useForm } from "react-hook-form";
 import {
   faArrowLeft,
@@ -22,6 +21,7 @@ import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 
 import Button from "../../components/Button";
 import MdxEditorInput from "../../components/MdxEditorInput";
+import ReactSelect from "../../components/ui/react-select";
 import ResourceForm from "../ResourceForm";
 import {
   DEFAULT_INDOOR_TILESET_ID,
@@ -2240,7 +2240,7 @@ export default function ResourceFeaturesEditorClient({
         <div>
           {!hasFixedResource ? (
             <div className="mt-3 max-w-xl">
-              <Select<ResourceSelectOption, false>
+              <ReactSelect<ResourceSelectOption, false>
                 inputId="resource-select"
                 value={selectedResourceOption}
                 onChange={(option) =>
@@ -2445,7 +2445,9 @@ export default function ResourceFeaturesEditorClient({
               ) : null}
             </div>
             {mapFeatures.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{tx("No features yet.")}</p>
+              <p className="text-sm text-muted-foreground">
+                {tx("No features yet.")}
+              </p>
             ) : (
               <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
                 {mapFeatures.map((feature, index) => {

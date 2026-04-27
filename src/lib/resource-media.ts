@@ -1,5 +1,8 @@
 export type ResourceMediaKind = "image" | "video" | "document" | "unknown";
 
+export type ResourceMediaPreviewMap = Record<string, string>;
+export type ResourceMediaPosterMap = Record<string, string>;
+
 type SupabaseRenderResizeMode = "cover" | "contain" | "fill";
 
 type SupabaseRenderImageOptions = {
@@ -97,6 +100,60 @@ export const isVideoUrl = (value?: string | null) =>
 
 export const isPdfUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "document";
+
+const normalizeResourceMediaMap = (
+  value: unknown,
+): Record<string, string> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value).filter(
+    ([originalUrl, previewUrl]) =>
+      typeof originalUrl === "string" &&
+      originalUrl.length > 0 &&
+      typeof previewUrl === "string" &&
+      previewUrl.length > 0,
+  ) as Array<[string, string]>;
+
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries);
+};
+
+export const normalizeResourceMediaPreviews = (
+  value: unknown,
+): ResourceMediaPreviewMap | undefined =>
+  normalizeResourceMediaMap(value) as ResourceMediaPreviewMap | undefined;
+
+export const normalizeResourceMediaPosters = (
+  value: unknown,
+): ResourceMediaPosterMap | undefined =>
+  normalizeResourceMediaMap(value) as ResourceMediaPosterMap | undefined;
+
+export const getResourcePreviewUrl = (
+  originalUrl?: string | null,
+  mediaPreviews?: ResourceMediaPreviewMap | null,
+) => {
+  if (!originalUrl) {
+    return originalUrl ?? null;
+  }
+
+  return mediaPreviews?.[originalUrl] ?? originalUrl;
+};
+
+export const getResourcePosterUrl = (
+  originalUrl?: string | null,
+  mediaPosters?: ResourceMediaPosterMap | null,
+) => {
+  if (!originalUrl) {
+    return originalUrl ?? null;
+  }
+
+  return mediaPosters?.[originalUrl] ?? null;
+};
 
 export const getSupabaseRenderedImageUrl = (
   url: string,

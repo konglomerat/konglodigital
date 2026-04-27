@@ -8,6 +8,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { hasRight } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
+import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
 import { describeInventoryImages } from "@/lib/openai-vision";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
@@ -15,11 +16,24 @@ import {
   parseProjectLinksJson,
   type ProjectLink,
 } from "@/lib/project-links";
-import { isImageMimeType, isImageUrl } from "@/lib/resource-media";
+import {
+  isImageMimeType,
+  isImageUrl,
+  isVideoMimeType,
+  normalizeResourceMediaPosters,
+  normalizeResourceMediaPreviews,
+  type ResourceMediaPosterMap,
+  type ResourceMediaPreviewMap,
+} from "@/lib/resource-media";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
 } from "@/app/[lang]/resources/map-features";
+import {
+  generateVideoPosterBuffer,
+  generateVideoPreviewBuffer,
+} from "@/lib/video-preview";
+import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
 
 const splitList = (value: string) =>
   value
@@ -604,6 +618,82 @@ const describeImage = async (files: File[], imageUrls?: string[] | null) => {
   return describeInventoryImages({ files, imageUrls });
 };
 
+const buildPreviewVideoPath = (path: string) => {
+  const lastDotIndex = path.lastIndexOf(".");
+  return lastDotIndex === -1
+    ? `${path}-preview.mp4`
+    : `${path.slice(0, lastDotIndex)}-preview.mp4`;
+};
+
+const buildPosterImagePath = (path: string) => {
+  const lastDotIndex = path.lastIndexOf(".");
+  return lastDotIndex === -1
+    ? `${path}-poster.jpg`
+    : `${path.slice(0, lastDotIndex)}-poster.jpg`;
+};
+
+const uploadVideoPreview = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  file: File,
+  bucket: string,
+  originalPath: string,
+) => {
+  const preview = await generateVideoPreviewBuffer(file);
+  if (!preview) {
+    return null;
+  }
+
+  const previewPath = buildPreviewVideoPath(originalPath);
+  const { data, error } = await supabase.storage.from(bucket).upload(
+    previewPath,
+    preview.data,
+    {
+      contentType: preview.contentType,
+      upsert: true,
+    },
+  );
+
+  if (error) {
+    throw new Error(error.message || "Supabase video preview upload failed.");
+  }
+  if (!data?.path) {
+    throw new Error("Supabase video preview upload failed.");
+  }
+
+  return data.path;
+};
+
+const uploadVideoPoster = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  file: File,
+  bucket: string,
+  originalPath: string,
+) => {
+  const poster = await generateVideoPosterBuffer(file);
+  if (!poster) {
+    return null;
+  }
+
+  const posterPath = buildPosterImagePath(originalPath);
+  const { data, error } = await supabase.storage.from(bucket).upload(
+    posterPath,
+    poster.data,
+    {
+      contentType: poster.contentType,
+      upsert: true,
+    },
+  );
+
+  if (error) {
+    throw new Error(error.message || "Supabase video poster upload failed.");
+  }
+  if (!data?.path) {
+    throw new Error("Supabase video poster upload failed.");
+  }
+
+  return data.path;
+};
+
 const uploadResourceMedia = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   file: File,
@@ -650,6 +740,8 @@ type ResourceRow = {
   description: string | null;
   image: string | null;
   images?: string[] | null;
+  media_previews?: unknown;
+  media_posters?: unknown;
   project_links?: StoredProjectLink[] | null;
   social_media_consent?: boolean | null;
   workshop_resource_id?: string | null;
@@ -687,6 +779,8 @@ const toResourcePayload = (
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
+  mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
+  mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
   projectLinks: normalizeProjectLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
   workshopResource:
@@ -842,6 +936,8 @@ export const POST = async (request: NextRequest) => {
 
   let imageUrl: string | null = payload.imageUrl ?? null;
   let imageUrls: string[] | null = payload.imageUrls ?? null;
+  let mediaPreviews: ResourceMediaPreviewMap | null = null;
+  let mediaPosters: ResourceMediaPosterMap | null = null;
   const imageFiles = payload.imageFiles.filter((file) =>
     isImageMimeType(file.type),
   );
@@ -873,6 +969,8 @@ export const POST = async (request: NextRequest) => {
   if (payload.imageFiles.length > 0) {
     const maxImageWidth = payload.maxImageWidth ?? 2000;
     const uploadedUrls: string[] = [];
+    const nextMediaPreviews: ResourceMediaPreviewMap = {};
+    const nextMediaPosters: ResourceMediaPosterMap = {};
     for (const file of payload.imageFiles) {
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${crypto.randomUUID()}-${safeName}`;
@@ -883,13 +981,43 @@ export const POST = async (request: NextRequest) => {
         path,
         maxImageWidth,
       );
-      uploadedUrls.push(
-        supabase.storage.from(storageBucket).getPublicUrl(storedPath).data
-          .publicUrl,
-      );
+      const publicUrl = supabase.storage
+        .from(storageBucket)
+        .getPublicUrl(storedPath).data.publicUrl;
+      uploadedUrls.push(publicUrl);
+
+      if (isVideoMimeType(file.type)) {
+        const previewPath = await uploadVideoPreview(
+          adminSupabase,
+          file,
+          storageBucket,
+          path,
+        );
+        if (previewPath) {
+          nextMediaPreviews[publicUrl] = supabase.storage
+            .from(storageBucket)
+            .getPublicUrl(previewPath).data.publicUrl;
+        }
+
+        const posterPath = await uploadVideoPoster(
+          adminSupabase,
+          file,
+          storageBucket,
+          path,
+        );
+        if (posterPath) {
+          nextMediaPosters[publicUrl] = supabase.storage
+            .from(storageBucket)
+            .getPublicUrl(posterPath).data.publicUrl;
+        }
+      }
     }
     imageUrls = uploadedUrls;
     imageUrl = uploadedUrls[0] ?? null;
+    mediaPreviews =
+      Object.keys(nextMediaPreviews).length > 0 ? nextMediaPreviews : null;
+    mediaPosters =
+      Object.keys(nextMediaPosters).length > 0 ? nextMediaPosters : null;
   } else if (Array.isArray(imageUrls) && imageUrls.length > 0) {
     imageUrl = imageUrl ?? imageUrls[0] ?? null;
   }
@@ -946,6 +1074,8 @@ export const POST = async (request: NextRequest) => {
       workshop_resource_id: workshopResourceId,
       image: imageUrl,
       images: imageUrls,
+      media_previews: mediaPreviews,
+      media_posters: mediaPosters,
       map_features: mapFeatures,
       gps_altitude: gpsData?.altitude ?? null,
       owner_id: data.user.id,
@@ -980,6 +1110,13 @@ export const POST = async (request: NextRequest) => {
     (await getRelatedResourcesMap(writeSupabase, [resource.id])).get(
       resource.id,
     ) ?? [];
+  const syncResult = await syncResourceToCampai(
+    adminSupabase,
+    created as ResourceSyncRecord,
+  );
   revalidateTag("resources", { expire: 0 });
-  return NextResponse.json({ id: resource.id, resource });
+  if (resource.type === INVENTORY_HIDDEN_RESOURCE_TYPE) {
+    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  }
+  return NextResponse.json({ id: resource.id, resource, campaiSync: syncResult });
 };

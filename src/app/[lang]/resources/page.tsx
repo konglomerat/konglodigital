@@ -3,6 +3,10 @@ import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import ResourcesPageClient from "./ResourcesPageClient";
 import { normalizeResourceMapFeatures } from "./map-features";
+import {
+  normalizeResourceMediaPosters,
+  normalizeResourceMediaPreviews,
+} from "@/lib/resource-media";
 
 type StoredCategory = {
   name?: string;
@@ -16,6 +20,8 @@ type ResourceRow = {
   description: string | null;
   image: string | null;
   images?: string[] | null;
+  media_previews?: unknown;
+  media_posters?: unknown;
   gps_altitude?: number | null;
   type: string | null;
   priority?: number | null;
@@ -39,6 +45,8 @@ const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
+  mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
+  mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
   gpsAltitude: row.gps_altitude ?? null,
   type: row.type ?? undefined,
   priority: row.priority ?? null,

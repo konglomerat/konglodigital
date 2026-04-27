@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { jsPDF } from "jspdf";
 import { PDFDocument } from "pdf-lib";
-import SelectInput from "react-select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBolt,
@@ -36,6 +35,7 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import ReactSelect from "../components/ui/react-select";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
   FormField,
@@ -812,7 +812,9 @@ export default function BuchungenPage() {
                       Nur leere Felder füllen
                     </label>
                     {extractMessage ? (
-                      <p className="text-xs text-muted-foreground">{extractMessage}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {extractMessage}
+                      </p>
                     ) : null}
                   </div>
                 ) : null}
@@ -906,7 +908,7 @@ export default function BuchungenPage() {
               </FormField>
               <FormField label="Bereich" hint="Werkbereich auswählen">
                 <input type="hidden" {...register("area")} />
-                <SelectInput<AreaOption, false>
+                <ReactSelect<AreaOption, false>
                   options={areaOptions}
                   value={selectedAreaOption}
                   onChange={(option) => {
@@ -927,20 +929,6 @@ export default function BuchungenPage() {
                     </span>
                   )}
                   className="text-sm"
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      minHeight: 40,
-                      borderColor: state.isFocused ? "#60a5fa" : "#e4e4e7",
-                      borderRadius: 8,
-                      boxShadow: "none",
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isFocused ? "#f4f4f5" : "white",
-                      color: "#18181b",
-                    }),
-                  }}
                 />
               </FormField>
               <FormField label="#Projekt" hint="Hashtag nicht vergessen!">

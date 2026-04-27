@@ -13,6 +13,8 @@ type ProjectSlide = {
   name: string;
   description?: string;
   mediaUrl?: string | null;
+  previewMediaUrl?: string | null;
+  posterUrl?: string | null;
   workshopName?: string | null;
   tags?: string[];
   ctaLabel: string;
@@ -137,7 +139,8 @@ export default function ProjectOfTheMonthCarousel({
           {activeProject.mediaUrl ? (
             isVideoUrl(activeProject.mediaUrl) ? (
               <video
-                src={activeProject.mediaUrl}
+                src={activeProject.previewMediaUrl ?? activeProject.mediaUrl}
+                poster={activeProject.posterUrl ?? undefined}
                 controls
                 autoPlay
                 muted
@@ -147,7 +150,7 @@ export default function ProjectOfTheMonthCarousel({
               />
             ) : (
               <img
-                src={activeProject.mediaUrl}
+                src={activeProject.previewMediaUrl ?? activeProject.mediaUrl}
                 alt={activeProject.name}
                 className="absolute inset-0 h-full w-full object-cover"
               />

@@ -1,3 +1,8 @@
+import type {
+  ResourceMediaPosterMap,
+  ResourceMediaPreviewMap,
+} from "@/lib/resource-media";
+
 export type RawResource = Record<string, unknown>;
 
 export type ResourceCategory = {
@@ -42,6 +47,8 @@ export type ResourcePayload = {
   description?: string;
   image?: string | null;
   images?: string[] | null;
+  mediaPreviews?: ResourceMediaPreviewMap | null;
+  mediaPosters?: ResourceMediaPosterMap | null;
   publishDate?: string | null;
   gpsLatitude?: number | null;
   gpsLongitude?: number | null;
