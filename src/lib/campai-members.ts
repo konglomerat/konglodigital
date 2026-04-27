@@ -85,8 +85,8 @@ const toStringArray = (value: unknown): string[] => {
 
 const extractContacts = (payload: unknown): Record<string, unknown>[] => {
   if (Array.isArray(payload)) {
-    return payload.filter(
-      (entry): entry is Record<string, unknown> => Boolean(toRecord(entry)),
+    return payload.filter((entry): entry is Record<string, unknown> =>
+      Boolean(toRecord(entry)),
     );
   }
 
@@ -113,8 +113,8 @@ const extractContacts = (payload: unknown): Record<string, unknown>[] => {
 
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
-      return candidate.filter(
-        (entry): entry is Record<string, unknown> => Boolean(toRecord(entry)),
+      return candidate.filter((entry): entry is Record<string, unknown> =>
+        Boolean(toRecord(entry)),
       );
     }
   }
@@ -299,10 +299,7 @@ export const searchCampaiMemberContacts = async (params: {
 };
 
 export const splitCampaiContactName = (name: string): CampaiNameParts => {
-  const normalizedName = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const normalizedName = name.trim().split(/\s+/).filter(Boolean);
 
   if (normalizedName.length === 0) {
     return { firstName: "", lastName: "" };
@@ -324,6 +321,8 @@ export const buildCampaiProfileData = (contact: CampaiMemberContact) => ({
   campai_debtor_account: contact.debtorAccount,
   campai_segments: contact.segments,
   campai_name: contact.name,
+  avatar_url: null,
+  short_bio: null,
 });
 
 export const getCampaiActiveMemberContactByEmail = async (email: string) => {
@@ -355,7 +354,10 @@ export const getCampaiActiveMemberContactByEmail = async (email: string) => {
       return null;
     }
 
-    if (typeof totalCount === "number" && offset + CAMP_AI_MEMBER_PAGE_SIZE >= totalCount) {
+    if (
+      typeof totalCount === "number" &&
+      offset + CAMP_AI_MEMBER_PAGE_SIZE >= totalCount
+    ) {
       return null;
     }
   }

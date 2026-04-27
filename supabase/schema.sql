@@ -93,11 +93,17 @@ $$;
 create table if not exists public.resources (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references auth.users (id) on delete set null,
+  author_name text,
   name text not null,
   pretty_title text,
   description text,
   image text,
   images text[],
+  media_previews jsonb,
+  media_posters jsonb,
+  project_links jsonb,
+  social_media_consent boolean not null default false,
+  workshop_resource_id uuid references public.resources (id) on delete set null,
   gps_latitude double precision,
   gps_longitude double precision,
   gps_altitude double precision,
@@ -107,6 +113,7 @@ create table if not exists public.resources (
   tags text[],
   categories jsonb,
   map_features jsonb,
+  publish_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -117,6 +124,20 @@ alter table public.resources add column if not exists gps_altitude double precis
 alter table public.resources add column if not exists priority smallint not null default 3;
 alter table public.resources add column if not exists map_features jsonb;
 alter table public.resources add column if not exists pretty_title text;
+alter table public.resources add column if not exists media_previews jsonb;
+alter table public.resources add column if not exists media_posters jsonb;
+alter table public.resources add column if not exists project_links jsonb;
+alter table public.resources add column if not exists social_media_consent boolean not null default false;
+alter table public.resources add column if not exists workshop_resource_id uuid references public.resources (id) on delete set null;
+alter table public.resources add column if not exists author_name text;
+alter table public.resources add column if not exists publish_date date;
+alter table public.resources add column if not exists campai_resource_id text;
+alter table public.resources add column if not exists campai_offer_id text;
+alter table public.resources add column if not exists campai_default_rate_id text;
+alter table public.resources add column if not exists campai_site_id text;
+alter table public.resources add column if not exists campai_sync_status text not null default 'pending';
+alter table public.resources add column if not exists campai_last_synced_at timestamptz;
+alter table public.resources add column if not exists campai_sync_error text;
 
 create table if not exists public.resource_pretty_titles (
   resource_id uuid not null references public.resources (id) on delete cascade,
@@ -239,6 +260,8 @@ create table if not exists public.member_profiles (
   campai_debtor_account integer,
   campai_segments text[] not null default '{}'::text[],
   campai_name text,
+  avatar_url text,
+  short_bio text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -248,6 +271,8 @@ alter table public.member_profiles add column if not exists campai_member_number
 alter table public.member_profiles add column if not exists campai_debtor_account integer;
 alter table public.member_profiles add column if not exists campai_segments text[] not null default '{}'::text[];
 alter table public.member_profiles add column if not exists campai_name text;
+alter table public.member_profiles add column if not exists avatar_url text;
+alter table public.member_profiles add column if not exists short_bio text;
 alter table public.member_profiles add column if not exists updated_at timestamptz not null default now();
 
 create unique index if not exists member_profiles_campai_contact_id_key
@@ -260,11 +285,24 @@ create unique index if not exists member_profiles_campai_member_number_key
 alter table public.member_profiles enable row level security;
 
 drop policy if exists "Users can read own member profile" on public.member_profiles;
+drop policy if exists "Users can insert own member profile" on public.member_profiles;
+drop policy if exists "Users can update own member profile" on public.member_profiles;
 
 create policy "Users can read own member profile"
 on public.member_profiles
 for select
 using (auth.uid() = user_id);
+
+create policy "Users can insert own member profile"
+on public.member_profiles
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update own member profile"
+on public.member_profiles
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 create table if not exists public.user_access (
   user_id uuid primary key references auth.users (id) on delete cascade,
@@ -302,6 +340,18 @@ create table if not exists public.access_code_inbox (
     check (extracted_from in ('subject', 'body', 'none'))
 );
 
+alter table public.access_code_inbox enable row level security;
+
+drop policy if exists "Authenticated users can read access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can insert access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can update access code inbox" on public.access_code_inbox;
+drop policy if exists "Authenticated users can delete access code inbox" on public.access_code_inbox;
+
+create policy "Authenticated users can read access code inbox"
+on public.access_code_inbox
+for select
+using (auth.role() = 'authenticated');
+
 create index if not exists access_code_inbox_created_at_idx
   on public.access_code_inbox (created_at desc);
 
@@ -323,7 +373,9 @@ with normalized_member_profiles as (
       ]
       else '{}'::text[]
     end as campai_segments,
-    nullif(btrim(users.raw_user_meta_data ->> 'campai_name'), '') as campai_name
+    nullif(btrim(users.raw_user_meta_data ->> 'campai_name'), '') as campai_name,
+    nullif(btrim(users.raw_user_meta_data ->> 'avatar_url'), '') as avatar_url,
+    nullif(btrim(users.raw_user_meta_data ->> 'short_bio'), '') as short_bio
   from auth.users as users
 )
 insert into public.member_profiles (
@@ -332,7 +384,9 @@ insert into public.member_profiles (
   campai_member_number,
   campai_debtor_account,
   campai_segments,
-  campai_name
+  campai_name,
+  avatar_url,
+  short_bio
 )
 select
   user_id,
@@ -340,13 +394,17 @@ select
   campai_member_number,
   campai_debtor_account,
   campai_segments,
-  campai_name
+  campai_name,
+  avatar_url,
+  short_bio
 from normalized_member_profiles
 where campai_contact_id is not null
   or campai_member_number is not null
   or campai_debtor_account is not null
   or array_length(campai_segments, 1) is not null
   or campai_name is not null
+  or avatar_url is not null
+  or short_bio is not null
 on conflict (user_id)
 do update set
   campai_contact_id = excluded.campai_contact_id,
@@ -354,6 +412,8 @@ do update set
   campai_debtor_account = excluded.campai_debtor_account,
   campai_segments = excluded.campai_segments,
   campai_name = excluded.campai_name,
+  avatar_url = excluded.avatar_url,
+  short_bio = excluded.short_bio,
   updated_at = now();
 
 with normalized_user_access as (

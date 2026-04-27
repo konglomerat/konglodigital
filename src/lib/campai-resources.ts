@@ -1,3 +1,8 @@
+import type {
+  ResourceMediaPosterMap,
+  ResourceMediaPreviewMap,
+} from "@/lib/resource-media";
+
 export type RawResource = Record<string, unknown>;
 
 export type ResourceCategory = {
@@ -10,11 +15,18 @@ export type RelatedResource = {
   id: string;
   name?: string;
   prettyTitle?: string | null;
+  image?: string | null;
+};
+
+export type ProjectLink = {
+  label: string;
+  url: string;
 };
 
 export type ResourceMapFeature = {
   id: string;
   layer: string;
+  description?: string;
 } & (
   | {
       geometryType: "Polygon";
@@ -29,10 +41,15 @@ export type ResourceMapFeature = {
 export type ResourcePayload = {
   id: string;
   prettyTitle?: string | null;
+  ownerId?: string | null;
+  authorName?: string | null;
   name: string;
   description?: string;
   image?: string | null;
   images?: string[] | null;
+  mediaPreviews?: ResourceMediaPreviewMap | null;
+  mediaPosters?: ResourceMediaPosterMap | null;
+  publishDate?: string | null;
   gpsLatitude?: number | null;
   gpsLongitude?: number | null;
   gpsAltitude?: number | null;
@@ -42,6 +59,9 @@ export type ResourcePayload = {
   tags?: string[];
   categories?: ResourceCategory[];
   relatedResources?: RelatedResource[];
+  workshopResource?: RelatedResource | null;
+  projectLinks?: ProjectLink[];
+  socialMediaConsent?: boolean;
   mapFeatures?: ResourceMapFeature[];
 };
 
@@ -158,10 +178,48 @@ const toRelatedResources = (value: unknown): RelatedResource[] | undefined => {
             : typeof record.pretty_title === "string"
               ? record.pretty_title
               : null,
+        image:
+          toStringArray(record.images)?.[0] ?? extractImageUrl(record.image),
       };
     })
     .filter((entry): entry is RelatedResource => entry !== null);
   return relatedResources.length > 0 ? relatedResources : undefined;
+};
+
+const toProjectLinks = (value: unknown): ProjectLink[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const projectLinks = value
+    .map((entry): ProjectLink | null => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+
+      const record = entry as Record<string, unknown>;
+      const label =
+        typeof record.label === "string"
+          ? record.label.trim()
+          : typeof record.title === "string"
+            ? record.title.trim()
+            : "";
+      const url =
+        typeof record.url === "string"
+          ? record.url.trim()
+          : typeof record.href === "string"
+            ? record.href.trim()
+            : "";
+
+      if (!label || !url) {
+        return null;
+      }
+
+      return { label, url };
+    })
+    .filter((entry): entry is ProjectLink => entry !== null);
+
+  return projectLinks.length > 0 ? projectLinks : undefined;
 };
 
 const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
@@ -174,7 +232,29 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
         return null;
       }
       const row = entry as Record<string, unknown>;
-      if (typeof row.id !== "string" || typeof row.layer !== "string") {
+      const properties =
+        row.properties && typeof row.properties === "object"
+          ? (row.properties as Record<string, unknown>)
+          : null;
+      const id =
+        typeof row.id === "string"
+          ? row.id
+          : typeof properties?.id === "string"
+            ? properties.id
+            : null;
+      const layer =
+        typeof row.layer === "string"
+          ? row.layer
+          : typeof properties?.layer === "string"
+            ? properties.layer
+            : null;
+      const description =
+        typeof row.description === "string"
+          ? row.description.trim() || undefined
+          : typeof properties?.description === "string"
+            ? properties.description.trim() || undefined
+            : undefined;
+      if (!id || !layer) {
         return null;
       }
       const geometryType =
@@ -198,8 +278,9 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
           return null;
         }
         return {
-          id: row.id,
-          layer: row.layer,
+          id,
+          layer,
+          description,
           geometryType: "Point",
           point: [lng, lat],
         };
@@ -225,8 +306,9 @@ const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
         return null;
       }
       return {
-        id: row.id,
-        layer: row.layer,
+        id,
+        layer,
+        description,
         geometryType: "Polygon",
         coordinates,
       };
@@ -283,6 +365,10 @@ export const normalizeResource = (
       (item.prettyTitle as string | undefined) ??
       (item.pretty_title as string | undefined) ??
       null,
+    ownerId:
+      (item.owner_id as string | undefined) ??
+      (item.ownerId as string | undefined) ??
+      null,
     name,
     description,
     image,
@@ -292,6 +378,16 @@ export const normalizeResource = (
     tags,
     categories,
     relatedResources,
+    workshopResource: toRelatedResources(
+      info.workshopResource ?? item.workshopResource,
+    )?.[0],
+    projectLinks: toProjectLinks(info.projectLinks ?? item.projectLinks),
+    socialMediaConsent:
+      typeof info.socialMediaConsent === "boolean"
+        ? info.socialMediaConsent
+        : typeof item.socialMediaConsent === "boolean"
+          ? item.socialMediaConsent
+          : undefined,
     mapFeatures,
   } satisfies ResourcePayload;
 };

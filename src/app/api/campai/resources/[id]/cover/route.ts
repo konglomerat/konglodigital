@@ -7,13 +7,13 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
+import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { createOpenAIClient } from "@/lib/openai";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
-} from "@/app/resources/map-features";
+} from "@/app/[lang]/resources/map-features";
 
 type StoredCategory = {
   name?: string;
@@ -197,11 +197,12 @@ export const POST = async (
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    if (existing.owner_id !== data.user.id) {
-      return NextResponse.json(
-        { error: "Insufficient permissions." },
-        { status: 403 },
-      );
+    const editPermissionError = getResourceEditPermissionError({
+      hasEditRight: canEditByRight,
+      isOwner: existing.owner_id === data.user.id,
+    });
+    if (editPermissionError) {
+      return NextResponse.json({ error: editPermissionError }, { status: 403 });
     }
   }
 

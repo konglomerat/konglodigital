@@ -7,7 +7,9 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import Button from "./components/Button";
+import Button from "./[lang]/components/Button";
+import ProjectOfTheMonthSection from "./ProjectOfTheMonthSection";
+import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import heroHelloImage from "./hero-hello.jpg";
 import inventoryImage from "./inventory.jpg";
 import inventoryBwImage from "./inventory-bw.jpg";
@@ -15,6 +17,9 @@ import calendarImage from "./calendar.jpg";
 import calendarBwImage from "./calendar-bw.jpg";
 import print3dImage from "./3dprint.jpg";
 import print3dBwImage from "./3dprint-bw.jpg";
+import projectsImage from "./projects.jpg";
+import projectsBwImage from "./projects-bw.jpg";
+import { getServerI18n } from "@/i18n/server";
 
 type QuickAction = {
   href: string;
@@ -22,82 +27,66 @@ type QuickAction = {
   description: string;
 };
 
-const quickActions: QuickAction[] = [
-  {
-    href: "/checkout",
-    title: "Zum Warenkorb",
-    description: "Direkt zu offenen Druckjobs und Produkten.",
-  },
-  {
-    href: "/resources",
-    title: "Inventar ansehen",
-    description: "Werkzeuge, Materialien und Standorte durchsuchen.",
-  },
-  {
-    href: "/calendar",
-    title: "Kalender öffnen",
-    description: "Termine, Workshops und Belegungen prüfen.",
-  },
-  /*
-  {
-    href: "/products",
-    title: "Produkte finden",
-    description: "Materialien und Services schnell auswählen.",
-  },
-  {
-    href: "/account",
-    title: "Mein Profil",
-    description: "Persönliche Daten und Einstellungen verwalten.",
-  },
-  {
-    href: "/invoices",
-    title: "Rechnungen",
-    description: "Rechnungen und Abrechnungen an einem Ort.",
-  },*/
-];
-
-const workflowSteps = [
-  {
-    title: "1. Entdecken",
-    text: "Finde Werkzeuge, freie Termine und passende Produkte.",
-  },
-  {
-    title: "2. Nutzen",
-    text: "Starte deinen Prozess mit wenigen Klicks und klaren Wegen.",
-  },
-  {
-    title: "3. Verwalten",
-    text: "Behalte Käufe, Beiträge und Unterlagen im Blick.",
-  },
-];
-
 export default async function Home() {
+  const { tx } = await getServerI18n();
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
+
+  const quickActions: QuickAction[] = [
+    {
+      href: "/checkout",
+      title: tx("Zum Warenkorb", "de"),
+      description: tx("Direkt zu offenen Druckjobs und Produkten.", "de"),
+    },
+    {
+      href: "/resources",
+      title: tx("Inventar ansehen", "de"),
+      description: tx(
+        "Werkzeuge, Materialien und Standorte durchsuchen.",
+        "de",
+      ),
+    },
+    {
+      href: "/calendar",
+      title: tx("Kalender öffnen", "de"),
+      description: tx("Termine, Workshops und Belegungen prüfen.", "de"),
+    },
+    {
+      href: "/projects",
+      title: tx("Projekte entdecken", "de"),
+      description: tx(
+        "Umbauten, Prototypen und Werkstattprojekte ansehen.",
+        "de",
+      ),
+    },
+  ];
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
       <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
         <div className="order-2 md:order-1">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Willkommen
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
+            {tx("Willkommen", "de")}
           </p>
-          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-zinc-900 md:text-5xl">
+          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-foreground md:text-5xl">
             Konglo
             <br />
             digital
           </h1>
-          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-600 md:text-base">
-            Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.
+          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-base">
+            {tx(
+              "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
+              "de",
+            )}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button href="/resources" kind="primary" size="medium">
-              Zum Inventar
+              {tx("Zum Inventar", "de")}
             </Button>
             <Button href="/calendar" kind="secondary" size="medium">
-              Termine ansehen
+              {tx("Termine ansehen", "de")}
             </Button>
           </div>
         </div>
@@ -125,47 +114,53 @@ export default async function Home() {
       </section>
 
       {!isAuthenticated ? (
-        <section className="rounded-2xl bg-blue-700 p-5 shadow-sm ring-1 ring-blue-600 md:p-6">
-          <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">
-            Neu hier? So funktioniert die Registrierung
+        <section className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-sm ring-1 ring-primary md:p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-primary-foreground md:text-2xl">
+            {tx("Neu hier? So funktioniert die Registrierung", "de")}
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faUserPlus} className="h-4 w-4" />
-                <span>Wer kann sich registrieren?</span>
+                <span>{tx("Wer kann sich registrieren?", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage
-                auch andere Personen.
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+                {tx(
+                  "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
+                  "de",
+                )}
               </p>
             </article>
 
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
-                <span>Automatische Freischaltung</span>
+                <span>{tx("Automatische Freischaltung", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich
-                beim Konglomerat angemeldet hast.
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+                {tx(
+                  "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
+                  "de",
+                )}
               </p>
             </article>
-
             <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-white md:text-base">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
                 <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
-                <span>Wenn es nicht klappt</span>
+                <span>{tx("Wenn es nicht klappt", "de")}</span>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-100 md:text-base">
-                Schreib uns an{" "}
+              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+                {tx("Schreib uns an", "de")}{" "}
                 <a
                   href="mailto:vorstand@konglomerat.org"
-                  className="font-medium text-cyan-100 underline underline-offset-2 hover:text-white dark:text-blue-300 dark:hover:text-blue-200"
+                  className="font-medium text-primary-soft underline underline-offset-2 hover:text-primary-foreground"
                 >
                   vorstand@konglomerat.org
-                </a>
-                , wenn du eine andere E-Mail-Adresse nutzen möchtest.
+                </a>{" "}
+                {tx(
+                  ", wenn du eine andere E-Mail-Adresse nutzen möchtest.",
+                  "de",
+                )}
               </p>
             </article>
           </div>
@@ -173,11 +168,11 @@ export default async function Home() {
           <div className="mt-5">
             <Button
               href="/register"
-              kind="primary"
+              kind="secondary"
               size="large"
-              className="w-full bg-blue-500 px-8 py-3 text-base font-bold shadow-lg shadow-blue-900/25 hover:!bg-[#3777ec]"
+              className="w-full border-transparent bg-background px-8 py-3 text-base font-bold text-primary shadow-lg shadow-black/10 hover:bg-background/90 hover:text-primary"
             >
-              Jetzt registrieren
+              {tx("Jetzt registrieren", "de")}
             </Button>
           </div>
         </section>
@@ -186,19 +181,19 @@ export default async function Home() {
       <section>
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
-              Schnellzugriff
+            <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+              {tx("Schnellzugriff", "de")}
             </h2>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-input hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {action.href === "/checkout" ? (
                   <div className="relative">
@@ -239,13 +234,26 @@ export default async function Home() {
                       className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
                     />
                   </div>
+                ) : action.href === "/projects" ? (
+                  <div className="relative">
+                    <Image
+                      src={projectsBwImage}
+                      alt="Projekte"
+                      className="h-auto w-full multiply negative-multiply"
+                    />
+                    <Image
+                      src={projectsImage}
+                      alt="Projekte"
+                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                    />
+                  </div>
                 ) : null}
 
                 <div className="px-5 pb-4">
-                  <h3 className="text-base font-semibold text-blue-600 group-hover:text-blue-700">
+                  <h3 className="text-base font-semibold text-primary group-hover:text-primary/80">
                     {action.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                     {action.description}
                   </p>
                 </div>
@@ -255,15 +263,19 @@ export default async function Home() {
         </div>
       </section>
 
+      <ProjectOfTheMonthSection />
+
+      <ResourceOfTheMonthSection />
+
       <section className="pt-2">
-        <p className="mb-1 text-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
-          Mit ❤️ im Ehrenamt entwickelt
+        <p className="mb-1 text-center text-sm font-medium text-muted-foreground">
+          {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>
         <a
           href="https://konglomerat.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-blue-700 underline underline-offset-4 transition hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-primary underline underline-offset-4 transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           konglomerat.org
         </a>

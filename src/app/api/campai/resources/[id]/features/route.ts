@@ -2,8 +2,8 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { normalizeResourceMapFeatures } from "@/app/resources/map-features";
-import { hasRight } from "@/lib/permissions";
+import { normalizeResourceMapFeatures } from "@/app/[lang]/resources/map-features";
+import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type ResourceRow = {
@@ -92,11 +92,12 @@ export const PUT = async (
   }
 
   const canEditByRight = hasRight(data.user, "resources:edit");
-  if (!canEditByRight && existingResource.owner_id !== data.user.id) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
+  const editPermissionError = getResourceEditPermissionError({
+    hasEditRight: canEditByRight,
+    isOwner: existingResource.owner_id === data.user.id,
+  });
+  if (editPermissionError) {
+    return NextResponse.json({ error: editPermissionError }, { status: 403 });
   }
 
   const payload = (await request.json()) as { mapFeatures?: unknown };
