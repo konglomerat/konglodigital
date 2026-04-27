@@ -96,14 +96,26 @@ const normalizeDate = (value: unknown): string | null => {
     return null;
   }
   const trimmed = value.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return null;
+
+  const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDateMatch) {
+    const normalized = `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : normalized;
   }
+
+  const germanDateMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (germanDateMatch) {
+    const normalized = `${germanDateMatch[3]}-${germanDateMatch[2].padStart(2, "0")}-${germanDateMatch[1].padStart(2, "0")}`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : normalized;
+  }
+
   const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  return trimmed;
+  return date.toISOString().slice(0, 10);
 };
 
 const normalizeDiscount = (value: unknown) => {
@@ -311,6 +323,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   const body = (await request.json()) as {
+    invoiceId?: string;
     address?: AddressPayload;
     email?: string;
     recipientEmail?: string;
@@ -325,6 +338,8 @@ export const POST = async (request: NextRequest) => {
     paid?: boolean;
     paymentMethod?: string;
     paymentCashAccountId?: string;
+    costCenter1?: string | number;
+    positionAccount?: string | number;
     customerNumber?: string | number | Array<string | number>;
     invoiceDate?: string;
     dueDate?: string;
@@ -351,12 +366,19 @@ export const POST = async (request: NextRequest) => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-  const defaultPositionAccount = Number.parseInt(
-    process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
-    10,
-  );
+  const requestedPositionAccount = parsePositiveInt(body.positionAccount);
+  const requestedCostCenter1 = parsePositiveInt(body.costCenter1);
+  const defaultPositionAccount =
+    requestedPositionAccount ??
+    Number.parseInt(
+      process.env.CAMPAI_INVOICE_ACCOUNT ?? requiredEnv("CAMPAI_ACCOUNT"),
+      10,
+    );
   const dueDays = Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10);
-  const defaultCostCenter1 = getValidDefaultCostCenter();
+  const defaultCostCenter1 =
+    requestedCostCenter1 && isValidCampaiCostCenter1(requestedCostCenter1)
+      ? requestedCostCenter1
+      : getValidDefaultCostCenter();
 
   if (Number.isNaN(defaultPositionAccount)) {
     return NextResponse.json(
@@ -365,7 +387,23 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const receiptDate = formatDate(new Date());
+  if (body.costCenter1 !== undefined && !requestedCostCenter1) {
+    return NextResponse.json(
+      { error: "Missing or invalid numeric costCenter1." },
+      { status: 400 },
+    );
+  }
+
+  if (requestedCostCenter1 && !isValidCampaiCostCenter1(requestedCostCenter1)) {
+    return NextResponse.json(
+      {
+        error:
+          "Ungültige Standard-Sphäre. costCenter1 muss mit 1, 2, 3, 4 oder 9 beginnen.",
+      },
+      { status: 400 },
+    );
+  }
+
   const dueDate = formatDate(
     new Date(Date.now() + Math.max(1, dueDays) * 86400000),
   );
@@ -387,6 +425,15 @@ export const POST = async (request: NextRequest) => {
   const payloadReceiptDate = normalizeDate(body.invoiceDate);
   const payloadDueDate = normalizeDate(body.dueDate) ?? dueDate;
   const payloadDeliveryDate = normalizeDate(body.deliveryDate);
+  const existingInvoiceId = normalizeObjectId(body.invoiceId);
+
+  if (body.invoiceId !== undefined && !existingInvoiceId) {
+    return NextResponse.json(
+      { error: "Ungueltige bestehende Campai-Rechnungs-ID." },
+      { status: 400 },
+    );
+  }
+
   if (!payloadReceiptDate) {
     return NextResponse.json(
       { error: "Missing or invalid invoice date." },
@@ -427,7 +474,7 @@ export const POST = async (request: NextRequest) => {
     ),
   );
 
-  let taxCodeByRate = resolveTaxCodeOverrides();
+  const taxCodeByRate = resolveTaxCodeOverrides();
   if (selectedTaxRates.length > 0) {
     const resolvedFromCampai = await resolveCampaiTaxCodesByRate({
       apiKey,
@@ -599,6 +646,7 @@ export const POST = async (request: NextRequest) => {
   };
 
   console.info("Campai invoice payload debug", {
+    existingInvoiceId,
     account: payload.account,
     accountName: payload.accountName,
     customerType: payload.customerType,
@@ -616,26 +664,40 @@ export const POST = async (request: NextRequest) => {
     })),
   });
 
-  const response = await fetch(
-    `https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/invoice`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify(payload),
+  const baseUrl = `https://cloud.campai.com/api/${organizationId}/${mandateId}`;
+  const endpoint = existingInvoiceId
+    ? `${baseUrl}/receipts/invoice/${existingInvoiceId}`
+    : `${baseUrl}/receipts/invoice`;
+  const method = "POST";
+
+  const response = await fetch(endpoint, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
     },
-  );
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     const errorBody = await response.text();
     return NextResponse.json(
-      { error: errorBody || "Campai request failed." },
+      {
+        error:
+          errorBody ||
+          (existingInvoiceId
+            ? "Campai request failed while updating invoice."
+            : "Campai request failed while creating invoice."),
+      },
       { status: response.status },
     );
   }
 
-  const dataResponse = (await response.json()) as { _id?: string };
-  return NextResponse.json({ id: dataResponse._id ?? null });
+  const dataResponse = (await response.json().catch(() => null)) as
+    | { _id?: string; id?: string }
+    | null;
+
+  return NextResponse.json({
+    id: dataResponse?._id ?? dataResponse?.id ?? existingInvoiceId ?? null,
+  });
 };

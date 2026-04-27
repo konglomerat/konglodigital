@@ -217,6 +217,42 @@ set is_current = resource_pretty_titles.pretty_title = resources.pretty_title
 from public.resources as resources
 where resources.id = resource_pretty_titles.resource_id;
 
+create table if not exists public.material_orders (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references auth.users (id) on delete set null,
+  supplier_name text not null default '',
+  supplier_invoice_number text not null default '',
+  supplier_invoice_date date,
+  participant_count integer not null default 0,
+  total_amount_euro numeric(12,2) not null default 0,
+  shipping_amount_euro numeric(12,2) not null default 0,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.material_orders enable row level security;
+
+drop policy if exists "Authenticated users can read material orders" on public.material_orders;
+drop policy if exists "Authenticated users can insert material orders" on public.material_orders;
+drop policy if exists "Authenticated users can update material orders" on public.material_orders;
+
+create policy "Authenticated users can read material orders"
+on public.material_orders
+for select
+using (auth.role() = 'authenticated');
+
+create policy "Authenticated users can insert material orders"
+on public.material_orders
+for insert
+with check (auth.role() = 'authenticated');
+
+create policy "Authenticated users can update material orders"
+on public.material_orders
+for update
+using (auth.role() = 'authenticated')
+with check (auth.role() = 'authenticated');
+
 create table if not exists public.member_profiles (
   user_id uuid primary key references auth.users (id) on delete cascade,
   campai_contact_id text,
