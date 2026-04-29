@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { normalizeResourceMapFeatures } from "@/app/resources/map-features";
+import { normalizeResourceMapFeatures } from "@/app/[lang]/resources/map-features";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type ResourceRow = {

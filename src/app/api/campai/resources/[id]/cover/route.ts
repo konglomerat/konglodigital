@@ -12,7 +12,7 @@ import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getPointFeatures,
   normalizeResourceMapFeatures,
-} from "@/app/resources/map-features";
+} from "@/app/[lang]/resources/map-features";
 
 type StoredCategory = {
   name?: string;

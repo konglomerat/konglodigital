@@ -12,7 +12,7 @@ type ActiveNavLinkProps = ComponentPropsWithoutRef<typeof Link> & {
 export default function ActiveNavLink({
   href,
   className,
-  activeClassName = "text-blue-400",
+  activeClassName = "text-primary",
   exact,
   ...props
 }: ActiveNavLinkProps) {
