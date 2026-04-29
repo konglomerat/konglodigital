@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  addCampaiReceiptNote,
+  buildCampaiReceiptCreatorNote,
+} from "@/lib/campai-receipt-notes";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -253,6 +258,12 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+  const creatorNote = buildCampaiReceiptCreatorNote({
+    user: data.user,
+    memberProfile,
+  });
+
   try {
     const apiKey = requiredEnv("CAMPAI_API_KEY");
     const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
@@ -499,11 +510,32 @@ export const POST = async (request: NextRequest) => {
       alreadyCollected?: boolean;
     };
 
+    const receiptId = dataResponse._id ?? null;
+    let noteWarning: string | undefined;
+
+    if (!receiptId) {
+      noteWarning =
+        "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Ersteller-Notiz konnte nicht angelegt werden.";
+    } else {
+      const noteResult = await addCampaiReceiptNote({
+        apiKey,
+        organizationId,
+        mandateId,
+        receiptId,
+        content: creatorNote,
+      });
+
+      if (!noteResult.ok) {
+        noteWarning = `Beleg erstellt, aber die Ersteller-Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
+      }
+    }
+
     return NextResponse.json({
-      id: dataResponse._id ?? null,
+      id: receiptId,
       alreadyCollected: dataResponse.alreadyCollected ?? false,
       uploadWarning,
       receiptFileId,
+      noteWarning,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

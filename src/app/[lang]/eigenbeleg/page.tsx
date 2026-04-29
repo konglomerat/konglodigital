@@ -16,7 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
-import PageTitle from "../components/PageTitle";
+import BookingPageShell from "../components/ui/BookingPageShell";
+import InternalNoteSection from "../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
   FormField,
@@ -25,6 +26,7 @@ import {
   Select,
   Textarea,
 } from "../components/ui/form";
+import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
 
 const reasonOptions = [
   "Umbuchung",
@@ -974,33 +976,33 @@ export default function EigenbelegPage() {
     const receiptFileName = attachment.fileName;
     const receiptFileContentType = attachment.contentType;
 
-    const storeResponse = await fetch("/api/campai/receipts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const storeResponse = await fetch(
+      `/api/campai/receipts/${values.bookingType === "einnahme" ? "revenue" : "expense"}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: values.reason,
+          occasion: receiptValues.occasion,
+          notes: receiptValues.notes,
+          transactionDate: receiptValues.transactionDate,
+          income: receiptValues.income,
+          expense: receiptValues.expense,
+          transferAmount: receiptValues.transferAmount,
+          senderName: receiptValues.senderName,
+          receiverName: receiptValues.receiverName,
+          counterpartyAccount: values.counterpartyAccount,
+          counterpartyName: values.counterpartyName,
+          costCenter2: values.associationArea,
+          invoiceStatus: values.invoiceStatus,
+          receiptFileBase64,
+          receiptFileName,
+          receiptFileContentType,
+        }),
       },
-      body: JSON.stringify({
-        reason: values.reason,
-        occasion: receiptValues.occasion,
-        notes: receiptValues.notes,
-        transactionDate: receiptValues.transactionDate,
-        income: receiptValues.income,
-        expense: receiptValues.expense,
-        transferAmount: receiptValues.transferAmount,
-        senderName: receiptValues.senderName,
-        receiverName: receiptValues.receiverName,
-        senderArea: receiptValues.senderArea,
-        receiverArea: receiptValues.receiverArea,
-        bookingType: values.bookingType,
-        counterpartyAccount: values.counterpartyAccount,
-        counterpartyName: values.counterpartyName,
-        costCenter2: values.associationArea,
-        invoiceStatus: values.invoiceStatus,
-        receiptFileBase64,
-        receiptFileName,
-        receiptFileContentType,
-      }),
-    });
+    );
 
     if (storeResponse.ok) {
       const payload = (await storeResponse.json().catch(() => ({}))) as {
@@ -1035,25 +1037,18 @@ export default function EigenbelegPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <PageTitle
-          title={
-            <span className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-sm">
-                <FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />
-              </span>
-              <span>Generator Eigenbeleg</span>
-            </span>
-          }
-          subTitle="Ein Eigenbeleg ist ein Ersatz für eine Rechnung bzw. Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Generator Eigenbeleg"
+          description="Ein Eigenbeleg ist ein Ersatz für eine Rechnung beziehungsweise Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />}
+          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
-
-        <p className="text-xs text-muted-foreground">Pflichtfelder sind mit * markiert.</p>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {errorCount > 0 ? (
-            <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               Bitte korrigiere {errorCount} Feld{errorCount === 1 ? "" : "er"}{" "}
               vor dem Speichern.
             </div>
@@ -1172,11 +1167,11 @@ export default function EigenbelegPage() {
                     })}
                   />
                   {selectedEvidenceName ? (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-zinc-500">
                       Ausgewählt: {selectedEvidenceName}
                     </p>
                   ) : null}
-                  <p className="text-xs text-muted-foreground">{attachmentModeHint}</p>
+                  <p className="text-xs text-zinc-500">{attachmentModeHint}</p>
                 </FormField>
               </div>
             </div>
@@ -1202,14 +1197,14 @@ export default function EigenbelegPage() {
               />
               <input type="hidden" autoComplete="off" {...register("counterpartyAccount")} />
 
-              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
+              <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
                 <button
                   type="button"
                   onClick={() => setValue("bookingType", "ausgabe")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     isExpenseFlow
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -1225,8 +1220,8 @@ export default function EigenbelegPage() {
                   onClick={() => setValue("bookingType", "einnahme")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     !isExpenseFlow
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   <span className="mr-2 inline-flex items-center">
@@ -1367,7 +1362,7 @@ export default function EigenbelegPage() {
               </div>
 
               {counterpartyAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
                     {counterpartyEntityLabel} <strong>#{counterpartyAccount}</strong>
@@ -1375,7 +1370,7 @@ export default function EigenbelegPage() {
                   </span>
                   <button
                     type="button"
-                    className="ml-auto rounded p-1 text-success hover:bg-success-soft"
+                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
                     onClick={resetCounterparty}
                   >
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
@@ -1384,14 +1379,14 @@ export default function EigenbelegPage() {
               ) : null}
 
               {activeCounterpartyError ? (
-                <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                   {activeCounterpartyError}
                 </div>
               ) : null}
 
               {showCreateCreditorPanel && !counterpartyAccount && isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
-                  <p className="text-sm font-medium text-primary">
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                  <p className="text-sm font-medium text-blue-900">
                     Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
                   </p>
 
@@ -1462,12 +1457,12 @@ export default function EigenbelegPage() {
               ) : null}
 
               {showCreateDebtorPanel && !counterpartyAccount && !isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-primary">
+                    <p className="text-sm font-medium text-blue-900">
                       Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
                     </p>
-                    <p className="text-sm text-primary">
+                    <p className="text-sm text-blue-800">
                       Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
                     </p>
                   </div>
@@ -1483,7 +1478,7 @@ export default function EigenbelegPage() {
                     </FormField>
 
                     <FormField label="Versand per E-Mail">
-                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-foreground/80">
+                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
                         <input
                           type="checkbox"
                           autoComplete="off"
@@ -1572,49 +1567,42 @@ export default function EigenbelegPage() {
             </div>
           </FormSection>
 
-          <FormSection title="4. Notizen" icon={faCalendarCheck}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label="Notizen"
-                hint="Hast du sonst noch was anzumerken?"
+          <FormSection title="4. Status" icon={faCalendarCheck}>
+            <FormField
+              label="Status"
+              required
+              error={errors.invoiceStatus?.message}
+            >
+              <Select
+                {...register("invoiceStatus", {
+                  required: "Bitte Status auswählen.",
+                })}
               >
-                <Textarea {...register("notes")} />
-              </FormField>
-
-              <FormField
-                label="Status"
-                required
-                error={errors.invoiceStatus?.message}
-              >
-                <Select
-                  {...register("invoiceStatus", {
-                    required: "Bitte Status auswählen.",
-                  })}
-                >
-                  <option value="offen">offen</option>
-                  <option value="bezahlt">bezahlt</option>
-                </Select>
-              </FormField>
-            </div>
+                <option value="offen">offen</option>
+                <option value="bezahlt">bezahlt</option>
+              </Select>
+            </FormField>
           </FormSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
+          <InternalNoteSection textareaProps={register("notes")} />
+
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {submittedAt ? (
-                <p className="text-sm text-success">
+                <p className="text-sm text-emerald-700">
                   Formular lokal erfasst: {submittedAt}
                 </p>
               ) : null}
               {storeResult?.id ? (
-                <p className="text-sm text-success">
+                <p className="text-sm text-emerald-700">
                   In Campai gespeichert: {storeResult.id}
                 </p>
               ) : null}
               {storeResult?.warning ? (
-                <p className="text-sm text-warning">{storeResult.warning}</p>
+                <p className="text-sm text-amber-700">{storeResult.warning}</p>
               ) : null}
               {storeResult?.error ? (
-                <p className="text-sm text-destructive">{storeResult.error}</p>
+                <p className="text-sm text-rose-700">{storeResult.error}</p>
               ) : null}
 
               <Button
@@ -1639,7 +1627,6 @@ export default function EigenbelegPage() {
             </div>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

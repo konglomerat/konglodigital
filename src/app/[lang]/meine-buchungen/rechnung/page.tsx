@@ -16,7 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
-import PageTitle from "../../components/PageTitle";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import {
   AutocompleteInput,
   type Suggestion as DebtorSuggestion,
@@ -36,6 +37,7 @@ import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
+import BookingPageHeader from "../bookingPageHeader";
 
 type InvoicePosition = {
   id: string;
@@ -710,7 +712,7 @@ export default function NewSimpleInvoicePage() {
     setSubmitting(true);
     try {
       const response = await fetchJson<{ id: string | null }>(
-        "/api/campai/invoices/create",
+        "/api/campai/receipts/invoice",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -814,10 +816,13 @@ export default function NewSimpleInvoicePage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <PageTitle
+    <BookingPageShell>
+      <BookingPageHeader
         title="Neue Rechnung erstellen"
-        subTitle="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss"
+        description="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss."
+        helperText="Pflichtfelder und Rechnungsdaten lassen sich hier in derselben Struktur wie auf den anderen Buchungsseiten erfassen."
+        icon={<FontAwesomeIcon icon={faFileInvoice} className="h-5 w-5" />}
+        iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
       />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
@@ -1360,19 +1365,13 @@ export default function NewSimpleInvoicePage() {
           </div>
         </FormSection>
 
-        <FormSection
-          title="Interne Notiz"
-          icon={faFileInvoice}
-          description="Interner Hinweis zur Rechnung (optional)."
-        >
-          <FormField label="Interne Notiz">
-            <Textarea
-              rows={3}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </FormField>
-        </FormSection>
+        <InternalNoteSection
+          fieldLabel="Interne Notiz"
+          textareaProps={{
+            value: note,
+            onChange: (event) => setNote(event.target.value),
+          }}
+        />
 
         <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
           <div className="flex flex-wrap items-center gap-3">
@@ -1408,6 +1407,6 @@ export default function NewSimpleInvoicePage() {
           </div>
         </div>
       </form>
-    </div>
+    </BookingPageShell>
   );
 }

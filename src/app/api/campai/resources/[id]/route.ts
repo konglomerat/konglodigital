@@ -6,7 +6,6 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
 import type { ResourcePayload } from "@/lib/campai-resources";
@@ -1020,15 +1019,6 @@ export const PUT = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const canEditByRight = hasRight(data.user, "resources:edit");
-  const editPermissionError = getResourceEditPermissionError({
-    hasEditRight: canEditByRight,
-    isOwner: existingResource.owner_id === data.user.id,
-  });
-  if (editPermissionError) {
-    return NextResponse.json({ error: editPermissionError }, { status: 403 });
-  }
-
   const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";
 
   const payload = await readResourcePayload(request);
@@ -1344,15 +1334,6 @@ export const DELETE = async (
 
   if (fetchError || !row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const canDelete =
-    hasRight(data.user, "resources:delete") || row.owner_id === data.user.id;
-  if (!canDelete) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
   }
 
   const { error: deleteLinksError } = await supabase

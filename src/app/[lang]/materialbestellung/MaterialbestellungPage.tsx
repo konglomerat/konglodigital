@@ -841,7 +841,7 @@ export default function MaterialInvoicesPage({
       };
 
       const data = await fetchJson<{ id: string | null }>(
-        "/api/campai/invoices/create",
+        "/api/campai/receipts/invoice",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1425,7 +1425,7 @@ export default function MaterialInvoicesPage({
                         </Button>
                       ) : null}
                       <Button
-                        kind="outline"
+                        kind="secondary"
                         size="small"
                         icon={faFileArrowUp}
                         onClick={() => void createInvoiceForParticipant(participant.id)}

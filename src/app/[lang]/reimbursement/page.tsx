@@ -16,7 +16,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
-import PageTitle from "../components/PageTitle";
+import BookingPageShell from "../components/ui/BookingPageShell";
+import InternalNoteSection from "../components/ui/InternalNoteSection";
+import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -26,7 +28,6 @@ import {
   FormSection,
   Input,
   Select,
-  Textarea,
 } from "../components/ui/form";
 
 type PositionValue = {
@@ -450,24 +451,17 @@ export default function ReimbursementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <PageTitle
-          title={
-            <span className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-sm">
-                <FontAwesomeIcon icon={faRotate} className="h-5 w-5" />
-              </span>
-              <span>Rückerstattungen einreichen</span>
-            </span>
-          }
-          subTitle="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Rückerstattungen einreichen"
+          description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faRotate} className="h-5 w-5" />}
+          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
 
-        <p className="text-xs text-muted-foreground">Pflichtfelder sind mit * markiert.</p>
-
         {costCentersError ? (
-          <div className="rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             {costCentersError}
           </div>
         ) : null}
@@ -511,7 +505,7 @@ export default function ReimbursementPage() {
 
               {/* Creditor selected badge */}
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
                     Kreditor <strong>#{creditorAccount}</strong>{" "}
@@ -519,7 +513,7 @@ export default function ReimbursementPage() {
                   </span>
                   <button
                     type="button"
-                    className="ml-auto rounded p-1 text-success hover:bg-success-soft"
+                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
                     onClick={resetCreditor}
                   >
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
@@ -529,8 +523,8 @@ export default function ReimbursementPage() {
 
               {/* Create creditor panel */}
               {showCreatePanel && !creditorAccount ? (
-                <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
-                  <p className="text-sm font-medium text-primary">
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                  <p className="text-sm font-medium text-blue-900">
                     Neuen Kreditor anlegen: &ldquo;{creditorName}&rdquo;
                   </p>
 
@@ -577,7 +571,7 @@ export default function ReimbursementPage() {
                   ) : null}
 
                   {creditorError ? (
-                    <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                       {creditorError}
                     </div>
                   ) : null}
@@ -688,7 +682,7 @@ export default function ReimbursementPage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-xl border border-border p-3"
+                  className="space-y-3 rounded-xl border border-zinc-200 p-3"
                 >
                   <div className="grid gap-3 md:grid-cols-3">
                     <FormField
@@ -781,59 +775,54 @@ export default function ReimbursementPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Status & Notizen" icon={faCalendarCheck}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Ist die Rechnung bereits beglichen?" required>
-                <div
-                  role="radiogroup"
-                  aria-label="Ist die Rechnung bereits beglichen?"
-                  className="flex flex-wrap gap-4"
-                >
-                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
-                    <Input
-                      type="radio"
-                      value="offen"
-                      className="h-4 w-4 accent-blue-600"
-                      {...register("rechnungStatus")}
-                    />
-                    <span>offen</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
-                    <Input
-                      type="radio"
-                      value="bezahlt"
-                      className="h-4 w-4 accent-blue-600"
-                      {...register("rechnungStatus")}
-                    />
-                    <span>bezahlt</span>
-                  </label>
-                </div>
-              </FormField>
-
-              <FormField
-                label="Notizen"
-                hint="Hast du sonst noch was anzumerken?"
-                error={errors.notiz?.message}
+          <FormSection title="Status" icon={faCalendarCheck}>
+            <FormField label="Ist die Rechnung bereits beglichen?" required>
+              <div
+                role="radiogroup"
+                aria-label="Ist die Rechnung bereits beglichen?"
+                className="flex flex-wrap gap-4"
               >
-                <Textarea {...register("notiz")} />
-              </FormField>
-            </div>
+                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <Input
+                    type="radio"
+                    value="offen"
+                    className="h-4 w-4 accent-blue-600"
+                    {...register("rechnungStatus")}
+                  />
+                  <span>offen</span>
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <Input
+                    type="radio"
+                    value="bezahlt"
+                    className="h-4 w-4 accent-blue-600"
+                    {...register("rechnungStatus")}
+                  />
+                  <span>bezahlt</span>
+                </label>
+              </div>
+            </FormField>
           </FormSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
+          <InternalNoteSection
+            error={errors.notiz?.message}
+            textareaProps={register("notiz")}
+          />
+
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {result?.id ? (
-                <p className="text-sm text-success">
+                <p className="text-sm text-emerald-700">
                   In Campai gespeichert: {result.id}
                 </p>
               ) : null}
 
               {result?.uploadWarning ? (
-                <p className="text-sm text-warning">{result.uploadWarning}</p>
+                <p className="text-sm text-amber-700">{result.uploadWarning}</p>
               ) : null}
 
               {result?.error ? (
-                <p className="text-sm text-destructive">{result.error}</p>
+                <p className="text-sm text-rose-700">{result.error}</p>
               ) : null}
 
               <Button
@@ -858,7 +847,6 @@ export default function ReimbursementPage() {
             </div>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

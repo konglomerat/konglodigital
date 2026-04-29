@@ -7,7 +7,6 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getResourceEditPermissionError, hasRight } from "@/lib/permissions";
 import { createOpenAIClient } from "@/lib/openai";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
@@ -177,34 +176,6 @@ export const POST = async (
     promptOverride === null || promptOverride.length === 0
       ? COVER_PROMPT
       : promptOverride;
-
-  const canEditByRight = hasRight(data.user, "resources:edit");
-  if (!canEditByRight) {
-    const { data: existing, error: existingError } = await supabase
-      .from("resources")
-      .select("owner_id")
-      .eq("id", params.id)
-      .maybeSingle();
-
-    if (existingError) {
-      return NextResponse.json(
-        { error: existingError.message || "Unable to load resource." },
-        { status: 500 },
-      );
-    }
-
-    if (!existing) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const editPermissionError = getResourceEditPermissionError({
-      hasEditRight: canEditByRight,
-      isOwner: existing.owner_id === data.user.id,
-    });
-    if (editPermissionError) {
-      return NextResponse.json({ error: editPermissionError }, { status: 403 });
-    }
-  }
 
   const { data: row, error: fetchError } = await supabase
     .from("resources")

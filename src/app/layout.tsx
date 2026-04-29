@@ -10,9 +10,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCube,
   faBoxOpen,
+  faCalendarCheck,
   faCalendarDays,
   faChartPie,
   faFolderOpen,
+  faLayerGroup,
   faPrint,
   faKey,
   faCartShopping,
@@ -25,7 +27,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "@mdxeditor/editor/style.css";
 import "./globals.css";
 import { signOut } from "./actions";
-import { getUserRole, roleCanAccessModule } from "@/lib/roles";
+import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
+import { getUserRole } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
@@ -128,6 +131,32 @@ function ProtectedNavItem({
   );
 }
 
+type ComingSoonNavItemProps = {
+  icon: IconProp;
+  children: React.ReactNode;
+  className: string;
+};
+
+function ComingSoonNavItem({
+  icon,
+  children,
+  className,
+}: ComingSoonNavItemProps) {
+  return (
+    <div
+      className={`${className} cursor-not-allowed select-none text-muted-foreground/80 hover:text-muted-foreground/80`}
+      aria-disabled="true"
+      title="Coming soon"
+    >
+      <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+      <span>{children}</span>
+      <span className="ml-auto whitespace-nowrap rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+        Coming soon
+      </span>
+    </div>
+  );
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -137,10 +166,11 @@ export default async function RootLayout({
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data: userData } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(userData.user);
+  const currentUserDisplayName = userData.user
+    ? getCampaiBookingDisplayName(userData.user)
+    : null;
   const userRole = await getUserRole(supabase, userData.user);
   const canAccessAdmin = isAuthenticated && userRole === "admin";
-  const canAccessInvoices =
-    isAuthenticated && roleCanAccessModule(userRole, "invoices");
   const navItemClassName =
     "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
@@ -231,8 +261,20 @@ export default async function RootLayout({
                         >
                           Warenkorb
                         </ProtectedNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faChartPie}
+                        >
+                          Laser
+                        </ComingSoonNavItem>
 
                         <p className={navSectionTitleClassName}>Self Service</p>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faCalendarCheck}
+                        >
+                          Zugangskarte
+                        </ComingSoonNavItem>
                         <ProtectedNavItem
                           href="/account"
                           className={navLinkClassName}
@@ -240,7 +282,9 @@ export default async function RootLayout({
                           isAccessible={isAuthenticated}
                           tooltip={membersOnlyTooltip}
                         >
-                          Profil
+                          {currentUserDisplayName
+                            ? `Profil (${currentUserDisplayName})`
+                            : "Profil"}
                         </ProtectedNavItem>
 
                         <p className={navSectionTitleClassName}>Verein</p>
@@ -283,42 +327,39 @@ export default async function RootLayout({
                         >
                           Produkte
                         </ProtectedNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faUser}
+                        >
+                          Ehrenamtsbonus
+                        </ComingSoonNavItem>
+
+                        <p className={navSectionTitleClassName}>Holzwerkstatt</p>
+                        <ProtectedNavItem
+                          href="/materialbestellung"
+                          className={navLinkClassName}
+                          icon={faLayerGroup}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Materialbestellung
+                        </ProtectedNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faLayerGroup}
+                        >
+                          Lagerplatz
+                        </ComingSoonNavItem>
+
                         <p className={navSectionTitleClassName}>buchhaltung</p>
                         <ProtectedNavItem
-                          href="/invoices"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={canAccessInvoices}
-                          tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-                        >
-                          Rechnungen
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/reimbursement"
+                          href="/meine-buchungen"
                           className={navLinkClassName}
                           icon={faFolderOpen}
                           isAccessible={isAuthenticated}
                           tooltip={membersOnlyTooltip}
                         >
-                          Rückerstattung von Auslagen
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/eigenbeleg"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Eigenbeleg erstellen
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/buchungen"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Beleg einbuchen
+                          Meine Buchungen
                         </ProtectedNavItem>
                         <ProtectedNavItem
                           href="/budget"
@@ -436,10 +477,22 @@ export default async function RootLayout({
                 >
                   Warenkorb
                 </ProtectedNavItem>
+                <ComingSoonNavItem
+                  className={navItemClassName}
+                  icon={faChartPie}
+                >
+                  Laser
+                </ComingSoonNavItem>
 
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Self Service
                 </p>
+                <ComingSoonNavItem
+                  className={navItemClassName}
+                  icon={faCalendarCheck}
+                >
+                  Zugangskarte
+                </ComingSoonNavItem>
                 <ProtectedNavItem
                   href="/account"
                   className={navItemClassName}
@@ -447,7 +500,9 @@ export default async function RootLayout({
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
-                  Profil
+                  {currentUserDisplayName
+                    ? `Profil (${currentUserDisplayName})`
+                    : "Profil"}
                 </ProtectedNavItem>
 
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -479,45 +534,43 @@ export default async function RootLayout({
                 >
                   Produkte
                 </ProtectedNavItem>
+                <ComingSoonNavItem
+                  className={navItemClassName}
+                  icon={faUser}
+                >
+                  Ehrenamtsbonus
+                </ComingSoonNavItem>
+
+                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Holzwerkstatt
+                </p>
+                <ProtectedNavItem
+                  href="/materialbestellung"
+                  className={navItemClassName}
+                  icon={faLayerGroup}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Materialbestellung
+                </ProtectedNavItem>
+                <ComingSoonNavItem
+                  className={navItemClassName}
+                  icon={faLayerGroup}
+                >
+                  Lagerplatz
+                </ComingSoonNavItem>
 
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   buchhaltung
                 </p>
                 <ProtectedNavItem
-                  href="/invoices"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={canAccessInvoices}
-                  tooltip="Nur fuer Rollen Admin und Accounting verfuegbar"
-                >
-                  Rechnungen
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/reimbursement"
+                  href="/meine-buchungen"
                   className={navItemClassName}
                   icon={faFolderOpen}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
-                  Rückerstattung von Auslagen
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/eigenbeleg"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Eigenbeleg erstellen
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/buchungen"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Beleg einbuchen
+                  Meine Buchungen
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/budget"

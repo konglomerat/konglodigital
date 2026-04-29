@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import {
+	addCampaiReceiptNote,
+	buildCampaiReceiptCreatorNote,
+} from "@/lib/campai-receipt-notes";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -149,51 +155,16 @@ const uploadFileToCampai = async (params: {
 	return putResponse.ok ? uploadId : null;
 };
 
-const addReceiptNote = async (params: {
-	apiKey: string;
-	organizationId: string;
-	mandateId: string;
-	receiptId: string;
-	content: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> => {
-	const { apiKey, organizationId, mandateId, receiptId, content } = params;
-
-	if (!content) {
-		return { ok: true };
-	}
-
-	const url = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/${receiptId}/notes`;
-
-	let response: Response;
-	try {
-		response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-API-Key": apiKey,
-			},
-			body: JSON.stringify({ content }),
-		});
-	} catch (fetchError) {
-		const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-		return { ok: false, error: `Netzwerkfehler: ${msg}` };
-	}
-
-	if (!response.ok) {
-		// 403 = API key lacks receipt.edit – expected, notiz already in description
-		if (response.status === 403) {
-			return { ok: true };
-		}
-		const body = await response.text().catch(() => "");
-		return {
-			ok: false,
-			error: `HTTP ${response.status}: ${body || "Campai note endpoint failed"}`,
-		};
-	}
-
-	return { ok: true };
-};
-
+const buildReceiptUserNote = (params: {
+	userId: string;
+	lines: string[];
+}) =>
+	[
+		...params.lines.filter(Boolean),
+		`Benutzer-ID: ${params.userId}`,
+	]
+		.filter(Boolean)
+		.join("\n");
 export const POST = async (request: NextRequest) => {
 	const { supabase } = createSupabaseRouteClient(request);
 	const { data } = await supabase.auth.getUser();
@@ -201,6 +172,13 @@ export const POST = async (request: NextRequest) => {
 	if (!data.user) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
+
+	const tags = buildCampaiBookingTags(data.user);
+	const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+	const creatorNote = buildCampaiReceiptCreatorNote({
+		user: data.user,
+		memberProfile,
+	});
 
 	try {
 		const apiKey = requiredEnv("CAMPAI_API_KEY");
@@ -358,14 +336,17 @@ export const POST = async (request: NextRequest) => {
 			.join(" | ")
 			.slice(0, 140);
 
-		const noteContent = [
+		const noteLines = [
 			empfaengerName ? `Empfänger: ${empfaengerName}` : "",
 			empfaengerEmail ? `E-Mail: ${empfaengerEmail}` : "",
 			bereitsBeglichen ? "Status: Rechnung bereits beglichen" : "Status: offen",
 			notiz ? `Notiz: ${notiz}` : "",
-		]
-			.filter(Boolean)
-			.join("\n");
+		];
+
+		const noteContent = buildReceiptUserNote({
+			userId: data.user.id,
+			lines: [...noteLines, creatorNote],
+		});
 
 		// ── Kreditor-Konto: vom Client übergeben oder Fallback auf Env ──
 		const finalCreditorAccount = clientCreditorAccount ?? creditorAccount;
@@ -384,7 +365,7 @@ export const POST = async (request: NextRequest) => {
 			description,
 			refund: false,
 			positions,
-			tags: ["API"],
+			tags,
 			queueReceiptDocument: false,
 			electronic: false,
 			receiptFileId,
@@ -420,7 +401,7 @@ export const POST = async (request: NextRequest) => {
 		if (!receiptId) {
 			noteWarning = "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
 		} else {
-			const noteResult = await addReceiptNote({
+			const noteResult = await addCampaiReceiptNote({
 				apiKey,
 				organizationId,
 				mandateId,

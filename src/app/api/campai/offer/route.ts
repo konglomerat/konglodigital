@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import {
+  addCampaiReceiptNote,
+  buildCampaiReceiptCreatorNote,
+} from "@/lib/campai-receipt-notes";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
@@ -205,6 +211,13 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const tags = buildCampaiBookingTags(data.user);
+  const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+  const creatorNote = buildCampaiReceiptCreatorNote({
+    user: data.user,
+    memberProfile,
+  });
+
   const body = (await request.json()) as {
     address?: AddressPayload;
     email?: string;
@@ -399,7 +412,7 @@ export const POST = async (request: NextRequest) => {
     positions,
     doNotSendReceipt: !sendByMail,
     queueReceiptDocument: sendByMail,
-    tags: ["API"],
+    tags,
   };
 
   const response = await fetch(
@@ -422,6 +435,26 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  const dataResponse = (await response.json()) as { _id?: string };
-  return NextResponse.json({ id: dataResponse._id ?? null });
+  const dataResponse = (await response.json()) as { _id?: string; id?: string };
+  const receiptId = dataResponse._id ?? dataResponse.id ?? null;
+  let noteWarning: string | undefined;
+
+  if (!receiptId) {
+    noteWarning =
+      "Angebot erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Ersteller-Notiz konnte nicht angelegt werden.";
+  } else {
+    const noteResult = await addCampaiReceiptNote({
+      apiKey,
+      organizationId,
+      mandateId,
+      receiptId,
+      content: creatorNote,
+    });
+
+    if (!noteResult.ok) {
+      noteWarning = `Angebot erstellt, aber die Ersteller-Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
+    }
+  }
+
+  return NextResponse.json({ id: receiptId, noteWarning });
 };

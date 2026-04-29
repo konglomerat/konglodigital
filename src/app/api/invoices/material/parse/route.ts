@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { extractXmlFromPdf, parseCiiXml } from "@/lib/zugferd-xml";
-import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const MAX_FILE_SIZE = 12 * 1024 * 1024;
@@ -12,10 +11,6 @@ export const POST = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
