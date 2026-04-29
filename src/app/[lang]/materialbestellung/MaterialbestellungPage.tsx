@@ -1425,7 +1425,7 @@ export default function MaterialInvoicesPage({
                         </Button>
                       ) : null}
                       <Button
-                        kind="outline"
+                        kind="secondary"
                         size="small"
                         icon={faFileArrowUp}
                         onClick={() => void createInvoiceForParticipant(participant.id)}
