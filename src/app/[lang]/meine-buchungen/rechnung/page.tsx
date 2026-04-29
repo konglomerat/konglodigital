@@ -713,6 +713,11 @@ export default function NewSimpleInvoicePage() {
 
     setSubmitting(true);
     try {
+      const statusNoteLine = `Status: ${paid ? "bezahlt" : "offen"}`;
+      const internalNote = [note.trim(), statusNoteLine]
+        .filter(Boolean)
+        .join("\n");
+
       const response = await fetchJson<{ id: string | null }>(
         "/api/campai/receipts/invoice",
         {
@@ -720,7 +725,7 @@ export default function NewSimpleInvoicePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             intro: intro.trim(),
-            note,
+            internalNote: internalNote || undefined,
             sendByMail,
             recipientEmail: recipientEmail.trim() || undefined,
             debtorName: debtorName.trim(),

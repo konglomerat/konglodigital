@@ -239,7 +239,7 @@ export default function EinnahmePage() {
           counterpartyName: debitorName,
           income: values.betragEuro,
           costCenter2: values.costCenter2,
-          notes: values.notes,
+          internalNote: values.notes || undefined,
           ...fileData,
         }),
       });

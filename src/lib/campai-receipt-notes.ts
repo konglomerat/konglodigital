@@ -60,8 +60,37 @@ export const buildCampaiReceiptCreatorNote = (params: {
 }): string => {
   const { user, memberProfile } = params;
   const creatorName = getReceiptCreatorName(user, memberProfile);
+  const creatorEmail = normalizeText(user.email) ?? user.id;
 
-  return `Erstellt in Konglo Digital von: ${creatorName} (${user.id})`;
+  return `Erstellt von ${creatorName} (${creatorEmail}) via KongloDigital`;
+};
+
+export const addCampaiReceiptNotes = async (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  receiptId: string;
+  contents: Array<string | null | undefined>;
+}): Promise<{ ok: true } | { ok: false; error: string }> => {
+  const { contents, ...noteParams } = params;
+
+  for (const content of contents) {
+    const normalizedContent = normalizeText(content);
+    if (!normalizedContent) {
+      continue;
+    }
+
+    const result = await addCampaiReceiptNote({
+      ...noteParams,
+      content: normalizedContent,
+    });
+
+    if (!result.ok) {
+      return result;
+    }
+  }
+
+  return { ok: true };
 };
 
 export const addCampaiReceiptNote = async (params: {

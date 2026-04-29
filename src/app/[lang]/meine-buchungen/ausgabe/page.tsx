@@ -318,7 +318,7 @@ export default function AusgabePage() {
           counterpartyName: creditorName,
           expense: values.betragEuro,
           costCenter2: values.costCenter2,
-          notes: values.notes || undefined,
+          internalNote: values.notes || undefined,
           ...fileData,
         }),
       });

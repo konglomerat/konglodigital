@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCalendarCheck,
   faCartShopping,
   faCheck,
   faFolderOpen,
@@ -165,6 +164,11 @@ export default function ReimbursementPage() {
   const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
   const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
   const [creditorError, setCreditorError] = useState<string | null>(null);
+  const selectedInvoiceStatus = useWatch({
+    control,
+    name: "rechnungStatus",
+  });
+  const statusNoteLine = `Status: ${selectedInvoiceStatus === "bezahlt" ? "bezahlt" : "offen"}`;
 
   const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
     setCreditorAccount(suggestion.account);
@@ -351,6 +355,9 @@ export default function ReimbursementPage() {
       }
 
       const bytes = new Uint8Array(await datei.arrayBuffer());
+      const internalNote = [values.notiz?.trim(), statusNoteLine]
+        .filter(Boolean)
+        .join("\n");
 
       const response = await fetch("/api/campai/reimbursement", {
         method: "POST",
@@ -365,7 +372,7 @@ export default function ReimbursementPage() {
           empfaengerEmail: values.empfaengerEmail,
           creditorAccount: creditorAccount ?? undefined,
           positions: values.positions,
-          notiz: values.notiz,
+          internalNote,
           receiptFileBase64: bytesToBase64(bytes),
           receiptFileName: datei.name,
           receiptFileContentType: datei.type || "application/octet-stream",
@@ -744,39 +751,20 @@ export default function ReimbursementPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Status" icon={faCalendarCheck}>
-            <FormField label="Ist die Rechnung bereits beglichen?" required>
-              <div
-                role="radiogroup"
-                aria-label="Ist die Rechnung bereits beglichen?"
-                className="flex flex-wrap gap-4"
-              >
-                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
-                  <Input
-                    type="radio"
-                    value="offen"
-                    className="h-4 w-4 accent-blue-600"
-                    {...register("rechnungStatus")}
-                  />
-                  <span>offen</span>
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
-                  <Input
-                    type="radio"
-                    value="bezahlt"
-                    className="h-4 w-4 accent-blue-600"
-                    {...register("rechnungStatus")}
-                  />
-                  <span>bezahlt</span>
-                </label>
-              </div>
-            </FormField>
-          </FormSection>
-
           <InternalNoteSection
+            hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar. Die Status-Zeile wird automatisch vorangestellt."
             error={errors.notiz?.message}
             textareaProps={register("notiz")}
-          />
+          >
+            <div className="mb-5 grid gap-4 md:grid-cols-2">
+              <FormField label="Status" required>
+                <Select {...register("rechnungStatus", { required: true })}>
+                  <option value="offen">offen</option>
+                  <option value="bezahlt">bezahlt</option>
+                </Select>
+              </FormField>
+            </div>
+          </InternalNoteSection>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="mr-auto flex flex-wrap items-center gap-3">

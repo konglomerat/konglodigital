@@ -1093,7 +1093,7 @@ export default function EigenbelegPage() {
 
     clearErrors("reasonOther");
     clearErrors("counterpartyName");
-    const internalNote = [statusNoteLine, values.notes?.trim()]
+    const internalNote = [values.notes?.trim(), statusNoteLine]
       .filter(Boolean)
       .join("\n");
     const receiptValues = buildReceiptValues(
@@ -1128,7 +1128,7 @@ export default function EigenbelegPage() {
           reason: values.reason,
           tags: [values.reason === "Sonstiges" ? values.reasonOther?.trim() || values.reason : values.reason],
           occasion: receiptValues.occasion,
-          notes: internalNote,
+          internalNote,
           transactionDate: receiptValues.transactionDate,
           invoiceStatus: values.invoiceStatus,
           receiptFileBase64,
