@@ -26,6 +26,9 @@ import {
   type MaterialOrderSummary,
 } from "@/lib/material-orders";
 import { type MaterialInvoiceParseResult } from "@/lib/material-invoice";
+import {
+  euroAmountValidationMessage,
+} from "@/lib/euro-input";
 
 type DebtorDetails = {
   account?: number | null;
@@ -1252,6 +1255,8 @@ export default function MaterialInvoicesPage({
                               <td className="px-3 py-2">
                                 <Input
                                   value={position.unitAmountEuro}
+                                  inputMode="decimal"
+                                  title={euroAmountValidationMessage}
                                   onChange={(event) =>
                                     updateParticipant(participant.id, (current) => ({
                                       ...current,

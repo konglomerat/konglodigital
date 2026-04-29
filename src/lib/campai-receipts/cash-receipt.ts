@@ -26,6 +26,8 @@ type ParsedCashReceipt = {
   counterpartyName: string;
   costCenter1: number | null;
   costCenter2: number | null;
+  positionAccount: number | null;
+  extraTags: string[];
   notes: string;
   description: string;
   positionDescription: string;
@@ -111,6 +113,12 @@ const parseCashReceiptInput = (
   const receiptNumber = (
     receiptNumberOverride || `${autoPrefix}-${timeStamp}`
   ).slice(0, 30);
+  const extraTags = Array.isArray(body.tags)
+    ? body.tags
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    : [];
 
   return {
     ok: true,
@@ -120,6 +128,8 @@ const parseCashReceiptInput = (
       counterpartyName,
       costCenter1: parsePositiveInt(body.costCenter1),
       costCenter2: parsePositiveInt(body.costCenter2),
+      positionAccount: parsePositiveInt(body.positionAccount),
+      extraTags,
       notes,
       description,
       positionDescription,
@@ -211,7 +221,7 @@ export const handleCashReceipt = async (
 
   try {
     const config = loadCampaiConfig();
-    const positionAccount =
+    const defaultPositionAccount =
       direction === "revenue" ? loadRevenueAccount() : loadExpenseAccount();
 
     const body = (await request.json().catch(() => ({}))) as Record<
@@ -226,6 +236,7 @@ export const handleCashReceipt = async (
       );
     }
     const receipt = parsed.receipt;
+    const positionAccount = receipt.positionAccount ?? defaultPositionAccount;
 
     const upload = await uploadCampaiReceiptFile({
       apiKey: config.apiKey,
@@ -254,7 +265,7 @@ export const handleCashReceipt = async (
     const payload = buildPayload(
       receipt,
       positionAccount,
-      buildCampaiBookingTags(data.user),
+      buildCampaiBookingTags(data.user, receipt.extraTags),
       upload.receiptFileId ?? null,
     );
 

@@ -37,6 +37,9 @@ import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
+import {
+  euroAmountValidationMessage,
+} from "@/lib/euro-input";
 import BookingPageHeader from "../bookingPageHeader";
 
 type InvoicePosition = {
@@ -1120,6 +1123,7 @@ export default function NewSimpleInvoicePage() {
                           aria-label="Einzelbetrag in Euro"
                           value={position.unitAmountEuro}
                           inputMode="decimal"
+                          title={euroAmountValidationMessage}
                           onChange={(event) =>
                             updatePosition(position.id, "unitAmountEuro", event.target.value)
                           }
