@@ -42,6 +42,46 @@ export const GET = async (request: NextRequest) => {
 		const apiKey = requiredEnv("CAMPAI_API_KEY");
 		const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
 		const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
+		const account = request.nextUrl.searchParams.get("account")?.trim() ?? "";
+
+		if (account) {
+			const response = await fetch(
+				`https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/accounts/creditors/${account}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						"X-API-Key": apiKey,
+					},
+					cache: "no-store",
+				},
+			);
+
+			if (!response.ok) {
+				const errorBody = await response.text().catch(() => "");
+				return NextResponse.json(
+					{
+						error:
+							errorBody ||
+							"Kreditorendaten konnten nicht geladen werden.",
+					},
+					{ status: response.status },
+				);
+			}
+
+			const creditor = (await response.json().catch(() => null)) as CampaiCreditor | null;
+
+			return NextResponse.json({
+				creditor: creditor
+					? {
+						account: creditor.account ?? null,
+						name: creditor.name ?? "",
+						paymentMethodType: creditor.paymentMethodType ?? null,
+						creditTransfer: creditor.creditTransfer ?? null,
+					}
+					: null,
+			});
+		}
 
 		const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
 		if (q.length < 2) {

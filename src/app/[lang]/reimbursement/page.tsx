@@ -29,6 +29,10 @@ import {
   Input,
   Select,
 } from "../components/ui/form";
+import {
+  euroAmountPattern,
+  euroAmountValidationMessage,
+} from "@/lib/euro-input";
 
 type PositionValue = {
   betragEuro: string;
@@ -56,8 +60,6 @@ type FormValues = {
   notiz: string;
   belegDatei: FileList;
 };
-
-const euroAmountPattern = /^\d+(,\d{1,2})?$/;
 
 const emptyPosition = (): PositionValue => ({
   betragEuro: "",
@@ -120,6 +122,7 @@ export default function ReimbursementPage() {
     getValues,
     formState: { errors },
   } = useForm<FormValues>({
+    mode: "onChange",
     defaultValues: {
       betreff: "",
       belegdatum: "",
@@ -697,7 +700,7 @@ export default function ReimbursementPage() {
                           required: "Betrag ist erforderlich.",
                           pattern: {
                             value: euroAmountPattern,
-                            message: "Bitte nur numerischen Betrag eingeben.",
+                            message: euroAmountValidationMessage,
                           },
                         })}
                       />

@@ -29,6 +29,10 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/form";
+import {
+  euroAmountPattern,
+  euroAmountValidationMessage,
+} from "@/lib/euro-input";
 
 type CostCenterOption = { value: string; label: string };
 
@@ -41,8 +45,6 @@ type FormValues = {
   kreditorName: string;
   notes: string;
 };
-
-const euroAmountPattern = /^\d+(,\d{1,2})?$/;
 
 const bytesToBase64 = (bytes: Uint8Array) => {
   const chunkSize = 0x8000;
@@ -62,6 +64,7 @@ export default function AusgabePage() {
     setValue,
     formState: { errors },
   } = useForm<FormValues>({
+    mode: "onChange",
     defaultValues: {
       beschreibung: "",
       belegdatum: "",
@@ -566,12 +569,13 @@ export default function AusgabePage() {
                   error={errors.betragEuro?.message}
                 >
                   <Input
+                    inputMode="decimal"
                     placeholder="0,00"
                     {...register("betragEuro", {
                       required: "Betrag ist erforderlich.",
                       pattern: {
                         value: euroAmountPattern,
-                        message: "Format: 12,50",
+                        message: euroAmountValidationMessage,
                       },
                     })}
                   />

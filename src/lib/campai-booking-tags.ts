@@ -13,7 +13,26 @@ export const getCampaiBookingDisplayName = (user: User): string => {
   return normalizeText(user.user_metadata?.campai_name) ?? "";
 };
 
-export const buildCampaiBookingTags = (user: User): string[] => {
+export const mergeCampaiTags = (...tagGroups: Array<Array<string | null | undefined>>): string[] => {
+  const seen = new Set<string>();
+
+  for (const group of tagGroups) {
+    for (const value of group) {
+      const normalized = normalizeText(value);
+      if (!normalized) {
+        continue;
+      }
+      seen.add(normalized);
+    }
+  }
+
+  return [...seen];
+};
+
+export const buildCampaiBookingTags = (
+  user: User,
+  extraTags: Array<string | null | undefined> = [],
+): string[] => {
   const displayName = getCampaiBookingDisplayName(user);
-  return ["API", displayName];
+  return mergeCampaiTags(["API", displayName], extraTags);
 };

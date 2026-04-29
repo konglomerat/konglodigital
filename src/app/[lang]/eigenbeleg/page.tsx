@@ -27,6 +27,10 @@ import {
   Textarea,
 } from "../components/ui/form";
 import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
+import {
+  euroAmountPattern,
+  euroAmountValidationMessage,
+} from "@/lib/euro-input";
 
 const reasonOptions = [
   "Umbuchung",
@@ -44,7 +48,7 @@ const reasonOptions = [
 
 type ReasonOption = (typeof reasonOptions)[number];
 
-type BookingType = "ausgabe" | "einnahme";
+type BookingType = "ausgabe" | "einnahme" | "umbuchung";
 type AssociationAccount = "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
 type CostCenterOption = {
   value: string;
@@ -66,6 +70,10 @@ type FormValues = {
   counterpartyAccount?: string;
   associationArea?: string;
   associationAccount: AssociationAccount;
+  transferSenderArea?: string;
+  transferSenderAccount: AssociationAccount;
+  transferReceiverArea?: string;
+  transferReceiverAccount: AssociationAccount;
   invoiceStatus: "offen" | "bezahlt";
   notes?: string;
 };
@@ -96,6 +104,10 @@ type ReceiptValues = {
 };
 
 const associationName = "Konglomerat e.V.";
+const settlementAccount = "14980";
+const settlementAccountLabel = `Verrechnungskonto ${settlementAccount}`;
+const transferCreditorAccount = "700015";
+const transferDebtorAccount = "100513";
 
 const associationAccountOptions: Array<{
   value: AssociationAccount;
@@ -120,11 +132,13 @@ const testFormData: Omit<FormValues, "evidence"> = {
   counterpartyAccount: "47001",
   associationArea: "50",
   associationAccount: "K0104 A",
+  transferSenderArea: "50",
+  transferSenderAccount: "K0104 A",
+  transferReceiverArea: "60",
+  transferReceiverAccount: "BAR",
   invoiceStatus: "bezahlt",
   notes: "Testdatensatz für interne Formularprüfung.",
 };
-
-const amountPattern = /^\d+(?:[.,]\d{1,2})?$/;
 
 async function fetchJson<T>(url: string, init?: RequestInit) {
   const response = await fetch(url, init);
@@ -133,6 +147,34 @@ async function fetchJson<T>(url: string, init?: RequestInit) {
     throw new Error(data.error ?? "Request failed");
   }
   return data;
+}
+
+async function loadTransferAccountNames() {
+  const [creditorResponse, debtorResponse] = await Promise.all([
+    fetchJson<{ creditor?: { name?: string | null } | null }>(
+      `/api/campai/creditors?account=${encodeURIComponent(transferCreditorAccount)}`,
+    ),
+    fetchJson<{ debtor?: { name?: string | null } | null }>(
+      `/api/campai/debtors?account=${encodeURIComponent(transferDebtorAccount)}`,
+    ),
+  ]);
+
+  const creditorName = creditorResponse.creditor?.name?.trim();
+  const debtorName = debtorResponse.debtor?.name?.trim();
+
+  if (!creditorName) {
+    throw new Error(
+      `Kreditor ${transferCreditorAccount} konnte nicht aus Campai geladen werden.`,
+    );
+  }
+
+  if (!debtorName) {
+    throw new Error(
+      `Debitor ${transferDebtorAccount} konnte nicht aus Campai geladen werden.`,
+    );
+  }
+
+  return { creditorName, debtorName };
 }
 
 function getFormattedDate(value: string) {
@@ -525,7 +567,6 @@ async function createEigenbelegPdf(values: ReceiptValues) {
     values.transactionDate || new Date().toISOString().slice(0, 10);
   const fileName = `eigenbeleg-${fileDate}.pdf`;
   const bytes = new Uint8Array(doc.output("arraybuffer"));
-  doc.save(fileName);
   return { fileName, bytes };
 }
 
@@ -556,6 +597,8 @@ async function buildAttachmentForCampai(params: {
 function buildReceiptValues(
   values: FormValues,
   associationAreaLabel?: string,
+  transferSenderAreaLabel?: string,
+  transferReceiverAreaLabel?: string,
 ): ReceiptValues {
   const baseValues = {
     reason: values.reason,
@@ -566,6 +609,27 @@ function buildReceiptValues(
     invoiceStatus: values.invoiceStatus,
     notes: values.notes,
   };
+
+  if (values.bookingType === "umbuchung") {
+    return {
+      ...baseValues,
+      income: undefined,
+      expense: undefined,
+      transferAmount: values.amountEuro,
+      senderName: associationName,
+      senderAdditional: undefined,
+      senderAccount: values.transferSenderAccount,
+      senderArea: transferSenderAreaLabel,
+      senderProject: undefined,
+      senderSplit: undefined,
+      receiverName: associationName,
+      receiverAdditional: undefined,
+      receiverAccount: values.transferReceiverAccount,
+      receiverArea: transferReceiverAreaLabel,
+      receiverProject: undefined,
+      receiverSplit: undefined,
+    };
+  }
 
   if (values.bookingType === "ausgabe") {
     return {
@@ -619,10 +683,13 @@ export default function EigenbelegPage() {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
+    mode: "onChange",
     defaultValues: {
       reason: "Umbuchung",
-      bookingType: "ausgabe",
+      bookingType: "umbuchung",
       associationAccount: "K0104 A",
+      transferSenderAccount: "K0104 A",
+      transferReceiverAccount: "K0104 A",
       invoiceStatus: "offen",
     },
   });
@@ -631,7 +698,7 @@ export default function EigenbelegPage() {
   const [costCentersLoading, setCostCentersLoading] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
   const [storeResult, setStoreResult] = useState<{
-    id?: string | null;
+    successMessage?: string;
     error?: string;
     warning?: string;
   } | null>(null);
@@ -657,11 +724,20 @@ export default function EigenbelegPage() {
   const selectedReason = useWatch({ control, name: "reason" });
   const selectedEvidence = useWatch({ control, name: "evidence" });
   const selectedBookingType = useWatch({ control, name: "bookingType" });
+  const selectedInvoiceStatus = useWatch({ control, name: "invoiceStatus" });
   const counterpartyName = useWatch({ control, name: "counterpartyName" });
   const counterpartyAccount = useWatch({ control, name: "counterpartyAccount" });
   const selectedAssociationArea = useWatch({
     control,
     name: "associationArea",
+  });
+  const selectedTransferSenderArea = useWatch({
+    control,
+    name: "transferSenderArea",
+  });
+  const selectedTransferReceiverArea = useWatch({
+    control,
+    name: "transferReceiverArea",
   });
 
   const selectedEvidenceName = useMemo(() => {
@@ -690,22 +766,45 @@ export default function EigenbelegPage() {
       selectedAssociationArea
     );
   }, [costCenters, selectedAssociationArea]);
+  const selectedTransferSenderAreaLabel = useMemo(() => {
+    if (!selectedTransferSenderArea) {
+      return undefined;
+    }
+
+    return (
+      costCenters.find((item) => item.value === selectedTransferSenderArea)?.label ??
+      selectedTransferSenderArea
+    );
+  }, [costCenters, selectedTransferSenderArea]);
+  const selectedTransferReceiverAreaLabel = useMemo(() => {
+    if (!selectedTransferReceiverArea) {
+      return undefined;
+    }
+
+    return (
+      costCenters.find((item) => item.value === selectedTransferReceiverArea)?.label ??
+      selectedTransferReceiverArea
+    );
+  }, [costCenters, selectedTransferReceiverArea]);
 
   const errorCount = Object.keys(errors).length;
-  const isExpenseFlow = selectedBookingType !== "einnahme";
-  const counterpartyEntityLabel = isExpenseFlow ? "Kreditor" : "Debitor";
-  const counterpartyFieldLabel = isExpenseFlow ? "Empfänger" : "Sender";
-  const associationFieldLabel = isExpenseFlow ? "Sender" : "Empfänger";
-  const counterpartyApiPath = isExpenseFlow
+  const isTransferFlow = selectedBookingType === "umbuchung";
+  const isExpenseFlow = selectedBookingType === "ausgabe";
+  const isExpenseLikeFlow = isExpenseFlow || isTransferFlow;
+  const counterpartyEntityLabel = isExpenseLikeFlow ? "Kreditor" : "Debitor";
+  const counterpartyFieldLabel = isExpenseLikeFlow ? "Empfänger" : "Sender";
+  const associationFieldLabel = isExpenseLikeFlow ? "Sender" : "Empfänger";
+  const counterpartyApiPath = isExpenseLikeFlow
     ? "/api/campai/creditors"
     : "/api/campai/debtors";
-  const activeCounterpartyError = isExpenseFlow ? creditorError : debtorError;
-  const senderDisplayValue = isExpenseFlow
+  const activeCounterpartyError = isExpenseLikeFlow ? creditorError : debtorError;
+  const senderDisplayValue = isExpenseLikeFlow
     ? associationName
     : counterpartyName ?? "";
-  const receiverDisplayValue = isExpenseFlow
+  const receiverDisplayValue = isExpenseLikeFlow
     ? counterpartyName ?? ""
     : associationName;
+  const statusNoteLine = `Status: ${selectedInvoiceStatus === "bezahlt" ? "bezahlt" : "offen"}`;
 
   useEffect(() => {
     setValue("counterpartyAccount", "");
@@ -714,6 +813,17 @@ export default function EigenbelegPage() {
     setCreditorError(null);
     setDebtorError(null);
   }, [selectedBookingType, setValue]);
+
+  useEffect(() => {
+    if (!isTransferFlow) {
+      return;
+    }
+
+    setShowCreateCreditorPanel(false);
+    setShowCreateDebtorPanel(false);
+    setCreditorError(null);
+    setDebtorError(null);
+  }, [isTransferFlow]);
 
   const resetCounterparty = () => {
     setValue("counterpartyName", "", {
@@ -918,6 +1028,22 @@ export default function EigenbelegPage() {
             shouldValidate: false,
           });
         }
+
+        if (items.length > 0 && !selectedTransferSenderArea) {
+          setValue("transferSenderArea", items[0].value, {
+            shouldDirty: false,
+            shouldTouch: false,
+            shouldValidate: false,
+          });
+        }
+
+        if (items.length > 0 && !selectedTransferReceiverArea) {
+          setValue("transferReceiverArea", items[0].value, {
+            shouldDirty: false,
+            shouldTouch: false,
+            shouldValidate: false,
+          });
+        }
       } catch (error) {
         if (!active) {
           return;
@@ -939,9 +1065,17 @@ export default function EigenbelegPage() {
     return () => {
       active = false;
     };
-  }, [selectedAssociationArea, setValue]);
+  }, [
+    selectedAssociationArea,
+    selectedTransferReceiverArea,
+    selectedTransferSenderArea,
+    setValue,
+  ]);
 
   const onSubmit = async (values: FormValues) => {
+    setStoreResult(null);
+    setSubmittedAt(null);
+
     if (values.reason === "Sonstiges" && !values.reasonOther?.trim()) {
       setError("reasonOther", {
         type: "required",
@@ -950,7 +1084,7 @@ export default function EigenbelegPage() {
       return;
     }
 
-    if (!values.counterpartyAccount?.trim()) {
+    if (!isTransferFlow && !values.counterpartyAccount?.trim()) {
       setError("counterpartyName", {
         type: "required",
         message: `Bitte einen ${counterpartyEntityLabel} aus der Liste auswählen.`,
@@ -960,9 +1094,14 @@ export default function EigenbelegPage() {
 
     clearErrors("reasonOther");
     clearErrors("counterpartyName");
+    const internalNote = [statusNoteLine, values.notes?.trim()]
+      .filter(Boolean)
+      .join("\n");
     const receiptValues = buildReceiptValues(
-      values,
+      { ...values, notes: internalNote },
       selectedAssociationAreaLabel,
+      selectedTransferSenderAreaLabel,
+      selectedTransferReceiverAreaLabel,
     );
     const { fileName: generatedPdfFileName, bytes: generatedPdfBytes } =
       await createEigenbelegPdf(receiptValues);
@@ -976,53 +1115,128 @@ export default function EigenbelegPage() {
     const receiptFileName = attachment.fileName;
     const receiptFileContentType = attachment.contentType;
 
-    const storeResponse = await fetch(
-      `/api/campai/receipts/${values.bookingType === "einnahme" ? "revenue" : "expense"}`,
-      {
+    const sendReceipt = async (
+      endpoint: "expense" | "revenue",
+      payload: Record<string, unknown>,
+    ) => {
+      const response = await fetch(`/api/campai/receipts/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          ...payload,
           reason: values.reason,
+          tags: [values.reason === "Sonstiges" ? values.reasonOther?.trim() || values.reason : values.reason],
           occasion: receiptValues.occasion,
-          notes: receiptValues.notes,
+          notes: internalNote,
           transactionDate: receiptValues.transactionDate,
-          income: receiptValues.income,
-          expense: receiptValues.expense,
-          transferAmount: receiptValues.transferAmount,
-          senderName: receiptValues.senderName,
-          receiverName: receiptValues.receiverName,
-          counterpartyAccount: values.counterpartyAccount,
-          counterpartyName: values.counterpartyName,
-          costCenter2: values.associationArea,
           invoiceStatus: values.invoiceStatus,
           receiptFileBase64,
           receiptFileName,
           receiptFileContentType,
         }),
-      },
-    );
+      });
 
-    if (storeResponse.ok) {
-      const payload = (await storeResponse.json().catch(() => ({}))) as {
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errorPayload.error ?? "Speichern in Campai fehlgeschlagen.");
+      }
+
+      return (await response.json().catch(() => ({}))) as {
         id?: string | null;
         uploadWarning?: string;
       };
-      const warning = [attachment.warning, payload.uploadWarning]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
+    };
+
+    try {
+      if (isTransferFlow) {
+        const { creditorName, debtorName } = await loadTransferAccountNames();
+        const transferDescription = `Umbuchung von Kst. ${selectedTransferSenderAreaLabel ?? values.transferSenderArea ?? "-"} zu Kst. ${selectedTransferReceiverAreaLabel ?? values.transferReceiverArea ?? "-"}`;
+
+        const expenseResult = await sendReceipt("expense", {
+          bookingType: "ausgabe",
+          description: transferDescription,
+          expense: values.amountEuro,
+          transferAmount: values.amountEuro,
+          senderName: associationName,
+          receiverName: settlementAccountLabel,
+          counterpartyAccount: transferCreditorAccount,
+          counterpartyName: creditorName,
+          positionAccount: settlementAccount,
+          costCenter2: values.transferSenderArea,
+        });
+
+        let revenueResult;
+        try {
+          revenueResult = await sendReceipt("revenue", {
+            bookingType: "einnahme",
+            description: transferDescription,
+            income: values.amountEuro,
+            transferAmount: values.amountEuro,
+            senderName: settlementAccountLabel,
+            receiverName: associationName,
+            counterpartyAccount: transferDebtorAccount,
+            counterpartyName: debtorName,
+            positionAccount: settlementAccount,
+            costCenter2: values.transferReceiverArea,
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Einnahme in Campai fehlgeschlagen.";
+          throw new Error(
+            `Ausgabe wurde bereits mit ${expenseResult.id ?? "ohne ID"} erstellt, aber die zugehörige Einnahme ist fehlgeschlagen. ${message}`,
+          );
+        }
+
+        const warning = [
+          attachment.warning,
+          expenseResult.uploadWarning,
+          revenueResult.uploadWarning,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        setStoreResult({
+          successMessage: `In Campai gespeichert: Ausgabe ${expenseResult.id ?? "ohne ID"}, Einnahme ${revenueResult.id ?? "ohne ID"}`,
+          warning: warning || undefined,
+        });
+      } else {
+        const storeResponse = await sendReceipt(
+          values.bookingType === "einnahme" ? "revenue" : "expense",
+          {
+            income: receiptValues.income,
+            expense: receiptValues.expense,
+            transferAmount: receiptValues.transferAmount,
+            senderName: receiptValues.senderName,
+            receiverName: receiptValues.receiverName,
+            counterpartyAccount: values.counterpartyAccount,
+            counterpartyName: values.counterpartyName,
+            costCenter2: values.associationArea,
+          },
+        );
+
+        const warning = [attachment.warning, storeResponse.uploadWarning]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        setStoreResult({
+          successMessage: `In Campai gespeichert: ${storeResponse.id ?? "ohne ID"}`,
+          warning: warning || undefined,
+        });
+      }
+    } catch (error) {
       setStoreResult({
-        id: payload.id ?? null,
-        warning: warning || undefined,
-      });
-    } else {
-      const payload = (await storeResponse.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setStoreResult({
-        error: payload.error ?? "Speichern in Campai fehlgeschlagen.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Speichern in Campai fehlgeschlagen.",
       });
     }
 
@@ -1178,13 +1392,9 @@ export default function EigenbelegPage() {
           </FormSection>
 
           <FormSection
-            title="3. Einnahme oder Ausgabe"
+            title="3. Buchung"
             icon={faMoneyBillTransfer}
-            description={
-              isExpenseFlow
-                ? "Bei Ausgaben ist der Verein der Sender. Wähle dazu Kostenstelle 2, Kreditor, Konto und Betrag."
-                : "Bei Einnahmen ist der Verein der Empfänger. Wähle dazu Kostenstelle 2, Debitor, Konto und Betrag."
-            }
+            description="Bei Ausgaben ist der Verein der Sender. Bei Einnahmen ist der Verein der Empfänger. Umbuchungen werden vereinsintern zwischen zwei Werkbereichen/Projekten getätigt"
           >
             <div className="space-y-5">
               <input type="hidden" autoComplete="off" {...register("bookingType")} />
@@ -1192,7 +1402,10 @@ export default function EigenbelegPage() {
                 type="hidden"
                 autoComplete="off"
                 {...register("counterpartyName", {
-                  required: `${counterpartyEntityLabel} ist erforderlich.`,
+                  validate: (value) =>
+                    isTransferFlow ||
+                    (typeof value === "string" && value.trim().length > 0) ||
+                    `${counterpartyEntityLabel} ist erforderlich.`,
                 })}
               />
               <input type="hidden" autoComplete="off" {...register("counterpartyAccount")} />
@@ -1219,7 +1432,7 @@ export default function EigenbelegPage() {
                   type="button"
                   onClick={() => setValue("bookingType", "einnahme")}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    !isExpenseFlow
+                    selectedBookingType === "einnahme"
                       ? "bg-white text-zinc-900 shadow-sm"
                       : "text-zinc-600 hover:text-zinc-900"
                   }`}
@@ -1232,371 +1445,608 @@ export default function EigenbelegPage() {
                   </span>
                   Einnahme
                 </button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField label="Sender">
-                  {isExpenseFlow ? (
-                    <Input value={senderDisplayValue} disabled readOnly />
-                  ) : (
-                    <AutocompleteInput
-                      apiPath={counterpartyApiPath}
-                      entityLabelSingular={counterpartyEntityLabel}
-                      placeholder="Name eingeben…"
-                      showCreateOption
-                      value={counterpartyName ?? ""}
-                      onChange={(event) => {
-                        setValue("counterpartyName", event.target.value, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                        setValue("counterpartyAccount", "", {
-                          shouldDirty: true,
-                        });
-                        setDebtorError(null);
-                        if (!event.target.value.trim()) {
-                          setShowCreateDebtorPanel(false);
-                        }
-                      }}
-                      onSelect={handleCounterpartySelect}
-                      onCreateNew={handleCreateDebtor}
+                <button
+                  type="button"
+                  onClick={() => setValue("bookingType", "umbuchung")}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    isTransferFlow
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  <span className="mr-2 inline-flex items-center">
+                    <FontAwesomeIcon
+                      icon={faMoneyBillTransfer}
+                      className="h-3.5 w-3.5"
                     />
-                  )}
-                </FormField>
-
-                <FormField label="Empfänger">
-                  {isExpenseFlow ? (
-                    <AutocompleteInput
-                      apiPath={counterpartyApiPath}
-                      entityLabelSingular={counterpartyEntityLabel}
-                      placeholder="Name eingeben…"
-                      showCreateOption
-                      value={counterpartyName ?? ""}
-                      onChange={(event) => {
-                        setValue("counterpartyName", event.target.value, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                        setValue("counterpartyAccount", "", {
-                          shouldDirty: true,
-                        });
-                        setCreditorError(null);
-                        if (!event.target.value.trim()) {
-                          setShowCreateCreditorPanel(false);
-                        }
-                      }}
-                      onSelect={handleCounterpartySelect}
-                      onCreateNew={handleCreateCreditor}
-                    />
-                  ) : (
-                    <Input value={receiverDisplayValue} disabled readOnly />
-                  )}
-                </FormField>
-
-                <FormField
-                  label="Kostenstelle 2"
-                  hint="Werkbereich des Vereins auswählen"
-                  required
-                  error={errors.associationArea?.message ?? costCentersError ?? undefined}
-                >
-                  <Select
-                    disabled={costCentersLoading || costCenters.length === 0}
-                    {...register("associationArea", {
-                      required: "Bitte eine Kostenstelle 2 auswählen.",
-                    })}
-                  >
-                    {costCenters.length === 0 ? (
-                      <option value="">
-                        {costCentersLoading
-                          ? "Kostenstellen werden geladen…"
-                          : "Keine Kostenstellen verfügbar"}
-                      </option>
-                    ) : null}
-                    {costCenters.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <FormField
-                  label="Konto/Kasse"
-                  required
-                  error={errors.associationAccount?.message}
-                >
-                  <Select
-                    {...register("associationAccount", {
-                      required: "Bitte ein Konto auswählen.",
-                    })}
-                  >
-                    {associationAccountOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <FormField
-                  label={isExpenseFlow ? "Ausgabe in Euro" : "Einnahme in Euro"}
-                  required
-                  hint={
-                    isExpenseFlow
-                      ? "Bitte den Ausgabenbetrag des Eigenbelegs eintragen."
-                      : "Bitte den Einnahmenbetrag des Eigenbelegs eintragen."
-                  }
-                  error={errors.amountEuro?.message}
-                >
-                  <Input
-                    placeholder={isExpenseFlow ? "z. B. 95,00" : "z. B. 30,00"}
-                    {...register("amountEuro", {
-                      required: "Bitte einen Betrag eintragen.",
-                      pattern: {
-                        value: amountPattern,
-                        message: "Bitte gültigen Betrag eingeben.",
-                      },
-                    })}
-                  />
-                </FormField>
-              </div>
-
-              {counterpartyAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    {counterpartyEntityLabel} <strong>#{counterpartyAccount}</strong>
-                    {counterpartyName ? ` (${counterpartyName})` : ""} ausgewählt
                   </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCounterparty}
+                  Umbuchung
+                </button>
+              </div>
+
+              {isTransferFlow ? (
+                <div className="space-y-5">
+                  <FormField
+                    label="Umbuchungsbetrag in Euro"
+                    required
+                    hint="Bitte den Betrag der Umbuchung eintragen."
+                    error={errors.amountEuro?.message}
                   >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : null}
+                    <Input
+                      placeholder="z. B. 95,00"
+                      inputMode="decimal"
+                      {...register("amountEuro", {
+                        required: "Bitte einen Betrag eintragen.",
+                        pattern: {
+                          value: euroAmountPattern,
+                          message: euroAmountValidationMessage,
+                        },
+                      })}
+                    />
+                  </FormField>
 
-              {activeCounterpartyError ? (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {activeCounterpartyError}
-                </div>
-              ) : null}
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
+                        <p className="text-sm text-zinc-600">
+                          Von hier wird der Betrag ausgebucht.
+                        </p>
+                      </div>
 
-              {showCreateCreditorPanel && !counterpartyAccount && isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
-                    Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
-                  </p>
+                      <FormField label="Verein">
+                        <Input value={associationName} disabled readOnly />
+                      </FormField>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label="Zahlungsart" required>
-                      <Select
-                        value={creditorPaymentMethodType}
-                        onChange={(event) =>
-                          setCreditorPaymentMethodType(
-                            event.target.value as CreditorPaymentMethodType,
-                          )
-                        }
+                      <FormField
+                        label="Werkbereich/Projekt"
+                        required
+                        error={errors.transferSenderArea?.message ?? costCentersError ?? undefined}
                       >
-                        <option value="creditTransfer">Überweisung</option>
-                        <option value="cash">Bargeld</option>
-                      </Select>
+                        <Select
+                          disabled={costCentersLoading || costCenters.length === 0}
+                          {...register("transferSenderArea", {
+                            required: "Bitte eine Kostenstelle 2 für den Sender auswählen.",
+                          })}
+                        >
+                          {costCenters.length === 0 ? (
+                            <option value="">
+                              {costCentersLoading
+                                ? "Kostenstellen werden geladen…"
+                                : "Keine Kostenstellen verfügbar"}
+                            </option>
+                          ) : null}
+                          {costCenters.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+
+                      <FormField
+                        label="Konto/Kasse"
+                        required
+                        error={errors.transferSenderAccount?.message}
+                      >
+                        <Select
+                          {...register("transferSenderAccount", {
+                            required: "Bitte ein Konto für den Sender auswählen.",
+                          })}
+                        >
+                          {associationAccountOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
+                        <p className="text-sm text-zinc-600">
+                          Hier wird der Betrag wieder eingebucht.
+                        </p>
+                      </div>
+
+                      <FormField label="Verein">
+                        <Input value={associationName} disabled readOnly />
+                      </FormField>
+
+                      <FormField
+                        label="Werkbereich/Projekt"
+                        required
+                        error={errors.transferReceiverArea?.message ?? costCentersError ?? undefined}
+                      >
+                        <Select
+                          disabled={costCentersLoading || costCenters.length === 0}
+                          {...register("transferReceiverArea", {
+                            required: "Bitte eine Kostenstelle 2 für den Empfänger auswählen.",
+                          })}
+                        >
+                          {costCenters.length === 0 ? (
+                            <option value="">
+                              {costCentersLoading
+                                ? "Kostenstellen werden geladen…"
+                                : "Keine Kostenstellen verfügbar"}
+                            </option>
+                          ) : null}
+                          {costCenters.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+
+                      <FormField
+                        label="Konto/Kasse"
+                        required
+                        error={errors.transferReceiverAccount?.message}
+                      >
+                        <Select
+                          {...register("transferReceiverAccount", {
+                            required: "Bitte ein Konto für den Empfänger auswählen.",
+                          })}
+                        >
+                          {associationAccountOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-5">
+                    <FormField
+                      label={isExpenseFlow ? "Ausgabe in Euro" : "Einnahme in Euro"}
+                      required
+                      hint={
+                        isExpenseFlow
+                          ? "Bitte den Ausgabenbetrag des Eigenbelegs eintragen."
+                          : "Bitte den Einnahmenbetrag des Eigenbelegs eintragen."
+                      }
+                      error={errors.amountEuro?.message}
+                    >
+                      <Input
+                        placeholder={isExpenseFlow ? "z. B. 95,00" : "z. B. 30,00"}
+                        inputMode="decimal"
+                        {...register("amountEuro", {
+                          required: "Bitte einen Betrag eintragen.",
+                          pattern: {
+                            value: euroAmountPattern,
+                            message: euroAmountValidationMessage,
+                          },
+                        })}
+                      />
                     </FormField>
 
-                    {creditorPaymentMethodType === "creditTransfer" ? (
-                      <FormField label="Kontoinhaber" required>
-                        <Input
-                          placeholder="Vor- und Nachname"
-                          value={creditorKontoinhaber}
-                          onChange={(event) =>
-                            setCreditorKontoinhaber(event.target.value)
-                          }
-                        />
-                      </FormField>
-                    ) : null}
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
+                          <p className="text-sm text-zinc-600">
+                            {isExpenseLikeFlow
+                              ? "Von hier wird der Betrag ausgebucht."
+                              : "Hier kommt der Betrag von außen in den Verein hinein."}
+                          </p>
+                        </div>
+
+                        <FormField label="Name" required={!isExpenseLikeFlow}>
+                          {isExpenseLikeFlow ? (
+                            <Input value={senderDisplayValue} disabled readOnly />
+                          ) : (
+                            <AutocompleteInput
+                              apiPath={counterpartyApiPath}
+                              entityLabelSingular={counterpartyEntityLabel}
+                              placeholder="Name eingeben…"
+                              showCreateOption
+                              value={counterpartyName ?? ""}
+                              onChange={(event) => {
+                                setValue("counterpartyName", event.target.value, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                                setValue("counterpartyAccount", "", {
+                                  shouldDirty: true,
+                                });
+                                setDebtorError(null);
+                                if (!event.target.value.trim()) {
+                                  setShowCreateDebtorPanel(false);
+                                }
+                              }}
+                              onSelect={handleCounterpartySelect}
+                              onCreateNew={handleCreateDebtor}
+                            />
+                          )}
+                        </FormField>
+
+                        {isExpenseLikeFlow ? (
+                          <>
+                            <FormField
+                              label="Werkbereich/Projekt"
+                              hint="Werkbereich des Vereins auswählen"
+                              required
+                              error={errors.associationArea?.message ?? costCentersError ?? undefined}
+                            >
+                              <Select
+                                disabled={costCentersLoading || costCenters.length === 0}
+                                {...register("associationArea", {
+                                  required: "Bitte eine Kostenstelle 2 auswählen.",
+                                })}
+                              >
+                                {costCenters.length === 0 ? (
+                                  <option value="">
+                                    {costCentersLoading
+                                      ? "Kostenstellen werden geladen…"
+                                      : "Keine Kostenstellen verfügbar"}
+                                  </option>
+                                ) : null}
+                                {costCenters.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </FormField>
+
+                            <FormField
+                              label="Konto/Kasse"
+                              required
+                              error={errors.associationAccount?.message}
+                            >
+                              <Select
+                                {...register("associationAccount", {
+                                  required: "Bitte ein Konto auswählen.",
+                                })}
+                              >
+                                {associationAccountOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </FormField>
+                          </>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
+                          <p className="text-sm text-zinc-600">
+                            {isExpenseLikeFlow
+                              ? "Hier geht der Betrag nach außen aus dem Verein heraus."
+                              : "Hier wird der Betrag im Verein eingebucht."}
+                          </p>
+                        </div>
+
+                        <FormField label="Name" required={isExpenseLikeFlow}>
+                          {isExpenseLikeFlow ? (
+                            <AutocompleteInput
+                              apiPath={counterpartyApiPath}
+                              entityLabelSingular={counterpartyEntityLabel}
+                              placeholder="Name eingeben…"
+                              showCreateOption
+                              value={counterpartyName ?? ""}
+                              onChange={(event) => {
+                                setValue("counterpartyName", event.target.value, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                                setValue("counterpartyAccount", "", {
+                                  shouldDirty: true,
+                                });
+                                setCreditorError(null);
+                                if (!event.target.value.trim()) {
+                                  setShowCreateCreditorPanel(false);
+                                }
+                              }}
+                              onSelect={handleCounterpartySelect}
+                              onCreateNew={handleCreateCreditor}
+                            />
+                          ) : (
+                            <Input value={receiverDisplayValue} disabled readOnly />
+                          )}
+                        </FormField>
+
+                        {!isExpenseLikeFlow ? (
+                          <>
+                            <FormField
+                              label="Werkbereich/Projekt"
+                              hint="Werkbereich des Vereins auswählen"
+                              required
+                              error={errors.associationArea?.message ?? costCentersError ?? undefined}
+                            >
+                              <Select
+                                disabled={costCentersLoading || costCenters.length === 0}
+                                {...register("associationArea", {
+                                  required: "Bitte eine Kostenstelle 2 auswählen.",
+                                })}
+                              >
+                                {costCenters.length === 0 ? (
+                                  <option value="">
+                                    {costCentersLoading
+                                      ? "Kostenstellen werden geladen…"
+                                      : "Keine Kostenstellen verfügbar"}
+                                  </option>
+                                ) : null}
+                                {costCenters.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </FormField>
+
+                            <FormField
+                              label="Konto/Kasse"
+                              required
+                              error={errors.associationAccount?.message}
+                            >
+                              <Select
+                                {...register("associationAccount", {
+                                  required: "Bitte ein Konto auswählen.",
+                                })}
+                              >
+                                {associationAccountOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </FormField>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
 
-                  {creditorPaymentMethodType === "creditTransfer" ? (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField label="IBAN" required>
-                        <Input
-                          placeholder="DE…"
-                          value={creditorIban}
-                          onChange={(event) => setCreditorIban(event.target.value)}
-                        />
-                      </FormField>
+                  {counterpartyAccount ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                      <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                      <span>
+                        {counterpartyEntityLabel} <strong>#{counterpartyAccount}</strong>
+                        {counterpartyName ? ` (${counterpartyName})` : ""} ausgewählt
+                      </span>
+                      <button
+                        type="button"
+                        className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                        onClick={resetCounterparty}
+                      >
+                        <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ) : null}
 
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      kind="primary"
-                      icon={faPlus}
-                      disabled={
-                        isCreatingCreditor ||
-                        !counterpartyName?.trim() ||
-                        (creditorPaymentMethodType === "creditTransfer" &&
-                          (!creditorIban.trim() || !creditorKontoinhaber.trim()))
-                      }
-                      onClick={createCreditor}
-                    >
-                      {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
-                    </Button>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      onClick={() => setShowCreateCreditorPanel(false)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+                  {activeCounterpartyError ? (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                      {activeCounterpartyError}
+                    </div>
+                  ) : null}
 
-              {showCreateDebtorPanel && !counterpartyAccount && !isExpenseFlow ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-900">
-                      Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
-                    </p>
-                    <p className="text-sm text-blue-800">
-                      Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
-                    </p>
-                  </div>
+                  {showCreateCreditorPanel && !counterpartyAccount && isExpenseLikeFlow ? (
+                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                      <p className="text-sm font-medium text-blue-900">
+                        Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
+                      </p>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label="E-Mail-Adresse">
-                      <Input
-                        type="email"
-                        placeholder="kunde@beispiel.de"
-                        value={debtorEmail}
-                        onChange={(event) => setDebtorEmail(event.target.value)}
-                      />
-                    </FormField>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField label="Zahlungsart" required>
+                          <Select
+                            value={creditorPaymentMethodType}
+                            onChange={(event) =>
+                              setCreditorPaymentMethodType(
+                                event.target.value as CreditorPaymentMethodType,
+                              )
+                            }
+                          >
+                            <option value="creditTransfer">Überweisung</option>
+                            <option value="cash">Bargeld</option>
+                          </Select>
+                        </FormField>
 
-                    <FormField label="Versand per E-Mail">
-                      <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
-                        <input
-                          type="checkbox"
-                          autoComplete="off"
-                          checked={debtorSendByMail}
-                          onChange={(event) =>
-                            setDebtorSendByMail(event.target.checked)
+                        {creditorPaymentMethodType === "creditTransfer" ? (
+                          <FormField label="Kontoinhaber" required>
+                            <Input
+                              placeholder="Vor- und Nachname"
+                              value={creditorKontoinhaber}
+                              onChange={(event) =>
+                                setCreditorKontoinhaber(event.target.value)
+                              }
+                            />
+                          </FormField>
+                        ) : null}
+                      </div>
+
+                      {creditorPaymentMethodType === "creditTransfer" ? (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <FormField label="IBAN" required>
+                            <Input
+                              placeholder="DE…"
+                              value={creditorIban}
+                              onChange={(event) => setCreditorIban(event.target.value)}
+                            />
+                          </FormField>
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-center gap-3">
+                        <Button
+                          type="button"
+                          kind="primary"
+                          icon={faPlus}
+                          disabled={
+                            isCreatingCreditor ||
+                            !counterpartyName?.trim() ||
+                            (creditorPaymentMethodType === "creditTransfer" &&
+                              (!creditorIban.trim() || !creditorKontoinhaber.trim()))
                           }
-                        />
-                        Rechnung per E-Mail versenden
-                      </label>
-                    </FormField>
-                  </div>
+                          onClick={createCreditor}
+                        >
+                          {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
+                        </Button>
+                        <Button
+                          type="button"
+                          kind="secondary"
+                          onClick={() => setShowCreateCreditorPanel(false)}
+                        >
+                          Abbrechen
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label="Straße / Adresse" required>
-                      <Input
-                        placeholder="Straße und Hausnummer"
-                        value={debtorAddressLine}
-                        onChange={(event) =>
-                          setDebtorAddressLine(event.target.value)
-                        }
-                      />
-                    </FormField>
+                  {showCreateDebtorPanel && !counterpartyAccount && !isExpenseLikeFlow ? (
+                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-blue-900">
+                          Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
+                        </p>
+                        <p className="text-sm text-blue-800">
+                          Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
+                        </p>
+                      </div>
 
-                    <FormField label="Adresszusatz 1">
-                      <Input
-                        placeholder="Optional"
-                        value={debtorDetails1}
-                        onChange={(event) => setDebtorDetails1(event.target.value)}
-                      />
-                    </FormField>
-                  </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField label="E-Mail-Adresse">
+                          <Input
+                            type="email"
+                            placeholder="kunde@beispiel.de"
+                            value={debtorEmail}
+                            onChange={(event) => setDebtorEmail(event.target.value)}
+                          />
+                        </FormField>
 
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <FormField label="PLZ" required>
-                      <Input
-                        placeholder="01159"
-                        value={debtorZip}
-                        onChange={(event) => setDebtorZip(event.target.value)}
-                      />
-                    </FormField>
+                        <FormField label="Versand per E-Mail">
+                          <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                            <input
+                              type="checkbox"
+                              autoComplete="off"
+                              checked={debtorSendByMail}
+                              onChange={(event) =>
+                                setDebtorSendByMail(event.target.checked)
+                              }
+                            />
+                            Rechnung per E-Mail versenden
+                          </label>
+                        </FormField>
+                      </div>
 
-                    <FormField label="Stadt" required>
-                      <Input
-                        placeholder="Dresden"
-                        value={debtorCity}
-                        onChange={(event) => setDebtorCity(event.target.value)}
-                      />
-                    </FormField>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField label="Straße / Adresse" required>
+                          <Input
+                            placeholder="Straße und Hausnummer"
+                            value={debtorAddressLine}
+                            onChange={(event) =>
+                              setDebtorAddressLine(event.target.value)
+                            }
+                          />
+                        </FormField>
 
-                    <FormField label="Adresszusatz 2">
-                      <Input
-                        placeholder="Optional"
-                        value={debtorDetails2}
-                        onChange={(event) => setDebtorDetails2(event.target.value)}
-                      />
-                    </FormField>
-                  </div>
+                        <FormField label="Adresszusatz 1">
+                          <Input
+                            placeholder="Optional"
+                            value={debtorDetails1}
+                            onChange={(event) => setDebtorDetails1(event.target.value)}
+                          />
+                        </FormField>
+                      </div>
 
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      kind="primary"
-                      icon={faPlus}
-                      disabled={
-                        isCreatingDebtor ||
-                        !counterpartyName?.trim() ||
-                        !debtorAddressLine.trim() ||
-                        !debtorZip.trim() ||
-                        !debtorCity.trim()
-                      }
-                      onClick={createDebtor}
-                    >
-                      {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
-                    </Button>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      onClick={() => setShowCreateDebtorPanel(false)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <FormField label="PLZ" required>
+                          <Input
+                            placeholder="01159"
+                            value={debtorZip}
+                            onChange={(event) => setDebtorZip(event.target.value)}
+                          />
+                        </FormField>
+
+                        <FormField label="Stadt" required>
+                          <Input
+                            placeholder="Dresden"
+                            value={debtorCity}
+                            onChange={(event) => setDebtorCity(event.target.value)}
+                          />
+                        </FormField>
+
+                        <FormField label="Adresszusatz 2">
+                          <Input
+                            placeholder="Optional"
+                            value={debtorDetails2}
+                            onChange={(event) => setDebtorDetails2(event.target.value)}
+                          />
+                        </FormField>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Button
+                          type="button"
+                          kind="primary"
+                          icon={faPlus}
+                          disabled={
+                            isCreatingDebtor ||
+                            !counterpartyName?.trim() ||
+                            !debtorAddressLine.trim() ||
+                            !debtorZip.trim() ||
+                            !debtorCity.trim()
+                          }
+                          onClick={createDebtor}
+                        >
+                          {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
+                        </Button>
+                        <Button
+                          type="button"
+                          kind="secondary"
+                          onClick={() => setShowCreateDebtorPanel(false)}
+                        >
+                          Abbrechen
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           </FormSection>
 
-          <FormSection title="4. Status" icon={faCalendarCheck}>
-            <FormField
-              label="Status"
-              required
-              error={errors.invoiceStatus?.message}
-            >
-              <Select
-                {...register("invoiceStatus", {
-                  required: "Bitte Status auswählen.",
-                })}
+          <InternalNoteSection
+            hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar. Die Status-Zeile wird automatisch vorangestellt."
+            textareaProps={register("notes")}
+          >
+            <div className="mb-5 grid gap-4 md:grid-cols-2">
+              <FormField
+                label="Status"
+                required
+                error={errors.invoiceStatus?.message}
               >
-                <option value="offen">offen</option>
-                <option value="bezahlt">bezahlt</option>
-              </Select>
-            </FormField>
-          </FormSection>
-
-          <InternalNoteSection textareaProps={register("notes")} />
+                <Select
+                  {...register("invoiceStatus", {
+                    required: "Bitte Status auswählen.",
+                  })}
+                >
+                  <option value="offen">offen</option>
+                  <option value="bezahlt">bezahlt</option>
+                </Select>
+              </FormField>
+            </div>
+          </InternalNoteSection>
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               {submittedAt ? (
                 <p className="text-sm text-emerald-700">
-                  Formular lokal erfasst: {submittedAt}
+                  Eigenbeleg erstellt: {submittedAt}
                 </p>
               ) : null}
-              {storeResult?.id ? (
-                <p className="text-sm text-emerald-700">
-                  In Campai gespeichert: {storeResult.id}
-                </p>
+              {storeResult?.successMessage ? (
+                <p className="text-sm text-emerald-700">{storeResult.successMessage}</p>
               ) : null}
               {storeResult?.warning ? (
                 <p className="text-sm text-amber-700">{storeResult.warning}</p>
@@ -1621,8 +2071,8 @@ export default function EigenbelegPage() {
                 className="ml-auto"
               >
                 {isSubmitting
-                  ? "Wird gespeichert…"
-                  : "Speichern & PDF erstellen"}
+                  ? "Wird erstellt…"
+                  : "Eigenbeleg erstellen"}
               </Button>
             </div>
           </div>
