@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import {
-  addCampaiReceiptNote,
+  addCampaiReceiptNotes,
   buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
@@ -363,7 +363,7 @@ export const POST = async (request: NextRequest) => {
 
     const reason = compactText(body.reason, "Eigenbeleg");
     const occasion = compactText(body.occasion, "Eigenbeleg");
-    const notes = compactText(body.notes);
+    const internalNote = compactText(body.internalNote ?? body.notes);
     const senderName = compactText(body.senderName);
     const receiverName = compactText(body.receiverName);
     const counterpartyName = compactText(
@@ -382,7 +382,6 @@ export const POST = async (request: NextRequest) => {
       `${reason}: ${occasion}`,
       senderName ? `Von: ${senderName}` : "",
       receiverName ? `An: ${receiverName}` : "",
-      notes ? `Notiz: ${notes}` : "",
     ]
       .filter(Boolean)
       .join(" | ")
@@ -515,18 +514,18 @@ export const POST = async (request: NextRequest) => {
 
     if (!receiptId) {
       noteWarning =
-        "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Ersteller-Notiz konnte nicht angelegt werden.";
+        "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Campai-Notizen konnten nicht angelegt werden.";
     } else {
-      const noteResult = await addCampaiReceiptNote({
+      const noteResult = await addCampaiReceiptNotes({
         apiKey,
         organizationId,
         mandateId,
         receiptId,
-        content: creatorNote,
+        contents: [creatorNote, internalNote],
       });
 
       if (!noteResult.ok) {
-        noteWarning = `Beleg erstellt, aber die Ersteller-Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
+        noteWarning = `Beleg erstellt, aber die Campai-Notizen konnten nicht gespeichert werden: ${noteResult.error}`;
       }
     }
 

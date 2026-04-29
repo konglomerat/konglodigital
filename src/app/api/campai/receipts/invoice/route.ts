@@ -14,7 +14,7 @@ import {
 import { parsePositiveInt } from "@/lib/campai-receipts/parsers";
 import { userCanAccessModule } from "@/lib/roles";
 import {
-  addCampaiReceiptNote,
+  addCampaiReceiptNotes,
   buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
@@ -51,6 +51,7 @@ type InvoiceBody = {
   title?: string;
   intro?: string;
   note?: string;
+  internalNote?: string;
   description?: string;
   positions?: PositionPayload[];
   isNet?: boolean;
@@ -403,6 +404,8 @@ export const POST = async (request: NextRequest) => {
     typeof body.debtorName === "string" ? body.debtorName.trim() : "";
   const paymentMethodType = normalizePaymentMethodType(body.paymentMethod);
   const paymentCashAccountId = normalizeObjectId(body.paymentCashAccountId);
+  const internalNote =
+    typeof body.internalNote === "string" ? body.internalNote.trim() : "";
 
   if (!debtorAccount) {
     return NextResponse.json(
@@ -616,22 +619,20 @@ export const POST = async (request: NextRequest) => {
   const receiptId = dataResponse?._id ?? dataResponse?.id ?? existingInvoiceId ?? null;
   let noteWarning: string | undefined;
 
-  if (!existingInvoiceId) {
-    if (!receiptId) {
-      noteWarning =
-        "Rechnung erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Ersteller-Notiz konnte nicht angelegt werden.";
-    } else {
-      const noteResult = await addCampaiReceiptNote({
-        apiKey: config.apiKey,
-        organizationId: config.organizationId,
-        mandateId: config.mandateId,
-        receiptId,
-        content: creatorNote,
-      });
+  if (!receiptId) {
+    noteWarning =
+      "Rechnung erstellt, aber Campai hat keine Receipt-ID zurückgegeben. Die Campai-Notizen konnten nicht angelegt werden.";
+  } else {
+    const noteResult = await addCampaiReceiptNotes({
+      apiKey: config.apiKey,
+      organizationId: config.organizationId,
+      mandateId: config.mandateId,
+      receiptId,
+      contents: [creatorNote, internalNote],
+    });
 
-      if (!noteResult.ok) {
-        noteWarning = `Rechnung erstellt, aber die Ersteller-Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
-      }
+    if (!noteResult.ok) {
+      noteWarning = `Rechnung erstellt, aber die Campai-Notizen konnten nicht gespeichert werden: ${noteResult.error}`;
     }
   }
 

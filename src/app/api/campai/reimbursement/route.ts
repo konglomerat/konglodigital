@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
 import {
-	addCampaiReceiptNote,
+	addCampaiReceiptNotes,
 	buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
@@ -155,16 +155,6 @@ const uploadFileToCampai = async (params: {
 	return putResponse.ok ? uploadId : null;
 };
 
-const buildReceiptUserNote = (params: {
-	userId: string;
-	lines: string[];
-}) =>
-	[
-		...params.lines.filter(Boolean),
-		`Benutzer-ID: ${params.userId}`,
-	]
-		.filter(Boolean)
-		.join("\n");
 export const POST = async (request: NextRequest) => {
 	const { supabase } = createSupabaseRouteClient(request);
 	const { data } = await supabase.auth.getUser();
@@ -215,7 +205,7 @@ export const POST = async (request: NextRequest) => {
 		>;
 
 		const betreff = compactText(body.betreff);
-		const notiz = compactText(body.notiz);
+		const internalNote = compactText(body.internalNote ?? body.notiz);
 		const belegdatum = parseDate(body.belegdatum);
 		const bereitsBeglichen = body.bereitsBeglichen === true;
 		const empfaengerName = compactText(body.empfaengerName);
@@ -336,18 +326,6 @@ export const POST = async (request: NextRequest) => {
 			.join(" | ")
 			.slice(0, 140);
 
-		const noteLines = [
-			empfaengerName ? `Empfänger: ${empfaengerName}` : "",
-			empfaengerEmail ? `E-Mail: ${empfaengerEmail}` : "",
-			bereitsBeglichen ? "Status: Rechnung bereits beglichen" : "Status: offen",
-			notiz ? `Notiz: ${notiz}` : "",
-		];
-
-		const noteContent = buildReceiptUserNote({
-			userId: data.user.id,
-			lines: [...noteLines, creatorNote],
-		});
-
 		// ── Kreditor-Konto: vom Client übergeben oder Fallback auf Env ──
 		const finalCreditorAccount = clientCreditorAccount ?? creditorAccount;
 		const finalAccountName = clientCreditorAccount
@@ -399,18 +377,18 @@ export const POST = async (request: NextRequest) => {
 
 		let noteWarning: string | undefined;
 		if (!receiptId) {
-			noteWarning = "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
+			noteWarning = "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Campai-Notizen konnten nicht angelegt werden.";
 		} else {
-			const noteResult = await addCampaiReceiptNote({
+			const noteResult = await addCampaiReceiptNotes({
 				apiKey,
 				organizationId,
 				mandateId,
 				receiptId,
-				content: noteContent,
+				contents: [creatorNote, internalNote],
 			});
 
 			if (!noteResult.ok) {
-				noteWarning = `Beleg erstellt, aber die Notiz konnte nicht gespeichert werden: ${noteResult.error}`;
+				noteWarning = `Beleg erstellt, aber die Campai-Notizen konnten nicht gespeichert werden: ${noteResult.error}`;
 			}
 		}
 
