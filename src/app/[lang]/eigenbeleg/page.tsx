@@ -7,7 +7,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowTrendDown,
   faArrowTrendUp,
-  faCalendarCheck,
   faCheck,
   faFolderOpen,
   faMoneyBillTransfer,
@@ -1243,13 +1242,6 @@ export default function EigenbelegPage() {
     setSubmittedAt(new Date().toLocaleString("de-DE"));
   };
 
-  const handleLoadTestData = () => {
-    reset(testFormData);
-    clearErrors();
-    setSubmittedAt(null);
-    setStoreResult(null);
-  };
-
   return (
     <BookingPageShell>
         <BookingPageHeader
@@ -2038,8 +2030,8 @@ export default function EigenbelegPage() {
             </div>
           </InternalNoteSection>
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="mr-auto flex flex-wrap items-center gap-3">
               {submittedAt ? (
                 <p className="text-sm text-emerald-700">
                   Eigenbeleg erstellt: {submittedAt}
@@ -2054,21 +2046,16 @@ export default function EigenbelegPage() {
               {storeResult?.error ? (
                 <p className="text-sm text-rose-700">{storeResult.error}</p>
               ) : null}
+            </div>
 
-              <Button
-                type="button"
-                kind="secondary"
-                icon={faFolderOpen}
-                onClick={handleLoadTestData}
-              >
-                Testdaten laden
+            <div className="ml-auto flex items-center justify-end gap-3">
+              <Button type="button" kind="secondary" href="/meine-buchungen">
+                Abbrechen
               </Button>
               <Button
                 type="submit"
                 kind="primary"
-                icon={faCalendarCheck}
                 disabled={isSubmitting}
-                className="ml-auto"
               >
                 {isSubmitting
                   ? "Wird erstellt…"

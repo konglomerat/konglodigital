@@ -419,40 +419,6 @@ export default function ReimbursementPage() {
     }
   };
 
-  const fillWithTestData = () => {
-    const defaultCostCenter = costCenters[0]?.value ?? "";
-
-    reset({
-      betreff: "Test Rückerstattung Materialkauf",
-      belegdatum: new Date().toISOString().slice(0, 10),
-      rechnungStatus: "bezahlt",
-      empfaengerName: "Max Mustermann",
-      empfaengerEmail: "max@example.com",
-      positions: [
-        {
-          betragEuro: "12,90",
-          beschreibung: "Materialkosten",
-          kostenstelle: defaultCostCenter,
-        },
-        {
-          betragEuro: "8,10",
-          beschreibung: "Fahrtkosten",
-          kostenstelle: defaultCostCenter,
-        },
-      ],
-      notiz: "Automatisch befüllte Testdaten",
-      belegDatei: undefined,
-    });
-
-    setCreditorAccount(null);
-    setCreditorName("");
-    setShowCreatePanel(false);
-    setCreditorIban("");
-    setCreditorKontoinhaber("");
-    setCreditorError(null);
-    setResult(null);
-  };
-
   return (
     <BookingPageShell>
         <BookingPageHeader
@@ -812,8 +778,8 @@ export default function ReimbursementPage() {
             textareaProps={register("notiz")}
           />
 
-          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="mr-auto flex flex-wrap items-center gap-3">
               {result?.id ? (
                 <p className="text-sm text-emerald-700">
                   In Campai gespeichert: {result.id}
@@ -827,23 +793,16 @@ export default function ReimbursementPage() {
               {result?.error ? (
                 <p className="text-sm text-rose-700">{result.error}</p>
               ) : null}
+            </div>
 
-              <Button
-                type="button"
-                kind="secondary"
-                icon={faFolderOpen}
-                onClick={fillWithTestData}
-                disabled={isSubmitting}
-              >
-                Testdaten laden
+            <div className="ml-auto flex items-center justify-end gap-3">
+              <Button type="button" kind="secondary" href="/meine-buchungen">
+                Abbrechen
               </Button>
-
               <Button
                 type="submit"
                 kind="primary"
-                icon={faCalendarCheck}
                 disabled={isSubmitting}
-                className="ml-auto"
               >
                 {isSubmitting ? "Wird gesendet…" : "Rückerstattung absenden"}
               </Button>

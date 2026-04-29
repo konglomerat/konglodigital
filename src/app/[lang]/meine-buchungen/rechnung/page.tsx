@@ -8,7 +8,6 @@ import {
   faFileInvoice,
   faList,
   faPlus,
-  faRotate,
   faTrash,
   faTriangleExclamation,
   faUser,
@@ -768,56 +767,6 @@ export default function NewSimpleInvoicePage() {
   const showCostCenterWarning =
     !costCentersLoading && (costCenters.length === 0 || Boolean(costCentersError));
 
-  const fillWithTestData = () => {
-    const defaultCostCenter = getDefaultCostCenter2(costCenters);
-    const defaultPaymentMethod = getDefaultPaymentMethod(paymentMethods);
-    setIntro(invoiceSubjectPrefill);
-    setNote("Bitte überweisen Sie den Betrag innerhalb von 14 Tagen.");
-    setDebtorAccount(null);
-    setDebtorName("Musterkunde GmbH");
-    setShowCreateDebtorPanel(true);
-    setDebtorError(null);
-    setAddressLine("Musterstraße 1");
-    setZip("12345");
-    setCity("Musterstadt");
-    setDetails1("");
-    setDetails2("");
-    setPaid(false);
-    setPaymentMethod(defaultPaymentMethod);
-    const today = new Date().toISOString().slice(0, 10);
-    const due = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    setInvoiceDate(today);
-    setDueDate(due);
-    setDeliveryDate(today);
-    setIsNet(true);
-    setSendByMail(false);
-    setRecipientEmail("");
-    setPositions([
-      {
-        id: `test-1`,
-        description: "Maschinenstunde Lasercutter",
-        unit: "Std",
-        quantity: "2",
-        unitAmountEuro: "15,00",
-        taxCode: "19",
-        costCenter2: defaultCostCenter,
-        discountPercent: "",
-      },
-      {
-        id: `test-2`,
-        description: "Material (Sperrholz 3mm)",
-        unit: "Stk",
-        quantity: "1",
-        unitAmountEuro: "8,50",
-        taxCode: "19",
-        costCenter2: defaultCostCenter,
-        discountPercent: "",
-      },
-    ]);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-  };
-
   return (
     <BookingPageShell>
       <BookingPageHeader
@@ -1377,8 +1326,8 @@ export default function NewSimpleInvoicePage() {
           }}
         />
 
-        <div className="sticky bottom-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="mr-auto flex flex-wrap items-center gap-3">
             {errorMessage ? (
               <p className="text-sm text-destructive">{errorMessage}</p>
             ) : null}
@@ -1394,18 +1343,13 @@ export default function NewSimpleInvoicePage() {
             <p className="text-sm text-foreground/80">
               Gesamtbetrag: <span className="font-semibold text-foreground">€{(totals.grossTotalCents / 100).toFixed(2)}</span>
             </p>
+          </div>
 
-            <Button
-              type="button"
-              kind="secondary"
-              icon={faRotate}
-              onClick={fillWithTestData}
-              disabled={submitting}
-            >
-              Mit Testdaten füllen
+          <div className="ml-auto flex items-center justify-end gap-3">
+            <Button type="button" kind="secondary" href="/meine-buchungen">
+              Abbrechen
             </Button>
-
-            <Button type="submit" kind="primary" disabled={submitting} className="ml-auto">
+            <Button type="submit" kind="primary" disabled={submitting}>
               {submitting ? "Rechnung wird erstellt..." : "Rechnung erstellen"}
             </Button>
           </div>

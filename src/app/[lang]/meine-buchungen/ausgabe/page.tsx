@@ -623,20 +623,20 @@ export default function AusgabePage() {
             </div>
           ) : null}
 
-          <div className="flex items-center gap-3">
-            <Button
-              type="submit"
-              kind="primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
-            </Button>
+          <div className="flex items-center justify-end gap-3">
             <Button
               type="button"
               kind="secondary"
               href="/meine-buchungen"
             >
               Abbrechen
+            </Button>
+            <Button
+              type="submit"
+              kind="primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
             </Button>
           </div>
         </form>
