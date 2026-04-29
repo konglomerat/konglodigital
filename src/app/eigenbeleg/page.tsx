@@ -16,6 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
+import BookingPageShell from "../components/ui/BookingPageShell";
+import InternalNoteSection from "../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
   FormField,
@@ -24,6 +26,7 @@ import {
   Select,
   Textarea,
 } from "../components/ui/form";
+import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
 
 const reasonOptions = [
   "Umbuchung",
@@ -1034,25 +1037,14 @@ export default function EigenbelegPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <header className="space-y-3">
-          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
-              <FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />
-            </span>
-            <span>Generator Eigenbeleg</span>
-          </h1>
-          <p className="max-w-4xl text-sm leading-relaxed text-zinc-600">
-            Ein Eigenbeleg ist ein Ersatz für eine Rechnung bzw. Quittung. Er
-            wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren
-            ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig
-            war.
-          </p>
-          <p className="text-xs text-zinc-500">
-            Pflichtfelder sind mit * markiert.
-          </p>
-        </header>
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Generator Eigenbeleg"
+          description="Ein Eigenbeleg ist ein Ersatz für eine Rechnung beziehungsweise Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />}
+          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
+        />
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {errorCount > 0 ? (
@@ -1575,31 +1567,24 @@ export default function EigenbelegPage() {
             </div>
           </FormSection>
 
-          <FormSection title="4. Notizen" icon={faCalendarCheck}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label="Notizen"
-                hint="Hast du sonst noch was anzumerken?"
+          <FormSection title="4. Status" icon={faCalendarCheck}>
+            <FormField
+              label="Status"
+              required
+              error={errors.invoiceStatus?.message}
+            >
+              <Select
+                {...register("invoiceStatus", {
+                  required: "Bitte Status auswählen.",
+                })}
               >
-                <Textarea {...register("notes")} />
-              </FormField>
-
-              <FormField
-                label="Status"
-                required
-                error={errors.invoiceStatus?.message}
-              >
-                <Select
-                  {...register("invoiceStatus", {
-                    required: "Bitte Status auswählen.",
-                  })}
-                >
-                  <option value="offen">offen</option>
-                  <option value="bezahlt">bezahlt</option>
-                </Select>
-              </FormField>
-            </div>
+                <option value="offen">offen</option>
+                <option value="bezahlt">bezahlt</option>
+              </Select>
+            </FormField>
           </FormSection>
+
+          <InternalNoteSection textareaProps={register("notes")} />
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
@@ -1642,7 +1627,6 @@ export default function EigenbelegPage() {
             </div>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

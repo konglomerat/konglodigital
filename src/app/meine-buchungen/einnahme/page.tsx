@@ -15,6 +15,9 @@ import {
 import Link from "next/link";
 
 import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import BookingPageHeader from "../bookingPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -35,6 +38,7 @@ type FormValues = {
   betragEuro: string;
   costCenter2: string;
   debitorName: string;
+  notes: string;
 };
 
 const euroAmountPattern = /^\d+(,\d{1,2})?$/;
@@ -63,6 +67,7 @@ export default function EinnahmePage() {
       betragEuro: "",
       costCenter2: "",
       debitorName: "",
+      notes: "",
     },
   });
 
@@ -139,7 +144,7 @@ export default function EinnahmePage() {
           error?: string;
         };
         setDebitorError(
-          payload.error ?? "Debitor konnte nicht erstellt werden.",
+          payload.error ?? "Person oder Firma konnte nicht angelegt werden.",
         );
         return;
       }
@@ -153,7 +158,7 @@ export default function EinnahmePage() {
         setShowCreatePanel(false);
       } else {
         setDebitorError(
-          "Debitor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
+          "Person oder Firma wurde angelegt, aber die Kontonummer konnte nicht ermittelt werden.",
         );
       }
     } catch (error) {
@@ -201,7 +206,7 @@ export default function EinnahmePage() {
 
   const onSubmit = async (values: FormValues) => {
     if (!debitorAccount) {
-      setResult({ error: "Bitte einen Debitor auswählen." });
+      setResult({ error: "Bitte eine zahlende Person oder Firma auswählen." });
       return;
     }
     setIsSubmitting(true);
@@ -232,6 +237,7 @@ export default function EinnahmePage() {
           counterpartyName: debitorName,
           income: values.betragEuro,
           costCenter2: values.costCenter2,
+          notes: values.notes,
           ...fileData,
         }),
       });
@@ -267,25 +273,13 @@ export default function EinnahmePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto w-full max-w-3xl space-y-6 px-6 py-10">
-        <header className="space-y-3">
-          <Link
-            href="/meine-buchungen"
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
-            ← Meine Buchungen
-          </Link>
-          <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-emerald-600 shadow-sm">
-              <FontAwesomeIcon icon={faArrowTrendUp} className="h-5 w-5" />
-            </span>
-            <span>Einnahme erfassen</span>
-          </h1>
-          <p className="text-xs text-zinc-500">
-            Pflichtfelder sind mit * markiert.
-          </p>
-        </header>
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Einnahme erfassen"
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faArrowTrendUp} className="h-5 w-5" />}
+          iconClassName="border-emerald-200 bg-emerald-50 text-emerald-600 shadow-sm"
+        />
 
         {costCentersError ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -293,40 +287,41 @@ export default function EinnahmePage() {
           </div>
         ) : null}
 
-        {result?.id ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <p className="font-medium">Einnahme gespeichert!</p>
-            <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
-            {result.uploadWarning ? (
-              <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {result?.error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {result.error}
-          </div>
-        ) : null}
-
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* Debitor */}
-          <FormSection title="Debitor" icon={faUser}>
+          {/* Beleg hochladen */}
+          <FormSection title="Beleg hochladen" icon={faFolderOpen}>
+            <FormField label="Belegdatei" hint="Optional - PDF, JPG oder PNG">
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
+                onChange={(event) =>
+                  setSelectedFile(event.target.files?.item(0) ?? null)
+                }
+              />
+              {selectedFile ? (
+                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
+              ) : null}
+            </FormField>
+          </FormSection>
+
+          {/* Zahlende Person/Firma */}
+          <FormSection title="Zahlende Person/Firma" icon={faUser}>
             <div className="space-y-4">
               <FormField
-                label="Debitor"
+                label="auswählen oder neu anlegen"
                 required
                 error={errors.debitorName?.message}
               >
                 <AutocompleteInput
                   apiPath="/api/campai/debtors"
-                  entityLabelSingular="Debitor"
+                  entityLabelSingular="Person/Firma"
                   placeholder="Name oder Kontonummer eingeben…"
                   showCreateOption
                   onSelect={handleDebitorSelect}
                   onCreateNew={handleCreateNew}
                   {...register("debitorName", {
-                    required: "Bitte einen Debitor auswählen.",
+                    required: "Bitte eine zahlende Person oder Firma auswählen.",
                   })}
                 />
               </FormField>
@@ -335,7 +330,7 @@ export default function EinnahmePage() {
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
-                    Debitor <strong>#{debitorAccount}</strong>
+                    Person/Firma <strong>#{debitorAccount}</strong>
                     {debitorName ? ` (${debitorName})` : ""} ausgewählt
                   </span>
                   <button
@@ -351,7 +346,7 @@ export default function EinnahmePage() {
               {showCreatePanel && !debitorAccount ? (
                 <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
                   <p className="text-sm font-medium text-blue-900">
-                    Neuen Debitor anlegen: &ldquo;{debitorName}&rdquo;
+                    Neue zahlende Person oder Firma anlegen: &ldquo;{debitorName}&rdquo;
                   </p>
                   <div className="space-y-4">
                     <FormField label="Straße / Adresse" required>
@@ -406,7 +401,7 @@ export default function EinnahmePage() {
                       }
                       onClick={createDebitor}
                     >
-                      {isCreatingDebitor ? "Wird angelegt…" : "Debitor anlegen"}
+                      {isCreatingDebitor ? "Wird angelegt…" : "Person/Firma anlegen"}
                     </Button>
                     <Button
                       type="button"
@@ -501,22 +496,23 @@ export default function EinnahmePage() {
             </div>
           </FormSection>
 
-          {/* Anhang */}
-          <FormSection title="Anhang" icon={faFolderOpen}>
-            <FormField label="Belegdatei" hint="Optional – PDF, JPG oder PNG">
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) =>
-                  setSelectedFile(event.target.files?.item(0) ?? null)
-                }
-              />
-              {selectedFile ? (
-                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
+          <InternalNoteSection textareaProps={register("notes")} />
+
+          {result?.id ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-medium">Einnahme gespeichert!</p>
+              <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
+              {result.uploadWarning ? (
+                <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
               ) : null}
-            </FormField>
-          </FormSection>
+            </div>
+          ) : null}
+
+          {result?.error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {result.error}
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-3">
             <Button
@@ -535,7 +531,6 @@ export default function EinnahmePage() {
             </Button>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

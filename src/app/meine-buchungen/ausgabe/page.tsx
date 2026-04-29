@@ -9,7 +9,6 @@ import {
   faFileImport,
   faFolderOpen,
   faList,
-  faPenToSquare,
   faPlus,
   faUser,
   faXmark,
@@ -17,6 +16,9 @@ import {
 import Link from "next/link";
 
 import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import BookingPageHeader from "../bookingPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -350,31 +352,14 @@ export default function AusgabePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <div className="mx-auto w-full max-w-3xl px-6 pt-8">
-        <Link
-          href="/meine-buchungen"
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 hover:text-zinc-900"
-        >
-          ← Meine Buchungen
-        </Link>
-      </div>
-      <main className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
-        <header className="space-y-3">
-          <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-rose-600 shadow-sm">
-              <FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />
-            </span>
-            <span>Ausgabe erfassen</span>
-          </h1>
-          <p className="text-sm leading-relaxed text-zinc-600">
-            Einbuchung von Rechnungen/Belegen die durch Ausgaben des Vereins
-            oder einer seiner Projekte/Werkbereiche entstanden sind
-          </p>
-          <p className="text-xs text-zinc-500">
-            Pflichtfelder sind mit * markiert.
-          </p>
-        </header>
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Ausgabe erfassen"
+          description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />}
+          iconClassName="border-rose-200 bg-rose-50 text-rose-600 shadow-sm"
+        />
 
         {costCentersError ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -617,19 +602,7 @@ export default function AusgabePage() {
             </div>
           </FormSection>
 
-          {/* Interne Notiz */}
-          <FormSection title="Interne Notiz" icon={faPenToSquare}>
-            <FormField
-              label="Notiz"
-              hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar."
-            >
-              <Textarea
-                placeholder="z. B. Genehmigt durch Vorstand am …"
-                rows={3}
-                {...register("notes")}
-              />
-            </FormField>
-          </FormSection>
+          <InternalNoteSection textareaProps={register("notes")} />
 
           {result?.id ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -664,7 +637,6 @@ export default function AusgabePage() {
             </Button>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

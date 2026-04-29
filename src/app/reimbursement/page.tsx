@@ -16,6 +16,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
+import BookingPageShell from "../components/ui/BookingPageShell";
+import InternalNoteSection from "../components/ui/InternalNoteSection";
+import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -25,7 +28,6 @@ import {
   FormSection,
   Input,
   Select,
-  Textarea,
 } from "../components/ui/form";
 
 type PositionValue = {
@@ -449,23 +451,14 @@ export default function ReimbursementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <header className="space-y-3">
-          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm">
-              <FontAwesomeIcon icon={faRotate} className="h-5 w-5" />
-            </span>
-            <span>Rückerstattungen einreichen</span>
-          </h1>
-          <p className="max-w-4xl text-sm leading-relaxed text-zinc-600">
-            Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System
-            automatisch.
-          </p>
-          <p className="text-xs text-zinc-500">
-            Pflichtfelder sind mit * markiert.
-          </p>
-        </header>
+    <BookingPageShell>
+        <BookingPageHeader
+          title="Rückerstattungen einreichen"
+          description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
+          helperText="Pflichtfelder sind mit * markiert."
+          icon={<FontAwesomeIcon icon={faRotate} className="h-5 w-5" />}
+          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
+        />
 
         {costCentersError ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -782,44 +775,39 @@ export default function ReimbursementPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Status & Notizen" icon={faCalendarCheck}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Ist die Rechnung bereits beglichen?" required>
-                <div
-                  role="radiogroup"
-                  aria-label="Ist die Rechnung bereits beglichen?"
-                  className="flex flex-wrap gap-4"
-                >
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
-                    <Input
-                      type="radio"
-                      value="offen"
-                      className="h-4 w-4 accent-blue-600"
-                      {...register("rechnungStatus")}
-                    />
-                    <span>offen</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
-                    <Input
-                      type="radio"
-                      value="bezahlt"
-                      className="h-4 w-4 accent-blue-600"
-                      {...register("rechnungStatus")}
-                    />
-                    <span>bezahlt</span>
-                  </label>
-                </div>
-              </FormField>
-
-              <FormField
-                label="Notizen"
-                hint="Hast du sonst noch was anzumerken?"
-                error={errors.notiz?.message}
+          <FormSection title="Status" icon={faCalendarCheck}>
+            <FormField label="Ist die Rechnung bereits beglichen?" required>
+              <div
+                role="radiogroup"
+                aria-label="Ist die Rechnung bereits beglichen?"
+                className="flex flex-wrap gap-4"
               >
-                <Textarea {...register("notiz")} />
-              </FormField>
-            </div>
+                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <Input
+                    type="radio"
+                    value="offen"
+                    className="h-4 w-4 accent-blue-600"
+                    {...register("rechnungStatus")}
+                  />
+                  <span>offen</span>
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-zinc-900">
+                  <Input
+                    type="radio"
+                    value="bezahlt"
+                    className="h-4 w-4 accent-blue-600"
+                    {...register("rechnungStatus")}
+                  />
+                  <span>bezahlt</span>
+                </label>
+              </div>
+            </FormField>
           </FormSection>
+
+          <InternalNoteSection
+            error={errors.notiz?.message}
+            textareaProps={register("notiz")}
+          />
 
           <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
@@ -859,7 +847,6 @@ export default function ReimbursementPage() {
             </div>
           </div>
         </form>
-      </main>
-    </div>
+    </BookingPageShell>
   );
 }

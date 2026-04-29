@@ -123,6 +123,24 @@ const formatAmount = (amountInCents: number | null, currency: string | null) => 
   }
 };
 
+const getReceiptStatusChipClassName = (status: string | null) => {
+  const normalizedStatus = status?.trim().toLowerCase();
+
+  if (normalizedStatus === "bezahlt") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
+  }
+
+  if (
+    normalizedStatus === "unbezahlt" ||
+    normalizedStatus === "offen" ||
+    normalizedStatus === "ausstehend"
+  ) {
+    return "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300";
+  }
+
+  return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+};
+
 type MeineBuchungenPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -254,7 +272,13 @@ export default async function MeineBuchungenPage({
                     {receipt.workArea || "—"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                    {receipt.status || "—"}
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getReceiptStatusChipClassName(
+                        receipt.status,
+                      )}`}
+                    >
+                      {receipt.status || "—"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {receipt.accountName || "—"}
