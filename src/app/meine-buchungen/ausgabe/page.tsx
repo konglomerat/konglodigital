@@ -8,7 +8,6 @@ import {
   faCheck,
   faFileImport,
   faFolderOpen,
-  faList,
   faPlus,
   faUser,
   faXmark,
@@ -560,45 +559,45 @@ export default function AusgabePage() {
                     {...register("belegnummer")}
                   />
                 </FormField>
-              </div>
-            </div>
-          </FormSection>
-
-          {/* Position */}
-          <FormSection title="Position" icon={faList}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label="Betrag (€)"
-                required
-                hint="Format: 12,50"
-                error={errors.betragEuro?.message}
-              >
-                <Input
-                  placeholder="0,00"
-                  {...register("betragEuro", {
-                    required: "Betrag ist erforderlich.",
-                    pattern: {
-                      value: euroAmountPattern,
-                      message: "Format: 12,50",
-                    },
-                  })}
-                />
-              </FormField>
-              <FormField label="Werkbereich/Projekt" required error={errors.costCenter2?.message}>
-                <Select
-                  disabled={costCentersLoading}
-                  {...register("costCenter2", { required: "Bitte einen Werkbereich/Projekt auswählen." })}
+                <FormField
+                  label="Betrag (€)"
+                  required
+                  hint="Format: 12,50"
+                  error={errors.betragEuro?.message}
                 >
-                  <option value="">
-                    {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
-                  </option>
-                  {costCenters.map((cc) => (
-                    <option key={cc.value} value={cc.value}>
-                      {cc.label}
+                  <Input
+                    placeholder="0,00"
+                    {...register("betragEuro", {
+                      required: "Betrag ist erforderlich.",
+                      pattern: {
+                        value: euroAmountPattern,
+                        message: "Format: 12,50",
+                      },
+                    })}
+                  />
+                </FormField>
+                <FormField
+                  label="Werkbereich/Projekt"
+                  required
+                  error={errors.costCenter2?.message}
+                >
+                  <Select
+                    disabled={costCentersLoading}
+                    {...register("costCenter2", {
+                      required: "Bitte einen Werkbereich/Projekt auswählen.",
+                    })}
+                  >
+                    <option value="">
+                      {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
                     </option>
-                  ))}
-                </Select>
-              </FormField>
+                    {costCenters.map((cc) => (
+                      <option key={cc.value} value={cc.value}>
+                        {cc.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
             </div>
           </FormSection>
 

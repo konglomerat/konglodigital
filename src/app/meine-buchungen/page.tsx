@@ -220,6 +220,9 @@ export default async function MeineBuchungenPage({
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
                 Beleg
               </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                PDF
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
                 Betrag
               </th>
@@ -244,7 +247,7 @@ export default async function MeineBuchungenPage({
             {receipts.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-8 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Keine Buchungen gefunden.
@@ -258,6 +261,30 @@ export default async function MeineBuchungenPage({
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                     {receipt.receiptNumber || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <a
+                      href={`/api/campai/receipts/${receipt.id}/download`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
+                      aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
+                      title="PDF herunterladen"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 3v12" />
+                        <path d="m7 10 5 5 5-5" />
+                        <path d="M5 21h14" />
+                      </svg>
+                    </a>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-zinc-800 dark:text-zinc-100">
                     {formatAmount(receipt.amountInCents, receipt.currency)}
