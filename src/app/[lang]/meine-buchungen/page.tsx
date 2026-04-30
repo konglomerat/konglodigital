@@ -54,6 +54,23 @@ const bookingActions = [
     ),
   },
   {
+    href: "/meine-buchungen/pretix-import",
+    title: "Pretix-Import",
+    description: "Rechnungen aus Pretix-Buchungen erstellen",
+    cardClassName:
+      "hover:border-violet-300 hover:bg-violet-50 dark:hover:border-violet-900/60 dark:hover:bg-violet-950/30",
+    iconClassName:
+      "bg-violet-100 text-violet-600 group-hover:bg-violet-200 dark:bg-violet-950/60 dark:text-violet-400",
+    icon: (
+      <>
+        <path d="M4 4h12l4 4v12a2 2 0 0 1-2 2H4Z" />
+        <path d="M16 4v4h4" />
+        <path d="M8 13h8" />
+        <path d="M8 17h5" />
+      </>
+    ),
+  },
+  {
     href: "/reimbursement",
     title: "Rückerstattung",
     description: "Formular für Rückerstattung von Auslagen öffnen",
