@@ -14,6 +14,7 @@ import {
   faCalendarDays,
   faChartPie,
   faFolderOpen,
+  faTableList,
   faLayerGroup,
   faPrint,
   faKey,
@@ -370,6 +371,15 @@ export default async function RootLayout({
                         >
                           Budget Werkbereiche
                         </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/balance"
+                          className={navLinkClassName}
+                          icon={faTableList}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Balance
+                        </ProtectedNavItem>
                       </nav>
                       <div className="border-t border-border px-4 py-4">
                         {isAuthenticated ? (
@@ -580,6 +590,15 @@ export default async function RootLayout({
                   tooltip={membersOnlyTooltip}
                 >
                   Budget Werkbereiche
+                </ProtectedNavItem>
+                <ProtectedNavItem
+                  href="/balance"
+                  className={navItemClassName}
+                  icon={faTableList}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Balance
                 </ProtectedNavItem>
               </nav>
               {isAuthenticated ? (
