@@ -61,43 +61,16 @@ const formatDate = (value: string | null): string => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString("de-DE");
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+
+  return `${year}.${month}.${day}`;
 };
 
 const formatDateTime = (value: string | null): string => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString("de-DE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const formatPositionsField = (
-  positions: CampaiReceiptPosition[],
-  field: keyof CampaiReceiptPosition,
-  labelMap: Map<string, string>,
-): string => {
-  if (positions.length === 0) {
-    return "—";
-  }
-  const values = positions.map((position) => {
-    const value = position[field];
-    if (value === null) {
-      return "—";
-    }
-    const key = String(value);
-    return labelMap.get(key) ?? key;
-  });
-  return values.join(", ");
+  return formatDate(value);
 };
 
 const formatFirstPositionField = (
@@ -119,30 +92,26 @@ const formatFirstPositionField = (
   return labelMap.get(key) ?? key;
 };
 
-const formatCostCenter2WithAmounts = (
+const formatAccountsWithAmounts = (
   positions: CampaiReceiptPosition[],
-  labelMap: Map<string, string>,
 ): string => {
   if (positions.length === 0) {
     return "—";
   }
 
-  const values = positions.map((position) => {
-    if (position.costCenter2 === null) {
-      return "—";
-    }
+  return positions
+    .map((position) => {
+      const label =
+        position.accountLabel ??
+        (position.account !== null ? `Konto ${position.account}` : "—");
 
-    const key = String(position.costCenter2);
-    const label = labelMap.get(key) ?? key;
+      if (position.amount === null) {
+        return label;
+      }
 
-    if (position.amount === null) {
-      return label;
-    }
-
-    return `${label} (${formatCents(position.amount)})`;
-  });
-
-  return values.join(", ");
+      return `${label} (${formatCents(position.amount)})`;
+    })
+    .join(", ");
 };
 
 const normalizePaymentStatusTone = (status: string | null): PaymentStatusTone => {
@@ -207,7 +176,9 @@ const getPaymentStatusChipClassName = (status: string | null): string => {
 const TABLE_HEADER_LABELS: Record<string, string> = {
   receiptDate: "Beleg Datum",
   createdAt: "Buchung Datum",
+  paidAt: "Zahlungsdatum",
   receiptNumber: "Beleg",
+  pdf: "PDF",
   description: "Beschreibung",
   accountName: "Sender/Empfänger",
   paymentAccounts: "Zahlkonto",
@@ -215,7 +186,12 @@ const TABLE_HEADER_LABELS: Record<string, string> = {
   paymentStatus: "Status",
   tags: "Tags",
   Sphäre: "Sphäre",
-  "positions.costCenter2": "positions.costCenter2",
+  "positions.account": "Aufteilung",
+};
+
+const HEADER_WIDTH_CLASS_NAMES: Record<string, string> = {
+  description: "w-[300px]",
+  "positions.account": "w-[200px]",
 };
 
 const CELL_TEXT_CLASS_NAME =
@@ -347,19 +323,21 @@ export default function BalancePage() {
   const hasSelection = selected.length > 0;
 
   const tableHeaders = [
-    "receiptDate",
-    "createdAt",
     "receiptNumber",
+    "paymentStatus",
+    "paidAt",
+    "Sphäre",
     "description",
+    "accountName",
     "Einnahmen",
     "Ausgaben",
-    "accountName",
     "paymentAccounts",
+    "positions.account",
     "type",
-    "paymentStatus",
+    "receiptDate",
+    "createdAt",
     "tags",
-    "Sphäre",
-    "positions.costCenter2",
+    "pdf",
   ];
   const colSpan = tableHeaders.length;
 
@@ -367,11 +345,11 @@ export default function BalancePage() {
     <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-0 md:py-0">
       <div className="space-y-2 pb-6">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Balance
+          Übersicht
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
-          Wähle einen oder mehrere Werkbereiche (costCenter2), um alle
-          zugehörigen Belege aus Campai zu sehen.
+          Wähle einen oder mehrere Werkbereiche/Projekte, um alle
+          zugehörigen Belege zu sehen.
         </p>
       </div>
 
@@ -380,7 +358,7 @@ export default function BalancePage() {
           htmlFor="cost-center-2-filter"
           className="mb-1.5 block text-sm font-medium text-foreground/80"
         >
-          Werkbereich(e)
+          Werkbereiche/Projekte
         </label>
         {loadingCostCenters ? (
           <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
@@ -454,8 +432,12 @@ export default function BalancePage() {
                 return (
                   <th
                     key={header}
-                    className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${
-                      isAmount ? "text-right" : "text-left"
+                    className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${HEADER_WIDTH_CLASS_NAMES[header] ?? ""} ${
+                      header === "pdf"
+                        ? "text-center"
+                        : isAmount
+                          ? "text-right"
+                          : "text-left"
                     }`}
                     title={TABLE_HEADER_LABELS[header] ?? header}
                   >
@@ -518,23 +500,52 @@ export default function BalancePage() {
                 return (
                   <tr key={receipt.id}>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
-                        {formatDate(receipt.receiptDate)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
-                        {formatDateTime(receipt.createdAt)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
                         {receipt.receiptNumber ?? "—"}
                       </span>
                     </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      {receipt.paymentStatus ? (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
+                          title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
+                        >
+                          {getPaymentStatusLabel(receipt.paymentStatus) ??
+                            receipt.paymentStatus}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.description ?? "—"}>
+                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.paidAt)}>
+                        {formatDate(receipt.paidAt)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span
+                        className={CELL_TEXT_CLASS_NAME}
+                        title={formatFirstPositionField(
+                          receipt.positions,
+                          "costCenter1",
+                          costCenterLabelMap,
+                        )}
+                      >
+                        {formatFirstPositionField(
+                          receipt.positions,
+                          "costCenter1",
+                          costCenterLabelMap,
+                        )}
+                      </span>
+                    </td>
+                    <td className="w-[300px] max-w-[300px] whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receipt.description ?? "—"}>
                         {receipt.description ?? "—"}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
+                        {receipt.accountName ?? "—"}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
@@ -545,11 +556,6 @@ export default function BalancePage() {
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
                       <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
                         {expenseCell || "—"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
-                        {receipt.accountName ?? "—"}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
@@ -574,6 +580,14 @@ export default function BalancePage() {
                             : "—"}
                       </span>
                     </td>
+                    <td className="w-[200px] max-w-[200px] whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span
+                        className={`${CELL_TEXT_CLASS_NAME} max-w-[200px]`}
+                        title={formatAccountsWithAmounts(receipt.positions)}
+                      >
+                        {formatAccountsWithAmounts(receipt.positions)}
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {receipt.type ? (
                         <span
@@ -586,57 +600,58 @@ export default function BalancePage() {
                         "—"
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      {receipt.paymentStatus ? (
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
-                          title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
-                        >
-                          {getPaymentStatusLabel(receipt.paymentStatus) ??
-                            receipt.paymentStatus}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
+                        {formatDate(receipt.receiptDate)}
+                      </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
+                        {formatDateTime(receipt.createdAt)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
                       {receipt.tags.length > 0 ? (
-                        <span
-                          className={CELL_TEXT_CLASS_NAME}
+                        <div
+                          className="inline-flex max-w-full flex-nowrap gap-1 overflow-hidden align-middle"
                           title={receipt.tags.join(", ")}
                         >
-                          {receipt.tags.join(", ")}
-                        </span>
+                          {receipt.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span
-                        className={CELL_TEXT_CLASS_NAME}
-                        title={formatFirstPositionField(
-                          receipt.positions,
-                          "costCenter1",
-                          costCenterLabelMap,
-                        )}
+                    <td className="px-4 py-3 text-center">
+                      <a
+                        href={`/api/campai/balance/receipts/${receipt.id}/download`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
+                        aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
+                        title="PDF herunterladen"
                       >
-                        {formatFirstPositionField(
-                        receipt.positions,
-                        "costCenter1",
-                        costCenterLabelMap,
-                        )}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span
-                        className={CELL_TEXT_CLASS_NAME}
-                        title={formatCostCenter2WithAmounts(
-                          receipt.positions,
-                          costCenterLabelMap,
-                        )}
-                      >
-                        {formatCostCenter2WithAmounts(receipt.positions, costCenterLabelMap)}
-                      </span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 3v12" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M5 21h14" />
+                        </svg>
+                      </a>
                     </td>
                   </tr>
                 );
