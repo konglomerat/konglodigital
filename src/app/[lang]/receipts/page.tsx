@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const bookingActions = [
   {
-    href: "/meine-buchungen/ausgabe",
+    href: "/receipts/expense",
     title: "Ausgabe erfassen",
     description: "Beleg für eine Ausgabe hinzufügen",
     cardClassName:
@@ -24,7 +24,7 @@ const bookingActions = [
     ),
   },
   {
-    href: "/meine-buchungen/einnahme",
+    href: "/receipts/income",
     title: "Einnahme erfassen",
     description: "Beleg für eine Einnahme hinzufügen",
     cardClassName:
@@ -39,7 +39,7 @@ const bookingActions = [
     ),
   },
   {
-    href: "/meine-buchungen/rechnung",
+    href: "/receipts/invoice",
     title: "Neue Rechnung",
     description: "Neue Rechnung direkt erstellen",
     cardClassName:
@@ -54,7 +54,7 @@ const bookingActions = [
     ),
   },
   {
-    href: "/meine-buchungen/pretix-import",
+    href: "/receipts/pretix-import",
     title: "Pretix-Import",
     description: "Rechnungen aus Pretix-Buchungen erstellen",
     cardClassName:
@@ -71,7 +71,7 @@ const bookingActions = [
     ),
   },
   {
-    href: "/reimbursement",
+    href: "/receipts/reimbursement",
     title: "Rückerstattung",
     description: "Formular für Rückerstattung von Auslagen öffnen",
     cardClassName:
@@ -88,7 +88,7 @@ const bookingActions = [
     ),
   },
   {
-    href: "/eigenbeleg",
+    href: "/receipts/eigenbeleg",
     title: "Eigenbeleg",
     description: "Eigenbeleg-Formular öffnen",
     cardClassName:
@@ -158,20 +158,20 @@ const getReceiptStatusChipClassName = (status: string | null) => {
   return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 };
 
-type MeineBuchungenPageProps = {
+type ReceiptsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function MeineBuchungenPage({
+export default async function ReceiptsPage({
   searchParams,
-}: MeineBuchungenPageProps) {
+}: ReceiptsPageProps) {
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data } = await supabase.auth.getUser();
   const resolvedSearchParams = await searchParams;
   const debug = resolvedSearchParams?.debug === "1";
 
   if (!data.user) {
-    redirect("/login?redirectedFrom=/meine-buchungen");
+    redirect("/login?redirectedFrom=/receipts");
   }
 
   const currentUserDisplayName = getCampaiBookingDisplayName(data.user);
@@ -185,7 +185,7 @@ export default async function MeineBuchungenPage({
     <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-0 md:py-0">
       <div className="space-y-2 pb-6">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Meine Buchungen
+          Neue Buchung
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
           Belege aus Campai, deren Tag deinem Campai-Anzeigenamen entspricht.

@@ -13,20 +13,20 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../components/Button";
-import BookingPageShell from "../components/ui/BookingPageShell";
-import CreditorCreatePanel from "../components/ui/creditor-create-panel";
-import DebtorCreatePanel from "../components/ui/debtor-create-panel";
-import InternalNoteSection from "../components/ui/InternalNoteSection";
-import { AutocompleteInput } from "../components/ui/autocomplete-input";
+import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import { AutocompleteInput } from "../../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
   Input,
   Select,
   Textarea,
-} from "../components/ui/form";
-import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
+} from "../../components/ui/form";
+import ReceiptsPageHeader from "../receiptsPageHeader";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -1103,7 +1103,7 @@ export default function EigenbelegPage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
+        <ReceiptsPageHeader
           title="Generator Eigenbeleg"
           description="Ein Eigenbeleg ist ein Ersatz für eine Rechnung beziehungsweise Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
           helperText="Pflichtfelder sind mit * markiert."
@@ -1753,7 +1753,7 @@ export default function EigenbelegPage() {
             </div>
 
             <div className="ml-auto flex items-center justify-end gap-3">
-              <Button type="button" kind="secondary" href="/meine-buchungen">
+              <Button type="button" kind="secondary" href="/receipts">
                 Abbrechen
               </Button>
               <Button

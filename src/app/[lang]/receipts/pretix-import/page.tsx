@@ -13,7 +13,7 @@ import {
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
-import BookingPageHeader from "../bookingPageHeader";
+import ReceiptsPageHeader from "../receiptsPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -580,7 +580,7 @@ export default function PretixImportPage() {
 
   return (
     <BookingPageShell>
-      <BookingPageHeader
+      <ReceiptsPageHeader
         title="Pretix-Import"
         description="Lade einen Pretix-Export (JSON) hoch, wähle Buchungen aus und erstelle daraus Rechnungen in Campai."
       />

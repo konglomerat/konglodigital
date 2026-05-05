@@ -4,9 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowTrendDown,
+  faArrowTrendUp,
   faCheck,
-  faFileImport,
   faFolderOpen,
   faPlus,
   faUser,
@@ -16,13 +15,13 @@ import Link from "next/link";
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
-import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
-import BookingPageHeader from "../bookingPageHeader";
+import ReceiptsPageHeader from "../receiptsPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import {
   FormField,
   FormSection,
@@ -42,7 +41,7 @@ type FormValues = {
   belegnummer: string;
   betragEuro: string;
   costCenter2: string;
-  kreditorName: string;
+  debitorName: string;
   notes: string;
 };
 
@@ -56,12 +55,11 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   return btoa(binary);
 };
 
-export default function AusgabePage() {
+export default function EinnahmePage() {
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     mode: "onChange",
@@ -71,7 +69,7 @@ export default function AusgabePage() {
       belegnummer: "",
       betragEuro: "",
       costCenter2: "",
-      kreditorName: "",
+      debitorName: "",
       notes: "",
     },
   });
@@ -86,32 +84,29 @@ export default function AusgabePage() {
     error?: string;
   } | null>(null);
 
-  // Creditor state
-  const [creditorAccount, setCreditorAccount] = useState<number | null>(null);
-  const [creditorName, setCreditorName] = useState("");
+  // Debitor state
+  const [debitorAccount, setDebitorAccount] = useState<number | null>(null);
+  const [debitorName, setDebitorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
-  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
 
-  const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
-    setCreditorAccount(suggestion.account);
-    setCreditorName(suggestion.name);
+  const handleDebitorSelect = useCallback((suggestion: Suggestion) => {
+    setDebitorAccount(suggestion.account);
+    setDebitorName(suggestion.name);
     setShowCreatePanel(false);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
-    setCreditorAccount(null);
-    setCreditorName(name);
+    setDebitorAccount(null);
+    setDebitorName(name);
     setShowCreatePanel(true);
   }, []);
 
-  const resetCreditor = useCallback(() => {
-    setCreditorAccount(null);
-    setCreditorName("");
+  const resetDebitor = useCallback(() => {
+    setDebitorAccount(null);
+    setDebitorName("");
     setShowCreatePanel(false);
   }, []);
 
@@ -149,82 +144,9 @@ export default function AusgabePage() {
     };
   }, []);
 
-  const handleScanReceipt = useCallback(async () => {
-    if (!selectedFile) {
-      return;
-    }
-
-    setIsScanningReceipt(true);
-    setScanFeedback(null);
-    setScanError(null);
-    setResult(null);
-
-    try {
-      const bytes = new Uint8Array(await selectedFile.arrayBuffer());
-      const response = await fetch("/api/campai/receipts/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiptType: "expense",
-          refund: false,
-          receiptFileBase64: bytesToBase64(bytes),
-          receiptFileName: selectedFile.name,
-          receiptFileContentType:
-            selectedFile.type || "application/octet-stream",
-        }),
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        receiptDate?: string | null;
-        receiptNumber?: string | null;
-        totalGrossAmount?: number | null;
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setScanError(payload.error ?? "Beleg konnte nicht ausgelesen werden.");
-        return;
-      }
-
-      setValue("belegdatum", payload.receiptDate ?? "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setValue(
-        "betragEuro",
-        typeof payload.totalGrossAmount === "number"
-          ? `${(payload.totalGrossAmount / 100).toFixed(2)}`.replace(".", ",")
-          : "",
-        {
-          shouldDirty: true,
-          shouldValidate: true,
-        },
-      );
-      setValue("belegnummer", payload.receiptNumber ?? "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setValue("beschreibung", "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setScanFeedback("Belegdaten wurden übernommen.");
-    } catch (error) {
-      setScanError(
-        error instanceof Error ? error.message : "Unbekannter Fehler",
-      );
-    } finally {
-      setIsScanningReceipt(false);
-    }
-  }, [selectedFile, setValue]);
-
   const onSubmit = async (values: FormValues) => {
-    if (!selectedFile) {
-      setResult({ error: "Bitte einen Beleg hochladen." });
-      return;
-    }
-    if (!creditorAccount) {
-      setResult({ error: "Bitte einen Zahlungsempfänger auswählen." });
+    if (!debitorAccount) {
+      setResult({ error: "Bitte eine zahlende Person oder Firma auswählen." });
       return;
     }
     setIsSubmitting(true);
@@ -244,16 +166,16 @@ export default function AusgabePage() {
             selectedFile.type || "application/octet-stream",
         };
       }
-      const response = await fetch("/api/campai/receipts/expense", {
+      const response = await fetch("/api/campai/receipts/revenue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description: values.beschreibung,
           transactionDate: values.belegdatum,
           receiptNumber: values.belegnummer || undefined,
-          counterpartyAccount: creditorAccount,
-          counterpartyName: creditorName,
-          expense: values.betragEuro,
+          counterpartyAccount: debitorAccount,
+          counterpartyName: debitorName,
+          income: values.betragEuro,
           costCenter2: values.costCenter2,
           internalNote: values.notes || undefined,
           ...fileData,
@@ -276,12 +198,10 @@ export default function AusgabePage() {
       }
       setResult({ id: payload.id ?? null, uploadWarning: payload.uploadWarning });
       reset();
-      setCreditorAccount(null);
-      setCreditorName("");
+      setDebitorAccount(null);
+      setDebitorName("");
       setShowCreatePanel(false);
       setSelectedFile(null);
-      setScanFeedback(null);
-      setScanError(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -289,12 +209,11 @@ export default function AusgabePage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
-          title="Ausgabe erfassen"
-          description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
+        <ReceiptsPageHeader
+          title="Einnahme erfassen"
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />}
-          iconClassName="border-rose-200 bg-rose-50 text-rose-600 shadow-sm"
+          icon={<FontAwesomeIcon icon={faArrowTrendUp} className="h-5 w-5" />}
+          iconClassName="border-emerald-200 bg-emerald-50 text-emerald-600 shadow-sm"
         />
 
         {costCentersError ? (
@@ -306,89 +225,68 @@ export default function AusgabePage() {
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {/* Beleg hochladen */}
           <FormSection title="Beleg hochladen" icon={faFolderOpen}>
-            <FormField label="Belegdatei" required hint="PDF, JPG oder PNG">
+            <FormField label="Belegdatei" hint="Optional - PDF, JPG oder PNG">
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) => {
-                  setSelectedFile(event.target.files?.item(0) ?? null);
-                  setScanFeedback(null);
-                  setScanError(null);
-                }}
+                onChange={(event) =>
+                  setSelectedFile(event.target.files?.item(0) ?? null)
+                }
               />
               {selectedFile ? (
                 <p className="text-xs text-zinc-500">{selectedFile.name}</p>
               ) : null}
-              <div className="mt-3 space-y-2">
-                <Button
-                  type="button"
-                  kind="secondary"
-                  icon={faFileImport}
-                  disabled={!selectedFile || isScanningReceipt}
-                  onClick={handleScanReceipt}
-                >
-                  {isScanningReceipt ? "Beleg wird ausgelesen…" : "Beleg auslesen"}
-                </Button>
-                <p className="text-xs text-zinc-500">
-                  Liest Datum, Betrag und Belegnummer automatisch aus dem Beleg
-                  und überträgt sie ins Formular.
-                </p>
-                {scanFeedback ? (
-                  <p className="text-sm text-emerald-700">{scanFeedback}</p>
-                ) : null}
-              </div>
-              {scanError ? (
-                <p className="mt-2 text-sm text-rose-700">{scanError}</p>
-              ) : null}
             </FormField>
           </FormSection>
 
-          {/* Zahlungsempfänger */}
-          <FormSection title="Zahlungsempfänger" icon={faUser}>
+          {/* Zahlende Person/Firma */}
+          <FormSection title="Zahlende Person/Firma" icon={faUser}>
             <div className="space-y-4">
               <FormField
-                label="Empfänger auswählen oder neu anlegen"
+                label="auswählen oder neu anlegen"
                 required
-                error={errors.kreditorName?.message}
+                error={errors.debitorName?.message}
               >
                 <AutocompleteInput
+                  apiPath="/api/campai/debtors"
+                  entityLabelSingular="Person/Firma"
                   placeholder="Name oder Kontonummer eingeben…"
                   showCreateOption
-                  onSelect={handleCreditorSelect}
+                  onSelect={handleDebitorSelect}
                   onCreateNew={handleCreateNew}
-                  {...register("kreditorName", {
-                    required: "Bitte einen Zahlungsempfänger auswählen.",
+                  {...register("debitorName", {
+                    required: "Bitte eine zahlende Person oder Firma auswählen.",
                   })}
                 />
               </FormField>
 
-              {creditorAccount ? (
+              {debitorAccount ? (
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                   <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                   <span>
-                    Empfänger <strong>#{creditorAccount}</strong>
-                    {creditorName ? ` (${creditorName})` : ""} ausgewählt
+                    Person/Firma <strong>#{debitorAccount}</strong>
+                    {debitorName ? ` (${debitorName})` : ""} ausgewählt
                   </span>
                   <button
                     type="button"
                     className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCreditor}
+                    onClick={resetDebitor}
                   >
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ) : null}
 
-              {showCreatePanel && !creditorAccount ? (
-                <CreditorCreatePanel
-                  initialName={creditorName}
-                  title={`Neuen Empfänger anlegen: "${creditorName}"`}
-                  submitLabel="Empfänger anlegen"
+              {showCreatePanel && !debitorAccount ? (
+                <DebtorCreatePanel
+                  title={`Neue zahlende Person oder Firma anlegen: "${debitorName}"`}
+                  submitLabel="Person/Firma anlegen"
+                  initialName={debitorName}
                   onCancel={() => setShowCreatePanel(false)}
-                  onCreated={(created) => {
-                    setCreditorAccount(created.account);
-                    setCreditorName(created.name);
+                  onCreated={(result) => {
+                    setDebitorAccount(result.account);
+                    setDebitorName(result.name);
                     setShowCreatePanel(false);
                   }}
                 />
@@ -400,17 +298,14 @@ export default function AusgabePage() {
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="space-y-4">
               <FormField
-                label="Buchungstext"
+                label="Beschreibung"
                 required
                 error={errors.beschreibung?.message}
               >
-                <p className="text-xs text-zinc-500">
-                  Kurze Beschreibung wofür die Ausgabe getätigt wurde
-                </p>
                 <Input
-                  placeholder="z. B. Materialkosten Werkstatt"
+                  placeholder="z. B. Mitgliedsbeitrag April"
                   {...register("beschreibung", {
-                    required: "Buchungstext ist erforderlich.",
+                    required: "Beschreibung ist erforderlich.",
                   })}
                 />
               </FormField>
@@ -433,7 +328,7 @@ export default function AusgabePage() {
                   error={errors.belegnummer?.message}
                 >
                   <Input
-                    placeholder="z. B. RE-2024-001"
+                    placeholder="z. B. EIN-2024-001"
                     {...register("belegnummer")}
                   />
                 </FormField>
@@ -484,7 +379,7 @@ export default function AusgabePage() {
 
           {result?.id ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              <p className="font-medium">Ausgabe gespeichert!</p>
+              <p className="font-medium">Einnahme gespeichert!</p>
               <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
               {result.uploadWarning ? (
                 <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
@@ -502,7 +397,7 @@ export default function AusgabePage() {
             <Button
               type="button"
               kind="secondary"
-              href="/meine-buchungen"
+              href="/receipts"
             >
               Abbrechen
             </Button>
@@ -511,7 +406,7 @@ export default function AusgabePage() {
               kind="primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
+              {isSubmitting ? "Wird gespeichert…" : "Einnahme speichern"}
             </Button>
           </div>
         </form>

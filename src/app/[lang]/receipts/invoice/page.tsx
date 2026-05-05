@@ -40,7 +40,7 @@ import {
 import {
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
-import BookingPageHeader from "../bookingPageHeader";
+import ReceiptsPageHeader from "../receiptsPageHeader";
 
 type InvoicePosition = {
   id: string;
@@ -700,7 +700,7 @@ export default function NewSimpleInvoicePage() {
 
   return (
     <BookingPageShell>
-      <BookingPageHeader
+      <ReceiptsPageHeader
         title="Neue Rechnung erstellen"
         description="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss."
         helperText="Pflichtfelder und Rechnungsdaten lassen sich hier in derselben Struktur wie auf den anderen Buchungsseiten erfassen."
@@ -1266,7 +1266,7 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           <div className="ml-auto flex items-center justify-end gap-3">
-            <Button type="button" kind="secondary" href="/meine-buchungen">
+            <Button type="button" kind="secondary" href="/receipts">
               Abbrechen
             </Button>
             <Button type="submit" kind="primary" disabled={submitting}>

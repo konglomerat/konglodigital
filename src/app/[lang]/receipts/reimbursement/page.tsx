@@ -14,21 +14,21 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../components/Button";
-import BookingPageShell from "../components/ui/BookingPageShell";
-import CreditorCreatePanel from "../components/ui/creditor-create-panel";
-import InternalNoteSection from "../components/ui/InternalNoteSection";
-import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
+import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import ReceiptsPageHeader from "../receiptsPageHeader";
 import {
   AutocompleteInput,
   type Suggestion,
-} from "../components/ui/autocomplete-input";
+} from "../../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
   Input,
   Select,
-} from "../components/ui/form";
+} from "../../components/ui/form";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -358,7 +358,7 @@ export default function ReimbursementPage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
+        <ReceiptsPageHeader
           title="Rückerstattungen einreichen"
           description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
           helperText="Pflichtfelder sind mit * markiert."
@@ -644,7 +644,7 @@ export default function ReimbursementPage() {
             </div>
 
             <div className="ml-auto flex items-center justify-end gap-3">
-              <Button type="button" kind="secondary" href="/meine-buchungen">
+              <Button type="button" kind="secondary" href="/receipts">
                 Abbrechen
               </Button>
               <Button

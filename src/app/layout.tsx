@@ -337,7 +337,7 @@ export default async function RootLayout({
 
                         <p className={navSectionTitleClassName}>Holzwerkstatt</p>
                         <ProtectedNavItem
-                          href="/materialbestellung"
+                          href="/split-invoice"
                           className={navLinkClassName}
                           icon={faLayerGroup}
                           isAccessible={isAuthenticated}
@@ -354,13 +354,13 @@ export default async function RootLayout({
 
                         <p className={navSectionTitleClassName}>buchhaltung</p>
                         <ProtectedNavItem
-                          href="/meine-buchungen"
+                          href="/receipts"
                           className={navLinkClassName}
                           icon={faFolderOpen}
                           isAccessible={isAuthenticated}
                           tooltip={membersOnlyTooltip}
                         >
-                          Meine Buchungen
+                          Neue Buchung
                         </ProtectedNavItem>
                         <ProtectedNavItem
                           href="/balance"
@@ -546,7 +546,7 @@ export default async function RootLayout({
                   Holzwerkstatt
                 </p>
                 <ProtectedNavItem
-                  href="/materialbestellung"
+                  href="/split-invoice"
                   className={navItemClassName}
                   icon={faLayerGroup}
                   isAccessible={isAuthenticated}
@@ -565,13 +565,13 @@ export default async function RootLayout({
                   buchhaltung
                 </p>
                 <ProtectedNavItem
-                  href="/meine-buchungen"
+                  href="/receipts"
                   className={navItemClassName}
                   icon={faFolderOpen}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
-                  Meine Buchungen
+                  Neue Buchung
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/balance"
