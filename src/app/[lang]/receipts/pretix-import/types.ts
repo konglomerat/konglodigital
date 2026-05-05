@@ -46,6 +46,7 @@ export type PretixRow = {
   orderCode: string;
   user: string;
   email: string;
+  totalAmountCents: number;
   totalDisplay: string;
   status: string;
   statusLabel: string;

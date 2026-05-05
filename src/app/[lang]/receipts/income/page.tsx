@@ -288,6 +288,7 @@ export default function EinnahmePage() {
                     setDebitorAccount(result.account);
                     setDebitorName(result.name);
                     setShowCreatePanel(false);
+                    setResult(null);
                   }}
                 />
               ) : null}

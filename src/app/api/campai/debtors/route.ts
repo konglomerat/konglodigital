@@ -88,6 +88,63 @@ const normalizePaymentMethodType = (
 	return null;
 };
 
+const buildDebtorPayload = (body: Record<string, unknown>) => {
+	const name = typeof body.name === "string" ? body.name.trim() : "";
+	const type = body.type === "person" ? "person" : "business";
+	const address = normalizeAddress(body.address);
+	const email = typeof body.email === "string" ? body.email.trim() : "";
+	const paymentMethodType = normalizePaymentMethodType(body.paymentMethodType);
+	const receiptSendMethod =
+		body.receiptSendMethod === "email"
+			? "email"
+			: body.receiptSendMethod === "postal"
+				? "postal"
+				: "none";
+
+	if (!name) {
+		return {
+			ok: false as const,
+			status: 400,
+			error: "Name ist erforderlich.",
+		};
+	}
+
+	if (paymentMethodType === "sepaDirectDebit") {
+		return {
+			ok: false as const,
+			status: 400,
+			error:
+				"SEPA-Lastschrift muss in Campai mit Mandat gepflegt werden und kann hier nicht inline angelegt werden.",
+		};
+	}
+
+	const payload: Record<string, unknown> = {
+		type,
+		name: name.slice(0, 81),
+		email,
+		receiptSendMethod: email
+			? receiptSendMethod === "none"
+				? "email"
+				: receiptSendMethod
+			: receiptSendMethod,
+	};
+
+	if (address) {
+		payload.address = address;
+	}
+
+	if (paymentMethodType) {
+		payload.paymentMethodType = paymentMethodType;
+	}
+
+	return {
+		ok: true as const,
+		name,
+		paymentMethodType,
+		payload,
+	};
+};
+
 export const GET = async (request: NextRequest) => {
 	const user = await ensureAuthenticatedUser(request);
 	if (!user) {
@@ -201,52 +258,9 @@ export const POST = async (request: NextRequest) => {
 		const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
 
 		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-		const name = typeof body.name === "string" ? body.name.trim() : "";
-		const type = body.type === "person" ? "person" : "business";
-		const address = normalizeAddress(body.address);
-		const email = typeof body.email === "string" ? body.email.trim() : "";
-		const paymentMethodType = normalizePaymentMethodType(body.paymentMethodType);
-		const receiptSendMethod =
-			body.receiptSendMethod === "email"
-				? "email"
-				: body.receiptSendMethod === "postal"
-					? "postal"
-					: "none";
-
-		if (!name) {
-			return NextResponse.json(
-				{ error: "Name ist erforderlich." },
-				{ status: 400 },
-			);
-		}
-
-		if (paymentMethodType === "sepaDirectDebit") {
-			return NextResponse.json(
-				{
-					error:
-						"SEPA-Lastschrift muss in Campai mit Mandat gepflegt werden und kann hier nicht inline angelegt werden.",
-				},
-				{ status: 400 },
-			);
-		}
-
-		const payload: Record<string, unknown> = {
-			type,
-			name: name.slice(0, 81),
-			email,
-			receiptSendMethod: email
-				? receiptSendMethod === "none"
-					? "email"
-					: receiptSendMethod
-				: receiptSendMethod,
-		};
-
-		if (address) {
-			payload.address = address;
-		}
-
-		if (paymentMethodType) {
-			payload.paymentMethodType = paymentMethodType;
+		const parsed = buildDebtorPayload(body);
+		if (!parsed.ok) {
+			return NextResponse.json({ error: parsed.error }, { status: parsed.status });
 		}
 
 		const response = await fetch(
@@ -257,7 +271,7 @@ export const POST = async (request: NextRequest) => {
 					"Content-Type": "application/json",
 					"X-API-Key": apiKey,
 				},
-				body: JSON.stringify(payload),
+				body: JSON.stringify(parsed.payload),
 			},
 		);
 
@@ -281,10 +295,9 @@ export const POST = async (request: NextRequest) => {
 		} | null;
 
 		return NextResponse.json({
-			debtorId: result?._id ?? null,
 			account: result?.account ?? null,
-			name: result?.name ?? name,
-			paymentMethodType: result?.paymentMethodType ?? paymentMethodType,
+			name: result?.name ?? parsed.name,
+			paymentMethodType: result?.paymentMethodType ?? parsed.paymentMethodType,
 		});
 	} catch (error) {
 		return NextResponse.json(

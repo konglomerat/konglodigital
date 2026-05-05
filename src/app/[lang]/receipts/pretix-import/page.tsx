@@ -41,6 +41,7 @@ const DEFAULT_COST_CENTER_1 = "3";
 const DEFAULT_COST_CENTER_2 = "54";
 const DEFAULT_POSITION_ACCOUNT = "12000";
 const DEFAULT_TRANSFER_ACCOUNT = "17100";
+const ADDRESS_REQUIRED_THRESHOLD_CENTS = 25_000;
 
 type BankConnectionOption = {
   value: string;
@@ -133,6 +134,7 @@ const buildRows = (event: PretixEvent | undefined): PretixRow[] => {
         orderCode: order.code,
         user: order.user ?? "",
         email: order.email ?? "",
+        totalAmountCents: toCents(order.total),
         totalDisplay: formatTotal(order.total),
         status: order.status,
         statusLabel: STATUS_LABELS[order.status] ?? order.status,
@@ -578,10 +580,15 @@ export default function PretixImportPage() {
     return map;
   }, [results]);
 
+  const createPanelRow = useMemo(
+    () => rows.find((row) => row.key === createPanel?.key),
+    [createPanel?.key, rows],
+  );
+
   return (
     <BookingPageShell>
       <ReceiptsPageHeader
-        title="Pretix-Import"
+        title="pretix Bulk Import"
         description="Lade einen Pretix-Export (JSON) hoch, wähle Buchungen aus und erstelle daraus Rechnungen in Campai."
       />
 
@@ -809,6 +816,12 @@ export default function PretixImportPage() {
               className="mt-4"
               initialName={createPanel.name}
               email={createPanel.email}
+              addressRequirementHint={
+                (createPanelRow?.totalAmountCents ?? 0) >
+                  ADDRESS_REQUIRED_THRESHOLD_CENTS
+                  ? "Ab Beträgen über 250 € ist die vollständige Adresse Pflicht."
+                  : undefined
+              }
               onCancel={() => setCreatePanel(null)}
               onCreated={(result) => {
                 setDebtorByKey((prev) => {

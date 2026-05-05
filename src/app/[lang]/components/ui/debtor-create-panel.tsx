@@ -32,6 +32,7 @@ type DebtorCreatePanelProps = {
   initialZip?: string;
   initialCity?: string;
   email?: string;
+  addressRequirementHint?: string;
   paymentMethodType?: string;
   receiptSendMethod?: "email" | "postal" | "none";
   title?: string;
@@ -71,11 +72,12 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     initialZip,
     initialCity,
     email,
+    addressRequirementHint,
     paymentMethodType,
     receiptSendMethod,
     title,
     className,
-    submitLabel = "Debitor anlegen",
+    submitLabel = "Kunde anlegen",
     onCancel,
     onCreated,
   } = props;
@@ -230,8 +232,11 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     >
       <div className="space-y-1">
         <p className="text-sm font-medium text-blue-900">
-          {title ?? `Neuen Debitor anlegen: "${draft.name || initialName}"`}
+          {title ?? `Neuen Kunde (Debitor) anlegen: "${draft.name || initialName}"`}
         </p>
+        {addressRequirementHint ? (
+          <p className="text-xs text-blue-800">{addressRequirementHint}</p>
+        ) : null}
       </div>
 
       <div className="space-y-4">

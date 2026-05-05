@@ -244,21 +244,21 @@ async function loadLogoAsDataUrl(): Promise<string | null> {
     const svgText = await response.text();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = "anonymous";
 
-    return new Promise((resolve) => {
+    return await new Promise<string | null>((resolve) => {
+      const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const scale = 2;
-        canvas.width = img.naturalWidth * scale;
-        canvas.height = img.naturalHeight * scale;
+        canvas.width = img.width;
+        canvas.height = img.height;
         const ctx = canvas.getContext("2d");
+
         if (!ctx) {
           URL.revokeObjectURL(url);
           resolve(null);
           return;
         }
+
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/png");
         URL.revokeObjectURL(url);

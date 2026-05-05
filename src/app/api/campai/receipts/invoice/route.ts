@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import {
   type CampaiPaymentMethodType,
   isCampaiPaymentMethodType,
@@ -147,6 +148,21 @@ const normalizeDiscount = (value: unknown) => {
   }
   return 0;
 };
+
+const calculateGrossAmountCents = (positions: PositionPayload[]): number =>
+  positions.reduce((sum, position) => {
+    if (!Number.isFinite(position.unitAmount) || position.unitAmount <= 0) {
+      return sum;
+    }
+    const quantity =
+      typeof position.quantity === "number" && Number.isFinite(position.quantity)
+        ? position.quantity
+        : 0;
+    const lineTotal = Math.round(position.unitAmount * Math.max(0, quantity));
+    const discount = normalizeDiscount(position.discount);
+    const discountedLineTotal = Math.round(lineTotal * (1 - discount / 100));
+    return sum + Math.max(0, discountedLineTotal);
+  }, 0);
 
 const parseTaxRateChoice = (value: unknown): TaxRateChoice | null => {
   if (value === 0 || value === 7 || value === 19) {
@@ -418,6 +434,19 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json(
       { error: "Missing debtor name." },
       { status: 400 },
+    );
+  }
+
+  const debtorAddressValidation = await validateDebtorAddressForAmount({
+    config,
+    debtorAccount,
+    grossAmountCents: calculateGrossAmountCents(rawPositions),
+  });
+
+  if (!debtorAddressValidation.ok) {
+    return NextResponse.json(
+      { error: debtorAddressValidation.error },
+      { status: debtorAddressValidation.status },
     );
   }
 

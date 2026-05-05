@@ -55,8 +55,8 @@ const bookingActions = [
   },
   {
     href: "/receipts/pretix-import",
-    title: "Pretix-Import",
-    description: "Rechnungen aus Pretix-Buchungen erstellen",
+    title: "pretix Bulk Import",
+    description: "Rechnungen aus exportierten Pretix Bestellungen (JSON) erstellen",
     cardClassName:
       "hover:border-violet-300 hover:bg-violet-50 dark:hover:border-violet-900/60 dark:hover:bg-violet-950/30",
     iconClassName:

@@ -73,22 +73,6 @@ type BankConnectionOption = {
 
 type InvoiceTaxCode = "" | "0" | "7" | "19";
 
-type DebtorDetails = {
-  account?: number | null;
-  name?: string;
-  email?: string;
-  paymentMethodType?: CampaiPaymentMethodType | null;
-  address?: {
-    country?: string;
-    state?: string;
-    zip?: string;
-    city?: string;
-    addressLine?: string;
-    details1?: string;
-    details2?: string;
-  } | null;
-};
-
 const euroPattern = /^\d+(?:,\d{1,2})?$/;
 const invoiceSubjectPrefill =
   "Für [text] erlauben wir Ihnen folgenden Betrag in Rechnung zu stellen";
@@ -497,9 +481,23 @@ export default function NewSimpleInvoicePage() {
 
     try {
       const params = new URLSearchParams({ account: String(suggestion.account) });
-      const response = await fetchJson<{ debtor?: DebtorDetails | null }>(
-        `/api/campai/debtors?${params.toString()}`,
-      );
+      const response = await fetchJson<{
+        debtor?: {
+          account?: number | null;
+          name?: string;
+          email?: string;
+          paymentMethodType?: CampaiPaymentMethodType | null;
+          address?: {
+            country?: string;
+            state?: string;
+            zip?: string;
+            city?: string;
+            addressLine?: string;
+            details1?: string;
+            details2?: string;
+          } | null;
+        } | null;
+      }>(`/api/campai/debtors?${params.toString()}`);
       const debtor = response.debtor;
 
       if (!debtor) {
@@ -709,6 +707,7 @@ export default function NewSimpleInvoicePage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+
         <FormSection
           title="Versand & Kunde"
           icon={faUser}
