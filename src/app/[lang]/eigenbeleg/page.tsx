@@ -10,12 +10,12 @@ import {
   faCheck,
   faFolderOpen,
   faMoneyBillTransfer,
-  faPlus,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../components/Button";
 import BookingPageShell from "../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../components/ui/creditor-create-panel";
 import DebtorCreatePanel from "../components/ui/debtor-create-panel";
 import InternalNoteSection from "../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
@@ -54,8 +54,6 @@ type CostCenterOption = {
   value: string;
   label: string;
 };
-
-type CreditorPaymentMethodType = "creditTransfer" | "cash";
 
 type FormValues = {
   reason: ReasonOption;
@@ -704,12 +702,6 @@ export default function EigenbelegPage() {
   } | null>(null);
   const [showCreateCreditorPanel, setShowCreateCreditorPanel] =
     useState(false);
-  const [creditorPaymentMethodType, setCreditorPaymentMethodType] =
-    useState<CreditorPaymentMethodType>("creditTransfer");
-  const [creditorIban, setCreditorIban] = useState("");
-  const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
-  const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
-  const [creditorError, setCreditorError] = useState<string | null>(null);
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
 
@@ -789,7 +781,7 @@ export default function EigenbelegPage() {
   const counterpartyApiPath = isExpenseLikeFlow
     ? "/api/campai/creditors"
     : "/api/campai/debtors";
-  const activeCounterpartyError = isExpenseLikeFlow ? creditorError : debtorError;
+  const activeCounterpartyError = isExpenseLikeFlow ? null : debtorError;
   const senderDisplayValue = isExpenseLikeFlow
     ? associationName
     : counterpartyName ?? "";
@@ -802,7 +794,6 @@ export default function EigenbelegPage() {
     setValue("counterpartyAccount", "");
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
     setDebtorError(null);
   }, [selectedBookingType, setValue]);
 
@@ -813,7 +804,6 @@ export default function EigenbelegPage() {
 
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
     setDebtorError(null);
   }, [isTransferFlow]);
 
@@ -827,7 +817,6 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
     setDebtorError(null);
   };
 
@@ -844,7 +833,6 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
     setDebtorError(null);
   };
 
@@ -856,10 +844,8 @@ export default function EigenbelegPage() {
     setValue("counterpartyAccount", "", {
       shouldDirty: true,
     });
-    setCreditorKontoinhaber(name);
     setShowCreateCreditorPanel(true);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
   };
 
   const handleCreateDebtor = (name: string) => {
@@ -873,62 +859,6 @@ export default function EigenbelegPage() {
     setShowCreateDebtorPanel(true);
     setShowCreateCreditorPanel(false);
     setDebtorError(null);
-  };
-
-  const createCreditor = async () => {
-    setIsCreatingCreditor(true);
-    setCreditorError(null);
-
-    try {
-      const payload: {
-        name: string;
-        type: "business";
-        paymentMethodType: CreditorPaymentMethodType;
-        iban?: string;
-        kontoinhaber?: string;
-      } = {
-        name: (counterpartyName ?? "").trim(),
-        type: "business",
-        paymentMethodType: creditorPaymentMethodType,
-      };
-
-      if (!payload.name) {
-        setCreditorError("Bitte zuerst einen Kreditorennamen eingeben.");
-        return;
-      }
-
-      if (creditorPaymentMethodType === "creditTransfer") {
-        payload.iban = creditorIban.replace(/\s+/g, "").toUpperCase();
-        payload.kontoinhaber = creditorKontoinhaber.trim();
-      }
-
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-      }>("/api/campai/creditors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setCreditorError(
-          "Kreditor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      handleCounterpartySelect({
-        account: response.account,
-        name: response.name ?? counterpartyName ?? "",
-      });
-    } catch (error) {
-      setCreditorError(
-        error instanceof Error ? error.message : "Kreditor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingCreditor(false);
-    }
   };
 
   useEffect(() => {
@@ -1664,7 +1594,6 @@ export default function EigenbelegPage() {
                                 setValue("counterpartyAccount", "", {
                                   shouldDirty: true,
                                 });
-                                setCreditorError(null);
                                 if (!event.target.value.trim()) {
                                   setShowCreateCreditorPanel(false);
                                 }
@@ -1753,75 +1682,16 @@ export default function EigenbelegPage() {
                   ) : null}
 
                   {showCreateCreditorPanel && !counterpartyAccount && isExpenseLikeFlow ? (
-                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                      <p className="text-sm font-medium text-blue-900">
-                        Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
-                      </p>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="Zahlungsart" required>
-                          <Select
-                            value={creditorPaymentMethodType}
-                            onChange={(event) =>
-                              setCreditorPaymentMethodType(
-                                event.target.value as CreditorPaymentMethodType,
-                              )
-                            }
-                          >
-                            <option value="creditTransfer">Überweisung</option>
-                            <option value="cash">Bargeld</option>
-                          </Select>
-                        </FormField>
-
-                        {creditorPaymentMethodType === "creditTransfer" ? (
-                          <FormField label="Kontoinhaber" required>
-                            <Input
-                              placeholder="Vor- und Nachname"
-                              value={creditorKontoinhaber}
-                              onChange={(event) =>
-                                setCreditorKontoinhaber(event.target.value)
-                              }
-                            />
-                          </FormField>
-                        ) : null}
-                      </div>
-
-                      {creditorPaymentMethodType === "creditTransfer" ? (
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField label="IBAN" required>
-                            <Input
-                              placeholder="DE…"
-                              value={creditorIban}
-                              onChange={(event) => setCreditorIban(event.target.value)}
-                            />
-                          </FormField>
-                        </div>
-                      ) : null}
-
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          kind="primary"
-                          icon={faPlus}
-                          disabled={
-                            isCreatingCreditor ||
-                            !counterpartyName?.trim() ||
-                            (creditorPaymentMethodType === "creditTransfer" &&
-                              (!creditorIban.trim() || !creditorKontoinhaber.trim()))
-                          }
-                          onClick={createCreditor}
-                        >
-                          {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
-                        </Button>
-                        <Button
-                          type="button"
-                          kind="secondary"
-                          onClick={() => setShowCreateCreditorPanel(false)}
-                        >
-                          Abbrechen
-                        </Button>
-                      </div>
-                    </div>
+                    <CreditorCreatePanel
+                      initialName={counterpartyName ?? ""}
+                      onCancel={() => setShowCreateCreditorPanel(false)}
+                      onCreated={(created) => {
+                        handleCounterpartySelect({
+                          account: created.account,
+                          name: created.name,
+                        });
+                      }}
+                    />
                   ) : null}
 
                   {showCreateDebtorPanel && !counterpartyAccount && !isExpenseLikeFlow ? (

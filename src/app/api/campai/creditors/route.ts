@@ -138,9 +138,11 @@ export const GET = async (request: NextRequest) => {
  * Body:
  *   name:              string   (required)
  *   type:              "business" | "person" (default "business")
+ *   details:           string   (optional)
  *   paymentMethodType: "cash" | "creditTransfer" | null
  *   iban:              string   (required when creditTransfer)
- *   kontoinhaber:      string   (required when creditTransfer)
+ *   accountHolderName: string   (required when creditTransfer)
+ *   kontoinhaber:      string   (legacy alias for accountHolderName)
  *   bic:               string   (optional)
  *
  * Returns: { creditorId, account, name }
@@ -167,6 +169,8 @@ export const POST = async (request: NextRequest) => {
 			typeof body.name === "string" ? body.name.trim() : "";
 		const type =
 			body.type === "person" ? "person" : "business";
+		const details =
+			typeof body.details === "string" ? body.details.trim() : "";
 		const paymentMethodType =
 			body.paymentMethodType === "cash"
 				? "cash"
@@ -177,9 +181,11 @@ export const POST = async (request: NextRequest) => {
 			typeof body.iban === "string"
 				? body.iban.replace(/\s+/g, "").toUpperCase()
 				: "";
-		const kontoinhaber =
-			typeof body.kontoinhaber === "string"
-				? body.kontoinhaber.trim()
+		const accountHolderName =
+			typeof body.accountHolderName === "string"
+				? body.accountHolderName.trim()
+				: typeof body.kontoinhaber === "string"
+					? body.kontoinhaber.trim()
 				: "";
 		const bic =
 			typeof body.bic === "string" ? body.bic.trim() : "";
@@ -198,7 +204,7 @@ export const POST = async (request: NextRequest) => {
 					{ status: 400 },
 				);
 			}
-			if (!kontoinhaber) {
+			if (!accountHolderName) {
 				return NextResponse.json(
 					{ error: "Kontoinhaber ist erforderlich." },
 					{ status: 400 },
@@ -211,13 +217,17 @@ export const POST = async (request: NextRequest) => {
 			name: name.slice(0, 81),
 		};
 
+		if (details) {
+			payload.details = details;
+		}
+
 		if (paymentMethodType) {
 			payload.paymentMethodType = paymentMethodType;
 		}
 
 		if (paymentMethodType === "creditTransfer") {
 			payload.creditTransfer = {
-				accountHolderName: kontoinhaber.slice(0, 80),
+				accountHolderName: accountHolderName.slice(0, 80),
 				iban,
 				bic: bic || "",
 			};
