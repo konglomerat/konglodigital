@@ -18,6 +18,7 @@ import {
   AutocompleteInput,
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import { FormField, FormSection, Input, Select } from "../../components/ui/form";
 
 import type {
@@ -153,12 +154,7 @@ type DebtorSelection = { account: number; name: string };
 type CreatePanelState = {
   key: string;
   name: string;
-  addressLine: string;
-  zip: string;
-  city: string;
   email: string;
-  submitting: boolean;
-  error: string | null;
 };
 
 type RowResult = {
@@ -358,12 +354,7 @@ export default function PretixImportPage() {
       setCreatePanel({
         key,
         name,
-        addressLine: "",
-        zip: "",
-        city: "",
         email: row.email,
-        submitting: false,
-        error: null,
       });
     },
     [],
@@ -376,69 +367,6 @@ export default function PretixImportPage() {
       return next;
     });
   }, []);
-
-  const submitCreatePanel = useCallback(async () => {
-    if (!createPanel) return;
-    setCreatePanel({ ...createPanel, submitting: true, error: null });
-    try {
-      const response = await fetch("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: createPanel.name,
-          type: "person",
-          email: createPanel.email.trim() || undefined,
-          address: {
-            country: "DE",
-            zip: createPanel.zip.trim(),
-            city: createPanel.city.trim(),
-            addressLine: createPanel.addressLine.trim(),
-          },
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        account?: number;
-        name?: string;
-        error?: string;
-      };
-      if (!response.ok || typeof payload.account !== "number") {
-        setCreatePanel((current) =>
-          current
-            ? {
-                ...current,
-                submitting: false,
-                error:
-                  payload.error ?? "Debitor konnte nicht angelegt werden.",
-              }
-            : current,
-        );
-        return;
-      }
-      const created: DebtorSelection = {
-        account: payload.account,
-        name: payload.name ?? createPanel.name,
-      };
-      setDebtorByKey((prev) => {
-        const next = new Map(prev);
-        next.set(createPanel.key, created);
-        return next;
-      });
-      setCreatePanel(null);
-    } catch (error) {
-      setCreatePanel((current) =>
-        current
-          ? {
-              ...current,
-              submitting: false,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Unbekannter Fehler beim Anlegen.",
-            }
-          : current,
-      );
-    }
-  }, [createPanel]);
 
   const selectedRowsMissingDebtor = useMemo(
     () =>
@@ -877,95 +805,23 @@ export default function PretixImportPage() {
           </div>
 
           {createPanel ? (
-            <div className="mt-4 space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-              <p className="text-sm font-medium text-blue-900">
-                Neuen Debitor anlegen: &ldquo;{createPanel.name}&rdquo;
-              </p>
-              <div className="space-y-4">
-                <FormField label="Straße / Adresse" required>
-                  <Input
-                    placeholder="Musterstraße 1"
-                    value={createPanel.addressLine}
-                    onChange={(e) =>
-                      setCreatePanel({
-                        ...createPanel,
-                        addressLine: e.target.value,
-                      })
-                    }
-                  />
-                </FormField>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField label="PLZ" required>
-                    <Input
-                      placeholder="01099"
-                      value={createPanel.zip}
-                      onChange={(e) =>
-                        setCreatePanel({
-                          ...createPanel,
-                          zip: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                  <FormField label="Stadt" required>
-                    <Input
-                      placeholder="Dresden"
-                      value={createPanel.city}
-                      onChange={(e) =>
-                        setCreatePanel({
-                          ...createPanel,
-                          city: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-                <FormField label="E-Mail" hint="Optional">
-                  <Input
-                    type="email"
-                    placeholder="kontakt@beispiel.de"
-                    value={createPanel.email}
-                    onChange={(e) =>
-                      setCreatePanel({
-                        ...createPanel,
-                        email: e.target.value,
-                      })
-                    }
-                  />
-                </FormField>
-              </div>
-              {createPanel.error ? (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {createPanel.error}
-                </div>
-              ) : null}
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  kind="primary"
-                  icon={faPlus}
-                  disabled={
-                    createPanel.submitting ||
-                    !createPanel.name.trim() ||
-                    !createPanel.addressLine.trim() ||
-                    !createPanel.zip.trim() ||
-                    !createPanel.city.trim()
-                  }
-                  onClick={() => void submitCreatePanel()}
-                >
-                  {createPanel.submitting
-                    ? "Wird angelegt…"
-                    : "Debitor anlegen"}
-                </Button>
-                <button
-                  type="button"
-                  className="text-sm text-zinc-600 underline-offset-2 hover:underline"
-                  onClick={() => setCreatePanel(null)}
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </div>
+            <DebtorCreatePanel
+              className="mt-4"
+              initialName={createPanel.name}
+              email={createPanel.email}
+              onCancel={() => setCreatePanel(null)}
+              onCreated={(result) => {
+                setDebtorByKey((prev) => {
+                  const next = new Map(prev);
+                  next.set(createPanel.key, {
+                    account: result.account,
+                    name: result.name,
+                  });
+                  return next;
+                });
+                setCreatePanel(null);
+              }}
+            />
           ) : null}
 
           <div className="mt-6 flex items-center justify-between">

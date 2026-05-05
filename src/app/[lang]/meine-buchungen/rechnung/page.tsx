@@ -21,6 +21,7 @@ import {
   AutocompleteInput,
   type Suggestion as DebtorSuggestion,
 } from "../../components/ui/autocomplete-input";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import {
   ProductAutocompleteInput,
   type ProductSuggestion,
@@ -216,7 +217,6 @@ export default function NewSimpleInvoicePage() {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
   const [debtorName, setDebtorName] = useState("");
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
-  const [isCreatingDebtor, setIsCreatingDebtor] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
   const [positions, setPositions] = useState<InvoicePosition[]>([
     createPosition(),
@@ -542,80 +542,6 @@ export default function NewSimpleInvoicePage() {
     setDebtorError(null);
   };
 
-  const createDebtor = async () => {
-    setDebtorError(null);
-
-    if (!debtorName.trim()) {
-      setDebtorError("Bitte zuerst einen Debitorennamen eingeben.");
-      return;
-    }
-
-    if (!addressLine.trim() || !zip.trim() || !city.trim()) {
-      setDebtorError(
-        "Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-      );
-      return;
-    }
-
-    setIsCreatingDebtor(true);
-    try {
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-        paymentMethodType?: CampaiPaymentMethodType | null;
-      }>("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: debtorName,
-          type: "business",
-          paymentMethodType: paymentMethod || undefined,
-          email: recipientEmail.trim() || undefined,
-          receiptSendMethod: recipientEmail.trim()
-            ? sendByMail
-              ? "email"
-              : "postal"
-            : "postal",
-          address: {
-            country: "DE",
-            zip: zip.trim(),
-            city: city.trim(),
-            addressLine: addressLine.trim(),
-            details1: details1.trim() || undefined,
-            details2: details2.trim() || undefined,
-          },
-        }),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setDebtorError(
-          "Debitor wurde erstellt, aber die Debitorennummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      setDebtorAccount(response.account);
-      setDebtorName(response.name ?? debtorName);
-      setShowCreateDebtorPanel(false);
-      setDebtorError(null);
-
-      if (
-        response.paymentMethodType &&
-        paymentMethods.some((item) => item.value === response.paymentMethodType)
-      ) {
-        setPaymentMethod(response.paymentMethodType);
-      }
-    } catch (error) {
-      setDebtorError(
-        error instanceof Error
-          ? error.message
-          : "Debitor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingDebtor(false);
-    }
-  };
-
   const updatePosition = (
     id: string,
     field: keyof Omit<InvoicePosition, "id">,
@@ -838,52 +764,41 @@ export default function NewSimpleInvoicePage() {
             ) : null}
 
             {showCreateDebtorPanel && !debtorAccount ? (
-              <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-primary">
-                    Neuen Debitor anlegen: &ldquo;{debtorName}&rdquo;
-                  </p>
-                  <p className="text-sm text-primary">
-                    Für die Anlage werden die unten eingetragene Adresse und die E-Mail-Adresse verwendet.
-                  </p>
-                  <p className="text-xs text-primary">
-                    Ausgewählte Zahlungsart: {paymentMethod
-                      ? paymentMethods.find((item) => item.value === paymentMethod)?.label ?? paymentMethod
-                      : "keine"}
-                  </p>
-                </div>
+              <DebtorCreatePanel
+                initialName={debtorName}
+                initialType="person"
+                initialDetails={details1}
+                initialAddressLine={addressLine}
+                initialZip={zip}
+                initialCity={city}
+                email={recipientEmail}
+                paymentMethodType={paymentMethod || undefined}
+                receiptSendMethod={recipientEmail.trim()
+                  ? sendByMail
+                    ? "email"
+                    : "postal"
+                  : "postal"}
+                onCancel={() => setShowCreateDebtorPanel(false)}
+                onCreated={(result, draft) => {
+                  setDebtorAccount(result.account);
+                  setDebtorName(result.name);
+                  setShowCreateDebtorPanel(false);
+                  setDebtorError(null);
+                  setAddressLine(draft.addressLine);
+                  setZip(draft.zip);
+                  setCity(draft.city);
+                  setDetails1(draft.details);
 
-                {debtorError ? (
-                  <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
-                    {debtorError}
-                  </div>
-                ) : null}
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    kind="primary"
-                    icon={faPlus}
-                    disabled={
-                      isCreatingDebtor ||
-                      !debtorName.trim() ||
-                      !addressLine.trim() ||
-                      !zip.trim() ||
-                      !city.trim()
-                    }
-                    onClick={createDebtor}
-                  >
-                    {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
-                  </Button>
-                  <Button
-                    type="button"
-                    kind="secondary"
-                    onClick={() => setShowCreateDebtorPanel(false)}
-                  >
-                    Abbrechen
-                  </Button>
-                </div>
-              </div>
+                  if (
+                    result.paymentMethodType &&
+                    paymentMethods.some(
+                      (item) => item.value === result.paymentMethodType,
+                    )
+                  ) {
+                    setPaymentMethod(result.paymentMethodType as PaymentMethod);
+                  }
+                }}
+              />
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">

@@ -6,9 +6,9 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 type AddressPayload = {
 	country: string;
 	state?: string;
-	zip: string;
-	city: string;
-	addressLine: string;
+	zip?: string;
+	city?: string;
+	addressLine?: string;
 	details1?: string;
 	details2?: string;
 };
@@ -59,15 +59,15 @@ const normalizeAddress = (value: unknown): AddressPayload | null => {
 		typeof typed.details2 === "string" ? typed.details2.trim() : "";
 	const state = typeof typed.state === "string" ? typed.state.trim() : "";
 
-	if (!zip || !city || !addressLine) {
+	if (!zip && !city && !addressLine && !details1 && !details2 && !state) {
 		return null;
 	}
 
 	return {
 		country: country || "DE",
-		zip,
-		city,
-		addressLine,
+		zip: zip || undefined,
+		city: city || undefined,
+		addressLine: addressLine || undefined,
 		state: state || undefined,
 		details1: details1 || undefined,
 		details2: details2 || undefined,
@@ -220,16 +220,6 @@ export const POST = async (request: NextRequest) => {
 			);
 		}
 
-		if (!address) {
-			return NextResponse.json(
-				{
-					error:
-						"Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-				},
-				{ status: 400 },
-			);
-		}
-
 		if (paymentMethodType === "sepaDirectDebit") {
 			return NextResponse.json(
 				{
@@ -243,7 +233,6 @@ export const POST = async (request: NextRequest) => {
 		const payload: Record<string, unknown> = {
 			type,
 			name: name.slice(0, 81),
-			address,
 			email,
 			receiptSendMethod: email
 				? receiptSendMethod === "none"
@@ -251,6 +240,10 @@ export const POST = async (request: NextRequest) => {
 					: receiptSendMethod
 				: receiptSendMethod,
 		};
+
+		if (address) {
+			payload.address = address;
+		}
 
 		if (paymentMethodType) {
 			payload.paymentMethodType = paymentMethodType;

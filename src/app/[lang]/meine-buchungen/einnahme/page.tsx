@@ -21,6 +21,7 @@ import {
   AutocompleteInput,
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import {
   FormField,
   FormSection,
@@ -87,12 +88,6 @@ export default function EinnahmePage() {
   const [debitorAccount, setDebitorAccount] = useState<number | null>(null);
   const [debitorName, setDebitorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [addressLine, setAddressLine] = useState("");
-  const [zip, setZip] = useState("");
-  const [city, setCity] = useState("");
-  const [debitorEmail, setDebitorEmail] = useState("");
-  const [isCreatingDebitor, setIsCreatingDebitor] = useState(false);
-  const [debitorError, setDebitorError] = useState<string | null>(null);
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -101,76 +96,19 @@ export default function EinnahmePage() {
     setDebitorAccount(suggestion.account);
     setDebitorName(suggestion.name);
     setShowCreatePanel(false);
-    setDebitorError(null);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
     setDebitorAccount(null);
     setDebitorName(name);
     setShowCreatePanel(true);
-    setDebitorError(null);
   }, []);
 
   const resetDebitor = useCallback(() => {
     setDebitorAccount(null);
     setDebitorName("");
     setShowCreatePanel(false);
-    setAddressLine("");
-    setZip("");
-    setCity("");
-    setDebitorEmail("");
-    setDebitorError(null);
   }, []);
-
-  const createDebitor = useCallback(async () => {
-    setIsCreatingDebitor(true);
-    setDebitorError(null);
-    try {
-      const response = await fetch("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: debitorName,
-          type: "business",
-          email: debitorEmail.trim() || undefined,
-          address: {
-            country: "DE",
-            zip: zip.trim(),
-            city: city.trim(),
-            addressLine: addressLine.trim(),
-          },
-        }),
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setDebitorError(
-          payload.error ?? "Person oder Firma konnte nicht angelegt werden.",
-        );
-        return;
-      }
-      const payload = (await response.json().catch(() => ({}))) as {
-        account?: number;
-        name?: string;
-      };
-      if (typeof payload.account === "number" && payload.account > 0) {
-        setDebitorAccount(payload.account);
-        setDebitorName(payload.name ?? debitorName);
-        setShowCreatePanel(false);
-      } else {
-        setDebitorError(
-          "Person oder Firma wurde angelegt, aber die Kontonummer konnte nicht ermittelt werden.",
-        );
-      }
-    } catch (error) {
-      setDebitorError(
-        error instanceof Error ? error.message : "Unbekannter Fehler",
-      );
-    } finally {
-      setIsCreatingDebitor(false);
-    }
-  }, [debitorName, debitorEmail, addressLine, zip, city]);
 
   useEffect(() => {
     let active = true;
@@ -263,11 +201,6 @@ export default function EinnahmePage() {
       setDebitorAccount(null);
       setDebitorName("");
       setShowCreatePanel(false);
-      setAddressLine("");
-      setZip("");
-      setCity("");
-      setDebitorEmail("");
-      setDebitorError(null);
       setSelectedFile(null);
     } finally {
       setIsSubmitting(false);
@@ -346,74 +279,17 @@ export default function EinnahmePage() {
               ) : null}
 
               {showCreatePanel && !debitorAccount ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
-                    Neue zahlende Person oder Firma anlegen: &ldquo;{debitorName}&rdquo;
-                  </p>
-                  <div className="space-y-4">
-                    <FormField label="Straße / Adresse" required>
-                      <Input
-                        placeholder="Musterstraße 1"
-                        value={addressLine}
-                        onChange={(event) => setAddressLine(event.target.value)}
-                      />
-                    </FormField>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField label="PLZ" required>
-                        <Input
-                          placeholder="12345"
-                          value={zip}
-                          onChange={(event) => setZip(event.target.value)}
-                        />
-                      </FormField>
-                      <FormField label="Stadt" required>
-                        <Input
-                          placeholder="Berlin"
-                          value={city}
-                          onChange={(event) => setCity(event.target.value)}
-                        />
-                      </FormField>
-                    </div>
-                    <FormField label="E-Mail" hint="Optional">
-                      <Input
-                        type="email"
-                        placeholder="kontakt@beispiel.de"
-                        value={debitorEmail}
-                        onChange={(event) =>
-                          setDebitorEmail(event.target.value)
-                        }
-                      />
-                    </FormField>
-                  </div>
-                  {debitorError ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {debitorError}
-                    </div>
-                  ) : null}
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      kind="primary"
-                      icon={faPlus}
-                      disabled={
-                        isCreatingDebitor ||
-                        !addressLine.trim() ||
-                        !zip.trim() ||
-                        !city.trim()
-                      }
-                      onClick={createDebitor}
-                    >
-                      {isCreatingDebitor ? "Wird angelegt…" : "Person/Firma anlegen"}
-                    </Button>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      onClick={() => setShowCreatePanel(false)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                </div>
+                <DebtorCreatePanel
+                  title={`Neue zahlende Person oder Firma anlegen: "${debitorName}"`}
+                  submitLabel="Person/Firma anlegen"
+                  initialName={debitorName}
+                  onCancel={() => setShowCreatePanel(false)}
+                  onCreated={(result) => {
+                    setDebitorAccount(result.account);
+                    setDebitorName(result.name);
+                    setShowCreatePanel(false);
+                  }}
+                />
               ) : null}
             </div>
           </FormSection>

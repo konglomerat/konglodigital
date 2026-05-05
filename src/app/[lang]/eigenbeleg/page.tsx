@@ -16,6 +16,7 @@ import {
 
 import Button from "../components/Button";
 import BookingPageShell from "../components/ui/BookingPageShell";
+import DebtorCreatePanel from "../components/ui/debtor-create-panel";
 import InternalNoteSection from "../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import {
@@ -710,14 +711,6 @@ export default function EigenbelegPage() {
   const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
   const [creditorError, setCreditorError] = useState<string | null>(null);
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
-  const [debtorEmail, setDebtorEmail] = useState("");
-  const [debtorSendByMail, setDebtorSendByMail] = useState(false);
-  const [debtorAddressLine, setDebtorAddressLine] = useState("");
-  const [debtorZip, setDebtorZip] = useState("");
-  const [debtorCity, setDebtorCity] = useState("");
-  const [debtorDetails1, setDebtorDetails1] = useState("");
-  const [debtorDetails2, setDebtorDetails2] = useState("");
-  const [isCreatingDebtor, setIsCreatingDebtor] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
 
   const selectedReason = useWatch({ control, name: "reason" });
@@ -935,70 +928,6 @@ export default function EigenbelegPage() {
       );
     } finally {
       setIsCreatingCreditor(false);
-    }
-  };
-
-  const createDebtor = async () => {
-    setDebtorError(null);
-
-    const trimmedName = (counterpartyName ?? "").trim();
-    if (!trimmedName) {
-      setDebtorError("Bitte zuerst einen Debitorennamen eingeben.");
-      return;
-    }
-
-    if (!debtorAddressLine.trim() || !debtorZip.trim() || !debtorCity.trim()) {
-      setDebtorError(
-        "Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-      );
-      return;
-    }
-
-    setIsCreatingDebtor(true);
-    try {
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-      }>("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: trimmedName,
-          type: "business",
-          email: debtorEmail.trim() || undefined,
-          receiptSendMethod: debtorEmail.trim()
-            ? debtorSendByMail
-              ? "email"
-              : "postal"
-            : "postal",
-          address: {
-            country: "DE",
-            zip: debtorZip.trim(),
-            city: debtorCity.trim(),
-            addressLine: debtorAddressLine.trim(),
-            details1: debtorDetails1.trim() || undefined,
-            details2: debtorDetails2.trim() || undefined,
-          },
-        }),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setDebtorError(
-          "Debitor wurde erstellt, aber die Debitorennummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      handleCounterpartySelect({
-        account: response.account,
-        name: response.name ?? trimmedName,
-      });
-    } catch (error) {
-      setDebtorError(
-        error instanceof Error ? error.message : "Debitor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingDebtor(false);
     }
   };
 
@@ -1896,112 +1825,17 @@ export default function EigenbelegPage() {
                   ) : null}
 
                   {showCreateDebtorPanel && !counterpartyAccount && !isExpenseLikeFlow ? (
-                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-blue-900">
-                          Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
-                        </p>
-                        <p className="text-sm text-blue-800">
-                          Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
-                        </p>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="E-Mail-Adresse">
-                          <Input
-                            type="email"
-                            placeholder="kunde@beispiel.de"
-                            value={debtorEmail}
-                            onChange={(event) => setDebtorEmail(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Versand per E-Mail">
-                          <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
-                            <input
-                              type="checkbox"
-                              autoComplete="off"
-                              checked={debtorSendByMail}
-                              onChange={(event) =>
-                                setDebtorSendByMail(event.target.checked)
-                              }
-                            />
-                            Rechnung per E-Mail versenden
-                          </label>
-                        </FormField>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="Straße / Adresse" required>
-                          <Input
-                            placeholder="Straße und Hausnummer"
-                            value={debtorAddressLine}
-                            onChange={(event) =>
-                              setDebtorAddressLine(event.target.value)
-                            }
-                          />
-                        </FormField>
-
-                        <FormField label="Adresszusatz 1">
-                          <Input
-                            placeholder="Optional"
-                            value={debtorDetails1}
-                            onChange={(event) => setDebtorDetails1(event.target.value)}
-                          />
-                        </FormField>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <FormField label="PLZ" required>
-                          <Input
-                            placeholder="01159"
-                            value={debtorZip}
-                            onChange={(event) => setDebtorZip(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Stadt" required>
-                          <Input
-                            placeholder="Dresden"
-                            value={debtorCity}
-                            onChange={(event) => setDebtorCity(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Adresszusatz 2">
-                          <Input
-                            placeholder="Optional"
-                            value={debtorDetails2}
-                            onChange={(event) => setDebtorDetails2(event.target.value)}
-                          />
-                        </FormField>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          kind="primary"
-                          icon={faPlus}
-                          disabled={
-                            isCreatingDebtor ||
-                            !counterpartyName?.trim() ||
-                            !debtorAddressLine.trim() ||
-                            !debtorZip.trim() ||
-                            !debtorCity.trim()
-                          }
-                          onClick={createDebtor}
-                        >
-                          {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
-                        </Button>
-                        <Button
-                          type="button"
-                          kind="secondary"
-                          onClick={() => setShowCreateDebtorPanel(false)}
-                        >
-                          Abbrechen
-                        </Button>
-                      </div>
-                    </div>
+                    <DebtorCreatePanel
+                      initialName={counterpartyName ?? ""}
+                      initialType="person"
+                      onCancel={() => setShowCreateDebtorPanel(false)}
+                      onCreated={(result) => {
+                        handleCounterpartySelect({
+                          account: result.account,
+                          name: result.name,
+                        });
+                      }}
+                    />
                   ) : null}
                 </>
               )}
