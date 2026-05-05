@@ -15,6 +15,8 @@ type CostCenterOption = {
   label: string;
 };
 
+type PaymentStatusTone = "paid" | "partial" | "unpaid" | "default";
+
 const INCOME_TYPES = new Set(["revenue", "invoice", "donation", "deposit"]);
 const EXPENSE_TYPES = new Set(["expense"]);
 const EXCLUDED_TYPES = new Set(["offer"]);
@@ -30,9 +32,17 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  paid: "Bezahlt",
   unpaid: "Unbezahlt",
   partial: "Teilweise bezahlt",
+  paid: "Bezahlt",
+};
+
+const COST_CENTER1_SHORT_LABELS: Record<string, string> = {
+  "Ideeller Bereich": "Ideell",
+  Vermögensverwaltung: "Vermögen",
+  Zweckbetrieb: "Zweckbetrieb",
+  "Wirtschaftlicher Geschäftsbetrieb": "Wirtsch. Geschäftsbetrieb",
+  Sammelposten: "Sammelposten",
 };
 
 const formatCents = (cents: number): string => {
@@ -90,35 +100,131 @@ const formatPositionsField = (
   return values.join(", ");
 };
 
+const formatFirstPositionField = (
+  positions: CampaiReceiptPosition[],
+  field: keyof CampaiReceiptPosition,
+  labelMap: Map<string, string>,
+): string => {
+  const firstPosition = positions[0];
+  if (!firstPosition) {
+    return "—";
+  }
+
+  const value = firstPosition[field];
+  if (value === null) {
+    return "—";
+  }
+
+  const key = String(value);
+  return labelMap.get(key) ?? key;
+};
+
+const formatCostCenter2WithAmounts = (
+  positions: CampaiReceiptPosition[],
+  labelMap: Map<string, string>,
+): string => {
+  if (positions.length === 0) {
+    return "—";
+  }
+
+  const values = positions.map((position) => {
+    if (position.costCenter2 === null) {
+      return "—";
+    }
+
+    const key = String(position.costCenter2);
+    const label = labelMap.get(key) ?? key;
+
+    if (position.amount === null) {
+      return label;
+    }
+
+    return `${label} (${formatCents(position.amount)})`;
+  });
+
+  return values.join(", ");
+};
+
+const normalizePaymentStatusTone = (status: string | null): PaymentStatusTone => {
+  const normalized = status?.trim().toLowerCase();
+
+  if (!normalized) {
+    return "default";
+  }
+
+  if (normalized === "paid") {
+    return "paid";
+  }
+
+  if (normalized === "partial") {
+    return "partial";
+  }
+
+  if (normalized === "unpaid") {
+    return "unpaid";
+  }
+
+  return "default";
+};
+
+const getPaymentStatusLabel = (status: string | null): string | null => {
+  if (!status) {
+    return null;
+  }
+
+  const normalized = status.trim().toLowerCase();
+  return PAYMENT_STATUS_LABELS[normalized] ?? status;
+};
+
 const getTypeChipClassName = (type: string | null): string => {
   if (type && INCOME_TYPES.has(type)) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "border-l-4 border-l-emerald-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-emerald-400 dark:bg-zinc-900 dark:text-zinc-100";
   }
   if (type && EXPENSE_TYPES.has(type)) {
-    return "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300";
+    return "border-l-4 border-l-rose-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-rose-400 dark:bg-zinc-900 dark:text-zinc-100";
   }
   if (type === "refund") {
-    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300";
+    return "border-l-4 border-l-amber-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-amber-400 dark:bg-zinc-900 dark:text-zinc-100";
+  }
+  return "border-l-4 border-l-sky-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-sky-400 dark:bg-zinc-900 dark:text-zinc-100";
+};
+
+const getPaymentStatusChipClassName = (status: string | null): string => {
+  const tone = normalizePaymentStatusTone(status);
+
+  if (tone === "paid") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
+  }
+  if (tone === "unpaid") {
+    return "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300";
+  }
+  if (tone === "partial") {
+    return "border-orange-300 bg-orange-100 text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300";
   }
   return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 };
 
-const getPaymentStatusChipClassName = (status: string | null): string => {
-  if (status === "paid") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
-  }
-  if (status === "unpaid") {
-    return "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300";
-  }
-  if (status === "partial") {
-    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300";
-  }
-  return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+const TABLE_HEADER_LABELS: Record<string, string> = {
+  receiptDate: "Beleg Datum",
+  createdAt: "Buchung Datum",
+  receiptNumber: "Beleg",
+  description: "Beschreibung",
+  accountName: "Sender/Empfänger",
+  paymentAccounts: "Zahlkonto",
+  type: "Typ",
+  paymentStatus: "Status",
+  tags: "Tags",
+  Sphäre: "Sphäre",
+  "positions.costCenter2": "positions.costCenter2",
 };
+
+const CELL_TEXT_CLASS_NAME =
+  "block overflow-hidden text-ellipsis whitespace-nowrap";
 
 export default function BalancePage() {
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [allCostCenters, setAllCostCenters] = useState<CostCenterOption[]>([]);
+  const [costCenter1Labels, setCostCenter1Labels] = useState<CostCenterOption[]>([]);
   const [loadingCostCenters, setLoadingCostCenters] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
@@ -131,11 +237,12 @@ export default function BalancePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [bookableResponse, allResponse] = await Promise.all([
+        const [bookableResponse, allResponse, costCenter1Response] = await Promise.all([
           fetch("/api/campai/cost-centers"),
           fetch("/api/campai/cost-centers?includeNonBookable=1"),
+          fetch("/api/campai/cost-center1-labels"),
         ]);
-        if (!bookableResponse.ok || !allResponse.ok) {
+        if (!bookableResponse.ok || !allResponse.ok || !costCenter1Response.ok) {
           throw new Error("Werkbereiche konnten nicht geladen werden.");
         }
         const bookableData = (await bookableResponse.json()) as {
@@ -144,8 +251,12 @@ export default function BalancePage() {
         const allData = (await allResponse.json()) as {
           costCenters?: CostCenterOption[];
         };
+        const costCenter1Data = (await costCenter1Response.json()) as {
+          costCenter1Labels?: CostCenterOption[];
+        };
         setCostCenters(bookableData.costCenters ?? []);
         setAllCostCenters(allData.costCenters ?? []);
+        setCostCenter1Labels(costCenter1Data.costCenter1Labels ?? []);
       } catch (error) {
         setCostCentersError(
           error instanceof Error
@@ -160,8 +271,14 @@ export default function BalancePage() {
   }, []);
 
   const costCenterLabelMap = useMemo(
-    () => new Map(allCostCenters.map((entry) => [entry.value, entry.label])),
-    [allCostCenters],
+    () =>
+      new Map(
+        [...costCenter1Labels, ...allCostCenters].map((entry) => [
+          entry.value,
+          COST_CENTER1_SHORT_LABELS[entry.label] ?? entry.label,
+        ]),
+      ),
+    [allCostCenters, costCenter1Labels],
   );
 
   const loadReceipts = useCallback(async (values: string[]) => {
@@ -237,10 +354,11 @@ export default function BalancePage() {
     "Einnahmen",
     "Ausgaben",
     "accountName",
+    "paymentAccounts",
     "type",
     "paymentStatus",
     "tags",
-    "positions.costCenter1",
+    "Sphäre",
     "positions.costCenter2",
   ];
   const colSpan = tableHeaders.length;
@@ -328,7 +446,7 @@ export default function BalancePage() {
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
+        <table className="min-w-full table-fixed divide-y divide-zinc-200 dark:divide-zinc-800">
           <thead className="bg-zinc-50 dark:bg-zinc-900/80">
             <tr>
               {tableHeaders.map((header) => {
@@ -339,8 +457,9 @@ export default function BalancePage() {
                     className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${
                       isAmount ? "text-right" : "text-left"
                     }`}
+                    title={TABLE_HEADER_LABELS[header] ?? header}
                   >
-                    {header}
+                    {TABLE_HEADER_LABELS[header] ?? header}
                   </th>
                 );
               })}
@@ -399,30 +518,67 @@ export default function BalancePage() {
                 return (
                   <tr key={receipt.id}>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {formatDate(receipt.receiptDate)}
+                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
+                        {formatDate(receipt.receiptDate)}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {formatDateTime(receipt.createdAt)}
+                      <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
+                        {formatDateTime(receipt.createdAt)}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {receipt.receiptNumber ?? "—"}
+                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
+                        {receipt.receiptNumber ?? "—"}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {receipt.description ?? "—"}
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.description ?? "—"}>
+                        {receipt.description ?? "—"}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      {incomeCell || "—"}
+                      <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
+                        {incomeCell || "—"}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
-                      {expenseCell || "—"}
+                      <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
+                        {expenseCell || "—"}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {receipt.accountName ?? "—"}
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
+                        {receipt.accountName ?? "—"}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span
+                        className={CELL_TEXT_CLASS_NAME}
+                        title={
+                          receipt.paymentAccountNames.length > 0
+                            ? receipt.paymentAccountNames.join(", ")
+                            : receipt.paymentAccounts.length > 0
+                              ? receipt.paymentAccounts
+                                  .map((account) => `Konto ${account}`)
+                                  .join(", ")
+                              : "—"
+                        }
+                      >
+                        {receipt.paymentAccountNames.length > 0
+                          ? receipt.paymentAccountNames.join(", ")
+                          : receipt.paymentAccounts.length > 0
+                            ? receipt.paymentAccounts
+                                .map((account) => `Konto ${account}`)
+                                .join(", ")
+                            : "—"}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {receipt.type ? (
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getTypeChipClassName(receipt.type)}`}
+                          className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${getTypeChipClassName(receipt.type)}`}
+                          title={TYPE_LABELS[receipt.type] ?? receipt.type}
                         >
                           {TYPE_LABELS[receipt.type] ?? receipt.type}
                         </span>
@@ -434,43 +590,53 @@ export default function BalancePage() {
                       {receipt.paymentStatus ? (
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
+                          title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
                         >
-                          {PAYMENT_STATUS_LABELS[receipt.paymentStatus] ??
+                          {getPaymentStatusLabel(receipt.paymentStatus) ??
                             receipt.paymentStatus}
                         </span>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {receipt.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {receipt.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                        <span
+                          className={CELL_TEXT_CLASS_NAME}
+                          title={receipt.tags.join(", ")}
+                        >
+                          {receipt.tags.join(", ")}
+                        </span>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {formatPositionsField(
+                      <span
+                        className={CELL_TEXT_CLASS_NAME}
+                        title={formatFirstPositionField(
+                          receipt.positions,
+                          "costCenter1",
+                          costCenterLabelMap,
+                        )}
+                      >
+                        {formatFirstPositionField(
                         receipt.positions,
                         "costCenter1",
                         costCenterLabelMap,
-                      )}
+                        )}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      {formatPositionsField(
-                        receipt.positions,
-                        "costCenter2",
-                        costCenterLabelMap,
-                      )}
+                      <span
+                        className={CELL_TEXT_CLASS_NAME}
+                        title={formatCostCenter2WithAmounts(
+                          receipt.positions,
+                          costCenterLabelMap,
+                        )}
+                      >
+                        {formatCostCenter2WithAmounts(receipt.positions, costCenterLabelMap)}
+                      </span>
                     </td>
                   </tr>
                 );
