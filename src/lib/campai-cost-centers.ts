@@ -3,6 +3,11 @@ export type CampaiCostCenterOption = {
   label: string;
 };
 
+type CampaiCostCenterRegion = {
+  digit: number;
+  label: string;
+};
+
 const requiredEnv = (name: string) => {
   const value = process.env[name];
   if (!value) {
@@ -91,6 +96,36 @@ const extractCostCenterArray = (payload: unknown): Record<string, unknown>[] => 
   return [];
 };
 
+const extractAccountingPlanRegions = (
+  payload: unknown,
+): CampaiCostCenterRegion[] => {
+  const record = asRecord(payload);
+  const regions = Array.isArray(record?.regions) ? record.regions : [];
+
+  return regions
+    .map((entry) => {
+      const region = asRecord(entry);
+      const digitValue = region?.digit;
+      const digit =
+        typeof digitValue === "number" && Number.isFinite(digitValue)
+          ? Math.trunc(digitValue)
+          : typeof digitValue === "string"
+            ? Number.parseInt(digitValue.trim(), 10)
+            : Number.NaN;
+      const label = normalizeDisplayName(normalizeString(region?.label));
+
+      if (!Number.isFinite(digit) || digit <= 0 || !label) {
+        return null;
+      }
+
+      return {
+        digit,
+        label,
+      } satisfies CampaiCostCenterRegion;
+    })
+    .filter((entry): entry is CampaiCostCenterRegion => Boolean(entry));
+};
+
 const normalizeCostCenter = (
   item: Record<string, unknown>,
 ): CampaiCostCenterOption | null => {
@@ -165,6 +200,44 @@ export const fetchCampaiCostCenters = async () => {
 
   if (deduped.length === 0) {
     throw new Error("No bookable cost centers found in mandate response.");
+  }
+
+  return deduped;
+};
+
+export const fetchCampaiCostCenter1Labels = async () => {
+  const apiKey = requiredEnv("CAMPAI_API_KEY");
+  const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
+  const endpoint = `https://cloud.campai.com/api/${organizationId}/finance/accounting/accountingPlan`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Campai API error: ${response.status} ${await response.text().catch(() => "")}`,
+    );
+  }
+
+  const raw = (await response.json().catch(() => null)) as unknown;
+  const regions = extractAccountingPlanRegions(raw);
+  const deduped = Array.from(
+    new Map(
+      regions.map((entry) => [String(entry.digit), {
+        value: String(entry.digit),
+        label: entry.label,
+      }] as const),
+    ).values(),
+  ).sort((left, right) => Number(left.value) - Number(right.value));
+
+  if (deduped.length === 0) {
+    throw new Error("No accounting plan regions found in accounting plan response.");
   }
 
   return deduped;

@@ -1,9 +1,15 @@
 const CAMPAI_RECEIPTS_PAGE_SIZE = 100;
 const CAMPAI_RECEIPTS_MAX_PAGES = 50;
 
+import {
+  createCampaiCashAccountLabelMap,
+  fetchCampaiCashAccounts,
+} from "@/lib/campai-cash-accounts";
+
 export type CampaiReceiptPosition = {
   costCenter1: number | null;
   costCenter2: number | null;
+  amount: number | null;
 };
 
 export type CampaiBalanceReceipt = {
@@ -17,6 +23,8 @@ export type CampaiBalanceReceipt = {
   totalGrossAmount: number | null;
   type: string | null;
   paymentStatus: string | null;
+  paymentAccounts: number[];
+  paymentAccountNames: string[];
   tags: string[];
   positions: CampaiReceiptPosition[];
 };
@@ -24,6 +32,7 @@ export type CampaiBalanceReceipt = {
 type RawPosition = {
   costCenter1?: number | null;
   costCenter2?: number | null;
+  amount?: number | null;
 };
 
 type RawReceipt = {
@@ -37,6 +46,9 @@ type RawReceipt = {
   totalGrossAmount?: number | null;
   type?: string | null;
   paymentStatus?: string | null;
+  payments?: Array<{
+    account?: number | null;
+  }> | null;
   tags?: string[] | null;
   positions?: RawPosition[] | null;
 };
@@ -72,7 +84,22 @@ const normalizePositions = (raw: RawReceipt["positions"]): CampaiReceiptPosition
   return raw.map((position) => ({
     costCenter1: toNumberOrNull(position?.costCenter1),
     costCenter2: toNumberOrNull(position?.costCenter2),
+    amount: toNumberOrNull(position?.amount),
   }));
+};
+
+const normalizePaymentAccounts = (raw: RawReceipt["payments"]): number[] => {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      raw
+        .map((payment) => toNumberOrNull(payment?.account))
+        .filter((account): account is number => account !== null && account > 0),
+    ),
+  );
 };
 
 const normalizeReceipt = (raw: RawReceipt): CampaiBalanceReceipt | null => {
@@ -84,6 +111,7 @@ const normalizeReceipt = (raw: RawReceipt): CampaiBalanceReceipt | null => {
   const tags = Array.isArray(raw.tags)
     ? raw.tags.filter((tag): tag is string => typeof tag === "string")
     : [];
+  const paymentAccounts = normalizePaymentAccounts(raw.payments);
 
   return {
     id,
@@ -96,6 +124,8 @@ const normalizeReceipt = (raw: RawReceipt): CampaiBalanceReceipt | null => {
     totalGrossAmount: toNumberOrNull(raw.totalGrossAmount),
     type: toStringOrNull(raw.type),
     paymentStatus: toStringOrNull(raw.paymentStatus),
+    paymentAccounts,
+    paymentAccountNames: [],
     tags,
     positions: normalizePositions(raw.positions),
   };
@@ -172,6 +202,10 @@ export const listCampaiReceiptsByCostCenter2 = async (
     return [];
   }
 
+  const cashAccountLabelMap = createCampaiCashAccountLabelMap(
+    await fetchCampaiCashAccounts(),
+  );
+
   const collected: CampaiBalanceReceipt[] = [];
   let offset = 0;
   let totalCount: number | null = null;
@@ -206,10 +240,17 @@ export const listCampaiReceiptsByCostCenter2 = async (
   // Defensive: ensure every returned receipt actually matches one of the
   // requested costCenter2 values, in case userFilter behaves unexpectedly.
   const valueSet = new Set(uniqueValues);
-  return collected.filter((receipt) =>
-    receipt.positions.some(
-      (position) =>
-        position.costCenter2 !== null && valueSet.has(position.costCenter2),
-    ),
-  );
+  return collected
+    .filter((receipt) =>
+      receipt.positions.some(
+        (position) =>
+          position.costCenter2 !== null && valueSet.has(position.costCenter2),
+      ),
+    )
+    .map((receipt) => ({
+      ...receipt,
+      paymentAccountNames: receipt.paymentAccounts.map(
+        (account) => cashAccountLabelMap.get(String(account)) ?? `Konto ${account}`,
+      ),
+    }));
 };
