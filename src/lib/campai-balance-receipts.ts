@@ -2,11 +2,17 @@ const CAMPAI_RECEIPTS_PAGE_SIZE = 100;
 const CAMPAI_RECEIPTS_MAX_PAGES = 50;
 
 import {
+  createCampaiAccountingAccountLabelMap,
+  fetchCampaiAccountingAccounts,
+} from "@/lib/campai-accounting-accounts";
+import {
   createCampaiCashAccountLabelMap,
   fetchCampaiCashAccounts,
 } from "@/lib/campai-cash-accounts";
 
 export type CampaiReceiptPosition = {
+  account: number | null;
+  accountLabel: string | null;
   costCenter1: number | null;
   costCenter2: number | null;
   amount: number | null;
@@ -16,6 +22,7 @@ export type CampaiBalanceReceipt = {
   id: string;
   receiptDate: string | null;
   createdAt: string | null;
+  paidAt: string | null;
   receiptNumber: string | null;
   account: number | null;
   accountName: string | null;
@@ -30,6 +37,7 @@ export type CampaiBalanceReceipt = {
 };
 
 type RawPosition = {
+  account?: number | null;
   costCenter1?: number | null;
   costCenter2?: number | null;
   amount?: number | null;
@@ -39,6 +47,7 @@ type RawReceipt = {
   _id?: string;
   receiptDate?: string | null;
   createdAt?: string | null;
+  paidAt?: string | null;
   receiptNumber?: string | null;
   account?: number | null;
   accountName?: string | null;
@@ -82,6 +91,8 @@ const normalizePositions = (raw: RawReceipt["positions"]): CampaiReceiptPosition
     return [];
   }
   return raw.map((position) => ({
+    account: toNumberOrNull(position?.account),
+    accountLabel: null,
     costCenter1: toNumberOrNull(position?.costCenter1),
     costCenter2: toNumberOrNull(position?.costCenter2),
     amount: toNumberOrNull(position?.amount),
@@ -117,6 +128,7 @@ const normalizeReceipt = (raw: RawReceipt): CampaiBalanceReceipt | null => {
     id,
     receiptDate: toStringOrNull(raw.receiptDate),
     createdAt: toStringOrNull(raw.createdAt),
+    paidAt: toStringOrNull(raw.paidAt),
     receiptNumber: toStringOrNull(raw.receiptNumber),
     account: toNumberOrNull(raw.account),
     accountName: toStringOrNull(raw.accountName),
@@ -202,8 +214,14 @@ export const listCampaiReceiptsByCostCenter2 = async (
     return [];
   }
 
-  const cashAccountLabelMap = createCampaiCashAccountLabelMap(
-    await fetchCampaiCashAccounts(),
+  const [cashAccounts, accountingAccounts] = await Promise.all([
+    fetchCampaiCashAccounts(),
+    fetchCampaiAccountingAccounts(),
+  ]);
+
+  const cashAccountLabelMap = createCampaiCashAccountLabelMap(cashAccounts);
+  const accountingAccountLabelMap = createCampaiAccountingAccountLabelMap(
+    accountingAccounts,
   );
 
   const collected: CampaiBalanceReceipt[] = [];
@@ -252,5 +270,12 @@ export const listCampaiReceiptsByCostCenter2 = async (
       paymentAccountNames: receipt.paymentAccounts.map(
         (account) => cashAccountLabelMap.get(String(account)) ?? `Konto ${account}`,
       ),
+      positions: receipt.positions.map((position) => ({
+        ...position,
+        accountLabel:
+          position.account !== null
+            ? accountingAccountLabelMap.get(String(position.account)) ?? null
+            : null,
+      })),
     }));
 };

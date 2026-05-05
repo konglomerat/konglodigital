@@ -363,22 +363,13 @@ export default async function RootLayout({
                           Meine Buchungen
                         </ProtectedNavItem>
                         <ProtectedNavItem
-                          href="/budget"
-                          className={navLinkClassName}
-                          icon={faChartPie}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Budget Werkbereiche
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
                           href="/balance"
                           className={navLinkClassName}
                           icon={faTableList}
                           isAccessible={isAuthenticated}
                           tooltip={membersOnlyTooltip}
                         >
-                          Balance
+                          Übersicht
                         </ProtectedNavItem>
                       </nav>
                       <div className="border-t border-border px-4 py-4">
@@ -583,22 +574,13 @@ export default async function RootLayout({
                   Meine Buchungen
                 </ProtectedNavItem>
                 <ProtectedNavItem
-                  href="/budget"
-                  className={navItemClassName}
-                  icon={faChartPie}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Budget Werkbereiche
-                </ProtectedNavItem>
-                <ProtectedNavItem
                   href="/balance"
                   className={navItemClassName}
                   icon={faTableList}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
-                  Balance
+                  Übersicht (WIP)
                 </ProtectedNavItem>
               </nav>
               {isAuthenticated ? (
