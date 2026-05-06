@@ -16,6 +16,7 @@ export type CampaiReceiptPosition = {
   costCenter1: number | null;
   costCenter2: number | null;
   amount: number | null;
+  description: string | null;
 };
 
 export type CampaiBalanceReceipt = {
@@ -41,6 +42,7 @@ type RawPosition = {
   costCenter1?: number | null;
   costCenter2?: number | null;
   amount?: number | null;
+  description?: string | null;
 };
 
 type RawReceipt = {
@@ -96,6 +98,7 @@ const normalizePositions = (raw: RawReceipt["positions"]): CampaiReceiptPosition
     costCenter1: toNumberOrNull(position?.costCenter1),
     costCenter2: toNumberOrNull(position?.costCenter2),
     amount: toNumberOrNull(position?.amount),
+    description: toStringOrNull(position?.description),
   }));
 };
 
