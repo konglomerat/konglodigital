@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowDown,
+  faArrowUp,
+  faColumns,
   faSort,
   faSortDown,
   faSortUp,
@@ -14,15 +17,44 @@ import type {
   CampaiBalanceReceipt,
   CampaiReceiptPosition,
 } from "@/lib/campai-balance-receipts";
+import type { MemberProfilePreferences } from "@/lib/member-profiles";
 
 type CostCenterOption = {
   value: string;
   label: string;
 };
 
+type ColumnKey =
+  | "receiptNumber"
+  | "paymentStatus"
+  | "paidAt"
+  | "Sphäre"
+  | "description"
+  | "accountName"
+  | "Einnahmen"
+  | "Ausgaben"
+  | "paymentAccounts"
+  | "positions.account"
+  | "type"
+  | "receiptDate"
+  | "createdAt"
+  | "tags"
+  | "pdf";
+
 type PaymentStatusTone = "paid" | "partial" | "unpaid" | "default";
 type SortKey = "paidAt" | "receiptDate" | "createdAt" | "income" | "expense";
 type SortDirection = "asc" | "desc";
+
+type TableColumn = {
+  key: ColumnKey;
+  label: string;
+  title?: string;
+  headerWidthClassName?: string;
+  align?: "left" | "right" | "center";
+  sortableKey?: SortKey;
+};
+
+type BalancePreferences = NonNullable<MemberProfilePreferences["balance"]>;
 
 const ALL_COST_CENTERS_OPTION: CostCenterOption = {
   value: "__ALL__",
@@ -211,36 +243,170 @@ const getPaymentStatusChipClassName = (status: string | null): string => {
   return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 };
 
-const TABLE_HEADER_LABELS: Record<string, string> = {
-  receiptDate: "BELEG DATUM",
-  createdAt: "BUCHUNG DATUM",
-  paidAt: "ZAHLUNGSDATUM",
-  receiptNumber: "BELEG",
-  pdf: "PDF",
-  description: "BESCHREIBUNG",
-  accountName: "SENDER/EMPFÄNGER",
-  paymentAccounts: "ZAHLKONTO",
-  type: "TYP",
-  paymentStatus: "STATUS",
-  tags: "TAGS",
-  Sphäre: "SPHÄRE",
-  "positions.account": "AUFTEILUNG",
-};
-
-const HEADER_WIDTH_CLASS_NAMES: Record<string, string> = {
-  description: "w-[300px]",
-  "positions.account": "w-[200px]",
-};
-
 const CELL_TEXT_CLASS_NAME =
   "block overflow-hidden text-ellipsis whitespace-nowrap";
 
-const SORTABLE_HEADERS: Partial<Record<string, SortKey>> = {
-  paidAt: "paidAt",
-  receiptDate: "receiptDate",
-  createdAt: "createdAt",
-  Einnahmen: "income",
-  Ausgaben: "expense",
+const TABLE_COLUMNS: TableColumn[] = [
+  { key: "receiptNumber", label: "Beleg" },
+  { key: "paymentStatus", label: "Status" },
+  {
+    key: "paidAt",
+    label: "Zahlungsdatum",
+    sortableKey: "paidAt",
+  },
+  { key: "Sphäre", label: "Sphäre" },
+  {
+    key: "description",
+    label: "Beschreibung",
+    headerWidthClassName: "w-[300px]",
+  },
+  { key: "accountName", label: "Sender/Empfänger" },
+  {
+    key: "Einnahmen",
+    label: "Einnahmen",
+    align: "right",
+    sortableKey: "income",
+  },
+  {
+    key: "Ausgaben",
+    label: "Ausgaben",
+    align: "right",
+    sortableKey: "expense",
+  },
+  { key: "paymentAccounts", label: "Zahlkonto" },
+  {
+    key: "positions.account",
+    label: "Aufteilung",
+    headerWidthClassName: "w-[200px]",
+  },
+  { key: "type", label: "Typ" },
+  {
+    key: "receiptDate",
+    label: "Beleg Datum",
+    sortableKey: "receiptDate",
+  },
+  {
+    key: "createdAt",
+    label: "Buchung Datum",
+    sortableKey: "createdAt",
+  },
+  { key: "tags", label: "Tags" },
+  { key: "pdf", label: "PDF", align: "center" },
+];
+
+const DEFAULT_COLUMN_ORDER = TABLE_COLUMNS.map((column) => column.key);
+
+const TABLE_COLUMN_MAP = new Map<ColumnKey, TableColumn>(
+  TABLE_COLUMNS.map((column) => [column.key, column]),
+);
+
+const sanitizeColumnOrder = (order: string[] | undefined): ColumnKey[] => {
+  const validKeys = new Set(DEFAULT_COLUMN_ORDER);
+  const seenKeys = new Set<ColumnKey>();
+  const nextOrder: ColumnKey[] = [];
+
+  for (const key of order ?? []) {
+    if (!validKeys.has(key as ColumnKey)) {
+      continue;
+    }
+
+    const columnKey = key as ColumnKey;
+    if (seenKeys.has(columnKey)) {
+      continue;
+    }
+
+    seenKeys.add(columnKey);
+    nextOrder.push(columnKey);
+  }
+
+  for (const key of DEFAULT_COLUMN_ORDER) {
+    if (seenKeys.has(key)) {
+      continue;
+    }
+
+    seenKeys.add(key);
+    nextOrder.push(key);
+  }
+
+  return nextOrder;
+};
+
+const sanitizeHiddenColumns = (
+  hiddenColumns: string[] | undefined,
+  columnOrder: ColumnKey[],
+): ColumnKey[] => {
+  const validKeys = new Set(columnOrder);
+  const nextHiddenColumns: ColumnKey[] = [];
+
+  for (const key of hiddenColumns ?? []) {
+    if (!validKeys.has(key as ColumnKey)) {
+      continue;
+    }
+
+    const columnKey = key as ColumnKey;
+    if (nextHiddenColumns.includes(columnKey)) {
+      continue;
+    }
+
+    nextHiddenColumns.push(columnKey);
+  }
+
+  if (nextHiddenColumns.length >= columnOrder.length) {
+    return nextHiddenColumns.slice(0, Math.max(columnOrder.length - 1, 0));
+  }
+
+  return nextHiddenColumns;
+};
+
+const getHeaderAlignmentClassName = (alignment: TableColumn["align"]): string => {
+  if (alignment === "center") {
+    return "text-center";
+  }
+
+  if (alignment === "right") {
+    return "text-right";
+  }
+
+  return "text-left";
+};
+
+const getHeaderButtonAlignmentClassName = (
+  alignment: TableColumn["align"],
+): string => {
+  if (alignment === "center") {
+    return "justify-center";
+  }
+
+  if (alignment === "right") {
+    return "justify-end";
+  }
+
+  return "justify-start";
+};
+
+const fetchJson = async <T,>(url: string, init?: RequestInit) => {
+  const response = await fetch(url, init);
+  const data = (await response.json()) as { error?: string } & T;
+
+  if (!response.ok) {
+    throw new Error(data.error ?? "Anfrage fehlgeschlagen");
+  }
+
+  return data;
+};
+
+const serializeBalancePreferences = (
+  costCenter2: string[],
+  columnOrder: ColumnKey[],
+  hiddenColumnKeys: ColumnKey[],
+) => {
+  return JSON.stringify({
+    costCenter2,
+    columns: {
+      order: columnOrder,
+      hidden: hiddenColumnKeys,
+    },
+  });
 };
 
 const getComparableDateValue = (value: string | null): number | null => {
@@ -293,6 +459,10 @@ const compareNullableValues = (
 };
 
 export default function BalancePage() {
+  const [isColumnPanelOpen, setIsColumnPanelOpen] = useState(false);
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
+  const [hiddenColumnKeys, setHiddenColumnKeys] = useState<ColumnKey[]>([]);
+  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [allCostCenters, setAllCostCenters] = useState<CostCenterOption[]>([]);
   const [costCenter1Labels, setCostCenter1Labels] = useState<CostCenterOption[]>([]);
@@ -308,6 +478,104 @@ export default function BalancePage() {
     key: SortKey;
     direction: SortDirection;
   } | null>({ key: "receiptDate", direction: "desc" });
+  const columnPanelRef = useRef<HTMLDivElement | null>(null);
+  const hasAppliedSavedSelectionRef = useRef(false);
+  const savedBalancePreferencesRef = useRef<string>(
+    serializeBalancePreferences([], DEFAULT_COLUMN_ORDER, []),
+  );
+  const [savedSelectedCostCenterValues, setSavedSelectedCostCenterValues] =
+    useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPreferences = async () => {
+      try {
+        const response = await fetchJson<{ preferences?: MemberProfilePreferences }>(
+          "/api/account/preferences",
+        );
+
+        if (!active) {
+          return;
+        }
+
+        const balancePreferences = response.preferences?.balance;
+        const nextColumnOrder = sanitizeColumnOrder(
+          balancePreferences?.columns?.order,
+        );
+        const nextHiddenColumnKeys = sanitizeHiddenColumns(
+          balancePreferences?.columns?.hidden,
+          nextColumnOrder,
+        );
+        const nextSelectedCostCenterValues = Array.isArray(
+          balancePreferences?.costCenter2,
+        )
+          ? balancePreferences.costCenter2
+              .filter((entry): entry is string => typeof entry === "string")
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [];
+
+        setColumnOrder(nextColumnOrder);
+        setHiddenColumnKeys(nextHiddenColumnKeys);
+        setSavedSelectedCostCenterValues(nextSelectedCostCenterValues);
+        savedBalancePreferencesRef.current = serializeBalancePreferences(
+          nextSelectedCostCenterValues,
+          nextColumnOrder,
+          nextHiddenColumnKeys,
+        );
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setColumnOrder(DEFAULT_COLUMN_ORDER);
+        setHiddenColumnKeys([]);
+        setSavedSelectedCostCenterValues([]);
+        savedBalancePreferencesRef.current = serializeBalancePreferences(
+          [],
+          DEFAULT_COLUMN_ORDER,
+          [],
+        );
+      } finally {
+        if (active) {
+          setHasLoadedPreferences(true);
+        }
+      }
+    };
+
+    void loadPreferences();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isColumnPanelOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!columnPanelRef.current?.contains(event.target as Node)) {
+        setIsColumnPanelOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsColumnPanelOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isColumnPanelOpen]);
 
   useEffect(() => {
     const load = async () => {
@@ -361,6 +629,15 @@ export default function BalancePage() {
     [costCenters],
   );
 
+  const visibleColumns = useMemo(() => {
+    const hiddenKeySet = new Set(hiddenColumnKeys);
+
+    return columnOrder
+      .filter((key) => !hiddenKeySet.has(key))
+      .map((key) => TABLE_COLUMN_MAP.get(key))
+      .filter((column): column is TableColumn => Boolean(column));
+  }, [columnOrder, hiddenColumnKeys]);
+
   const selectedCostCenterValues = useMemo(() => {
     if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
       return allCostCenters.map((option) => option.value);
@@ -368,6 +645,14 @@ export default function BalancePage() {
 
     return selected.map((option) => option.value);
   }, [allCostCenters, selected]);
+
+  const selectedPreferenceValues = useMemo(() => {
+    if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
+      return [ALL_COST_CENTERS_OPTION.value];
+    }
+
+    return selected.map((option) => option.value);
+  }, [selected]);
 
   const handleSelectedChange = useCallback((value: readonly CostCenterOption[] | null) => {
     const nextSelected = value ? [...value] : [];
@@ -419,6 +704,101 @@ export default function BalancePage() {
   useEffect(() => {
     loadReceipts(selectedCostCenterValues);
   }, [selectedCostCenterValues, loadReceipts]);
+
+  useEffect(() => {
+    if (
+      !hasLoadedPreferences ||
+      hasAppliedSavedSelectionRef.current ||
+      loadingCostCenters
+    ) {
+      return;
+    }
+
+    if (
+      savedSelectedCostCenterValues.includes(ALL_COST_CENTERS_OPTION.value)
+    ) {
+      setSelected([ALL_COST_CENTERS_OPTION]);
+      hasAppliedSavedSelectionRef.current = true;
+      return;
+    }
+
+    const availableOptions = new Map(
+      costCenters.map((option) => [option.value, option] as const),
+    );
+    const nextSelected = savedSelectedCostCenterValues
+      .map((value) => availableOptions.get(value))
+      .filter((option): option is CostCenterOption => Boolean(option));
+
+    setSelected(nextSelected);
+    hasAppliedSavedSelectionRef.current = true;
+  }, [
+    costCenters,
+    hasLoadedPreferences,
+    loadingCostCenters,
+    savedSelectedCostCenterValues,
+  ]);
+
+  useEffect(() => {
+    if (!hasLoadedPreferences || !hasAppliedSavedSelectionRef.current) {
+      return;
+    }
+
+    const nextSerializedPreferences = serializeBalancePreferences(
+      selectedPreferenceValues,
+      columnOrder,
+      hiddenColumnKeys,
+    );
+
+    if (savedBalancePreferencesRef.current === nextSerializedPreferences) {
+      return;
+    }
+
+    let active = true;
+
+    const savePreferences = async () => {
+      const preferences: MemberProfilePreferences = {
+        balance: {
+          costCenter2: selectedPreferenceValues,
+          columns: {
+            order: columnOrder,
+            hidden: hiddenColumnKeys,
+          },
+        },
+      };
+
+      try {
+        await fetchJson<{ preferences?: BalancePreferences }>(
+          "/api/account/preferences",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ preferences }),
+          },
+        );
+
+        if (!active) {
+          return;
+        }
+
+        savedBalancePreferencesRef.current = nextSerializedPreferences;
+      } catch {
+        if (!active) {
+          return;
+        }
+      }
+    };
+
+    void savePreferences();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    columnOrder,
+    hasLoadedPreferences,
+    hiddenColumnKeys,
+    selectedPreferenceValues,
+  ]);
 
   const visibleReceipts = useMemo(
     () => receipts.filter((receipt) => !(receipt.type && EXCLUDED_TYPES.has(receipt.type))),
@@ -482,6 +862,7 @@ export default function BalancePage() {
   }, [visibleReceipts]);
 
   const hasSelection = selected.length > 0;
+  const visibleColumnCount = visibleColumns.length;
 
   const toggleSort = useCallback((key: SortKey) => {
     setSortConfig((current) => {
@@ -496,24 +877,242 @@ export default function BalancePage() {
     });
   }, []);
 
-  const tableHeaders = [
-    "receiptNumber",
-    "paymentStatus",
-    "paidAt",
-    "Sphäre",
-    "description",
-    "accountName",
-    "Einnahmen",
-    "Ausgaben",
-    "paymentAccounts",
-    "positions.account",
-    "type",
-    "receiptDate",
-    "createdAt",
-    "tags",
-    "pdf",
-  ];
-  const colSpan = tableHeaders.length;
+  const toggleColumnVisibility = useCallback(
+    (columnKey: ColumnKey) => {
+      setHiddenColumnKeys((current) => {
+        const nextHiddenKeys = new Set(current);
+
+        if (nextHiddenKeys.has(columnKey)) {
+          nextHiddenKeys.delete(columnKey);
+          return sanitizeHiddenColumns(Array.from(nextHiddenKeys), columnOrder);
+        }
+
+        if (columnOrder.length - nextHiddenKeys.size <= 1) {
+          return current;
+        }
+
+        nextHiddenKeys.add(columnKey);
+        return sanitizeHiddenColumns(Array.from(nextHiddenKeys), columnOrder);
+      });
+    },
+    [columnOrder],
+  );
+
+  const moveColumn = useCallback((columnKey: ColumnKey, direction: -1 | 1) => {
+    setColumnOrder((current) => {
+      const currentIndex = current.indexOf(columnKey);
+      const nextIndex = currentIndex + direction;
+
+      if (currentIndex === -1 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const nextOrder = [...current];
+      const [movedColumn] = nextOrder.splice(currentIndex, 1);
+
+      nextOrder.splice(nextIndex, 0, movedColumn);
+      return nextOrder;
+    });
+  }, []);
+
+  const renderReceiptCell = useCallback(
+    (columnKey: ColumnKey, receipt: CampaiBalanceReceipt) => {
+      const cellKey = `${receipt.id}-${columnKey}`;
+      const isIncome = receipt.type ? INCOME_TYPES.has(receipt.type) : false;
+      const isExpense = receipt.type ? EXPENSE_TYPES.has(receipt.type) : false;
+      const amount = receipt.totalGrossAmount;
+      const incomeCell = isIncome && amount !== null ? formatCents(amount) : "";
+      const expenseCell = isExpense && amount !== null ? formatCents(amount) : "";
+      const receiptDescription = getReceiptDescription(receipt);
+      const paymentAccountsLabel =
+        receipt.paymentAccountNames.length > 0
+          ? receipt.paymentAccountNames.join(", ")
+          : receipt.paymentAccounts.length > 0
+            ? receipt.paymentAccounts.map((account) => `Konto ${account}`).join(", ")
+            : "—";
+
+      switch (columnKey) {
+        case "receiptNumber":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
+                {receipt.receiptNumber ?? "—"}
+              </span>
+            </td>
+          );
+        case "paymentStatus":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm">
+              {receipt.paymentStatus ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
+                  title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
+                >
+                  {getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
+                </span>
+              ) : (
+                "—"
+              )}
+            </td>
+          );
+        case "paidAt":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.paidAt)}>
+                {formatDate(receipt.paidAt)}
+              </span>
+            </td>
+          );
+        case "Sphäre":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={formatFirstPositionField(
+                  receipt.positions,
+                  "costCenter1",
+                  costCenterLabelMap,
+                )}
+              >
+                {getFirstPositionValue(receipt.positions, "costCenter1")}
+              </span>
+            </td>
+          );
+        case "description":
+          return (
+            <td key={cellKey} className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receiptDescription}>
+                {receiptDescription}
+              </span>
+            </td>
+          );
+        case "accountName":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
+                {receipt.accountName ?? "—"}
+              </span>
+            </td>
+          );
+        case "Einnahmen":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
+                {incomeCell || "—"}
+              </span>
+            </td>
+          );
+        case "Ausgaben":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
+              <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
+                {expenseCell || "—"}
+              </span>
+            </td>
+          );
+        case "paymentAccounts":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={paymentAccountsLabel}>
+                {paymentAccountsLabel}
+              </span>
+            </td>
+          );
+        case "positions.account":
+          return (
+            <td key={cellKey} className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span
+                className={`${CELL_TEXT_CLASS_NAME} max-w-[180px]`}
+                title={formatAccountsWithAmounts(receipt.positions)}
+              >
+                {formatAccountsWithAmounts(receipt.positions)}
+              </span>
+            </td>
+          );
+        case "type":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm">
+              {receipt.type ? (
+                <span
+                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getTypeChipClassName(receipt.type)}`}
+                  title={TABLE_COLUMN_MAP.get("type")?.title ?? TYPE_LABELS[receipt.type] ?? receipt.type}
+                >
+                  {TYPE_LABELS[receipt.type] ?? receipt.type}
+                </span>
+              ) : (
+                "—"
+              )}
+            </td>
+          );
+        case "receiptDate":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
+                {formatDate(receipt.receiptDate)}
+              </span>
+            </td>
+          );
+        case "createdAt":
+          return (
+            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+              <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
+                {formatDateTime(receipt.createdAt)}
+              </span>
+            </td>
+          );
+        case "tags":
+          return (
+            <td key={cellKey} className="px-2 py-2 text-sm">
+              {receipt.tags.length > 0 ? (
+                <div
+                  className="inline-flex max-w-full flex-nowrap gap-0.5 overflow-hidden align-middle"
+                  title={receipt.tags.join(", ")}
+                >
+                  {receipt.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                "—"
+              )}
+            </td>
+          );
+        case "pdf":
+          return (
+            <td key={cellKey} className="px-2 py-2 text-center">
+              <a
+                href={`/api/campai/balance/receipts/${receipt.id}/download`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
+                aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
+                title="PDF herunterladen"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+              </a>
+            </td>
+          );
+      }
+    },
+    [costCenterLabelMap],
+  );
 
   return (
     <div className="mx-auto w-full px-2 py-4 md:px-0 md:py-0">
@@ -597,14 +1196,96 @@ export default function BalancePage() {
         </div>
       ) : null}
 
+      <div className="mb-3 flex justify-end">
+        <div className="relative" ref={columnPanelRef}>
+          <button
+            type="button"
+            onClick={() => setIsColumnPanelOpen((current) => !current)}
+            className="inline-flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950"
+            aria-haspopup="dialog"
+            aria-expanded={isColumnPanelOpen}
+          >
+            <FontAwesomeIcon icon={faColumns} className="h-4 w-4" />
+            Spalten verwalten
+          </button>
+
+          {isColumnPanelOpen ? (
+            <div
+              className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg"
+              role="dialog"
+              aria-label="Spalten verwalten"
+            >
+              <div className="mb-2">
+                <p className="text-sm font-semibold">Spalten verwalten</p>
+                <p className="text-xs text-muted-foreground">
+                  Spalten ein- oder ausblenden und ihre Reihenfolge anpassen.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {columnOrder.map((columnKey, index) => {
+                  const column = TABLE_COLUMN_MAP.get(columnKey);
+
+                  if (!column) {
+                    return null;
+                  }
+
+                  const isVisible = !hiddenColumnKeys.includes(columnKey);
+                  const disableHide = isVisible && visibleColumnCount <= 1;
+
+                  return (
+                    <div
+                      key={column.key}
+                      className="flex items-center gap-2 rounded-lg border border-border px-2 py-2"
+                    >
+                      <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={isVisible}
+                          onChange={() => toggleColumnVisibility(column.key)}
+                          disabled={disableHide}
+                          className="h-4 w-4 rounded border-border text-foreground focus:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                        <span className="truncate">{column.label}</span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveColumn(column.key, -1)}
+                          disabled={index === 0}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`${column.label} nach oben verschieben`}
+                        >
+                          <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveColumn(column.key, 1)}
+                          disabled={index === columnOrder.length - 1}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`${column.label} nach unten verschieben`}
+                        >
+                          <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="min-w-full table-fixed divide-y divide-zinc-200 dark:divide-zinc-800">
           <thead className="bg-zinc-50 dark:bg-zinc-900/80">
             <tr>
-              {tableHeaders.map((header) => {
-                const isAmount = header === "Einnahmen" || header === "Ausgaben";
-                const sortableKey = SORTABLE_HEADERS[header];
-                const isActiveSort = sortableKey ? sortConfig?.key === sortableKey : false;
+              {visibleColumns.map((column) => {
+                const sortableKey = column.sortableKey;
+                const isActiveSort = column.sortableKey
+                  ? sortConfig?.key === column.sortableKey
+                  : false;
                 const sortIcon = !sortableKey
                   ? null
                   : isActiveSort
@@ -614,39 +1295,35 @@ export default function BalancePage() {
                     : faSort;
                 return (
                   <th
-                    key={header}
-                    className={`whitespace-nowrap px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${HEADER_WIDTH_CLASS_NAMES[header] ?? ""} ${
-                      header === "pdf"
-                        ? "text-center"
-                        : isAmount
-                          ? "text-right"
-                          : "text-left"
-                    }`}
-                    title={TABLE_HEADER_LABELS[header] ?? header}
+                    key={column.key}
+                    className={`whitespace-nowrap px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${column.headerWidthClassName ?? ""} ${getHeaderAlignmentClassName(
+                      column.align,
+                    )}`}
+                    title={column.title ?? column.label}
                     aria-sort={
-                      sortableKey && isActiveSort
+                      column.sortableKey && isActiveSort
                         ? sortConfig?.direction === "asc"
                           ? "ascending"
                           : "descending"
                         : undefined
                     }
                   >
-                    {sortableKey ? (
+                    {column.sortableKey ? (
                       <button
                         type="button"
-                        onClick={() => toggleSort(sortableKey)}
+                        onClick={() => {
+                          if (sortableKey) {
+                            toggleSort(sortableKey);
+                          }
+                        }}
                         className={`group inline-flex w-full items-center gap-1 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900 ${
-                          header === "pdf"
-                            ? "justify-center"
-                            : isAmount
-                              ? "justify-end"
-                              : "justify-start"
+                          getHeaderButtonAlignmentClassName(column.align)
                         } ${
                           isActiveSort
                             ? "font-bold text-zinc-900 dark:text-zinc-50"
                             : ""
                         }`}
-                        aria-label={`${TABLE_HEADER_LABELS[header] ?? header} sortieren${
+                        aria-label={`${column.label} sortieren${
                           isActiveSort
                             ? sortConfig?.direction === "asc"
                               ? ", aktuell aufsteigend"
@@ -665,10 +1342,10 @@ export default function BalancePage() {
                             }`}
                           />
                         ) : null}
-                        <span>{TABLE_HEADER_LABELS[header] ?? header}</span>
+                        <span>{column.label}</span>
                       </button>
                     ) : (
-                      TABLE_HEADER_LABELS[header] ?? header
+                      column.label
                     )}
                   </th>
                 );
@@ -679,7 +1356,7 @@ export default function BalancePage() {
             {!hasSelection ? (
               <tr>
                 <td
-                  colSpan={colSpan}
+                  colSpan={visibleColumnCount}
                   className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Bitte einen oder mehrere Werkbereiche auswählen, um Belege
@@ -689,7 +1366,7 @@ export default function BalancePage() {
             ) : loadingReceipts ? (
               <tr>
                 <td
-                  colSpan={colSpan}
+                  colSpan={visibleColumnCount}
                   className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   <span className="inline-flex items-center gap-2">
@@ -705,7 +1382,7 @@ export default function BalancePage() {
             ) : sortedReceipts.length === 0 ? (
               <tr>
                 <td
-                  colSpan={colSpan}
+                  colSpan={visibleColumnCount}
                   className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Keine Belege gefunden.
@@ -713,171 +1390,9 @@ export default function BalancePage() {
               </tr>
             ) : (
               sortedReceipts.map((receipt) => {
-                const isIncome = receipt.type
-                  ? INCOME_TYPES.has(receipt.type)
-                  : false;
-                const isExpense = receipt.type
-                  ? EXPENSE_TYPES.has(receipt.type)
-                  : false;
-                const amount = receipt.totalGrossAmount;
-                const incomeCell =
-                  isIncome && amount !== null ? formatCents(amount) : "";
-                const expenseCell =
-                  isExpense && amount !== null ? formatCents(amount) : "";
-                const receiptDescription = getReceiptDescription(receipt);
-
                 return (
                   <tr key={receipt.id}>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
-                        {receipt.receiptNumber ?? "—"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm">
-                      {receipt.paymentStatus ? (
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
-                          title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
-                        >
-                          {getPaymentStatusLabel(receipt.paymentStatus) ??
-                            receipt.paymentStatus}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.paidAt)}>
-                        {formatDate(receipt.paidAt)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span
-                        className={CELL_TEXT_CLASS_NAME}
-                        title={formatFirstPositionField(
-                          receipt.positions,
-                          "costCenter1",
-                          costCenterLabelMap,
-                        )}
-                      >
-                        {getFirstPositionValue(receipt.positions, "costCenter1")}
-                      </span>
-                    </td>
-                    <td className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receiptDescription}>
-                        {receiptDescription}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
-                        {receipt.accountName ?? "—"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
-                        {incomeCell || "—"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
-                      <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
-                        {expenseCell || "—"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span
-                        className={CELL_TEXT_CLASS_NAME}
-                        title={
-                          receipt.paymentAccountNames.length > 0
-                            ? receipt.paymentAccountNames.join(", ")
-                            : receipt.paymentAccounts.length > 0
-                              ? receipt.paymentAccounts
-                                  .map((account) => `Konto ${account}`)
-                                  .join(", ")
-                              : "—"
-                        }
-                      >
-                        {receipt.paymentAccountNames.length > 0
-                          ? receipt.paymentAccountNames.join(", ")
-                          : receipt.paymentAccounts.length > 0
-                            ? receipt.paymentAccounts
-                                .map((account) => `Konto ${account}`)
-                                .join(", ")
-                            : "—"}
-                      </span>
-                    </td>
-                    <td className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span
-                        className={`${CELL_TEXT_CLASS_NAME} max-w-[180px]`}
-                        title={formatAccountsWithAmounts(receipt.positions)}
-                      >
-                        {formatAccountsWithAmounts(receipt.positions)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm">
-                      {receipt.type ? (
-                        <span
-                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getTypeChipClassName(receipt.type)}`}
-                          title={TYPE_LABELS[receipt.type] ?? receipt.type}
-                        >
-                          {TYPE_LABELS[receipt.type] ?? receipt.type}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
-                        {formatDate(receipt.receiptDate)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
-                        {formatDateTime(receipt.createdAt)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-sm">
-                      {receipt.tags.length > 0 ? (
-                        <div
-                          className="inline-flex max-w-full flex-nowrap gap-0.5 overflow-hidden align-middle"
-                          title={receipt.tags.join(", ")}
-                        >
-                          {receipt.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <a
-                        href={`/api/campai/balance/receipts/${receipt.id}/download`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
-                        aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
-                        title="PDF herunterladen"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        >
-                          <path d="M12 3v12" />
-                          <path d="m7 10 5 5 5-5" />
-                          <path d="M5 21h14" />
-                        </svg>
-                      </a>
-                    </td>
+                    {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
                   </tr>
                 );
               })
