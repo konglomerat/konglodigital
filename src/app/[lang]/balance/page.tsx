@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSort,
+  faSortDown,
+  faSortUp,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
 import type {
@@ -16,6 +21,13 @@ type CostCenterOption = {
 };
 
 type PaymentStatusTone = "paid" | "partial" | "unpaid" | "default";
+type SortKey = "paidAt" | "receiptDate" | "createdAt" | "income" | "expense";
+type SortDirection = "asc" | "desc";
+
+const ALL_COST_CENTERS_OPTION: CostCenterOption = {
+  value: "__ALL__",
+  label: "Alle",
+};
 
 const INCOME_TYPES = new Set(["revenue", "invoice", "donation", "deposit"]);
 const EXPENSE_TYPES = new Set(["expense"]);
@@ -66,7 +78,7 @@ const formatDate = (value: string | null): string => {
   const month = String(parsed.getMonth() + 1).padStart(2, "0");
   const day = String(parsed.getDate()).padStart(2, "0");
 
-  return `${year}.${month}.${day}`;
+  return `${day}.${month}.${year}`;
 };
 
 const formatDateTime = (value: string | null): string => {
@@ -92,6 +104,23 @@ const formatFirstPositionField = (
   return labelMap.get(key) ?? key;
 };
 
+const getFirstPositionValue = (
+  positions: CampaiReceiptPosition[],
+  field: keyof CampaiReceiptPosition,
+): string => {
+  const firstPosition = positions[0];
+  if (!firstPosition) {
+    return "—";
+  }
+
+  const value = firstPosition[field];
+  if (value === null) {
+    return "—";
+  }
+
+  return String(value);
+};
+
 const formatAccountsWithAmounts = (
   positions: CampaiReceiptPosition[],
 ): string => {
@@ -112,6 +141,15 @@ const formatAccountsWithAmounts = (
       return `${label} (${formatCents(position.amount)})`;
     })
     .join(", ");
+};
+
+const getReceiptDescription = (receipt: CampaiBalanceReceipt): string => {
+  if (receipt.description) {
+    return receipt.description;
+  }
+
+  const firstPositionDescription = receipt.positions[0]?.description;
+  return firstPositionDescription ?? "—";
 };
 
 const normalizePaymentStatusTone = (status: string | null): PaymentStatusTone => {
@@ -174,19 +212,19 @@ const getPaymentStatusChipClassName = (status: string | null): string => {
 };
 
 const TABLE_HEADER_LABELS: Record<string, string> = {
-  receiptDate: "Beleg Datum",
-  createdAt: "Buchung Datum",
-  paidAt: "Zahlungsdatum",
-  receiptNumber: "Beleg",
+  receiptDate: "BELEG DATUM",
+  createdAt: "BUCHUNG DATUM",
+  paidAt: "ZAHLUNGSDATUM",
+  receiptNumber: "BELEG",
   pdf: "PDF",
-  description: "Beschreibung",
-  accountName: "Sender/Empfänger",
-  paymentAccounts: "Zahlkonto",
-  type: "Typ",
-  paymentStatus: "Status",
-  tags: "Tags",
-  Sphäre: "Sphäre",
-  "positions.account": "Aufteilung",
+  description: "BESCHREIBUNG",
+  accountName: "SENDER/EMPFÄNGER",
+  paymentAccounts: "ZAHLKONTO",
+  type: "TYP",
+  paymentStatus: "STATUS",
+  tags: "TAGS",
+  Sphäre: "SPHÄRE",
+  "positions.account": "AUFTEILUNG",
 };
 
 const HEADER_WIDTH_CLASS_NAMES: Record<string, string> = {
@@ -196,6 +234,63 @@ const HEADER_WIDTH_CLASS_NAMES: Record<string, string> = {
 
 const CELL_TEXT_CLASS_NAME =
   "block overflow-hidden text-ellipsis whitespace-nowrap";
+
+const SORTABLE_HEADERS: Partial<Record<string, SortKey>> = {
+  paidAt: "paidAt",
+  receiptDate: "receiptDate",
+  createdAt: "createdAt",
+  Einnahmen: "income",
+  Ausgaben: "expense",
+};
+
+const getComparableDateValue = (value: string | null): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getComparableAmountValue = (
+  receipt: CampaiBalanceReceipt,
+  amountType: SortKey,
+): number | null => {
+  const amount = receipt.totalGrossAmount;
+  if (amount === null) {
+    return null;
+  }
+
+  if (amountType === "income") {
+    return receipt.type && INCOME_TYPES.has(receipt.type) ? amount : null;
+  }
+
+  if (amountType === "expense") {
+    return receipt.type && EXPENSE_TYPES.has(receipt.type) ? amount : null;
+  }
+
+  return null;
+};
+
+const compareNullableValues = (
+  left: number | null,
+  right: number | null,
+  direction: SortDirection,
+): number => {
+  if (left === null && right === null) {
+    return 0;
+  }
+
+  if (left === null) {
+    return 1;
+  }
+
+  if (right === null) {
+    return -1;
+  }
+
+  return direction === "asc" ? left - right : right - left;
+};
 
 export default function BalancePage() {
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
@@ -209,6 +304,10 @@ export default function BalancePage() {
   const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>([]);
   const [loadingReceipts, setLoadingReceipts] = useState(false);
   const [receiptsError, setReceiptsError] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  } | null>({ key: "receiptDate", direction: "desc" });
 
   useEffect(() => {
     const load = async () => {
@@ -257,6 +356,30 @@ export default function BalancePage() {
     [allCostCenters, costCenter1Labels],
   );
 
+  const costCenterOptions = useMemo(
+    () => [ALL_COST_CENTERS_OPTION, ...costCenters],
+    [costCenters],
+  );
+
+  const selectedCostCenterValues = useMemo(() => {
+    if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
+      return allCostCenters.map((option) => option.value);
+    }
+
+    return selected.map((option) => option.value);
+  }, [allCostCenters, selected]);
+
+  const handleSelectedChange = useCallback((value: readonly CostCenterOption[] | null) => {
+    const nextSelected = value ? [...value] : [];
+
+    if (nextSelected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
+      setSelected([ALL_COST_CENTERS_OPTION]);
+      return;
+    }
+
+    setSelected(nextSelected);
+  }, []);
+
   const loadReceipts = useCallback(async (values: string[]) => {
     if (values.length === 0) {
       setReceipts([]);
@@ -294,13 +417,51 @@ export default function BalancePage() {
   }, []);
 
   useEffect(() => {
-    loadReceipts(selected.map((option) => option.value));
-  }, [selected, loadReceipts]);
+    loadReceipts(selectedCostCenterValues);
+  }, [selectedCostCenterValues, loadReceipts]);
 
   const visibleReceipts = useMemo(
     () => receipts.filter((receipt) => !(receipt.type && EXCLUDED_TYPES.has(receipt.type))),
     [receipts],
   );
+
+  const sortedReceipts = useMemo(() => {
+    if (!sortConfig) {
+      return visibleReceipts;
+    }
+
+    return [...visibleReceipts].sort((left, right) => {
+      if (sortConfig.key === "paidAt") {
+        return compareNullableValues(
+          getComparableDateValue(left.paidAt),
+          getComparableDateValue(right.paidAt),
+          sortConfig.direction,
+        );
+      }
+
+      if (sortConfig.key === "receiptDate") {
+        return compareNullableValues(
+          getComparableDateValue(left.receiptDate),
+          getComparableDateValue(right.receiptDate),
+          sortConfig.direction,
+        );
+      }
+
+      if (sortConfig.key === "createdAt") {
+        return compareNullableValues(
+          getComparableDateValue(left.createdAt),
+          getComparableDateValue(right.createdAt),
+          sortConfig.direction,
+        );
+      }
+
+      return compareNullableValues(
+        getComparableAmountValue(left, sortConfig.key),
+        getComparableAmountValue(right, sortConfig.key),
+        sortConfig.direction,
+      );
+    });
+  }, [sortConfig, visibleReceipts]);
 
   const { totalIncome, totalExpense, saldo } = useMemo(() => {
     let income = 0;
@@ -322,6 +483,19 @@ export default function BalancePage() {
 
   const hasSelection = selected.length > 0;
 
+  const toggleSort = useCallback((key: SortKey) => {
+    setSortConfig((current) => {
+      if (!current || current.key !== key) {
+        return { key, direction: "desc" };
+      }
+
+      return {
+        key,
+        direction: current.direction === "desc" ? "asc" : "desc",
+      };
+    });
+  }, []);
+
   const tableHeaders = [
     "receiptNumber",
     "paymentStatus",
@@ -342,7 +516,7 @@ export default function BalancePage() {
   const colSpan = tableHeaders.length;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-0 md:py-0">
+    <div className="mx-auto w-full px-2 py-4 md:px-0 md:py-0">
       <div className="space-y-2 pb-6">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Übersicht
@@ -353,7 +527,7 @@ export default function BalancePage() {
         </p>
       </div>
 
-      <div className="mb-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+      <div className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
         <label
           htmlFor="cost-center-2-filter"
           className="mb-1.5 block text-sm font-medium text-foreground/80"
@@ -370,9 +544,9 @@ export default function BalancePage() {
             inputId="cost-center-2-filter"
             isMulti
             isClearable
-            options={costCenters}
+            options={costCenterOptions}
             value={selected}
-            onChange={(value) => setSelected(value ? [...value] : [])}
+            onChange={handleSelectedChange}
             placeholder="Werkbereich(e) auswählen…"
             noOptionsMessage={() => "Keine Werkbereiche gefunden."}
           />
@@ -383,8 +557,8 @@ export default function BalancePage() {
       </div>
 
       {hasSelection ? (
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Einnahmen
             </p>
@@ -392,7 +566,7 @@ export default function BalancePage() {
               {formatCents(totalIncome)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Ausgaben
             </p>
@@ -400,7 +574,7 @@ export default function BalancePage() {
               {formatCents(totalExpense)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Saldo
             </p>
@@ -429,10 +603,19 @@ export default function BalancePage() {
             <tr>
               {tableHeaders.map((header) => {
                 const isAmount = header === "Einnahmen" || header === "Ausgaben";
+                const sortableKey = SORTABLE_HEADERS[header];
+                const isActiveSort = sortableKey ? sortConfig?.key === sortableKey : false;
+                const sortIcon = !sortableKey
+                  ? null
+                  : isActiveSort
+                    ? sortConfig?.direction === "asc"
+                      ? faSortUp
+                      : faSortDown
+                    : faSort;
                 return (
                   <th
                     key={header}
-                    className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${HEADER_WIDTH_CLASS_NAMES[header] ?? ""} ${
+                    className={`whitespace-nowrap px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${HEADER_WIDTH_CLASS_NAMES[header] ?? ""} ${
                       header === "pdf"
                         ? "text-center"
                         : isAmount
@@ -440,8 +623,53 @@ export default function BalancePage() {
                           : "text-left"
                     }`}
                     title={TABLE_HEADER_LABELS[header] ?? header}
+                    aria-sort={
+                      sortableKey && isActiveSort
+                        ? sortConfig?.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined
+                    }
                   >
-                    {TABLE_HEADER_LABELS[header] ?? header}
+                    {sortableKey ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(sortableKey)}
+                        className={`group inline-flex w-full items-center gap-1 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900 ${
+                          header === "pdf"
+                            ? "justify-center"
+                            : isAmount
+                              ? "justify-end"
+                              : "justify-start"
+                        } ${
+                          isActiveSort
+                            ? "font-bold text-zinc-900 dark:text-zinc-50"
+                            : ""
+                        }`}
+                        aria-label={`${TABLE_HEADER_LABELS[header] ?? header} sortieren${
+                          isActiveSort
+                            ? sortConfig?.direction === "asc"
+                              ? ", aktuell aufsteigend"
+                              : ", aktuell absteigend"
+                            : ""
+                        }`}
+                      >
+                        {sortIcon ? (
+                          <FontAwesomeIcon
+                            icon={sortIcon}
+                            aria-hidden="true"
+                            className={`text-[11px] leading-none ${
+                              isActiveSort
+                                ? "opacity-100 text-zinc-700 dark:text-zinc-200"
+                                : "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                            }`}
+                          />
+                        ) : null}
+                        <span>{TABLE_HEADER_LABELS[header] ?? header}</span>
+                      </button>
+                    ) : (
+                      TABLE_HEADER_LABELS[header] ?? header
+                    )}
                   </th>
                 );
               })}
@@ -452,7 +680,7 @@ export default function BalancePage() {
               <tr>
                 <td
                   colSpan={colSpan}
-                  className="px-4 py-8 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Bitte einen oder mehrere Werkbereiche auswählen, um Belege
                   anzuzeigen.
@@ -462,7 +690,7 @@ export default function BalancePage() {
               <tr>
                 <td
                   colSpan={colSpan}
-                  className="px-4 py-8 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   <span className="inline-flex items-center gap-2">
                     <FontAwesomeIcon
@@ -474,17 +702,17 @@ export default function BalancePage() {
                   </span>
                 </td>
               </tr>
-            ) : visibleReceipts.length === 0 ? (
+            ) : sortedReceipts.length === 0 ? (
               <tr>
                 <td
                   colSpan={colSpan}
-                  className="px-4 py-8 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
                 >
                   Keine Belege gefunden.
                 </td>
               </tr>
             ) : (
-              visibleReceipts.map((receipt) => {
+              sortedReceipts.map((receipt) => {
                 const isIncome = receipt.type
                   ? INCOME_TYPES.has(receipt.type)
                   : false;
@@ -496,18 +724,19 @@ export default function BalancePage() {
                   isIncome && amount !== null ? formatCents(amount) : "";
                 const expenseCell =
                   isExpense && amount !== null ? formatCents(amount) : "";
+                const receiptDescription = getReceiptDescription(receipt);
 
                 return (
                   <tr key={receipt.id}>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
                         {receipt.receiptNumber ?? "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm">
                       {receipt.paymentStatus ? (
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
                           title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
                         >
                           {getPaymentStatusLabel(receipt.paymentStatus) ??
@@ -517,12 +746,12 @@ export default function BalancePage() {
                         "—"
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.paidAt)}>
                         {formatDate(receipt.paidAt)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span
                         className={CELL_TEXT_CLASS_NAME}
                         title={formatFirstPositionField(
@@ -531,34 +760,30 @@ export default function BalancePage() {
                           costCenterLabelMap,
                         )}
                       >
-                        {formatFirstPositionField(
-                          receipt.positions,
-                          "costCenter1",
-                          costCenterLabelMap,
-                        )}
+                        {getFirstPositionValue(receipt.positions, "costCenter1")}
                       </span>
                     </td>
-                    <td className="w-[300px] max-w-[300px] whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
-                      <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receipt.description ?? "—"}>
-                        {receipt.description ?? "—"}
+                    <td className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receiptDescription}>
+                        {receiptDescription}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
                         {receipt.accountName ?? "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
                       <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
                         {incomeCell || "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
+                    <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
                       <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
                         {expenseCell || "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span
                         className={CELL_TEXT_CLASS_NAME}
                         title={
@@ -580,18 +805,18 @@ export default function BalancePage() {
                             : "—"}
                       </span>
                     </td>
-                    <td className="w-[200px] max-w-[200px] whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span
-                        className={`${CELL_TEXT_CLASS_NAME} max-w-[200px]`}
+                        className={`${CELL_TEXT_CLASS_NAME} max-w-[180px]`}
                         title={formatAccountsWithAmounts(receipt.positions)}
                       >
                         {formatAccountsWithAmounts(receipt.positions)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm">
                       {receipt.type ? (
                         <span
-                          className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${getTypeChipClassName(receipt.type)}`}
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getTypeChipClassName(receipt.type)}`}
                           title={TYPE_LABELS[receipt.type] ?? receipt.type}
                         >
                           {TYPE_LABELS[receipt.type] ?? receipt.type}
@@ -600,26 +825,26 @@ export default function BalancePage() {
                         "—"
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
                         {formatDate(receipt.receiptDate)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
                       <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
                         {formatDateTime(receipt.createdAt)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 py-2 text-sm">
                       {receipt.tags.length > 0 ? (
                         <div
-                          className="inline-flex max-w-full flex-nowrap gap-1 overflow-hidden align-middle"
+                          className="inline-flex max-w-full flex-nowrap gap-0.5 overflow-hidden align-middle"
                           title={receipt.tags.join(", ")}
                         >
                           {receipt.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                              className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                             >
                               {tag}
                             </span>
@@ -629,10 +854,10 @@ export default function BalancePage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 py-2 text-center">
                       <a
                         href={`/api/campai/balance/receipts/${receipt.id}/download`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
                         aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
                         title="PDF herunterladen"
                       >
