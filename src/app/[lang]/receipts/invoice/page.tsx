@@ -176,7 +176,7 @@ const getDefaultCostCenter2 = (items: CostCenterOption[]) => {
 };
 
 export default function NewSimpleInvoicePage() {
-  const [intro, setIntro] = useState(invoiceSubjectPrefill);
+  const [intro, setIntro] = useState("");
   const [note, setNote] = useState("");
   const [sendByMail, setSendByMail] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -874,7 +874,11 @@ export default function NewSimpleInvoicePage() {
               <p className="mb-2 text-xs text-muted-foreground">
                 Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang der Dienstleistung
               </p>
-              <Input value={intro} onChange={(event) => setIntro(event.target.value)} />
+              <Input
+                value={intro}
+                onChange={(event) => setIntro(event.target.value)}
+                placeholder={invoiceSubjectPrefill}
+              />
             </FormField>
           </div>
 

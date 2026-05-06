@@ -48,6 +48,7 @@ type InvoiceBody = {
   email?: string;
   recipientEmail?: string;
   debtorName?: string;
+  doNotSendReceipt?: boolean;
   sendByMail?: boolean;
   title?: string;
   intro?: string;
@@ -378,7 +379,8 @@ export const POST = async (request: NextRequest) => {
   const fallbackDueDate = formatDate(
     new Date(Date.now() + Math.max(1, dueDays) * 86400000),
   );
-  const sendByMail = body.sendByMail === true;
+  const doNotSendReceipt = body.doNotSendReceipt === true;
+  const sendByMail = doNotSendReceipt ? false : body.sendByMail === true;
   const recipientEmail =
     typeof body.recipientEmail === "string"
       ? body.recipientEmail.trim()
@@ -587,12 +589,10 @@ export const POST = async (request: NextRequest) => {
       country: String(body.address.country),
     },
     title: body.title?.trim() || "Rechnung",
-    intro:
-      body.intro?.trim() ||
-      "Für [text] erlauben wir Ihnen folgenden Betrag in Rechnung zu stellen",
+    intro: body.intro?.trim() || "",
     account: debtorAccount,
     isNet: body.isNet ?? true,
-    deliveryDateType: payloadDeliveryDate ? "delivery" : null,
+    deliveryDateType: "service",
     receiptDate: payloadReceiptDate,
     dueDate: payloadDueDate,
     deliveryDate: payloadDeliveryDate ?? undefined,
@@ -609,7 +609,7 @@ export const POST = async (request: NextRequest) => {
     discount: 0,
     discountType: "%",
     positions,
-    doNotSendReceipt: !sendByMail,
+    doNotSendReceipt,
     queueReceiptDocument: sendByMail,
     tags,
   };

@@ -7,7 +7,6 @@ export type PretixItem = {
 export type PretixSubevent = {
   id: number;
   name?: string;
-  date_from?: string | null;
 };
 
 export type PretixOrderPosition = {
@@ -56,5 +55,4 @@ export type PretixRow = {
   taxRate: 0 | 7 | 19;
   eventName: string;
   eventSlug: string;
-  subeventDateFrom: string | null;
 };

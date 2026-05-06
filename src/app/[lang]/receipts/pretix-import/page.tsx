@@ -35,11 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const POSITION_DESCRIPTION_TITLE = "Rechnung";
-const POSITION_INTRO =
-  "Für die Teilnahme am CNC-Workshop erlauben wir uns, Ihnen folgende Positionen in Rechnung zu stellen:";
-const DEFAULT_COST_CENTER_1 = "3";
 const DEFAULT_COST_CENTER_2 = "54";
-const DEFAULT_POSITION_ACCOUNT = "12000";
 const DEFAULT_TRANSFER_ACCOUNT = "17100";
 const ADDRESS_REQUIRED_THRESHOLD_CENTS = 25_000;
 
@@ -96,39 +92,16 @@ const formatTotal = (raw: unknown): string => {
   }
 };
 
-const formatEventDate = (raw: string | null): string => {
-  if (!raw) return "—";
-
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  try {
-    return new Intl.DateTimeFormat("de-DE", {
-      dateStyle: "medium",
-    }).format(date);
-  } catch {
-    return raw.slice(0, 10);
-  }
-};
-
 const buildRows = (event: PretixEvent | undefined): PretixRow[] => {
   if (!event) return [];
   const itemsById = new Map<number, string>();
   for (const item of event.items ?? []) {
     itemsById.set(item.id, item.name);
   }
-  const subeventsById = new Map<number, string | null>();
-  for (const subevent of event.subevents ?? []) {
-    subeventsById.set(subevent.id, subevent.date_from ?? null);
-  }
 
   const rows: PretixRow[] = [];
   for (const order of event.orders ?? []) {
     for (const position of order.positions ?? []) {
-      const subeventDateFrom =
-        position.subevent != null
-          ? (subeventsById.get(position.subevent) ?? null)
-          : null;
       rows.push({
         key: `${order.code}#${position.id}`,
         orderCode: order.code,
@@ -144,7 +117,6 @@ const buildRows = (event: PretixEvent | undefined): PretixRow[] => {
         taxRate: parseTaxRate(position.tax_rate),
         eventName: event.name ?? "",
         eventSlug: event.slug ?? "",
-        subeventDateFrom,
       });
     }
   }
@@ -166,13 +138,6 @@ type RowResult = {
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
-
-const normalizeDeliveryDate = (raw: string | null): string | undefined => {
-  if (!raw) return undefined;
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString().slice(0, 10);
-};
 
 const parseIntegerSetting = (raw: string): number | null => {
   const trimmed = raw.trim();
@@ -198,10 +163,8 @@ export default function PretixImportPage() {
   const [selectedCashAccountId, setSelectedCashAccountId] = useState<string>("");
   const [selectedCostCenter2, setSelectedCostCenter2] =
     useState<string>(DEFAULT_COST_CENTER_2);
-  const [costCenter1, setCostCenter1] = useState<string>(DEFAULT_COST_CENTER_1);
-  const [positionAccount, setPositionAccount] =
-    useState<string>(DEFAULT_POSITION_ACCOUNT);
   const [invoiceDate, setInvoiceDate] = useState<string>(todayISO());
+  const [serviceDate, setServiceDate] = useState<string>(todayISO());
   const [bankConnectionOptions, setBankConnectionOptions] = useState<
     BankConnectionOption[]
   >([]);
@@ -376,17 +339,9 @@ export default function PretixImportPage() {
     [selectedKeys, debtorByKey],
   );
 
-  const parsedCostCenter1 = useMemo(
-    () => parseIntegerSetting(costCenter1),
-    [costCenter1],
-  );
   const parsedCostCenter2 = useMemo(
     () => parseIntegerSetting(selectedCostCenter2),
     [selectedCostCenter2],
-  );
-  const parsedPositionAccount = useMemo(
-    () => parseIntegerSetting(positionAccount),
-    [positionAccount],
   );
 
   const invoiceSettingsValidationMessage = useMemo(() => {
@@ -396,31 +351,23 @@ export default function PretixImportPage() {
     if (!invoiceDate) {
       return "Bitte ein Rechnungsdatum eintragen.";
     }
-    if (parsedCostCenter1 == null) {
-      return "Kostenstelle 1 muss eine ganze Zahl sein.";
+    if (!serviceDate) {
+      return "Bitte ein Servicedatum eintragen.";
     }
     if (parsedCostCenter2 == null) {
       return "Werkbereich muss eine gültige Kostenstelle sein.";
     }
-    if (parsedPositionAccount == null) {
-      return "Erlöskonto muss eine ganze Zahl sein.";
-    }
     return null;
   }, [
     invoiceDate,
-    parsedCostCenter1,
     parsedCostCenter2,
-    parsedPositionAccount,
     selectedCashAccountId,
+    serviceDate,
   ]);
 
   const submit = useCallback(async () => {
-    if (!selectedCashAccountId || !invoiceDate) return;
-    if (
-      parsedCostCenter1 == null ||
-      parsedCostCenter2 == null ||
-      parsedPositionAccount == null
-    ) {
+    if (!selectedCashAccountId || !invoiceDate || !serviceDate) return;
+    if (parsedCostCenter2 == null) {
       return;
     }
     if (selectedKeys.size === 0) return;
@@ -461,7 +408,21 @@ export default function PretixImportPage() {
           error?: string;
         };
         const address = debtorPayload.debtor?.address;
-        if (!address?.zip || !address.city || !address.addressLine) {
+        const invoiceAddress = {
+          country: address?.country || "DE",
+          zip: address?.zip ?? "",
+          city: address?.city ?? "",
+          addressLine: address?.addressLine ?? "",
+          details1: address?.details1 ?? undefined,
+          details2: address?.details2 ?? undefined,
+          state: address?.state ?? undefined,
+        };
+        const requiresDebtorAddress =
+          row.unitAmountCents > ADDRESS_REQUIRED_THRESHOLD_CENTS;
+        if (
+          requiresDebtorAddress &&
+          (!address?.zip || !address.city || !address.addressLine)
+        ) {
           newResults.push({
             key: row.key,
             ok: false,
@@ -480,28 +441,18 @@ export default function PretixImportPage() {
             body: JSON.stringify({
               debtorName: debtor.name,
               customerNumber: debtor.account,
-              address: {
-                country: address.country || "DE",
-                zip: address.zip,
-                city: address.city,
-                addressLine: address.addressLine,
-                details1: address.details1 ?? undefined,
-                details2: address.details2 ?? undefined,
-                state: address.state ?? undefined,
-              },
+              address: invoiceAddress,
               email: row.email || debtorPayload.debtor?.email || "",
+              doNotSendReceipt: true,
               sendByMail: false,
               title: POSITION_DESCRIPTION_TITLE,
-              intro: POSITION_INTRO,
               description: "",
               isNet: false,
               paid: false,
               paymentMethod: "sepaCreditTransfer",
               paymentCashAccountId: selectedCashAccountId,
-              costCenter1: parsedCostCenter1,
-              positionAccount: parsedPositionAccount,
               invoiceDate,
-              deliveryDate: normalizeDeliveryDate(row.subeventDateFrom),
+              deliveryDate: serviceDate,
               positions: [
                 {
                   description: `${row.eventName} - ${row.itemName}`,
@@ -559,12 +510,11 @@ export default function PretixImportPage() {
   }, [
     debtorByKey,
     invoiceDate,
-    parsedCostCenter1,
     parsedCostCenter2,
-    parsedPositionAccount,
     rows,
     selectedCashAccountId,
     selectedKeys,
+    serviceDate,
   ]);
 
   const submitDisabled =
@@ -625,6 +575,13 @@ export default function PretixImportPage() {
                   onChange={(e) => setInvoiceDate(e.target.value)}
                 />
               </FormField>
+              <FormField label="Servicedatum" required>
+                <Input
+                  type="date"
+                  value={serviceDate}
+                  onChange={(e) => setServiceDate(e.target.value)}
+                />
+              </FormField>
               <FormField label="Zahlungskonto" required>
                 <Select
                   value={selectedCashAccountId}
@@ -658,20 +615,6 @@ export default function PretixImportPage() {
                     ))
                   )}
                 </Select>
-              </FormField>
-              <FormField label="Kostenstelle 1" required>
-                <Input
-                  inputMode="numeric"
-                  value={costCenter1}
-                  onChange={(e) => setCostCenter1(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Erlöskonto" required>
-                <Input
-                  inputMode="numeric"
-                  value={positionAccount}
-                  onChange={(e) => setPositionAccount(e.target.value)}
-                />
               </FormField>
             </div>
 
@@ -710,9 +653,6 @@ export default function PretixImportPage() {
                     Code
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Event-Datum
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                     E-Mail
                   </th>
                   <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
@@ -745,9 +685,6 @@ export default function PretixImportPage() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 font-mono text-sm text-zinc-800">
                         {row.orderCode}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
-                        {formatEventDate(row.subeventDateFrom)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
                         {row.email || "—"}
@@ -817,7 +754,7 @@ export default function PretixImportPage() {
               initialName={createPanel.name}
               email={createPanel.email}
               addressRequirementHint={
-                (createPanelRow?.totalAmountCents ?? 0) >
+                (createPanelRow?.unitAmountCents ?? 0) >
                   ADDRESS_REQUIRED_THRESHOLD_CENTS
                   ? "Ab Beträgen über 250 € ist die vollständige Adresse Pflicht."
                   : undefined
