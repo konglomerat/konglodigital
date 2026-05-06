@@ -24,6 +24,11 @@ type CostCenterOption = {
   label: string;
 };
 
+type FilterOption = {
+  value: string;
+  label: string;
+};
+
 type ColumnKey =
   | "receiptNumber"
   | "paymentStatus"
@@ -61,6 +66,21 @@ const ALL_COST_CENTERS_OPTION: CostCenterOption = {
   label: "Alle",
 };
 
+const ALL_FILTER_OPTION: FilterOption = {
+  value: "__ALL__",
+  label: "Alle",
+};
+
+const isTwoDigitCostCenterOption = (option: CostCenterOption): boolean =>
+  /^\d{2}$/.test(option.value.trim());
+
+const isThreeDigitCostCenterValue = (value: string): boolean => /^\d{3}$/.test(value);
+
+const DEFAULT_YEAR_FILTER_OPTION: FilterOption = {
+  value: "2026",
+  label: "2026",
+};
+
 const INCOME_TYPES = new Set(["revenue", "invoice", "donation", "deposit"]);
 const EXPENSE_TYPES = new Set(["expense"]);
 const EXCLUDED_TYPES = new Set(["offer"]);
@@ -88,6 +108,17 @@ const COST_CENTER1_SHORT_LABELS: Record<string, string> = {
   "Wirtschaftlicher Geschäftsbetrieb": "Wirtsch. Geschäftsbetrieb",
   Sammelposten: "Sammelposten",
 };
+
+const ACCOUNT_DOT_CLASS_NAMES = [
+  "bg-sky-500 dark:bg-sky-400",
+  "bg-emerald-500 dark:bg-emerald-400",
+  "bg-amber-500 dark:bg-amber-400",
+  "bg-fuchsia-500 dark:bg-fuchsia-400",
+  "bg-cyan-500 dark:bg-cyan-400",
+  "bg-orange-500 dark:bg-orange-400",
+  "bg-lime-500 dark:bg-lime-400",
+  "bg-pink-500 dark:bg-pink-400",
+];
 
 const formatCents = (cents: number): string => {
   const abs = Math.abs(cents);
@@ -153,8 +184,25 @@ const getFirstPositionValue = (
   return String(value);
 };
 
-const formatAccountsWithAmounts = (
+const getPositionCostCenter2Key = (position: CampaiReceiptPosition): string => {
+  if (position.costCenter2 !== null) {
+    return String(position.costCenter2);
+  }
+
+  return "—";
+};
+
+const getPositionCostCenter2Label = (
+  position: CampaiReceiptPosition,
+  labelMap: Map<string, string>,
+): string => {
+  const key = getPositionCostCenter2Key(position);
+  return labelMap.get(key) ?? key;
+};
+
+const formatCostCentersWithAmounts = (
   positions: CampaiReceiptPosition[],
+  labelMap: Map<string, string>,
 ): string => {
   if (positions.length === 0) {
     return "—";
@@ -162,9 +210,7 @@ const formatAccountsWithAmounts = (
 
   return positions
     .map((position) => {
-      const label =
-        position.accountLabel ??
-        (position.account !== null ? `Konto ${position.account}` : "—");
+      const label = getPositionCostCenter2Label(position, labelMap);
 
       if (position.amount === null) {
         return label;
@@ -182,6 +228,16 @@ const getReceiptDescription = (receipt: CampaiBalanceReceipt): string => {
 
   const firstPositionDescription = receipt.positions[0]?.description;
   return firstPositionDescription ?? "—";
+};
+
+const getSplitDotClassName = (splitKey: string): string => {
+  let hash = 0;
+
+  for (const character of splitKey) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+
+  return ACCOUNT_DOT_CLASS_NAMES[hash % ACCOUNT_DOT_CLASS_NAMES.length];
 };
 
 const normalizePaymentStatusTone = (status: string | null): PaymentStatusTone => {
@@ -470,6 +526,16 @@ export default function BalancePage() {
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<CostCenterOption[]>([]);
+  const [selectedYear, setSelectedYear] = useState<FilterOption | null>(
+    DEFAULT_YEAR_FILTER_OPTION,
+  );
+  const [selectedStatus, setSelectedStatus] = useState<FilterOption | null>(
+    ALL_FILTER_OPTION,
+  );
+  const [selectedType, setSelectedType] = useState<FilterOption | null>(
+    ALL_FILTER_OPTION,
+  );
+  const [selectedAccountSummaryKey, setSelectedAccountSummaryKey] = useState<string | null>(null);
 
   const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>([]);
   const [loadingReceipts, setLoadingReceipts] = useState(false);
@@ -597,7 +663,9 @@ export default function BalancePage() {
         const costCenter1Data = (await costCenter1Response.json()) as {
           costCenter1Labels?: CostCenterOption[];
         };
-        setCostCenters(bookableData.costCenters ?? []);
+        setCostCenters(
+          (bookableData.costCenters ?? []).filter(isTwoDigitCostCenterOption),
+        );
         setAllCostCenters(allData.costCenters ?? []);
         setCostCenter1Labels(costCenter1Data.costCenter1Labels ?? []);
       } catch (error) {
@@ -639,12 +707,32 @@ export default function BalancePage() {
   }, [columnOrder, hiddenColumnKeys]);
 
   const selectedCostCenterValues = useMemo(() => {
-    if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
-      return allCostCenters.map((option) => option.value);
+    const selectedBaseValues = selected.some(
+      (option) => option.value === ALL_COST_CENTERS_OPTION.value,
+    )
+      ? costCenters.map((option) => option.value)
+      : selected.map((option) => option.value);
+
+    const expandedValues = new Set(selectedBaseValues);
+
+    for (const baseValue of selectedBaseValues) {
+      if (!/^\d{2}$/.test(baseValue)) {
+        continue;
+      }
+
+      for (const option of allCostCenters) {
+        const candidateValue = option.value.trim();
+        if (
+          isThreeDigitCostCenterValue(candidateValue) &&
+          candidateValue.startsWith(baseValue)
+        ) {
+          expandedValues.add(candidateValue);
+        }
+      }
     }
 
-    return selected.map((option) => option.value);
-  }, [allCostCenters, selected]);
+    return Array.from(expandedValues);
+  }, [allCostCenters, costCenters, selected]);
 
   const selectedPreferenceValues = useMemo(() => {
     if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
@@ -805,12 +893,179 @@ export default function BalancePage() {
     [receipts],
   );
 
-  const sortedReceipts = useMemo(() => {
-    if (!sortConfig) {
-      return visibleReceipts;
+  const yearOptions = useMemo<FilterOption[]>(() => {
+    const years = new Set<string>();
+
+    for (const receipt of visibleReceipts) {
+      const sourceDate = receipt.receiptDate ?? receipt.createdAt ?? receipt.paidAt;
+      const timestamp = sourceDate ? Date.parse(sourceDate) : Number.NaN;
+
+      if (Number.isNaN(timestamp)) {
+        continue;
+      }
+
+      years.add(String(new Date(timestamp).getFullYear()));
     }
 
-    return [...visibleReceipts].sort((left, right) => {
+    return [
+      ALL_FILTER_OPTION,
+      ...Array.from(years)
+        .sort((left, right) => Number(right) - Number(left))
+        .map((year) => ({ value: year, label: year })),
+    ];
+  }, [visibleReceipts]);
+
+  const statusOptions = useMemo<FilterOption[]>(() => {
+    const statuses = new Map<string, FilterOption>();
+
+    for (const receipt of visibleReceipts) {
+      const status = receipt.paymentStatus?.trim();
+      if (!status) {
+        continue;
+      }
+
+      const normalized = status.toLowerCase();
+      if (!statuses.has(normalized)) {
+        statuses.set(normalized, {
+          value: normalized,
+          label: getPaymentStatusLabel(status) ?? status,
+        });
+      }
+    }
+
+    return [
+      ALL_FILTER_OPTION,
+      ...Array.from(statuses.values()).sort((left, right) =>
+        left.label.localeCompare(right.label, "de-DE"),
+      ),
+    ];
+  }, [visibleReceipts]);
+
+  const typeOptions = useMemo<FilterOption[]>(() => {
+    const types = new Map<string, FilterOption>();
+
+    for (const receipt of visibleReceipts) {
+      const type = receipt.type?.trim();
+      if (!type) {
+        continue;
+      }
+
+      if (!types.has(type)) {
+        types.set(type, {
+          value: type,
+          label: TYPE_LABELS[type] ?? type,
+        });
+      }
+    }
+
+    return [
+      ALL_FILTER_OPTION,
+      ...Array.from(types.values()).sort((left, right) =>
+        left.label.localeCompare(right.label, "de-DE"),
+      ),
+    ];
+  }, [visibleReceipts]);
+
+  const receiptsMatchingToolbarFilters = useMemo(() => {
+    return visibleReceipts.filter((receipt) => {
+      const selectedYearValue = selectedYear?.value;
+      if (selectedYearValue && selectedYearValue !== ALL_FILTER_OPTION.value) {
+        const sourceDate = receipt.receiptDate ?? receipt.createdAt ?? receipt.paidAt;
+        const timestamp = sourceDate ? Date.parse(sourceDate) : Number.NaN;
+
+        if (
+          Number.isNaN(timestamp) ||
+          String(new Date(timestamp).getFullYear()) !== selectedYearValue
+        ) {
+          return false;
+        }
+      }
+
+      const selectedStatusValue = selectedStatus?.value;
+      if (selectedStatusValue && selectedStatusValue !== ALL_FILTER_OPTION.value) {
+        if (receipt.paymentStatus?.trim().toLowerCase() !== selectedStatusValue) {
+          return false;
+        }
+      }
+
+      const selectedTypeValue = selectedType?.value;
+      if (selectedTypeValue && selectedTypeValue !== ALL_FILTER_OPTION.value) {
+        if (receipt.type?.trim() !== selectedTypeValue) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [selectedStatus, selectedType, selectedYear, visibleReceipts]);
+
+  const filteredReceipts = useMemo(() => {
+    if (!selectedAccountSummaryKey) {
+      return receiptsMatchingToolbarFilters;
+    }
+
+    return receiptsMatchingToolbarFilters.filter((receipt) =>
+      receipt.positions.some(
+        (position) =>
+          getPositionCostCenter2Key(position) === selectedAccountSummaryKey,
+      ),
+    );
+  }, [receiptsMatchingToolbarFilters, selectedAccountSummaryKey]);
+
+  useEffect(() => {
+    if (
+      selectedYear &&
+      selectedYear.value !== DEFAULT_YEAR_FILTER_OPTION.value &&
+      selectedYear.value !== ALL_FILTER_OPTION.value &&
+      !yearOptions.some((option) => option.value === selectedYear.value)
+    ) {
+      setSelectedYear(null);
+    }
+  }, [selectedYear, yearOptions]);
+
+  useEffect(() => {
+    if (
+      selectedStatus &&
+      selectedStatus.value !== ALL_FILTER_OPTION.value &&
+      !statusOptions.some((option) => option.value === selectedStatus.value)
+    ) {
+      setSelectedStatus(null);
+    }
+  }, [selectedStatus, statusOptions]);
+
+  useEffect(() => {
+    if (
+      selectedType &&
+      selectedType.value !== ALL_FILTER_OPTION.value &&
+      !typeOptions.some((option) => option.value === selectedType.value)
+    ) {
+      setSelectedType(null);
+    }
+  }, [selectedType, typeOptions]);
+
+  useEffect(() => {
+    if (!selectedAccountSummaryKey) {
+      return;
+    }
+
+    const hasMatchingAccount = receiptsMatchingToolbarFilters.some((receipt) =>
+      receipt.positions.some(
+        (position) =>
+          getPositionCostCenter2Key(position) === selectedAccountSummaryKey,
+      ),
+    );
+
+    if (!hasMatchingAccount) {
+      setSelectedAccountSummaryKey(null);
+    }
+  }, [receiptsMatchingToolbarFilters, selectedAccountSummaryKey]);
+
+  const sortedReceipts = useMemo(() => {
+    if (!sortConfig) {
+      return filteredReceipts;
+    }
+
+    return [...filteredReceipts].sort((left, right) => {
       if (sortConfig.key === "paidAt") {
         return compareNullableValues(
           getComparableDateValue(left.paidAt),
@@ -841,25 +1096,84 @@ export default function BalancePage() {
         sortConfig.direction,
       );
     });
-  }, [sortConfig, visibleReceipts]);
+  }, [filteredReceipts, sortConfig]);
 
-  const { totalIncome, totalExpense, saldo } = useMemo(() => {
+  const { totalIncome, totalExpense, saldo, accountSummaries } = useMemo(() => {
     let income = 0;
     let expense = 0;
-    for (const receipt of visibleReceipts) {
-      const amount = receipt.totalGrossAmount ?? 0;
+    const accountSummaryMap = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        income: number;
+        expense: number;
+      }
+    >();
+
+    for (const receipt of receiptsMatchingToolbarFilters) {
       if (receipt.type && INCOME_TYPES.has(receipt.type)) {
+        const amount = receipt.totalGrossAmount ?? 0;
         income += amount;
+        for (const position of receipt.positions) {
+          if (position.amount === null) {
+            continue;
+          }
+
+          const key = getPositionCostCenter2Key(position);
+          const label = getPositionCostCenter2Label(position, costCenterLabelMap);
+          const current = accountSummaryMap.get(key) ?? {
+            key,
+            label,
+            income: 0,
+            expense: 0,
+          };
+
+          current.income += position.amount;
+          accountSummaryMap.set(key, current);
+        }
       } else if (receipt.type && EXPENSE_TYPES.has(receipt.type)) {
+        const amount = receipt.totalGrossAmount ?? 0;
         expense += amount;
+        for (const position of receipt.positions) {
+          if (position.amount === null) {
+            continue;
+          }
+
+          const key = getPositionCostCenter2Key(position);
+          const label = getPositionCostCenter2Label(position, costCenterLabelMap);
+          const current = accountSummaryMap.get(key) ?? {
+            key,
+            label,
+            income: 0,
+            expense: 0,
+          };
+
+          current.expense += position.amount;
+          accountSummaryMap.set(key, current);
+        }
       }
     }
+
     return {
       totalIncome: income,
       totalExpense: expense,
       saldo: income - expense,
+      accountSummaries: Array.from(accountSummaryMap.values())
+        .map((entry) => ({
+          ...entry,
+          saldo: entry.income - entry.expense,
+        }))
+        .sort((left, right) => {
+          const saldoDifference = Math.abs(right.saldo) - Math.abs(left.saldo);
+          if (saldoDifference !== 0) {
+            return saldoDifference;
+          }
+
+          return left.label.localeCompare(right.label, "de-DE");
+        }),
     };
-  }, [visibleReceipts]);
+  }, [costCenterLabelMap, receiptsMatchingToolbarFilters]);
 
   const hasSelection = selected.length > 0;
   const visibleColumnCount = visibleColumns.length;
@@ -913,6 +1227,12 @@ export default function BalancePage() {
       nextOrder.splice(nextIndex, 0, movedColumn);
       return nextOrder;
     });
+  }, []);
+
+  const toggleAccountSummaryFilter = useCallback((accountKey: string) => {
+    setSelectedAccountSummaryKey((current) =>
+      current === accountKey ? null : accountKey,
+    );
   }, []);
 
   const renderReceiptCell = useCallback(
@@ -1021,12 +1341,32 @@ export default function BalancePage() {
         case "positions.account":
           return (
             <td key={cellKey} className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span
-                className={`${CELL_TEXT_CLASS_NAME} max-w-[180px]`}
-                title={formatAccountsWithAmounts(receipt.positions)}
-              >
-                {formatAccountsWithAmounts(receipt.positions)}
-              </span>
+              {receipt.positions.length > 0 ? (
+                <div
+                  className="flex max-w-[180px] items-center gap-3 overflow-hidden"
+                  title={formatCostCentersWithAmounts(
+                    receipt.positions,
+                    costCenterLabelMap,
+                  )}
+                >
+                  {receipt.positions.map((position, index) => (
+                    <span
+                      key={`${cellKey}-position-${position.costCenter2 ?? "none"}-${index}`}
+                      className="inline-flex min-w-0 shrink-0 items-center gap-1.5"
+                    >
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${getSplitDotClassName(getPositionCostCenter2Key(position))}`}
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        {position.amount !== null ? formatCents(position.amount) : "—"}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                "—"
+              )}
             </td>
           );
         case "type":
@@ -1034,7 +1374,7 @@ export default function BalancePage() {
             <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm">
               {receipt.type ? (
                 <span
-                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getTypeChipClassName(receipt.type)}`}
+                  className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                   title={TABLE_COLUMN_MAP.get("type")?.title ?? TYPE_LABELS[receipt.type] ?? receipt.type}
                 >
                   {TYPE_LABELS[receipt.type] ?? receipt.type}
@@ -1126,59 +1466,132 @@ export default function BalancePage() {
         </p>
       </div>
 
-      <div className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <label
-          htmlFor="cost-center-2-filter"
-          className="mb-1.5 block text-sm font-medium text-foreground/80"
-        >
-          Werkbereiche/Projekte
-        </label>
-        {loadingCostCenters ? (
-          <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-            <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
-            Werkbereiche werden geladen…
-          </div>
-        ) : (
-          <ReactSelect<CostCenterOption, true>
-            inputId="cost-center-2-filter"
-            isMulti
-            isClearable
-            options={costCenterOptions}
-            value={selected}
-            onChange={handleSelectedChange}
-            placeholder="Werkbereich(e) auswählen…"
-            noOptionsMessage={() => "Keine Werkbereiche gefunden."}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="w-full min-w-[260px] sm:w-[360px] lg:w-[420px] lg:flex-none">
+          <label
+            htmlFor="cost-center-2-filter"
+            className="mb-1.5 block text-sm font-medium text-foreground/80"
+          >
+            Werkbereiche/Projekte
+          </label>
+          {loadingCostCenters ? (
+            <div className="flex min-h-10 items-center gap-2 py-2 text-sm text-muted-foreground">
+              <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
+              Werkbereiche werden geladen…
+            </div>
+          ) : (
+            <ReactSelect<CostCenterOption, true>
+              inputId="cost-center-2-filter"
+              isMulti
+              isClearable
+              options={costCenterOptions}
+              value={selected}
+              onChange={handleSelectedChange}
+              placeholder="Werkbereich(e) auswählen…"
+              noOptionsMessage={() => "Keine Werkbereiche gefunden."}
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  backgroundColor: "transparent",
+                  boxShadow: state.isFocused
+                    ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
+                    : "none",
+                }),
+              }}
+            />
+          )}
+          {costCentersError ? (
+            <p className="mt-2 text-sm text-destructive">{costCentersError}</p>
+          ) : null}
+        </div>
+
+        <div className="min-w-[150px] sm:w-[150px]">
+          <label
+            htmlFor="balance-year-filter"
+            className="mb-1.5 block text-sm font-medium text-foreground/80"
+          >
+            Jahr
+          </label>
+          <ReactSelect<FilterOption>
+            inputId="balance-year-filter"
+            options={yearOptions}
+            value={selectedYear}
+            onChange={(value) => setSelectedYear(value)}
+            placeholder="Jahr"
+            noOptionsMessage={() => "Keine Jahre gefunden."}
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                backgroundColor: "transparent",
+                boxShadow: state.isFocused
+                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
+                  : "none",
+              }),
+            }}
           />
-        )}
-        {costCentersError ? (
-          <p className="mt-2 text-sm text-destructive">{costCentersError}</p>
-        ) : null}
+        </div>
+
+        <div className="min-w-[170px] sm:w-[170px]">
+          <label
+            htmlFor="balance-status-filter"
+            className="mb-1.5 block text-sm font-medium text-foreground/80"
+          >
+            Status
+          </label>
+          <ReactSelect<FilterOption>
+            inputId="balance-status-filter"
+            options={statusOptions}
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            placeholder="Status"
+            noOptionsMessage={() => "Keine Status gefunden."}
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                backgroundColor: "transparent",
+                boxShadow: state.isFocused
+                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
+                  : "none",
+              }),
+            }}
+          />
+        </div>
+
+        <div className="min-w-[170px] sm:w-[170px]">
+          <label
+            htmlFor="balance-type-filter"
+            className="mb-1.5 block text-sm font-medium text-foreground/80"
+          >
+            Typ
+          </label>
+          <ReactSelect<FilterOption>
+            inputId="balance-type-filter"
+            options={typeOptions}
+            value={selectedType}
+            onChange={(value) => setSelectedType(value)}
+            placeholder="Typ"
+            noOptionsMessage={() => "Keine Typen gefunden."}
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                backgroundColor: "transparent",
+                boxShadow: state.isFocused
+                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
+                  : "none",
+              }),
+            }}
+          />
+        </div>
       </div>
 
       {hasSelection ? (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Einnahmen
-            </p>
-            <p className="mt-1 text-xl font-semibold text-emerald-600 dark:text-emerald-400">
-              {formatCents(totalIncome)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Ausgaben
-            </p>
-            <p className="mt-1 text-xl font-semibold text-rose-600 dark:text-rose-400">
-              {formatCents(totalExpense)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-4 flex items-start gap-3 overflow-hidden">
+          <div className="shrink-0 rounded-xl border border-border bg-card p-4 text-right shadow-sm">
+            <p className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Saldo
             </p>
             <p
-              className={`mt-1 text-xl font-semibold ${
+              className={`mt-1 text-3xl font-semibold ${
                 saldo < 0
                   ? "text-rose-600 dark:text-rose-400"
                   : "text-foreground"
@@ -1186,6 +1599,74 @@ export default function BalancePage() {
             >
               {formatCents(saldo)}
             </p>
+            <div className="mt-1.5 flex items-baseline justify-end gap-4 text-sm font-medium sm:text-base">
+              <span className="text-emerald-600 dark:text-emerald-400">
+                +{formatCents(totalIncome)}
+              </span>
+              <span className="text-muted-foreground" aria-hidden="true">
+                &middot;
+              </span>
+              <span className="text-rose-600 dark:text-rose-400">
+                -{formatCents(totalExpense)}
+              </span>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 overflow-x-auto pb-1">
+            <div className="flex w-max gap-3 pr-1">
+              {accountSummaries.map((accountSummary, index) => (
+                <button
+                  type="button"
+                  key={accountSummary.key}
+                  onClick={() => toggleAccountSummaryFilter(accountSummary.key)}
+                  aria-pressed={selectedAccountSummaryKey === accountSummary.key}
+                  className={`shrink-0 rounded-xl border p-4 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 ${
+                    selectedAccountSummaryKey === accountSummary.key
+                      ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800/80"
+                      : "border-zinc-200/70 bg-zinc-50/75 hover:border-zinc-300 hover:bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
+                  }`}
+                >
+                  <p
+                    className="flex max-w-[220px] items-center gap-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground/90"
+                    title={accountSummary.label}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${getSplitDotClassName(accountSummary.key)}`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{accountSummary.label}</span>
+                  </p>
+                  <p
+                    className={`mt-1 text-2xl ${
+                      selectedAccountSummaryKey === accountSummary.key
+                        ? accountSummary.saldo < 0
+                          ? "font-semibold text-rose-500/70 dark:text-rose-400/70"
+                          : "font-semibold text-emerald-600/70 dark:text-emerald-400/70"
+                        : "font-normal text-black/45 dark:text-zinc-100/45"
+                    }`}
+                  >
+                    {formatCents(accountSummary.saldo)}
+                  </p>
+                  <div
+                    className={`mt-1.5 flex items-baseline justify-end gap-4 text-sm font-medium transition-opacity sm:text-base ${
+                      selectedAccountSummaryKey === accountSummary.key
+                        ? "visible opacity-100"
+                        : "invisible opacity-0"
+                    }`}
+                  >
+                    <span className="text-emerald-600/80 dark:text-emerald-400/80">
+                      +{formatCents(accountSummary.income)}
+                    </span>
+                    <span className="text-muted-foreground/70" aria-hidden="true">
+                      &middot;
+                    </span>
+                    <span className="text-rose-600/80 dark:text-rose-400/80">
+                      -{formatCents(accountSummary.expense)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}
