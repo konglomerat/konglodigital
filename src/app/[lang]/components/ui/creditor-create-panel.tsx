@@ -5,6 +5,7 @@ import { faPenToSquare, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../Button";
 import { FormField, Input, Select } from "./form";
+import { SegmentedControl } from "./segmented-control";
 
 export type CreditorCreateType = "business" | "person";
 export type CreditorPaymentMethodType = "creditTransfer" | "cash";
@@ -335,32 +336,14 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
 
       <div className="space-y-4">
         <FormField label="Typ" required>
-          <div className="inline-flex rounded-md border border-border bg-secondary/60 p-0.5">
-            <button
-              type="button"
-              className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
-                draft.type === "person"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
-              }`}
-              onClick={() => updateDraft("type", "person")}
-              aria-pressed={draft.type === "person"}
-            >
-              Person
-            </button>
-            <button
-              type="button"
-              className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
-                draft.type === "business"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
-              }`}
-              onClick={() => updateDraft("type", "business")}
-              aria-pressed={draft.type === "business"}
-            >
-              Firma
-            </button>
-          </div>
+          <SegmentedControl
+            value={draft.type}
+            options={[
+              { value: "person", label: "Person" },
+              { value: "business", label: "Firma" },
+            ]}
+            onChange={(next) => updateDraft("type", next)}
+          />
         </FormField>
 
         <FormField label="Name" required>

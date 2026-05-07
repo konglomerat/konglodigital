@@ -32,6 +32,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/form";
+import { SegmentedControl } from "../../components/ui/segmented-control";
 import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
@@ -1120,30 +1121,14 @@ export default function NewSimpleInvoicePage() {
 
           <div className="mt-4">
             <FormField label="Rechnungsart" required>
-              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
-                <button
-                  type="button"
-                  onClick={() => setIsNet(true)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    isNet
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Nettopreise
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsNet(false)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    !isNet
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Bruttopreise
-                </button>
-              </div>
+              <SegmentedControl
+                value={isNet ? "net" : "gross"}
+                options={[
+                  { value: "net", label: "Nettopreise" },
+                  { value: "gross", label: "Bruttopreise" },
+                ]}
+                onChange={(next) => setIsNet(next === "net")}
+              />
             </FormField>
           </div>
         </FormSection>
