@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowTrendUp,
   faCheck,
   faFolderOpen,
   faPlus,
@@ -16,7 +15,7 @@ import Link from "next/link";
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -212,8 +211,6 @@ export default function EinnahmePage() {
         <ReceiptsPageHeader
           title="Einnahme erfassen"
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faArrowTrendUp} className="h-5 w-5" />}
-          iconClassName="border-emerald-200 bg-emerald-50 text-emerald-600 shadow-sm"
         />
 
         {costCentersError ? (

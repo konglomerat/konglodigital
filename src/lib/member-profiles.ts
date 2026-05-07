@@ -167,11 +167,12 @@ export const normalizeMemberProfilePreferences = (
     if (isPlainObject(value.balance.columns)) {
       const order = normalizeSegments(value.balance.columns.order);
       const hidden = normalizeSegments(value.balance.columns.hidden);
+      const hasHiddenField = Array.isArray(value.balance.columns.hidden);
 
-      if (order.length > 0 || hidden.length > 0) {
+      if (order.length > 0 || hidden.length > 0 || hasHiddenField) {
         balance.columns = {
           ...(order.length > 0 ? { order } : {}),
-          ...(hidden.length > 0 ? { hidden } : {}),
+          ...(hasHiddenField ? { hidden } : {}),
         };
       }
     }

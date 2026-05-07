@@ -8,7 +8,6 @@ import {
   faCheck,
   faFolderOpen,
   faPlus,
-  faRotate,
   faTrash,
   faUser,
   faXmark,
@@ -18,7 +17,7 @@ import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -362,8 +361,6 @@ export default function ReimbursementPage() {
           title="Rückerstattungen einreichen"
           description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faRotate} className="h-5 w-5" />}
-          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
 
         {costCentersError ? (

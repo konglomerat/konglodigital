@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowTrendDown,
   faCheck,
   faFileImport,
   faFolderOpen,
@@ -18,7 +17,7 @@ import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -293,8 +292,6 @@ export default function AusgabePage() {
           title="Ausgabe erfassen"
           description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />}
-          iconClassName="border-rose-200 bg-rose-50 text-rose-600 shadow-sm"
         />
 
         {costCentersError ? (

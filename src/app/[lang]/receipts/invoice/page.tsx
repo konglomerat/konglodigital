@@ -40,7 +40,7 @@ import {
 import {
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 
 type InvoicePosition = {
   id: string;
@@ -702,8 +702,6 @@ export default function NewSimpleInvoicePage() {
         title="Neue Rechnung erstellen"
         description="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss."
         helperText="Pflichtfelder und Rechnungsdaten lassen sich hier in derselben Struktur wie auf den anderen Buchungsseiten erfassen."
-        icon={<FontAwesomeIcon icon={faFileInvoice} className="h-5 w-5" />}
-        iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
       />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>

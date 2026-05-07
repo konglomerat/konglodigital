@@ -13,7 +13,7 @@ import {
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,

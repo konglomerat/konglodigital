@@ -26,7 +26,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/form";
-import ReceiptsPageHeader from "../receiptsPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -1107,8 +1107,6 @@ export default function EigenbelegPage() {
           title="Generator Eigenbeleg"
           description="Ein Eigenbeleg ist ein Ersatz für eine Rechnung beziehungsweise Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />}
-          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
