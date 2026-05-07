@@ -799,7 +799,7 @@ export default function NewSimpleInvoicePage() {
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-2xl border border-border p-3">
+            <div className="md:col-span-2 rounded-2xl border border-border p-2 sm:p-3">
               <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
                 <input
                   type="checkbox"
@@ -893,7 +893,7 @@ export default function NewSimpleInvoicePage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-border p-3">
+            <div className="rounded-2xl border border-border p-2 sm:p-3">
               <div className="mb-2 hidden grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] gap-2 px-1 xl:grid">
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einheit</p>
@@ -944,7 +944,7 @@ export default function NewSimpleInvoicePage() {
                   return (
                     <div
                       key={position.id}
-                      className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end"
+                      className="grid gap-3 rounded-xl border border-border p-2 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end sm:p-3"
                     >
                       <FormField
                         label="Name"

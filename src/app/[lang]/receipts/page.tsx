@@ -1482,8 +1482,8 @@ export default function ReceiptsPage() {
   );
 
   return (
-    <div className="mx-auto w-full px-2 py-4 md:px-0 md:py-0">
-      <div className="flex items-start justify-between gap-4 pb-6">
+    <div className="mx-auto w-full px-4 py-4 md:px-0 md:py-0">
+      <div className="flex items-start justify-between gap-3 pb-4 sm:gap-4 sm:pb-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
             Übersicht
@@ -1499,7 +1499,7 @@ export default function ReceiptsPage() {
         </Button>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+      <div className="mb-3 flex flex-wrap items-end gap-2 sm:mb-4 sm:gap-3">
         <div className="w-full min-w-[260px] sm:w-[360px] lg:w-[420px] lg:flex-none">
           {loadingCostCenters ? (
             <div className="flex min-h-10 items-center gap-2 py-2 text-sm text-muted-foreground">
@@ -1594,8 +1594,8 @@ export default function ReceiptsPage() {
       </div>
 
       {hasSelection && !isSaldoHidden ? (
-        <div className="mb-4 flex items-start gap-3 overflow-hidden">
-          <div className="shrink-0 rounded-xl border border-border bg-card p-4 text-right shadow-sm">
+        <div className="mb-4 flex items-start gap-2 overflow-hidden sm:gap-3">
+          <div className="shrink-0 rounded-xl border border-border bg-card p-3 text-right shadow-sm sm:p-4">
             <p className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Saldo
             </p>
@@ -1622,14 +1622,14 @@ export default function ReceiptsPage() {
           </div>
 
           <div className="min-w-0 flex-1 overflow-x-auto pb-1">
-            <div className="flex w-max gap-3 pr-1">
+            <div className="flex w-max gap-2 pr-1 sm:gap-3">
               {accountSummaries.map((accountSummary, index) => (
                 <button
                   type="button"
                   key={accountSummary.key}
                   onClick={() => toggleAccountSummaryFilter(accountSummary.key)}
                   aria-pressed={selectedAccountSummaryKey === accountSummary.key}
-                  className={`shrink-0 rounded-xl border p-4 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 ${
+                  className={`shrink-0 rounded-xl border p-3 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 sm:p-4 ${
                     selectedAccountSummaryKey === accountSummary.key
                       ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800/80"
                       : "border-zinc-200/70 bg-zinc-50/75 hover:border-zinc-300 hover:bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
@@ -1681,7 +1681,7 @@ export default function ReceiptsPage() {
       ) : null}
 
       {receiptsError ? (
-        <div className="mb-6 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <div className="mb-6 rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive sm:px-4 sm:py-3">
           {receiptsError}
         </div>
       ) : null}

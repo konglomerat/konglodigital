@@ -1335,7 +1335,7 @@ export default function EigenbelegPage() {
                   </FormField>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                       <div className="space-y-1">
                         <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
                         <p className="text-sm text-zinc-600">
@@ -1392,7 +1392,7 @@ export default function EigenbelegPage() {
                       </FormField>
                     </div>
 
-                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                       <div className="space-y-1">
                         <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
                         <p className="text-sm text-zinc-600">
@@ -1477,7 +1477,7 @@ export default function EigenbelegPage() {
                     </FormField>
 
                     <div className="grid gap-4 lg:grid-cols-2">
-                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                         <div className="space-y-1">
                           <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
                           <p className="text-sm text-zinc-600">
@@ -1566,7 +1566,7 @@ export default function EigenbelegPage() {
                         ) : null}
                       </div>
 
-                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                         <div className="space-y-1">
                           <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
                           <p className="text-sm text-zinc-600">

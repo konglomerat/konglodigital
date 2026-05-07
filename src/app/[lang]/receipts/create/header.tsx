@@ -112,24 +112,24 @@ export default function ReceiptsPageHeader({
   helperText,
 }: ReceiptsPageHeaderProps) {
   return (
-    <header className="space-y-6">
+    <header className="space-y-4 sm:space-y-6">
       <Link
         href="/receipts"
-        className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900"
+        className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900 sm:px-4 sm:py-2"
       >
         <span aria-hidden="true">←</span>
         <span>Übersicht</span>
       </Link>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-2 sm:gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {bookingActions.map((action) => (
           <Link
             key={action.href}
             href={action.href}
-            className={`group flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 ${action.cardClassName}`}
+            className={`group flex min-h-0 min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 sm:h-20 sm:gap-3 sm:p-3 ${action.cardClassName}`}
           >
             <span
-              className={`flex h-12 w-12 flex-none items-center justify-center rounded-full transition ${action.iconClassName}`}
+              className={`flex h-10 w-10 flex-none items-center justify-center rounded-full transition sm:h-12 sm:w-12 ${action.iconClassName}`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -139,17 +139,17 @@ export default function ReceiptsPageHeader({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-6 w-6"
+                className="h-5 w-5 sm:h-6 sm:w-6"
                 aria-hidden="true"
               >
                 {action.icon}
               </svg>
             </span>
-            <span className="flex flex-col text-left">
-              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="flex min-w-0 flex-1 flex-col text-left">
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:text-base">
                 {action.title}
               </span>
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-zinc-600 dark:text-zinc-400 sm:text-sm">
                 {action.description}
               </span>
             </span>

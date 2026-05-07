@@ -444,8 +444,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+    <div className="min-h-screen text-foreground">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <PageTitle
           title="3D Printer Dashboard"
           links={[

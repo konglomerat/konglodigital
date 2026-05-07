@@ -715,7 +715,7 @@ export default function ReceiptDetailDrawer({
                     return (
                       <div
                         key={`position-${index}`}
-                        className="rounded-lg border border-border bg-card p-3"
+                        className="rounded-lg border border-border bg-card p-2 sm:p-3"
                       >
                         <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
                           <span className="font-semibold text-foreground">
@@ -823,7 +823,7 @@ export default function ReceiptDetailDrawer({
                                 noOptionsMessage={() => "Keine Werkbereiche gefunden."}
                               />
                               {creatingCostCenterForIndex === index ? (
-                                <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3">
+                                <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-2 sm:p-3">
                                   <div className="grid gap-2 sm:grid-cols-2">
                                     <input
                                       type="number"
@@ -911,7 +911,7 @@ export default function ReceiptDetailDrawer({
 
               <section>
                 <SectionTitle>Interne Notizen</SectionTitle>
-                <div className="mb-3 space-y-2 rounded-lg border border-border bg-card p-3">
+                <div className="mb-3 space-y-2 rounded-lg border border-border bg-card p-2 sm:p-3">
                   <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Neue Notiz
                   </label>
@@ -944,7 +944,7 @@ export default function ReceiptDetailDrawer({
                     {detail.notes.map((note) => (
                       <li
                         key={note.id}
-                        className="rounded-lg border border-border bg-card p-3 text-sm"
+                        className="rounded-lg border border-border bg-card p-2 text-sm sm:p-3"
                       >
                         <p className="whitespace-pre-wrap text-foreground">
                           {note.content}

@@ -515,7 +515,7 @@ export default function ReimbursementPage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-xl border border-zinc-200 p-3"
+                  className="space-y-3 rounded-xl border border-zinc-200 p-2 sm:p-3"
                 >
                   <div className="grid gap-3 md:grid-cols-3">
                     <FormField

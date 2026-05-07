@@ -605,7 +605,7 @@ export default async function RootLayout({
               )}
             </aside>
             <div className="ml-0 md:ml-64">
-              <main className="mx-auto w-full md:px-10 md:py-10">
+              <main className="mx-auto w-full px-3 py-4 md:px-10 md:py-10">
                 {children}
               </main>
             </div>
