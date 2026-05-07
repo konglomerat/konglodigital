@@ -408,20 +408,11 @@ export default function ReimbursementPage() {
 
               {/* Creditor selected badge */}
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    Kreditor <strong>#{creditorAccount}</strong>{" "}
-                    {creditorName ? `(${creditorName})` : ""} ausgewählt
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCreditor}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <SelectedCreditorBadge
+                  account={creditorAccount}
+                  fallbackName={creditorName}
+                  onClear={resetCreditor}
+                />
               ) : null}
 
               {/* Create creditor panel */}
