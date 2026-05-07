@@ -4,14 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleInfo,
-  faCheck,
   faFileInvoice,
   faList,
   faPlus,
   faTrash,
   faTriangleExclamation,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
@@ -22,6 +20,7 @@ import {
   type Suggestion as DebtorSuggestion,
 } from "../../components/ui/autocomplete-input";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
 import {
   ProductAutocompleteInput,
   type ProductSuggestion,
@@ -201,6 +200,7 @@ export default function NewSimpleInvoicePage() {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
   const [debtorName, setDebtorName] = useState("");
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
+  const [showUpdateDebtorPanel, setShowUpdateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
   const [positions, setPositions] = useState<InvoicePosition[]>([
     createPosition(),
@@ -470,6 +470,7 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(suggestion.account);
     setDebtorName(suggestion.name);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
 
     if (
@@ -530,6 +531,7 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(null);
     setDebtorName(name);
     setShowCreateDebtorPanel(true);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -537,6 +539,7 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(null);
     setDebtorName("");
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -744,20 +747,41 @@ export default function NewSimpleInvoicePage() {
             </div>
 
             {debtorAccount ? (
-              <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
-                <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                <span>
-                  Debitor <strong>#{debtorAccount}</strong>
-                  {debtorName ? ` (${debtorName})` : ""} ausgewählt
-                </span>
-                <button
-                  type="button"
-                  className="ml-auto rounded p-1 text-success hover:bg-success-soft"
-                  onClick={resetDebtor}
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <SelectedDebtorBadge
+                account={debtorAccount}
+                entityLabel="Debitor"
+                fallbackName={debtorName}
+                tone="success"
+                onClear={resetDebtor}
+                onEdit={() => setShowUpdateDebtorPanel((current) => !current)}
+              />
+            ) : null}
+
+            {showUpdateDebtorPanel && debtorAccount ? (
+              <DebtorCreatePanel
+                debtorAccount={debtorAccount}
+                initialName={debtorName}
+                onCancel={() => setShowUpdateDebtorPanel(false)}
+                onCreated={(result, draft) => {
+                  setDebtorName(result.name);
+                  setShowUpdateDebtorPanel(false);
+                  setDebtorError(null);
+                  setRecipientEmail(draft.email);
+                  setAddressLine(draft.addressLine);
+                  setZip(draft.zip);
+                  setCity(draft.city);
+                  setDetails1(draft.details);
+
+                  if (
+                    result.paymentMethodType &&
+                    paymentMethods.some(
+                      (item) => item.value === result.paymentMethodType,
+                    )
+                  ) {
+                    setPaymentMethod(result.paymentMethodType as PaymentMethod);
+                  }
+                }}
+              />
             ) : null}
 
             {showCreateDebtorPanel && !debtorAccount ? (

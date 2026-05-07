@@ -5,17 +5,16 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
-  faCheck,
   faFolderOpen,
   faPlus,
   faTrash,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import ReceiptsPageHeader from "../create/header";
 import {
@@ -157,6 +156,7 @@ export default function ReimbursementPage() {
   const [creditorAccount, setCreditorAccount] = useState<number | null>(null);
   const [creditorName, setCreditorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [showUpdatePanel, setShowUpdatePanel] = useState(false);
   const selectedInvoiceStatus = useWatch({
     control,
     name: "rechnungStatus",

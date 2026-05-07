@@ -17,6 +17,7 @@ import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../../components/ui/autocomplete-input";
 import {
@@ -703,6 +704,7 @@ export default function EigenbelegPage() {
   const [showCreateCreditorPanel, setShowCreateCreditorPanel] =
     useState(false);
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
+  const [showUpdateDebtorPanel, setShowUpdateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
 
   const selectedReason = useWatch({ control, name: "reason" });
@@ -794,6 +796,7 @@ export default function EigenbelegPage() {
     setValue("counterpartyAccount", "");
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   }, [selectedBookingType, setValue]);
 
@@ -804,6 +807,7 @@ export default function EigenbelegPage() {
 
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   }, [isTransferFlow]);
 
@@ -817,6 +821,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -833,6 +838,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -846,6 +852,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(true);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
   };
 
   const handleCreateDebtor = (name: string) => {
@@ -858,6 +865,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateDebtorPanel(true);
     setShowCreateCreditorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -1656,7 +1664,20 @@ export default function EigenbelegPage() {
                     </div>
                   </div>
 
-                  {counterpartyAccount ? (
+                  {counterpartyAccount && !isExpenseLikeFlow ? (
+                    <SelectedDebtorBadge
+                      account={Number(counterpartyAccount)}
+                      entityLabel={counterpartyEntityLabel}
+                      fallbackName={counterpartyName ?? ""}
+                      tone="emerald"
+                      onClear={resetCounterparty}
+                      onEdit={() =>
+                        setShowUpdateDebtorPanel((current) => !current)
+                      }
+                    />
+                  ) : null}
+
+                  {counterpartyAccount && isExpenseLikeFlow ? (
                     <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                       <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                       <span>
@@ -1671,6 +1692,24 @@ export default function EigenbelegPage() {
                         <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
                       </button>
                     </div>
+                  ) : null}
+
+                  {showUpdateDebtorPanel &&
+                  counterpartyAccount &&
+                  !isExpenseLikeFlow ? (
+                    <DebtorCreatePanel
+                      debtorAccount={Number(counterpartyAccount)}
+                      initialName={counterpartyName ?? ""}
+                      onCancel={() => setShowUpdateDebtorPanel(false)}
+                      onCreated={(result) => {
+                        setValue("counterpartyName", result.name, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setShowUpdateDebtorPanel(false);
+                        setDebtorError(null);
+                      }}
+                    />
                   ) : null}
 
                   {activeCounterpartyError ? (

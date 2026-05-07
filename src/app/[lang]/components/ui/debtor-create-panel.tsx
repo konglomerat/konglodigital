@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../Button";
 import { FormField, Input } from "./form";
@@ -38,6 +38,12 @@ type DebtorCreatePanelProps = {
   title?: string;
   className?: string;
   submitLabel?: string;
+  /**
+   * When set, the panel updates the existing debtor with this account number
+   * instead of creating a new one. The submit button label and default title
+   * adapt accordingly.
+   */
+  debtorAccount?: number;
   onCancel: () => void;
   onCreated: (result: DebtorCreateResult, draft: DebtorCreateDraft) => void;
 };
@@ -77,10 +83,15 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     receiptSendMethod,
     title,
     className,
-    submitLabel = "Kunde anlegen",
+    submitLabel,
+    debtorAccount,
     onCancel,
     onCreated,
   } = props;
+
+  const isUpdate = typeof debtorAccount === "number" && debtorAccount > 0;
+  const resolvedSubmitLabel =
+    submitLabel ?? (isUpdate ? "Änderungen speichern" : "Kunde anlegen");
 
   const [draft, setDraft] = useState<DebtorCreateDraft>(() =>
     buildInitialDraft({
@@ -95,6 +106,7 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setDraft(
@@ -119,6 +131,74 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     initialZip,
     email,
   ]);
+
+  useEffect(() => {
+    if (!isUpdate) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/campai/debtors?account=${encodeURIComponent(String(debtorAccount))}`,
+          { cache: "no-store" },
+        );
+        const result = (await response.json().catch(() => ({}))) as {
+          debtor?: {
+            name?: string | null;
+            email?: string | null;
+            type?: "person" | "business" | null;
+            address?: {
+              addressLine?: string | null;
+              zip?: string | null;
+              city?: string | null;
+              details1?: string | null;
+            } | null;
+          } | null;
+          error?: string;
+        };
+
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setError(
+            result.error ?? "Debitorendaten konnten nicht geladen werden.",
+          );
+          return;
+        }
+
+        const debtor = result.debtor;
+        if (!debtor) return;
+
+        setDraft({
+          type: debtor.type === "business" ? "business" : "person",
+          name: debtor.name ?? "",
+          email: debtor.email ?? "",
+          details: debtor.address?.details1 ?? "",
+          addressLine: debtor.address?.addressLine ?? "",
+          zip: debtor.address?.zip ?? "",
+          city: debtor.address?.city ?? "",
+        });
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Debitorendaten konnten nicht geladen werden.",
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isUpdate, debtorAccount]);
 
   const updateDraft = <K extends keyof DebtorCreateDraft>(
     key: K,
@@ -170,7 +250,10 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     }
 
     try {
-      const response = await fetch("/api/campai/debtors", {
+      const url = isUpdate
+        ? `/api/campai/debtors/${debtorAccount}`
+        : "/api/campai/debtors";
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -183,11 +266,23 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
       };
 
       if (!response.ok) {
-        setError(result.error ?? "Debitor konnte nicht angelegt werden.");
+        setError(
+          result.error ??
+            (isUpdate
+              ? "Debitor konnte nicht aktualisiert werden."
+              : "Debitor konnte nicht angelegt werden."),
+        );
         return;
       }
 
-      if (typeof result.account !== "number" || result.account <= 0) {
+      const resolvedAccount =
+        typeof result.account === "number" && result.account > 0
+          ? result.account
+          : isUpdate
+            ? debtorAccount
+            : null;
+
+      if (typeof resolvedAccount !== "number" || resolvedAccount <= 0) {
         setError(
           "Debitor wurde angelegt, aber die Debitorennummer konnte nicht ermittelt werden.",
         );
@@ -196,7 +291,7 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
 
       onCreated(
         {
-          account: result.account,
+          account: resolvedAccount,
           name: result.name ?? trimmedName,
           paymentMethodType: result.paymentMethodType ?? null,
         },
@@ -232,7 +327,10 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
     >
       <div className="space-y-1">
         <p className="text-sm font-medium text-blue-900">
-          {title ?? `Neuen Kunde (Debitor) anlegen: "${draft.name || initialName}"`}
+          {title ??
+            (isUpdate
+              ? `Kunde (Debitor) bearbeiten: "${draft.name || initialName}"`
+              : `Neuen Kunde (Debitor) anlegen: "${draft.name || initialName}"`)}
         </p>
         {addressRequirementHint ? (
           <p className="text-xs text-blue-800">{addressRequirementHint}</p>
@@ -330,11 +428,17 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
         <Button
           type="button"
           kind="primary"
-          icon={faPlus}
-          disabled={submitting || !draft.name.trim()}
+          icon={isUpdate ? faPenToSquare : faPlus}
+          disabled={submitting || loading || !draft.name.trim()}
           onClick={() => void handleSubmit()}
         >
-          {submitting ? "Wird angelegt…" : submitLabel}
+          {loading
+            ? "Wird geladen…"
+            : submitting
+              ? isUpdate
+                ? "Wird gespeichert…"
+                : "Wird angelegt…"
+              : resolvedSubmitLabel}
         </Button>
         <Button type="button" kind="secondary" onClick={onCancel}>
           Abbrechen

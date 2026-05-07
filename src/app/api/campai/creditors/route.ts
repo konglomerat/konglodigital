@@ -16,6 +16,9 @@ type CampaiCreditor = {
 	_id?: string;
 	account?: number;
 	name?: string;
+	type?: "person" | "business";
+	details?: string;
+	supplierNumber?: string;
 	paymentMethodType?: string | null;
 	creditTransfer?: {
 		accountHolderName?: string;
@@ -76,6 +79,9 @@ export const GET = async (request: NextRequest) => {
 					? {
 						account: creditor.account ?? null,
 						name: creditor.name ?? "",
+						type: creditor.type ?? null,
+						details: creditor.details ?? "",
+						supplierNumber: creditor.supplierNumber ?? "",
 						paymentMethodType: creditor.paymentMethodType ?? null,
 						creditTransfer: creditor.creditTransfer ?? null,
 					}

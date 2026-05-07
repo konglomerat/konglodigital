@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowTrendUp,
   faCheck,
   faFolderOpen,
   faPlus,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
@@ -21,6 +21,7 @@ import {
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
 import {
   FormField,
   FormSection,
@@ -87,6 +88,7 @@ export default function EinnahmePage() {
   const [debitorAccount, setDebitorAccount] = useState<number | null>(null);
   const [debitorName, setDebitorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [showUpdatePanel, setShowUpdatePanel] = useState(false);
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -95,18 +97,21 @@ export default function EinnahmePage() {
     setDebitorAccount(suggestion.account);
     setDebitorName(suggestion.name);
     setShowCreatePanel(false);
+    setShowUpdatePanel(false);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
     setDebitorAccount(null);
     setDebitorName(name);
     setShowCreatePanel(true);
+    setShowUpdatePanel(false);
   }, []);
 
   const resetDebitor = useCallback(() => {
     setDebitorAccount(null);
     setDebitorName("");
     setShowCreatePanel(false);
+    setShowUpdatePanel(false);
   }, []);
 
   useEffect(() => {
@@ -259,20 +264,26 @@ export default function EinnahmePage() {
               </FormField>
 
               {debitorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    Person/Firma <strong>#{debitorAccount}</strong>
-                    {debitorName ? ` (${debitorName})` : ""} ausgewählt
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetDebitor}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <SelectedDebtorBadge
+                  account={debitorAccount}
+                  entityLabel="Person/Firma"
+                  fallbackName={debitorName}
+                  tone="emerald"
+                  onClear={resetDebitor}
+                  onEdit={() => setShowUpdatePanel((current) => !current)}
+                />
+              ) : null}
+
+              {showUpdatePanel && debitorAccount ? (
+                <DebtorCreatePanel
+                  debtorAccount={debitorAccount}
+                  initialName={debitorName}
+                  onCancel={() => setShowUpdatePanel(false)}
+                  onCreated={(result) => {
+                    setDebitorName(result.name);
+                    setShowUpdatePanel(false);
+                  }}
+                />
               ) : null}
 
               {showCreatePanel && !debitorAccount ? (

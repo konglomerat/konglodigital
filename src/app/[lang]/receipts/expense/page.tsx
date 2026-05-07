@@ -4,18 +4,19 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowTrendDown,
   faCheck,
   faFileImport,
   faFolderOpen,
   faPlus,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import ReceiptsPageHeader from "../create/header";
 import {
@@ -89,6 +90,7 @@ export default function AusgabePage() {
   const [creditorAccount, setCreditorAccount] = useState<number | null>(null);
   const [creditorName, setCreditorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [showUpdatePanel, setShowUpdatePanel] = useState(false);
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -100,18 +102,21 @@ export default function AusgabePage() {
     setCreditorAccount(suggestion.account);
     setCreditorName(suggestion.name);
     setShowCreatePanel(false);
+    setShowUpdatePanel(false);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
     setCreditorAccount(null);
     setCreditorName(name);
     setShowCreatePanel(true);
+    setShowUpdatePanel(false);
   }, []);
 
   const resetCreditor = useCallback(() => {
     setCreditorAccount(null);
     setCreditorName("");
     setShowCreatePanel(false);
+    setShowUpdatePanel(false);
   }, []);
 
   useEffect(() => {
@@ -361,20 +366,26 @@ export default function AusgabePage() {
               </FormField>
 
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    Empfänger <strong>#{creditorAccount}</strong>
-                    {creditorName ? ` (${creditorName})` : ""} ausgewählt
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCreditor}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <SelectedCreditorBadge
+                  account={creditorAccount}
+                  entityLabel="Empfänger"
+                  fallbackName={creditorName}
+                  tone="emerald"
+                  onClear={resetCreditor}
+                  onEdit={() => setShowUpdatePanel((current) => !current)}
+                />
+              ) : null}
+
+              {showUpdatePanel && creditorAccount ? (
+                <CreditorCreatePanel
+                  creditorAccount={creditorAccount}
+                  initialName={creditorName}
+                  onCancel={() => setShowUpdatePanel(false)}
+                  onCreated={(updated) => {
+                    setCreditorName(updated.name);
+                    setShowUpdatePanel(false);
+                  }}
+                />
               ) : null}
 
               {showCreatePanel && !creditorAccount ? (

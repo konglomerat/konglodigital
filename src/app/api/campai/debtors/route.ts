@@ -2,30 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-
-type AddressPayload = {
-	country: string;
-	state?: string;
-	zip?: string;
-	city?: string;
-	addressLine?: string;
-	details1?: string;
-	details2?: string;
-};
-
-type CampaiDebtorPaymentMethodType =
-	| "sepaCreditTransfer"
-	| "sepaDirectDebit"
-	| "cash"
-	| "online";
+import {
+	buildDebtorPayload,
+	type CampaiDebtorAddressPayload,
+	type CampaiDebtorPaymentMethodType,
+} from "@/lib/campai-debtors";
 
 type CampaiDebtor = {
 	_id?: string;
 	account?: number;
 	name?: string;
 	email?: string;
+	type?: "person" | "business";
 	paymentMethodType?: CampaiDebtorPaymentMethodType | null;
-	address?: AddressPayload | null;
+	address?: CampaiDebtorAddressPayload | null;
+	receiptSendMethod?: "email" | "postal" | "none";
 };
 
 const requiredEnv = (name: string) => {
@@ -40,109 +31,6 @@ const ensureAuthenticatedUser = async (request: NextRequest) => {
 	const { supabase } = createSupabaseRouteClient(request);
 	const { data } = await supabase.auth.getUser();
 	return data.user ?? null;
-};
-
-const normalizeAddress = (value: unknown): AddressPayload | null => {
-	if (!value || typeof value !== "object") {
-		return null;
-	}
-
-	const typed = value as Record<string, unknown>;
-	const country = typeof typed.country === "string" ? typed.country.trim() : "DE";
-	const zip = typeof typed.zip === "string" ? typed.zip.trim() : "";
-	const city = typeof typed.city === "string" ? typed.city.trim() : "";
-	const addressLine =
-		typeof typed.addressLine === "string" ? typed.addressLine.trim() : "";
-	const details1 =
-		typeof typed.details1 === "string" ? typed.details1.trim() : "";
-	const details2 =
-		typeof typed.details2 === "string" ? typed.details2.trim() : "";
-	const state = typeof typed.state === "string" ? typed.state.trim() : "";
-
-	if (!zip && !city && !addressLine && !details1 && !details2 && !state) {
-		return null;
-	}
-
-	return {
-		country: country || "DE",
-		zip: zip || undefined,
-		city: city || undefined,
-		addressLine: addressLine || undefined,
-		state: state || undefined,
-		details1: details1 || undefined,
-		details2: details2 || undefined,
-	};
-};
-
-const normalizePaymentMethodType = (
-	value: unknown,
-): CampaiDebtorPaymentMethodType | null => {
-	if (
-		value === "sepaCreditTransfer" ||
-		value === "sepaDirectDebit" ||
-		value === "cash" ||
-		value === "online"
-	) {
-		return value;
-	}
-	return null;
-};
-
-const buildDebtorPayload = (body: Record<string, unknown>) => {
-	const name = typeof body.name === "string" ? body.name.trim() : "";
-	const type = body.type === "person" ? "person" : "business";
-	const address = normalizeAddress(body.address);
-	const email = typeof body.email === "string" ? body.email.trim() : "";
-	const paymentMethodType = normalizePaymentMethodType(body.paymentMethodType);
-	const receiptSendMethod =
-		body.receiptSendMethod === "email"
-			? "email"
-			: body.receiptSendMethod === "postal"
-				? "postal"
-				: "none";
-
-	if (!name) {
-		return {
-			ok: false as const,
-			status: 400,
-			error: "Name ist erforderlich.",
-		};
-	}
-
-	if (paymentMethodType === "sepaDirectDebit") {
-		return {
-			ok: false as const,
-			status: 400,
-			error:
-				"SEPA-Lastschrift muss in Campai mit Mandat gepflegt werden und kann hier nicht inline angelegt werden.",
-		};
-	}
-
-	const payload: Record<string, unknown> = {
-		type,
-		name: name.slice(0, 81),
-		email,
-		receiptSendMethod: email
-			? receiptSendMethod === "none"
-				? "email"
-				: receiptSendMethod
-			: receiptSendMethod,
-	};
-
-	if (address) {
-		payload.address = address;
-	}
-
-	if (paymentMethodType) {
-		payload.paymentMethodType = paymentMethodType;
-	}
-
-	return {
-		ok: true as const,
-		name,
-		paymentMethodType,
-		payload,
-	};
 };
 
 export const GET = async (request: NextRequest) => {
@@ -190,7 +78,9 @@ export const GET = async (request: NextRequest) => {
 						account: debtor.account ?? null,
 						name: debtor.name ?? "",
 						email: debtor.email ?? "",
+						type: debtor.type ?? null,
 						paymentMethodType: debtor.paymentMethodType ?? null,
+						receiptSendMethod: debtor.receiptSendMethod ?? null,
 						address: debtor.address ?? null,
 					}
 					: null,
