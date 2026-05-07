@@ -19,6 +19,8 @@ import type {
 } from "@/lib/campai-balance-receipts";
 import type { MemberProfilePreferences } from "@/lib/member-profiles";
 
+import ReceiptDetailDrawer from "./receipt-detail-drawer";
+
 type CostCenterOption = {
   value: string;
   label: string;
@@ -540,6 +542,7 @@ export default function BalancePage() {
   const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>([]);
   const [loadingReceipts, setLoadingReceipts] = useState(false);
   const [receiptsError, setReceiptsError] = useState<string | null>(null);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: SortDirection;
@@ -551,6 +554,47 @@ export default function BalancePage() {
   );
   const [savedSelectedCostCenterValues, setSavedSelectedCostCenterValues] =
     useState<string[]>([]);
+
+  const loadCostCenters = useCallback(async () => {
+    setLoadingCostCenters(true);
+    setCostCentersError(null);
+
+    try {
+      const [bookableResponse, allResponse, costCenter1Response] = await Promise.all([
+        fetch("/api/campai/cost-centers"),
+        fetch("/api/campai/cost-centers?includeNonBookable=1"),
+        fetch("/api/campai/cost-center1-labels"),
+      ]);
+
+      if (!bookableResponse.ok || !allResponse.ok || !costCenter1Response.ok) {
+        throw new Error("Werkbereiche konnten nicht geladen werden.");
+      }
+
+      const bookableData = (await bookableResponse.json()) as {
+        costCenters?: CostCenterOption[];
+      };
+      const allData = (await allResponse.json()) as {
+        costCenters?: CostCenterOption[];
+      };
+      const costCenter1Data = (await costCenter1Response.json()) as {
+        costCenter1Labels?: CostCenterOption[];
+      };
+
+      setCostCenters(
+        (bookableData.costCenters ?? []).filter(isTwoDigitCostCenterOption),
+      );
+      setAllCostCenters(allData.costCenters ?? []);
+      setCostCenter1Labels(costCenter1Data.costCenter1Labels ?? []);
+    } catch (error) {
+      setCostCentersError(
+        error instanceof Error
+          ? error.message
+          : "Werkbereiche konnten nicht geladen werden.",
+      );
+    } finally {
+      setLoadingCostCenters(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -644,42 +688,8 @@ export default function BalancePage() {
   }, [isColumnPanelOpen]);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [bookableResponse, allResponse, costCenter1Response] = await Promise.all([
-          fetch("/api/campai/cost-centers"),
-          fetch("/api/campai/cost-centers?includeNonBookable=1"),
-          fetch("/api/campai/cost-center1-labels"),
-        ]);
-        if (!bookableResponse.ok || !allResponse.ok || !costCenter1Response.ok) {
-          throw new Error("Werkbereiche konnten nicht geladen werden.");
-        }
-        const bookableData = (await bookableResponse.json()) as {
-          costCenters?: CostCenterOption[];
-        };
-        const allData = (await allResponse.json()) as {
-          costCenters?: CostCenterOption[];
-        };
-        const costCenter1Data = (await costCenter1Response.json()) as {
-          costCenter1Labels?: CostCenterOption[];
-        };
-        setCostCenters(
-          (bookableData.costCenters ?? []).filter(isTwoDigitCostCenterOption),
-        );
-        setAllCostCenters(allData.costCenters ?? []);
-        setCostCenter1Labels(costCenter1Data.costCenter1Labels ?? []);
-      } catch (error) {
-        setCostCentersError(
-          error instanceof Error
-            ? error.message
-            : "Werkbereiche konnten nicht geladen werden.",
-        );
-      } finally {
-        setLoadingCostCenters(false);
-      }
-    };
-    load();
-  }, []);
+    void loadCostCenters();
+  }, [loadCostCenters]);
 
   const costCenterLabelMap = useMemo(
     () =>
@@ -1097,6 +1107,25 @@ export default function BalancePage() {
       );
     });
   }, [filteredReceipts, sortConfig]);
+
+  const tableTotals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+
+    for (const receipt of filteredReceipts) {
+      const amount = receipt.totalGrossAmount ?? 0;
+
+      if (receipt.type && INCOME_TYPES.has(receipt.type)) {
+        income += amount;
+      }
+
+      if (receipt.type && EXPENSE_TYPES.has(receipt.type)) {
+        expense += amount;
+      }
+    }
+
+    return { income, expense };
+  }, [filteredReceipts]);
 
   const { totalIncome, totalExpense, saldo, accountSummaries } = useMemo(() => {
     let income = 0;
@@ -1758,6 +1787,16 @@ export default function BalancePage() {
         </div>
       </div>
 
+      <ReceiptDetailDrawer
+        receiptId={selectedReceiptId}
+        costCenterOptions={allCostCenters}
+        onCostCentersChanged={loadCostCenters}
+        onClose={() => setSelectedReceiptId(null)}
+        onSaved={() => {
+          loadReceipts(selectedCostCenterValues);
+        }}
+      />
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="min-w-full table-fixed divide-y divide-zinc-200 dark:divide-zinc-800">
           <thead className="bg-zinc-50 dark:bg-zinc-900/80">
@@ -1872,13 +1911,65 @@ export default function BalancePage() {
             ) : (
               sortedReceipts.map((receipt) => {
                 return (
-                  <tr key={receipt.id}>
+                  <tr
+                    key={receipt.id}
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement;
+                      if (target.closest("a,button")) {
+                        return;
+                      }
+                      setSelectedReceiptId(receipt.id);
+                    }}
+                    className="cursor-pointer transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                  >
                     {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
                   </tr>
                 );
               })
             )}
           </tbody>
+          {hasSelection && !loadingReceipts && sortedReceipts.length > 0 ? (
+            <tfoot className="bg-zinc-50 dark:bg-zinc-900/80">
+              <tr>
+                {visibleColumns.map((column, index) => {
+                  if (column.key === "Einnahmen") {
+                    return (
+                      <td
+                        key={column.key}
+                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                      >
+                        <span className={CELL_TEXT_CLASS_NAME} title={formatCents(tableTotals.income)}>
+                          {formatCents(tableTotals.income)}
+                        </span>
+                      </td>
+                    );
+                  }
+
+                  if (column.key === "Ausgaben") {
+                    return (
+                      <td
+                        key={column.key}
+                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-rose-700 dark:text-rose-400"
+                      >
+                        <span className={CELL_TEXT_CLASS_NAME} title={formatCents(tableTotals.expense)}>
+                          {formatCents(tableTotals.expense)}
+                        </span>
+                      </td>
+                    );
+                  }
+
+                  return (
+                    <td
+                      key={column.key}
+                      className="whitespace-nowrap px-2 py-2 text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                    >
+                      {index === 0 ? "Total" : ""}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
     </div>
