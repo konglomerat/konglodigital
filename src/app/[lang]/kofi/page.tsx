@@ -228,6 +228,30 @@ const CashflowChart = ({
     0,
   );
 
+  // Linear regression through the monthly balance — its slope visualises
+  // whether the cashflow trend is heading up or down across the year.
+  const n = monthlySummary.length;
+  let slope = 0;
+  let intercept = 0;
+  if (n > 1) {
+    const sumX = monthlySummary.reduce((sum, _, i) => sum + i, 0);
+    const sumY = monthlySummary.reduce((sum, e) => sum + e.balance, 0);
+    const sumXY = monthlySummary.reduce((sum, e, i) => sum + i * e.balance, 0);
+    const sumXX = monthlySummary.reduce((sum, _, i) => sum + i * i, 0);
+    const denom = n * sumXX - sumX * sumX;
+    slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+    intercept = (sumY - slope * sumX) / n;
+  }
+  const trendStart = intercept;
+  const trendEnd = slope * (n - 1) + intercept;
+
+  const yMin = Math.min(0, trendStart, trendEnd);
+  const yMax = Math.max(maxValue, trendStart, trendEnd);
+  const yRange = yMax - yMin || 1;
+  const toY = (value: number) => 100 - ((value - yMin) / yRange) * 100;
+  const startX = n > 1 ? (0.5 * 100) / n : 0;
+  const endX = n > 1 ? ((n - 0.5) * 100) / n : 100;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
@@ -237,50 +261,144 @@ const CashflowChart = ({
         />
         Einnahmen vs. Ausgaben
       </div>
-      <div className="mt-4 flex h-40 items-end gap-2">
-        {monthlySummary.map((entry) => {
-          const incomeHeight =
-            maxValue > 0 ? Math.max(6, (entry.income / maxValue) * 100) : 6;
-          const expenseHeight =
-            maxValue > 0 ? Math.max(6, (entry.expense / maxValue) * 100) : 6;
+      <div className="mt-4">
+        <div className="relative h-28">
+          <div className="flex h-full items-end gap-2">
+            {monthlySummary.map((entry) => {
+              const incomeHeight =
+                maxValue > 0 ? Math.max(6, (entry.income / maxValue) * 100) : 6;
+              const expenseHeight =
+                maxValue > 0
+                  ? Math.max(6, (entry.expense / maxValue) * 100)
+                  : 6;
 
-          return (
-            <div
-              key={entry.monthIndex}
-              className="flex min-w-0 flex-1 flex-col items-center gap-2"
+              return (
+                <div
+                  key={entry.monthIndex}
+                  className="flex h-full min-w-0 flex-1 items-end justify-center gap-1"
+                >
+                  <div
+                    className="w-2 rounded-t bg-success"
+                    style={{ height: `${incomeHeight}%` }}
+                    title={`Einnahmen ${entry.label}: ${formatCurrency(entry.income)}`}
+                  />
+                  <div
+                    className="w-2 rounded-t bg-warning"
+                    style={{ height: `${expenseHeight}%` }}
+                    title={`Ausgaben ${entry.label}: ${formatCurrency(entry.expense)}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {n > 1 ? (
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full text-foreground/70"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
             >
-              <div className="flex h-28 items-end gap-1">
-                <div
-                  className="w-2 rounded-t bg-success"
-                  style={{ height: `${incomeHeight}%` }}
-                  title={`Einnahmen ${entry.label}: ${formatCurrency(entry.income)}`}
-                />
-                <div
-                  className="w-2 rounded-t bg-warning"
-                  style={{ height: `${expenseHeight}%` }}
-                  title={`Ausgaben ${entry.label}: ${formatCurrency(entry.expense)}`}
-                />
-              </div>
-              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {entry.label}
-              </span>
-            </div>
-          );
-        })}
+              <line
+                x1={startX.toFixed(2)}
+                y1={toY(trendStart).toFixed(2)}
+                x2={endX.toFixed(2)}
+                y2={toY(trendEnd).toFixed(2)}
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          ) : null}
+        </div>
+        <div className="mt-2 flex gap-2">
+          {monthlySummary.map((entry) => (
+            <span
+              key={entry.monthIndex}
+              className="min-w-0 flex-1 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              {entry.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-success" />
+          Einnahmen
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-warning" />
+          Ausgaben
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-px w-5 border-t border-dashed border-foreground/70" />
+          Saldo-Trend
+        </span>
       </div>
     </div>
   );
 };
 
+type MonthlyOverviewRow = KoFiMonthlySummary & { isForecast: boolean };
+
+const buildForecastRows = (
+  monthlySummary: KoFiMonthlySummary[],
+  year: number,
+): MonthlyOverviewRow[] => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  // Forecast only for the current year, for months strictly after the
+  // current (in-progress) month. Past years stay fully actual; future years
+  // have no historical basis to forecast from.
+  const forecastStart =
+    year === currentYear ? currentMonth + 1 : year < currentYear ? 12 : 12;
+
+  const elapsed = monthlySummary.slice(0, forecastStart);
+  const hasBasis = elapsed.length > 0;
+  const avgIncome = hasBasis
+    ? elapsed.reduce((sum, entry) => sum + entry.income, 0) / elapsed.length
+    : 0;
+  const avgExpense = hasBasis
+    ? elapsed.reduce((sum, entry) => sum + entry.expense, 0) / elapsed.length
+    : 0;
+
+  let cumulative = 0;
+  return monthlySummary.map((entry) => {
+    const isForecast = hasBasis && entry.monthIndex >= forecastStart;
+    const income = isForecast ? avgIncome : entry.income;
+    const expense = isForecast ? avgExpense : entry.expense;
+    const balance = income - expense;
+    cumulative += balance;
+
+    return {
+      monthIndex: entry.monthIndex,
+      label: entry.label,
+      income,
+      expense,
+      balance,
+      cumulative,
+      isForecast,
+    };
+  });
+};
+
 const MonthlyOverviewTable = ({
   monthlySummary,
+  year,
 }: {
   monthlySummary: KoFiMonthlySummary[];
+  year: number;
 }) => {
+  const rows = buildForecastRows(monthlySummary, year);
   const maxMagnitude = Math.max(
-    ...monthlySummary.map((entry) => Math.abs(entry.cumulative)),
+    ...rows.map((entry) => Math.abs(entry.cumulative)),
     0,
   );
+  const hasForecast = rows.some((entry) => entry.isForecast);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -306,36 +424,54 @@ const MonthlyOverviewTable = ({
             </tr>
           </thead>
           <tbody>
-            {monthlySummary.map((entry, index) => (
-              <tr
-                key={entry.monthIndex}
-                className={index % 2 === 0 ? "bg-card" : "bg-muted/60"}
-              >
-                <td className="border-b border-r border-border px-4 py-2 font-medium text-foreground/90">
-                  {entry.label}
-                </td>
-                <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-success">
-                  {formatCurrency(entry.income)}
-                </td>
-                <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-warning">
-                  {formatCurrency(entry.expense)}
-                </td>
-                <td
-                  className={`border-b border-r border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
-                >
-                  {formatCurrency(entry.balance)}
-                </td>
-                <td
-                  className={`border-b border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
-                  style={cumulativeCellStyle(entry.cumulative, maxMagnitude)}
-                >
-                  {formatCurrency(entry.cumulative)}
-                </td>
-              </tr>
-            ))}
+            {rows.map((entry, index) => {
+              const baseRow =
+                index % 2 === 0 ? "bg-card" : "bg-muted/60";
+              const rowClass = entry.isForecast
+                ? `${baseRow} italic text-muted-foreground/90`
+                : baseRow;
+
+              return (
+                <tr key={entry.monthIndex} className={rowClass}>
+                  <td className="border-b border-r border-border px-4 py-2 font-medium text-foreground/90">
+                    <span className="inline-flex items-center gap-2">
+                      {entry.label}
+                      {entry.isForecast ? (
+                        <span className="rounded-full border border-dashed border-muted-foreground/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Prognose
+                        </span>
+                      ) : null}
+                    </span>
+                  </td>
+                  <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-success">
+                    {formatCurrency(entry.income)}
+                  </td>
+                  <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-warning">
+                    {formatCurrency(entry.expense)}
+                  </td>
+                  <td
+                    className={`border-b border-r border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
+                  >
+                    {formatCurrency(entry.balance)}
+                  </td>
+                  <td
+                    className={`border-b border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
+                    style={cumulativeCellStyle(entry.cumulative, maxMagnitude)}
+                  >
+                    {formatCurrency(entry.cumulative)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      {hasForecast ? (
+        <div className="border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
+          Prognosewerte basieren auf dem Durchschnitt der bisher abgelaufenen
+          Monate.
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -776,7 +912,10 @@ export default function KoFiPage() {
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
-              <MonthlyOverviewTable monthlySummary={data.monthlySummary} />
+              <MonthlyOverviewTable
+                monthlySummary={data.monthlySummary}
+                year={year}
+              />
               <div className="grid gap-5">
                 <CostDistributionChart groups={data.costs.groups} />
                 <CashflowChart monthlySummary={data.monthlySummary} />
