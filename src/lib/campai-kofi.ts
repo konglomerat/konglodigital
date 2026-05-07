@@ -1,3 +1,8 @@
+import {
+  fetchCampaiCostCenter1Labels,
+  fetchCampaiCostCenters,
+} from "@/lib/campai-cost-centers";
+
 export const KOFI_MONTH_LABELS = [
   "Jan",
   "Feb",
@@ -65,6 +70,7 @@ export type KoFiSummary = {
 export type KoFiResponse = {
   year: number;
   filters: {
+    costCenters1: KoFiFilterOption[];
     costCenters: KoFiFilterOption[];
     accounts: KoFiAccountOption[];
   };
@@ -86,6 +92,7 @@ type CampaiReceiptType =
 type CampaiReceiptPosition = {
   account: number | null;
   costCenter1: number | null;
+  costCenter2: number | null;
   amount: number | null;
   description?: string;
   details?: string;
@@ -105,8 +112,6 @@ type CampaiReceipt = {
   canceledAt: string | null;
   positions: CampaiReceiptPosition[];
 };
-
-type CampaiCostCenter = KoFiFilterOption;
 
 type CampaiAccountPlanAccount = {
   number: number;
@@ -200,15 +205,6 @@ const sumSeries = (values: number[]) =>
 
 const createEmptySeries = () => Array.from({ length: 12 }, () => 0);
 
-const normalizeCostCenterDisplay = (value: string | undefined) => {
-  if (!value) {
-    return undefined;
-  }
-
-  const normalized = value.replace(/^_+/, "").trim();
-  return normalized.length > 0 ? normalized : undefined;
-};
-
 const unwrapCampaiPayload = (raw: unknown): Record<string, unknown> => {
   if (Array.isArray(raw)) {
     const first = asRecord(raw[0]);
@@ -266,6 +262,7 @@ const normalizeReceiptPosition = (
   return {
     account,
     costCenter1: normalizeInt(record.costCenter1),
+    costCenter2: normalizeInt(record.costCenter2),
     amount,
     description: normalizeString(record.description),
     details: normalizeString(record.details),
@@ -302,72 +299,6 @@ const normalizeReceipt = (
     canceledAt: normalizeString(value.canceledAt) ?? null,
     positions,
   };
-};
-
-const normalizeCostCenter = (value: unknown): CampaiCostCenter | null => {
-  const record = asRecord(value);
-  if (!record) {
-    return null;
-  }
-
-  const isBookable = normalizeBoolean(record.bookable ?? record.isBookable);
-  if (!isBookable) {
-    return null;
-  }
-
-  const number = normalizeInt(
-    record.number ?? record.code ?? record.costCenter,
-  );
-  if (!number) {
-    return null;
-  }
-
-  const label =
-    normalizeCostCenterDisplay(
-      normalizeString(
-        record.label ?? record.name ?? record.title ?? record.description,
-      ),
-    ) ?? String(number);
-
-  return {
-    value: String(number),
-    label,
-  };
-};
-
-const extractCostCenters = (payload: unknown): CampaiCostCenter[] => {
-  if (Array.isArray(payload)) {
-    return payload
-      .map((item) => normalizeCostCenter(item))
-      .filter((item): item is CampaiCostCenter => Boolean(item));
-  }
-
-  const record = asRecord(payload);
-  if (!record) {
-    return [];
-  }
-
-  const nestedCandidates = [
-    record.costCenters,
-    record.costcenters,
-    record.items,
-    record.rows,
-    record.docs,
-    record.data,
-    asRecord(record.result)?.items,
-    asRecord(record.data)?.items,
-    asRecord(record.data)?.costCenters,
-  ];
-
-  for (const candidate of nestedCandidates) {
-    if (Array.isArray(candidate)) {
-      return candidate
-        .map((item) => normalizeCostCenter(item))
-        .filter((item): item is CampaiCostCenter => Boolean(item));
-    }
-  }
-
-  return [];
 };
 
 const normalizeIncomeStatementLine = (
@@ -630,7 +561,7 @@ const finalizeBlock = (groups: Map<string, MutableGroup>): KoFiBlock => {
   };
 };
 
-const parseMonthIndex = (value: string | null) => {
+const parseReceiptDate = (value: string | null) => {
   if (!value) {
     return null;
   }
@@ -640,7 +571,7 @@ const parseMonthIndex = (value: string | null) => {
     return null;
   }
 
-  return parsed.getMonth();
+  return { year: parsed.getFullYear(), month: parsed.getMonth() };
 };
 
 const fetchCampaiJson = async (url: string, init: RequestInit) => {
@@ -662,9 +593,8 @@ const fetchAllReceipts = async (params: {
   apiKey: string;
   organizationId: string;
   mandateId: string;
-  year: number;
 }) => {
-  const { apiKey, organizationId, mandateId, year } = params;
+  const { apiKey, organizationId, mandateId } = params;
   const endpoint = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/list`;
   const receipts: CampaiReceipt[] = [];
   let offset = 0;
@@ -676,7 +606,6 @@ const fetchAllReceipts = async (params: {
       offset,
       returnCount: true,
       sort: { receiptDate: "asc" },
-      range: { year },
     };
 
     const raw = await fetchCampaiJson(endpoint, {
@@ -706,28 +635,6 @@ const fetchAllReceipts = async (params: {
   return receipts;
 };
 
-const fetchCostCenters = async (params: {
-  apiKey: string;
-  organizationId: string;
-  mandateId: string;
-}) => {
-  const { apiKey, organizationId, mandateId } = params;
-  const endpoint = `https://cloud.campai.com/api/organizations/${organizationId}/mandates/${mandateId}`;
-  const raw = await fetchCampaiJson(endpoint, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
-  });
-
-  return Array.from(
-    new Map(
-      extractCostCenters(raw).map((entry) => [entry.value, entry] as const),
-    ).values(),
-  ).sort((left, right) => left.label.localeCompare(right.label, "de"));
-};
-
 const fetchAccountingPlan = async (params: {
   apiKey: string;
   organizationId: string;
@@ -750,7 +657,8 @@ export const loadCampaiKoFi = async (params: {
   organizationId: string;
   mandateId: string;
   year: number;
-  costCenter: number | null;
+  costCenter1: number | null;
+  costCenter2: number | null;
   account: number | null;
   search: string;
 }) => {
@@ -759,16 +667,19 @@ export const loadCampaiKoFi = async (params: {
     organizationId,
     mandateId,
     year,
-    costCenter,
+    costCenter1,
+    costCenter2,
     account,
     search,
   } = params;
 
-  const [receipts, costCenters, accountingPlan] = await Promise.all([
-    fetchAllReceipts({ apiKey, organizationId, mandateId, year }),
-    fetchCostCenters({ apiKey, organizationId, mandateId }),
-    fetchAccountingPlan({ apiKey, organizationId }),
-  ]);
+  const [receipts, costCenters, costCenters1, accountingPlan] =
+    await Promise.all([
+      fetchAllReceipts({ apiKey, organizationId, mandateId }),
+      fetchCampaiCostCenters(),
+      fetchCampaiCostCenter1Labels(),
+      fetchAccountingPlan({ apiKey, organizationId }),
+    ]);
 
   const monthlyIncome = createEmptySeries();
   const monthlyExpense = createEmptySeries();
@@ -786,18 +697,23 @@ export const loadCampaiKoFi = async (params: {
       continue;
     }
 
-    const monthIndex = parseMonthIndex(receipt.receiptDate);
+    const receiptDate = parseReceiptDate(receipt.receiptDate);
     const block = getReceiptBlock(receipt.type);
-    if (monthIndex === null || !block) {
+    if (!receiptDate || receiptDate.year !== year || !block) {
       continue;
     }
+    const monthIndex = receiptDate.month;
 
     for (const position of receipt.positions) {
       if (!position.amount || !position.account) {
         continue;
       }
 
-      if (costCenter !== null && position.costCenter1 !== costCenter) {
+      if (costCenter1 !== null && position.costCenter1 !== costCenter1) {
+        continue;
+      }
+
+      if (costCenter2 !== null && position.costCenter2 !== costCenter2) {
         continue;
       }
 
@@ -899,6 +815,7 @@ export const loadCampaiKoFi = async (params: {
   return {
     year,
     filters: {
+      costCenters1,
       costCenters,
       accounts: accountOptions,
     },

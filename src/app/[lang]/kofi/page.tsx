@@ -251,12 +251,12 @@ const CashflowChart = ({
             >
               <div className="flex h-28 items-end gap-1">
                 <div
-                  className="w-2 rounded-t bg-success-soft0"
+                  className="w-2 rounded-t bg-success"
                   style={{ height: `${incomeHeight}%` }}
                   title={`Einnahmen ${entry.label}: ${formatCurrency(entry.income)}`}
                 />
                 <div
-                  className="w-2 rounded-t bg-warning-soft0"
+                  className="w-2 rounded-t bg-warning"
                   style={{ height: `${expenseHeight}%` }}
                   title={`Ausgaben ${entry.label}: ${formatCurrency(entry.expense)}`}
                 />
@@ -360,7 +360,7 @@ const KoFiTable = ({
     kind === "funding"
       ? "from-emerald-50 via-white to-white"
       : "from-zinc-100 via-white to-white";
-  const headerTint = kind === "funding" ? "bg-success-soft/70" : "bg-accent/80";
+  const headerTint = kind === "funding" ? "bg-success-soft/70" : "bg-red-200/60";
   const sumTint = kind === "funding" ? "bg-success-soft/70" : "bg-muted/70";
   const summarySeries = projectSeries(
     block.groups.reduce(
@@ -398,7 +398,7 @@ const KoFiTable = ({
               <th className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Gesamt
               </th>
-              <th className="sticky top-0 z-20 border-b border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <th className="sticky top-0 z-20 border-b border-l-2 border-border bg-card px-3 py-3 pl-5 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Durchschnitt / Monat
               </th>
             </tr>
@@ -416,7 +416,7 @@ const KoFiTable = ({
             ) : (
               block.groups.map((group) => {
                 const projectedGroup = projectSeries(group.months, viewMode);
-                const isCollapsed = collapsedGroups[group.key] ?? false;
+                const isCollapsed = collapsedGroups[group.key] ?? true;
 
                 return (
                   <Fragment key={group.key}>
@@ -449,9 +449,7 @@ const KoFiTable = ({
                       >
                         {formatCurrency(group.total)}
                       </td>
-                      <td
-                        className={`border-b border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.average)}`}
-                      >
+                      <td className="border-b border-l-2 border-border bg-card px-3 py-3 pl-5 text-right font-normal tabular-nums text-muted-foreground">
                         {formatCurrency(group.average)}
                       </td>
                     </tr>
@@ -486,9 +484,7 @@ const KoFiTable = ({
                             >
                               {formatCurrency(child.total)}
                             </td>
-                            <td
-                              className={`border-b border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.average)}`}
-                            >
+                            <td className="border-b border-l-2 border-border bg-card px-3 py-2.5 pl-5 text-right font-normal tabular-nums text-muted-foreground">
                               {formatCurrency(child.average)}
                             </td>
                           </tr>
@@ -517,9 +513,7 @@ const KoFiTable = ({
               >
                 {formatCurrency(block.total)}
               </td>
-              <td
-                className={`px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(block.average)}`}
-              >
+              <td className="border-l-2 border-border bg-card px-3 py-3 pl-5 text-right font-normal tabular-nums text-muted-foreground">
                 {formatCurrency(block.average)}
               </td>
             </tr>
@@ -536,7 +530,8 @@ export default function KoFiPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(currentYear);
-  const [costCenter, setCostCenter] = useState("");
+  const [costCenter1, setCostCenter1] = useState("");
+  const [costCenter2, setCostCenter2] = useState("");
   const [account, setAccount] = useState("");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -549,8 +544,11 @@ export default function KoFiPage() {
     const controller = new AbortController();
     const params = new URLSearchParams({ year: String(year) });
 
-    if (costCenter) {
-      params.set("costCenter", costCenter);
+    if (costCenter1) {
+      params.set("costCenter1", costCenter1);
+    }
+    if (costCenter2) {
+      params.set("costCenter2", costCenter2);
     }
     if (account) {
       params.set("account", account);
@@ -603,12 +601,12 @@ export default function KoFiPage() {
     load();
 
     return () => controller.abort();
-  }, [account, costCenter, deferredSearch, year]);
+  }, [account, costCenter1, costCenter2, deferredSearch, year]);
 
   const toggleGroup = (groupKey: string) => {
     setCollapsedGroups((current) => ({
       ...current,
-      [groupKey]: !current[groupKey],
+      [groupKey]: !(current[groupKey] ?? true),
     }));
   };
 
@@ -632,7 +630,7 @@ export default function KoFiPage() {
           />
           Filter
         </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
           <label className="block text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Jahr
@@ -654,14 +652,32 @@ export default function KoFiPage() {
 
           <label className="block text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Kostenstelle
+              Kostenstelle 1 (Sphäre)
             </span>
             <select
-              value={costCenter}
-              onChange={(event) => setCostCenter(event.target.value)}
+              value={costCenter1}
+              onChange={(event) => setCostCenter1(event.target.value)}
               className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
-              <option value="">Alle Kostenstellen</option>
+              <option value="">Alle Kostenstellen 1</option>
+              {data?.filters.costCenters1.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-sm text-foreground/80">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Kostenstelle 2 (Werkbereiche/Projekte)
+            </span>
+            <select
+              value={costCenter2}
+              onChange={(event) => setCostCenter2(event.target.value)}
+              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
+            >
+              <option value="">Alle Kostenstellen 2</option>
               {data?.filters.costCenters.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
