@@ -4,14 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleInfo,
-  faCheck,
   faFileInvoice,
   faList,
   faPlus,
   faTrash,
   faTriangleExclamation,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
@@ -21,6 +19,8 @@ import {
   AutocompleteInput,
   type Suggestion as DebtorSuggestion,
 } from "../../components/ui/autocomplete-input";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
 import {
   ProductAutocompleteInput,
   type ProductSuggestion,
@@ -32,6 +32,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/form";
+import { SegmentedControl } from "../../components/ui/segmented-control";
 import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
@@ -39,7 +40,7 @@ import {
 import {
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
-import BookingPageHeader from "../bookingPageHeader";
+import ReceiptsPageHeader from "../create/header";
 
 type InvoicePosition = {
   id: string;
@@ -71,22 +72,6 @@ type BankConnectionOption = {
 };
 
 type InvoiceTaxCode = "" | "0" | "7" | "19";
-
-type DebtorDetails = {
-  account?: number | null;
-  name?: string;
-  email?: string;
-  paymentMethodType?: CampaiPaymentMethodType | null;
-  address?: {
-    country?: string;
-    state?: string;
-    zip?: string;
-    city?: string;
-    addressLine?: string;
-    details1?: string;
-    details2?: string;
-  } | null;
-};
 
 const euroPattern = /^\d+(?:,\d{1,2})?$/;
 const invoiceSubjectPrefill =
@@ -191,7 +176,7 @@ const getDefaultCostCenter2 = (items: CostCenterOption[]) => {
 };
 
 export default function NewSimpleInvoicePage() {
-  const [intro, setIntro] = useState(invoiceSubjectPrefill);
+  const [intro, setIntro] = useState("");
   const [note, setNote] = useState("");
   const [sendByMail, setSendByMail] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -216,7 +201,7 @@ export default function NewSimpleInvoicePage() {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
   const [debtorName, setDebtorName] = useState("");
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
-  const [isCreatingDebtor, setIsCreatingDebtor] = useState(false);
+  const [showUpdateDebtorPanel, setShowUpdateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
   const [positions, setPositions] = useState<InvoicePosition[]>([
     createPosition(),
@@ -486,6 +471,7 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(suggestion.account);
     setDebtorName(suggestion.name);
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
 
     if (
@@ -497,9 +483,23 @@ export default function NewSimpleInvoicePage() {
 
     try {
       const params = new URLSearchParams({ account: String(suggestion.account) });
-      const response = await fetchJson<{ debtor?: DebtorDetails | null }>(
-        `/api/campai/debtors?${params.toString()}`,
-      );
+      const response = await fetchJson<{
+        debtor?: {
+          account?: number | null;
+          name?: string;
+          email?: string;
+          paymentMethodType?: CampaiPaymentMethodType | null;
+          address?: {
+            country?: string;
+            state?: string;
+            zip?: string;
+            city?: string;
+            addressLine?: string;
+            details1?: string;
+            details2?: string;
+          } | null;
+        } | null;
+      }>(`/api/campai/debtors?${params.toString()}`);
       const debtor = response.debtor;
 
       if (!debtor) {
@@ -532,6 +532,7 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(null);
     setDebtorName(name);
     setShowCreateDebtorPanel(true);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -539,81 +540,8 @@ export default function NewSimpleInvoicePage() {
     setDebtorAccount(null);
     setDebtorName("");
     setShowCreateDebtorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
-  };
-
-  const createDebtor = async () => {
-    setDebtorError(null);
-
-    if (!debtorName.trim()) {
-      setDebtorError("Bitte zuerst einen Debitorennamen eingeben.");
-      return;
-    }
-
-    if (!addressLine.trim() || !zip.trim() || !city.trim()) {
-      setDebtorError(
-        "Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-      );
-      return;
-    }
-
-    setIsCreatingDebtor(true);
-    try {
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-        paymentMethodType?: CampaiPaymentMethodType | null;
-      }>("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: debtorName,
-          type: "business",
-          paymentMethodType: paymentMethod || undefined,
-          email: recipientEmail.trim() || undefined,
-          receiptSendMethod: recipientEmail.trim()
-            ? sendByMail
-              ? "email"
-              : "postal"
-            : "postal",
-          address: {
-            country: "DE",
-            zip: zip.trim(),
-            city: city.trim(),
-            addressLine: addressLine.trim(),
-            details1: details1.trim() || undefined,
-            details2: details2.trim() || undefined,
-          },
-        }),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setDebtorError(
-          "Debitor wurde erstellt, aber die Debitorennummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      setDebtorAccount(response.account);
-      setDebtorName(response.name ?? debtorName);
-      setShowCreateDebtorPanel(false);
-      setDebtorError(null);
-
-      if (
-        response.paymentMethodType &&
-        paymentMethods.some((item) => item.value === response.paymentMethodType)
-      ) {
-        setPaymentMethod(response.paymentMethodType);
-      }
-    } catch (error) {
-      setDebtorError(
-        error instanceof Error
-          ? error.message
-          : "Debitor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingDebtor(false);
-    }
   };
 
   const updatePosition = (
@@ -774,15 +702,14 @@ export default function NewSimpleInvoicePage() {
 
   return (
     <BookingPageShell>
-      <BookingPageHeader
+      <ReceiptsPageHeader
         title="Neue Rechnung erstellen"
         description="Wenn eine Rechnung an eine natürliche oder juristische Person erstellt werden muss."
         helperText="Pflichtfelder und Rechnungsdaten lassen sich hier in derselben Struktur wie auf den anderen Buchungsseiten erfassen."
-        icon={<FontAwesomeIcon icon={faFileInvoice} className="h-5 w-5" />}
-        iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
       />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+
         <FormSection
           title="Versand & Kunde"
           icon={faUser}
@@ -821,73 +748,83 @@ export default function NewSimpleInvoicePage() {
             </div>
 
             {debtorAccount ? (
-              <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-success">
-                <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                <span>
-                  Debitor <strong>#{debtorAccount}</strong>
-                  {debtorName ? ` (${debtorName})` : ""} ausgewählt
-                </span>
-                <button
-                  type="button"
-                  className="ml-auto rounded p-1 text-success hover:bg-success-soft"
-                  onClick={resetDebtor}
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <SelectedDebtorBadge
+                account={debtorAccount}
+                entityLabel="Debitor"
+                fallbackName={debtorName}
+                tone="success"
+                onClear={resetDebtor}
+                onEdit={() => setShowUpdateDebtorPanel((current) => !current)}
+              />
+            ) : null}
+
+            {showUpdateDebtorPanel && debtorAccount ? (
+              <DebtorCreatePanel
+                debtorAccount={debtorAccount}
+                initialName={debtorName}
+                onCancel={() => setShowUpdateDebtorPanel(false)}
+                onCreated={(result, draft) => {
+                  setDebtorName(result.name);
+                  setShowUpdateDebtorPanel(false);
+                  setDebtorError(null);
+                  setRecipientEmail(draft.email);
+                  setAddressLine(draft.addressLine);
+                  setZip(draft.zip);
+                  setCity(draft.city);
+                  setDetails1(draft.details);
+
+                  if (
+                    result.paymentMethodType &&
+                    paymentMethods.some(
+                      (item) => item.value === result.paymentMethodType,
+                    )
+                  ) {
+                    setPaymentMethod(result.paymentMethodType as PaymentMethod);
+                  }
+                }}
+              />
             ) : null}
 
             {showCreateDebtorPanel && !debtorAccount ? (
-              <div className="space-y-4 rounded-xl border border-primary-border bg-primary-soft/50 p-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-primary">
-                    Neuen Debitor anlegen: &ldquo;{debtorName}&rdquo;
-                  </p>
-                  <p className="text-sm text-primary">
-                    Für die Anlage werden die unten eingetragene Adresse und die E-Mail-Adresse verwendet.
-                  </p>
-                  <p className="text-xs text-primary">
-                    Ausgewählte Zahlungsart: {paymentMethod
-                      ? paymentMethods.find((item) => item.value === paymentMethod)?.label ?? paymentMethod
-                      : "keine"}
-                  </p>
-                </div>
+              <DebtorCreatePanel
+                initialName={debtorName}
+                initialType="person"
+                initialDetails={details1}
+                initialAddressLine={addressLine}
+                initialZip={zip}
+                initialCity={city}
+                email={recipientEmail}
+                paymentMethodType={paymentMethod || undefined}
+                receiptSendMethod={recipientEmail.trim()
+                  ? sendByMail
+                    ? "email"
+                    : "postal"
+                  : "postal"}
+                onCancel={() => setShowCreateDebtorPanel(false)}
+                onCreated={(result, draft) => {
+                  setDebtorAccount(result.account);
+                  setDebtorName(result.name);
+                  setShowCreateDebtorPanel(false);
+                  setDebtorError(null);
+                  setAddressLine(draft.addressLine);
+                  setZip(draft.zip);
+                  setCity(draft.city);
+                  setDetails1(draft.details);
 
-                {debtorError ? (
-                  <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
-                    {debtorError}
-                  </div>
-                ) : null}
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    kind="primary"
-                    icon={faPlus}
-                    disabled={
-                      isCreatingDebtor ||
-                      !debtorName.trim() ||
-                      !addressLine.trim() ||
-                      !zip.trim() ||
-                      !city.trim()
-                    }
-                    onClick={createDebtor}
-                  >
-                    {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
-                  </Button>
-                  <Button
-                    type="button"
-                    kind="secondary"
-                    onClick={() => setShowCreateDebtorPanel(false)}
-                  >
-                    Abbrechen
-                  </Button>
-                </div>
-              </div>
+                  if (
+                    result.paymentMethodType &&
+                    paymentMethods.some(
+                      (item) => item.value === result.paymentMethodType,
+                    )
+                  ) {
+                    setPaymentMethod(result.paymentMethodType as PaymentMethod);
+                  }
+                }}
+              />
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-2xl border border-border p-3">
+            <div className="md:col-span-2 rounded-2xl border border-border p-2 sm:p-3">
               <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
                 <input
                   type="checkbox"
@@ -960,7 +897,11 @@ export default function NewSimpleInvoicePage() {
               <p className="mb-2 text-xs text-muted-foreground">
                 Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang der Dienstleistung
               </p>
-              <Input value={intro} onChange={(event) => setIntro(event.target.value)} />
+              <Input
+                value={intro}
+                onChange={(event) => setIntro(event.target.value)}
+                placeholder={invoiceSubjectPrefill}
+              />
             </FormField>
           </div>
 
@@ -977,7 +918,7 @@ export default function NewSimpleInvoicePage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-border p-3">
+            <div className="rounded-2xl border border-border p-2 sm:p-3">
               <div className="mb-2 hidden grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] gap-2 px-1 xl:grid">
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
                 <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einheit</p>
@@ -1028,7 +969,7 @@ export default function NewSimpleInvoicePage() {
                   return (
                     <div
                       key={position.id}
-                      className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end"
+                      className="grid gap-3 rounded-xl border border-border p-2 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end sm:p-3"
                     >
                       <FormField
                         label="Name"
@@ -1180,30 +1121,14 @@ export default function NewSimpleInvoicePage() {
 
           <div className="mt-4">
             <FormField label="Rechnungsart" required>
-              <div className="inline-flex rounded-xl border border-border bg-accent p-1">
-                <button
-                  type="button"
-                  onClick={() => setIsNet(true)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    isNet
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Nettopreise
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsNet(false)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    !isNet
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Bruttopreise
-                </button>
-              </div>
+              <SegmentedControl
+                value={isNet ? "net" : "gross"}
+                options={[
+                  { value: "net", label: "Nettopreise" },
+                  { value: "gross", label: "Bruttopreise" },
+                ]}
+                onChange={(next) => setIsNet(next === "net")}
+              />
             </FormField>
           </div>
         </FormSection>
@@ -1351,7 +1276,7 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           <div className="ml-auto flex items-center justify-end gap-3">
-            <Button type="button" kind="secondary" href="/meine-buchungen">
+            <Button type="button" kind="secondary" href="/receipts">
               Abbrechen
             </Button>
             <Button type="submit" kind="primary" disabled={submitting}>

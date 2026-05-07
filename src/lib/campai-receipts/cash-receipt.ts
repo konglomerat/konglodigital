@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -237,6 +238,21 @@ export const handleCashReceipt = async (
     }
     const receipt = parsed.receipt;
     const positionAccount = receipt.positionAccount ?? defaultPositionAccount;
+
+    if (direction === "revenue") {
+      const debtorAddressValidation = await validateDebtorAddressForAmount({
+        config,
+        debtorAccount: receipt.counterpartyAccount,
+        grossAmountCents: receipt.amount,
+      });
+
+      if (!debtorAddressValidation.ok) {
+        return NextResponse.json(
+          { error: debtorAddressValidation.error },
+          { status: debtorAddressValidation.status },
+        );
+      }
+    }
 
     const upload = await uploadCampaiReceiptFile({
       apiKey: config.apiKey,

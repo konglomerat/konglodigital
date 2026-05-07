@@ -14,7 +14,6 @@ import {
   faCalendarDays,
   faChartPie,
   faFolderOpen,
-  faTableList,
   faLayerGroup,
   faPrint,
   faKey,
@@ -337,7 +336,7 @@ export default async function RootLayout({
 
                         <p className={navSectionTitleClassName}>Holzwerkstatt</p>
                         <ProtectedNavItem
-                          href="/materialbestellung"
+                          href="/split-invoice"
                           className={navLinkClassName}
                           icon={faLayerGroup}
                           isAccessible={isAuthenticated}
@@ -354,18 +353,9 @@ export default async function RootLayout({
 
                         <p className={navSectionTitleClassName}>buchhaltung</p>
                         <ProtectedNavItem
-                          href="/meine-buchungen"
+                          href="/receipts"
                           className={navLinkClassName}
                           icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Meine Buchungen
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/balance"
-                          className={navLinkClassName}
-                          icon={faTableList}
                           isAccessible={isAuthenticated}
                           tooltip={membersOnlyTooltip}
                         >
@@ -546,7 +536,7 @@ export default async function RootLayout({
                   Holzwerkstatt
                 </p>
                 <ProtectedNavItem
-                  href="/materialbestellung"
+                  href="/split-invoice"
                   className={navItemClassName}
                   icon={faLayerGroup}
                   isAccessible={isAuthenticated}
@@ -565,22 +555,13 @@ export default async function RootLayout({
                   buchhaltung
                 </p>
                 <ProtectedNavItem
-                  href="/meine-buchungen"
+                  href="/receipts"
                   className={navItemClassName}
                   icon={faFolderOpen}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
-                  Meine Buchungen
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/balance"
-                  className={navItemClassName}
-                  icon={faTableList}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Übersicht (WIP)
+                  Übersicht
                 </ProtectedNavItem>
               </nav>
               {isAuthenticated ? (
@@ -624,7 +605,7 @@ export default async function RootLayout({
               )}
             </aside>
             <div className="ml-0 md:ml-64">
-              <main className="mx-auto w-full md:px-10 md:py-10">
+              <main className="mx-auto w-full px-3 py-4 md:px-10 md:py-10">
                 {children}
               </main>
             </div>

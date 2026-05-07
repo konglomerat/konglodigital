@@ -10,14 +10,15 @@ import {
   faFolderOpen,
   faPlus,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
-import BookingPageHeader from "../bookingPageHeader";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -27,7 +28,6 @@ import {
   FormSection,
   Input,
   Select,
-  Textarea,
 } from "../../components/ui/form";
 import {
   euroAmountPattern,
@@ -90,13 +90,7 @@ export default function AusgabePage() {
   const [creditorAccount, setCreditorAccount] = useState<number | null>(null);
   const [creditorName, setCreditorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [paymentMethodType, setPaymentMethodType] = useState<
-    "creditTransfer" | "cash"
-  >("creditTransfer");
-  const [creditorIban, setCreditorIban] = useState("");
-  const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
-  const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
-  const [creditorError, setCreditorError] = useState<string | null>(null);
+  const [showUpdatePanel, setShowUpdatePanel] = useState(false);
 
   // File state (optional)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -108,75 +102,22 @@ export default function AusgabePage() {
     setCreditorAccount(suggestion.account);
     setCreditorName(suggestion.name);
     setShowCreatePanel(false);
-    setCreditorError(null);
+    setShowUpdatePanel(false);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
     setCreditorAccount(null);
     setCreditorName(name);
-    setCreditorKontoinhaber(name);
     setShowCreatePanel(true);
-    setCreditorError(null);
+    setShowUpdatePanel(false);
   }, []);
 
   const resetCreditor = useCallback(() => {
     setCreditorAccount(null);
     setCreditorName("");
     setShowCreatePanel(false);
-    setCreditorIban("");
-    setCreditorKontoinhaber("");
-    setCreditorError(null);
+    setShowUpdatePanel(false);
   }, []);
-
-  const createCreditor = useCallback(async () => {
-    setIsCreatingCreditor(true);
-    setCreditorError(null);
-    try {
-      const response = await fetch("/api/campai/creditors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: creditorName,
-          type: "business",
-          paymentMethodType,
-          ...(paymentMethodType === "creditTransfer"
-            ? {
-                iban: creditorIban.replace(/\s+/g, "").toUpperCase(),
-                kontoinhaber: creditorKontoinhaber || creditorName,
-              }
-            : {}),
-        }),
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setCreditorError(
-          payload.error ?? "Kreditor konnte nicht erstellt werden.",
-        );
-        return;
-      }
-      const payload = (await response.json().catch(() => ({}))) as {
-        account?: number;
-        name?: string;
-      };
-      if (typeof payload.account === "number" && payload.account > 0) {
-        setCreditorAccount(payload.account);
-        setCreditorName(payload.name ?? creditorName);
-        setShowCreatePanel(false);
-      } else {
-        setCreditorError(
-          "Kreditor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
-        );
-      }
-    } catch (error) {
-      setCreditorError(
-        error instanceof Error ? error.message : "Unbekannter Fehler",
-      );
-    } finally {
-      setIsCreatingCreditor(false);
-    }
-  }, [creditorName, paymentMethodType, creditorIban, creditorKontoinhaber]);
 
   useEffect(() => {
     let active = true;
@@ -342,9 +283,6 @@ export default function AusgabePage() {
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
-      setCreditorIban("");
-      setCreditorKontoinhaber("");
-      setCreditorError(null);
       setSelectedFile(null);
       setScanFeedback(null);
       setScanError(null);
@@ -355,12 +293,10 @@ export default function AusgabePage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
+        <ReceiptsPageHeader
           title="Ausgabe erfassen"
           description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faArrowTrendDown} className="h-5 w-5" />}
-          iconClassName="border-rose-200 bg-rose-50 text-rose-600 shadow-sm"
         />
 
         {costCentersError ? (
@@ -430,93 +366,40 @@ export default function AusgabePage() {
               </FormField>
 
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    Empfänger <strong>#{creditorAccount}</strong>
-                    {creditorName ? ` (${creditorName})` : ""} ausgewählt
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCreditor}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <SelectedCreditorBadge
+                  account={creditorAccount}
+                  entityLabel="Empfänger"
+                  fallbackName={creditorName}
+                  tone="emerald"
+                  onClear={resetCreditor}
+                  onEdit={() => setShowUpdatePanel((current) => !current)}
+                />
+              ) : null}
+
+              {showUpdatePanel && creditorAccount ? (
+                <CreditorCreatePanel
+                  creditorAccount={creditorAccount}
+                  initialName={creditorName}
+                  onCancel={() => setShowUpdatePanel(false)}
+                  onCreated={(updated) => {
+                    setCreditorName(updated.name);
+                    setShowUpdatePanel(false);
+                  }}
+                />
               ) : null}
 
               {showCreatePanel && !creditorAccount ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
-                    Neuen Empfänger anlegen: &ldquo;{creditorName}&rdquo;
-                  </p>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label="Zahlungsart" required>
-                      <Select
-                        value={paymentMethodType}
-                        onChange={(event) =>
-                          setPaymentMethodType(
-                            event.target.value as "creditTransfer" | "cash",
-                          )
-                        }
-                      >
-                        <option value="creditTransfer">Überweisung</option>
-                        <option value="cash">Bargeld</option>
-                      </Select>
-                    </FormField>
-                    {paymentMethodType === "creditTransfer" ? (
-                      <FormField label="Kontoinhaber" required>
-                        <Input
-                          placeholder="Vor- und Nachname"
-                          value={creditorKontoinhaber}
-                          onChange={(event) =>
-                            setCreditorKontoinhaber(event.target.value)
-                          }
-                        />
-                      </FormField>
-                    ) : null}
-                  </div>
-                  {paymentMethodType === "creditTransfer" ? (
-                    <FormField label="IBAN" required>
-                      <Input
-                        placeholder="DE…"
-                        value={creditorIban}
-                        onChange={(event) =>
-                          setCreditorIban(event.target.value)
-                        }
-                      />
-                    </FormField>
-                  ) : null}
-                  {creditorError ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {creditorError}
-                    </div>
-                  ) : null}
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      kind="primary"
-                      icon={faPlus}
-                      disabled={
-                        isCreatingCreditor ||
-                        (paymentMethodType === "creditTransfer" &&
-                          (!creditorIban.trim() ||
-                            !creditorKontoinhaber.trim()))
-                      }
-                      onClick={createCreditor}
-                    >
-                      {isCreatingCreditor ? "Wird angelegt…" : "Empfänger anlegen"}
-                    </Button>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      onClick={() => setShowCreatePanel(false)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                </div>
+                <CreditorCreatePanel
+                  initialName={creditorName}
+                  title={`Neuen Empfänger anlegen: "${creditorName}"`}
+                  submitLabel="Empfänger anlegen"
+                  onCancel={() => setShowCreatePanel(false)}
+                  onCreated={(created) => {
+                    setCreditorAccount(created.account);
+                    setCreditorName(created.name);
+                    setShowCreatePanel(false);
+                  }}
+                />
               ) : null}
             </div>
           </FormSection>
@@ -627,7 +510,7 @@ export default function AusgabePage() {
             <Button
               type="button"
               kind="secondary"
-              href="/meine-buchungen"
+              href="/receipts"
             >
               Abbrechen
             </Button>

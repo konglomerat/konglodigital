@@ -86,7 +86,7 @@ export default function MaterialbestellungListPage() {
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Materialbestellungen
         </h1>
-        <Button href="/materialbestellung/new" kind="primary" size="small" icon={faPlus}>
+        <Button href="/split-invoice/new" kind="primary" size="small" icon={faPlus}>
           Neue Materialbestellung
         </Button>
       </div>
@@ -139,7 +139,7 @@ export default function MaterialbestellungListPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{formatDate(order.updatedAt)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button href={`/materialbestellung/${order.id}`} size="small">
+                      <Button href={`/split-invoice/${order.id}`} size="small">
                         Öffnen
                       </Button>
                       <button

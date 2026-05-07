@@ -2,30 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-
-type AddressPayload = {
-	country: string;
-	state?: string;
-	zip: string;
-	city: string;
-	addressLine: string;
-	details1?: string;
-	details2?: string;
-};
-
-type CampaiDebtorPaymentMethodType =
-	| "sepaCreditTransfer"
-	| "sepaDirectDebit"
-	| "cash"
-	| "online";
+import {
+	buildDebtorPayload,
+	type CampaiDebtorAddressPayload,
+	type CampaiDebtorPaymentMethodType,
+} from "@/lib/campai-debtors";
 
 type CampaiDebtor = {
 	_id?: string;
 	account?: number;
 	name?: string;
 	email?: string;
+	type?: "person" | "business";
 	paymentMethodType?: CampaiDebtorPaymentMethodType | null;
-	address?: AddressPayload | null;
+	address?: CampaiDebtorAddressPayload | null;
+	receiptSendMethod?: "email" | "postal" | "none";
 };
 
 const requiredEnv = (name: string) => {
@@ -40,52 +31,6 @@ const ensureAuthenticatedUser = async (request: NextRequest) => {
 	const { supabase } = createSupabaseRouteClient(request);
 	const { data } = await supabase.auth.getUser();
 	return data.user ?? null;
-};
-
-const normalizeAddress = (value: unknown): AddressPayload | null => {
-	if (!value || typeof value !== "object") {
-		return null;
-	}
-
-	const typed = value as Record<string, unknown>;
-	const country = typeof typed.country === "string" ? typed.country.trim() : "DE";
-	const zip = typeof typed.zip === "string" ? typed.zip.trim() : "";
-	const city = typeof typed.city === "string" ? typed.city.trim() : "";
-	const addressLine =
-		typeof typed.addressLine === "string" ? typed.addressLine.trim() : "";
-	const details1 =
-		typeof typed.details1 === "string" ? typed.details1.trim() : "";
-	const details2 =
-		typeof typed.details2 === "string" ? typed.details2.trim() : "";
-	const state = typeof typed.state === "string" ? typed.state.trim() : "";
-
-	if (!zip || !city || !addressLine) {
-		return null;
-	}
-
-	return {
-		country: country || "DE",
-		zip,
-		city,
-		addressLine,
-		state: state || undefined,
-		details1: details1 || undefined,
-		details2: details2 || undefined,
-	};
-};
-
-const normalizePaymentMethodType = (
-	value: unknown,
-): CampaiDebtorPaymentMethodType | null => {
-	if (
-		value === "sepaCreditTransfer" ||
-		value === "sepaDirectDebit" ||
-		value === "cash" ||
-		value === "online"
-	) {
-		return value;
-	}
-	return null;
 };
 
 export const GET = async (request: NextRequest) => {
@@ -133,7 +78,9 @@ export const GET = async (request: NextRequest) => {
 						account: debtor.account ?? null,
 						name: debtor.name ?? "",
 						email: debtor.email ?? "",
+						type: debtor.type ?? null,
 						paymentMethodType: debtor.paymentMethodType ?? null,
+						receiptSendMethod: debtor.receiptSendMethod ?? null,
 						address: debtor.address ?? null,
 					}
 					: null,
@@ -201,59 +148,9 @@ export const POST = async (request: NextRequest) => {
 		const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
 
 		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-		const name = typeof body.name === "string" ? body.name.trim() : "";
-		const type = body.type === "person" ? "person" : "business";
-		const address = normalizeAddress(body.address);
-		const email = typeof body.email === "string" ? body.email.trim() : "";
-		const paymentMethodType = normalizePaymentMethodType(body.paymentMethodType);
-		const receiptSendMethod =
-			body.receiptSendMethod === "email"
-				? "email"
-				: body.receiptSendMethod === "postal"
-					? "postal"
-					: "none";
-
-		if (!name) {
-			return NextResponse.json(
-				{ error: "Name ist erforderlich." },
-				{ status: 400 },
-			);
-		}
-
-		if (!address) {
-			return NextResponse.json(
-				{
-					error:
-						"Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-				},
-				{ status: 400 },
-			);
-		}
-
-		if (paymentMethodType === "sepaDirectDebit") {
-			return NextResponse.json(
-				{
-					error:
-						"SEPA-Lastschrift muss in Campai mit Mandat gepflegt werden und kann hier nicht inline angelegt werden.",
-				},
-				{ status: 400 },
-			);
-		}
-
-		const payload: Record<string, unknown> = {
-			type,
-			name: name.slice(0, 81),
-			address,
-			email,
-			receiptSendMethod: email
-				? receiptSendMethod === "none"
-					? "email"
-					: receiptSendMethod
-				: receiptSendMethod,
-		};
-
-		if (paymentMethodType) {
-			payload.paymentMethodType = paymentMethodType;
+		const parsed = buildDebtorPayload(body);
+		if (!parsed.ok) {
+			return NextResponse.json({ error: parsed.error }, { status: parsed.status });
 		}
 
 		const response = await fetch(
@@ -264,7 +161,7 @@ export const POST = async (request: NextRequest) => {
 					"Content-Type": "application/json",
 					"X-API-Key": apiKey,
 				},
-				body: JSON.stringify(payload),
+				body: JSON.stringify(parsed.payload),
 			},
 		);
 
@@ -288,10 +185,9 @@ export const POST = async (request: NextRequest) => {
 		} | null;
 
 		return NextResponse.json({
-			debtorId: result?._id ?? null,
 			account: result?.account ?? null,
-			name: result?.name ?? name,
-			paymentMethodType: result?.paymentMethodType ?? paymentMethodType,
+			name: result?.name ?? parsed.name,
+			paymentMethodType: result?.paymentMethodType ?? parsed.paymentMethodType,
 		});
 	} catch (error) {
 		return NextResponse.json(

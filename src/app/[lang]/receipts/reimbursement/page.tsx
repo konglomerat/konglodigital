@@ -5,29 +5,28 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
-  faCheck,
   faFolderOpen,
   faPlus,
-  faRotate,
   faTrash,
   faUser,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../components/Button";
-import BookingPageShell from "../components/ui/BookingPageShell";
-import InternalNoteSection from "../components/ui/InternalNoteSection";
-import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
+import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
   type Suggestion,
-} from "../components/ui/autocomplete-input";
+} from "../../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
   Input,
   Select,
-} from "../components/ui/form";
+} from "../../components/ui/form";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -157,13 +156,7 @@ export default function ReimbursementPage() {
   const [creditorAccount, setCreditorAccount] = useState<number | null>(null);
   const [creditorName, setCreditorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [paymentMethodType, setPaymentMethodType] = useState<
-    "creditTransfer" | "cash"
-  >("creditTransfer");
-  const [creditorIban, setCreditorIban] = useState("");
-  const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
-  const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
-  const [creditorError, setCreditorError] = useState<string | null>(null);
+  const [showUpdatePanel, setShowUpdatePanel] = useState(false);
   const selectedInvoiceStatus = useWatch({
     control,
     name: "rechnungStatus",
@@ -174,81 +167,20 @@ export default function ReimbursementPage() {
     setCreditorAccount(suggestion.account);
     setCreditorName(suggestion.name);
     setShowCreatePanel(false);
-    setCreditorError(null);
   }, []);
 
   const handleCreateNew = useCallback((name: string) => {
     setCreditorAccount(null);
     setCreditorName(name);
-    setCreditorKontoinhaber(name);
     setShowCreatePanel(true);
-    setCreditorError(null);
   }, []);
 
   const resetCreditor = useCallback(() => {
     setCreditorAccount(null);
     setCreditorName("");
     setShowCreatePanel(false);
-    setCreditorIban("");
-    setCreditorKontoinhaber("");
-    setCreditorError(null);
     setValue("empfaengerName", "", { shouldDirty: true });
   }, [setValue]);
-
-  const createCreditor = useCallback(async () => {
-    setIsCreatingCreditor(true);
-    setCreditorError(null);
-
-    try {
-      const response = await fetch("/api/campai/creditors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: creditorName,
-          type: "business",
-          paymentMethodType,
-          ...(paymentMethodType === "creditTransfer"
-            ? {
-                iban: creditorIban.replace(/\s+/g, "").toUpperCase(),
-                kontoinhaber: creditorKontoinhaber || creditorName,
-              }
-            : {}),
-        }),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setCreditorError(
-          payload.error ?? "Kreditor konnte nicht erstellt werden.",
-        );
-        return;
-      }
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        creditorId?: string;
-        account?: number;
-        name?: string;
-      };
-
-      if (typeof payload.account === "number" && payload.account > 0) {
-        setCreditorAccount(payload.account);
-        setCreditorName(payload.name ?? creditorName);
-        setShowCreatePanel(false);
-      } else {
-        setCreditorError(
-          "Kreditor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
-        );
-      }
-    } catch (error) {
-      setCreditorError(
-        error instanceof Error ? error.message : "Unbekannter Fehler",
-      );
-    } finally {
-      setIsCreatingCreditor(false);
-    }
-  }, [creditorName, paymentMethodType, creditorIban, creditorKontoinhaber]);
 
   useEffect(() => {
     let active = true;
@@ -409,9 +341,6 @@ export default function ReimbursementPage() {
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
-      setCreditorIban("");
-      setCreditorKontoinhaber("");
-      setCreditorError(null);
 
       if (costCenters.length > 0) {
         const firstValue = costCenters[0].value;
@@ -428,12 +357,10 @@ export default function ReimbursementPage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
+        <ReceiptsPageHeader
           title="Rückerstattungen einreichen"
           description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faRotate} className="h-5 w-5" />}
-          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
 
         {costCentersError ? (
@@ -481,103 +408,24 @@ export default function ReimbursementPage() {
 
               {/* Creditor selected badge */}
               {creditorAccount ? (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                  <span>
-                    Kreditor <strong>#{creditorAccount}</strong>{" "}
-                    {creditorName ? `(${creditorName})` : ""} ausgewählt
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
-                    onClick={resetCreditor}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <SelectedCreditorBadge
+                  account={creditorAccount}
+                  fallbackName={creditorName}
+                  onClear={resetCreditor}
+                />
               ) : null}
 
               {/* Create creditor panel */}
               {showCreatePanel && !creditorAccount ? (
-                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                  <p className="text-sm font-medium text-blue-900">
-                    Neuen Kreditor anlegen: &ldquo;{creditorName}&rdquo;
-                  </p>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label="Zahlungsart" required>
-                      <Select
-                        value={paymentMethodType}
-                        onChange={(event) =>
-                          setPaymentMethodType(
-                            event.target.value as "creditTransfer" | "cash",
-                          )
-                        }
-                      >
-                        <option value="creditTransfer">Überweisung</option>
-                        <option value="cash">Bargeld</option>
-                      </Select>
-                    </FormField>
-
-                    {paymentMethodType === "creditTransfer" ? (
-                      <FormField label="Kontoinhaber" required>
-                        <Input
-                          placeholder="Vor- und Nachname"
-                          value={creditorKontoinhaber}
-                          onChange={(event) =>
-                            setCreditorKontoinhaber(event.target.value)
-                          }
-                        />
-                      </FormField>
-                    ) : null}
-                  </div>
-
-                  {paymentMethodType === "creditTransfer" ? (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField label="IBAN" required>
-                        <Input
-                          placeholder="DE…"
-                          value={creditorIban}
-                          onChange={(event) =>
-                            setCreditorIban(event.target.value)
-                          }
-                        />
-                      </FormField>
-                    </div>
-                  ) : null}
-
-                  {creditorError ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {creditorError}
-                    </div>
-                  ) : null}
-
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      kind="primary"
-                      icon={faPlus}
-                      disabled={
-                        isCreatingCreditor ||
-                        (paymentMethodType === "creditTransfer" &&
-                          (!creditorIban.trim() ||
-                            !creditorKontoinhaber.trim()))
-                      }
-                      onClick={createCreditor}
-                    >
-                      {isCreatingCreditor
-                        ? "Wird angelegt…"
-                        : "Kreditor anlegen"}
-                    </Button>
-                    <Button
-                      type="button"
-                      kind="secondary"
-                      onClick={() => setShowCreatePanel(false)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                </div>
+                <CreditorCreatePanel
+                  initialName={creditorName}
+                  onCancel={() => setShowCreatePanel(false)}
+                  onCreated={(created) => {
+                    setCreditorAccount(created.account);
+                    setCreditorName(created.name);
+                    setShowCreatePanel(false);
+                  }}
+                />
               ) : null}
             </div>
           </FormSection>
@@ -658,7 +506,7 @@ export default function ReimbursementPage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-xl border border-zinc-200 p-3"
+                  className="space-y-3 rounded-xl border border-zinc-200 p-2 sm:p-3"
                 >
                   <div className="grid gap-3 md:grid-cols-3">
                     <FormField
@@ -784,7 +632,7 @@ export default function ReimbursementPage() {
             </div>
 
             <div className="ml-auto flex items-center justify-end gap-3">
-              <Button type="button" kind="secondary" href="/meine-buchungen">
+              <Button type="button" kind="secondary" href="/receipts">
                 Abbrechen
               </Button>
               <Button

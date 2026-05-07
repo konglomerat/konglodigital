@@ -11,7 +11,7 @@ export default async function MaterialbestellungLayout({
   const { data } = await supabase.auth.getUser();
 
   if (!data.user) {
-    redirect("/login?redirectedFrom=/materialbestellung");
+    redirect("/login?redirectedFrom=/split-invoice");
   }
 
   return children;

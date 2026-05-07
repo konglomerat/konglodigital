@@ -10,22 +10,24 @@ import {
   faCheck,
   faFolderOpen,
   faMoneyBillTransfer,
-  faPlus,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../components/Button";
-import BookingPageShell from "../components/ui/BookingPageShell";
-import InternalNoteSection from "../components/ui/InternalNoteSection";
-import { AutocompleteInput } from "../components/ui/autocomplete-input";
+import Button from "../../components/Button";
+import BookingPageShell from "../../components/ui/BookingPageShell";
+import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
+import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
+import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
+import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import { AutocompleteInput } from "../../components/ui/autocomplete-input";
 import {
   FormField,
   FormSection,
   Input,
   Select,
   Textarea,
-} from "../components/ui/form";
-import BookingPageHeader from "../meine-buchungen/bookingPageHeader";
+} from "../../components/ui/form";
+import ReceiptsPageHeader from "../create/header";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -53,8 +55,6 @@ type CostCenterOption = {
   value: string;
   label: string;
 };
-
-type CreditorPaymentMethodType = "creditTransfer" | "cash";
 
 type FormValues = {
   reason: ReasonOption;
@@ -245,21 +245,21 @@ async function loadLogoAsDataUrl(): Promise<string | null> {
     const svgText = await response.text();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = "anonymous";
 
-    return new Promise((resolve) => {
+    return await new Promise<string | null>((resolve) => {
+      const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const scale = 2;
-        canvas.width = img.naturalWidth * scale;
-        canvas.height = img.naturalHeight * scale;
+        canvas.width = img.width;
+        canvas.height = img.height;
         const ctx = canvas.getContext("2d");
+
         if (!ctx) {
           URL.revokeObjectURL(url);
           resolve(null);
           return;
         }
+
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/png");
         URL.revokeObjectURL(url);
@@ -703,21 +703,8 @@ export default function EigenbelegPage() {
   } | null>(null);
   const [showCreateCreditorPanel, setShowCreateCreditorPanel] =
     useState(false);
-  const [creditorPaymentMethodType, setCreditorPaymentMethodType] =
-    useState<CreditorPaymentMethodType>("creditTransfer");
-  const [creditorIban, setCreditorIban] = useState("");
-  const [creditorKontoinhaber, setCreditorKontoinhaber] = useState("");
-  const [isCreatingCreditor, setIsCreatingCreditor] = useState(false);
-  const [creditorError, setCreditorError] = useState<string | null>(null);
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
-  const [debtorEmail, setDebtorEmail] = useState("");
-  const [debtorSendByMail, setDebtorSendByMail] = useState(false);
-  const [debtorAddressLine, setDebtorAddressLine] = useState("");
-  const [debtorZip, setDebtorZip] = useState("");
-  const [debtorCity, setDebtorCity] = useState("");
-  const [debtorDetails1, setDebtorDetails1] = useState("");
-  const [debtorDetails2, setDebtorDetails2] = useState("");
-  const [isCreatingDebtor, setIsCreatingDebtor] = useState(false);
+  const [showUpdateDebtorPanel, setShowUpdateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
 
   const selectedReason = useWatch({ control, name: "reason" });
@@ -796,7 +783,7 @@ export default function EigenbelegPage() {
   const counterpartyApiPath = isExpenseLikeFlow
     ? "/api/campai/creditors"
     : "/api/campai/debtors";
-  const activeCounterpartyError = isExpenseLikeFlow ? creditorError : debtorError;
+  const activeCounterpartyError = isExpenseLikeFlow ? null : debtorError;
   const senderDisplayValue = isExpenseLikeFlow
     ? associationName
     : counterpartyName ?? "";
@@ -809,7 +796,7 @@ export default function EigenbelegPage() {
     setValue("counterpartyAccount", "");
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   }, [selectedBookingType, setValue]);
 
@@ -820,7 +807,7 @@ export default function EigenbelegPage() {
 
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   }, [isTransferFlow]);
 
@@ -834,7 +821,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -851,7 +838,7 @@ export default function EigenbelegPage() {
     });
     setShowCreateCreditorPanel(false);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
   };
 
@@ -863,10 +850,9 @@ export default function EigenbelegPage() {
     setValue("counterpartyAccount", "", {
       shouldDirty: true,
     });
-    setCreditorKontoinhaber(name);
     setShowCreateCreditorPanel(true);
     setShowCreateDebtorPanel(false);
-    setCreditorError(null);
+    setShowUpdateDebtorPanel(false);
   };
 
   const handleCreateDebtor = (name: string) => {
@@ -879,127 +865,8 @@ export default function EigenbelegPage() {
     });
     setShowCreateDebtorPanel(true);
     setShowCreateCreditorPanel(false);
+    setShowUpdateDebtorPanel(false);
     setDebtorError(null);
-  };
-
-  const createCreditor = async () => {
-    setIsCreatingCreditor(true);
-    setCreditorError(null);
-
-    try {
-      const payload: {
-        name: string;
-        type: "business";
-        paymentMethodType: CreditorPaymentMethodType;
-        iban?: string;
-        kontoinhaber?: string;
-      } = {
-        name: (counterpartyName ?? "").trim(),
-        type: "business",
-        paymentMethodType: creditorPaymentMethodType,
-      };
-
-      if (!payload.name) {
-        setCreditorError("Bitte zuerst einen Kreditorennamen eingeben.");
-        return;
-      }
-
-      if (creditorPaymentMethodType === "creditTransfer") {
-        payload.iban = creditorIban.replace(/\s+/g, "").toUpperCase();
-        payload.kontoinhaber = creditorKontoinhaber.trim();
-      }
-
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-      }>("/api/campai/creditors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setCreditorError(
-          "Kreditor wurde erstellt, aber die Kontonummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      handleCounterpartySelect({
-        account: response.account,
-        name: response.name ?? counterpartyName ?? "",
-      });
-    } catch (error) {
-      setCreditorError(
-        error instanceof Error ? error.message : "Kreditor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingCreditor(false);
-    }
-  };
-
-  const createDebtor = async () => {
-    setDebtorError(null);
-
-    const trimmedName = (counterpartyName ?? "").trim();
-    if (!trimmedName) {
-      setDebtorError("Bitte zuerst einen Debitorennamen eingeben.");
-      return;
-    }
-
-    if (!debtorAddressLine.trim() || !debtorZip.trim() || !debtorCity.trim()) {
-      setDebtorError(
-        "Für neue Debitoren werden Straße/Adresse, PLZ und Stadt benötigt.",
-      );
-      return;
-    }
-
-    setIsCreatingDebtor(true);
-    try {
-      const response = await fetchJson<{
-        account?: number | null;
-        name?: string;
-      }>("/api/campai/debtors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: trimmedName,
-          type: "business",
-          email: debtorEmail.trim() || undefined,
-          receiptSendMethod: debtorEmail.trim()
-            ? debtorSendByMail
-              ? "email"
-              : "postal"
-            : "postal",
-          address: {
-            country: "DE",
-            zip: debtorZip.trim(),
-            city: debtorCity.trim(),
-            addressLine: debtorAddressLine.trim(),
-            details1: debtorDetails1.trim() || undefined,
-            details2: debtorDetails2.trim() || undefined,
-          },
-        }),
-      });
-
-      if (typeof response.account !== "number" || response.account <= 0) {
-        setDebtorError(
-          "Debitor wurde erstellt, aber die Debitorennummer konnte nicht ermittelt werden.",
-        );
-        return;
-      }
-
-      handleCounterpartySelect({
-        account: response.account,
-        name: response.name ?? trimmedName,
-      });
-    } catch (error) {
-      setDebtorError(
-        error instanceof Error ? error.message : "Debitor konnte nicht erstellt werden.",
-      );
-    } finally {
-      setIsCreatingDebtor(false);
-    }
   };
 
   useEffect(() => {
@@ -1244,12 +1111,10 @@ export default function EigenbelegPage() {
 
   return (
     <BookingPageShell>
-        <BookingPageHeader
+        <ReceiptsPageHeader
           title="Generator Eigenbeleg"
           description="Ein Eigenbeleg ist ein Ersatz für eine Rechnung beziehungsweise Quittung. Er wird genutzt, wenn kein Beleg vorhanden ist oder ein Beleg verloren ging und die Ausgabe betrieblich beziehungsweise beruflich notwendig war."
           helperText="Pflichtfelder sind mit * markiert."
-          icon={<FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5" />}
-          iconClassName="border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
         />
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -1478,7 +1343,7 @@ export default function EigenbelegPage() {
                   </FormField>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                       <div className="space-y-1">
                         <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
                         <p className="text-sm text-zinc-600">
@@ -1535,7 +1400,7 @@ export default function EigenbelegPage() {
                       </FormField>
                     </div>
 
-                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                       <div className="space-y-1">
                         <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
                         <p className="text-sm text-zinc-600">
@@ -1620,7 +1485,7 @@ export default function EigenbelegPage() {
                     </FormField>
 
                     <div className="grid gap-4 lg:grid-cols-2">
-                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                         <div className="space-y-1">
                           <h3 className="text-sm font-semibold text-zinc-900">Sender</h3>
                           <p className="text-sm text-zinc-600">
@@ -1709,7 +1574,7 @@ export default function EigenbelegPage() {
                         ) : null}
                       </div>
 
-                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
                         <div className="space-y-1">
                           <h3 className="text-sm font-semibold text-zinc-900">Empfänger</h3>
                           <p className="text-sm text-zinc-600">
@@ -1735,7 +1600,6 @@ export default function EigenbelegPage() {
                                 setValue("counterpartyAccount", "", {
                                   shouldDirty: true,
                                 });
-                                setCreditorError(null);
                                 if (!event.target.value.trim()) {
                                   setShowCreateCreditorPanel(false);
                                 }
@@ -1800,7 +1664,20 @@ export default function EigenbelegPage() {
                     </div>
                   </div>
 
-                  {counterpartyAccount ? (
+                  {counterpartyAccount && !isExpenseLikeFlow ? (
+                    <SelectedDebtorBadge
+                      account={Number(counterpartyAccount)}
+                      entityLabel={counterpartyEntityLabel}
+                      fallbackName={counterpartyName ?? ""}
+                      tone="emerald"
+                      onClear={resetCounterparty}
+                      onEdit={() =>
+                        setShowUpdateDebtorPanel((current) => !current)
+                      }
+                    />
+                  ) : null}
+
+                  {counterpartyAccount && isExpenseLikeFlow ? (
                     <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                       <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                       <span>
@@ -1817,6 +1694,24 @@ export default function EigenbelegPage() {
                     </div>
                   ) : null}
 
+                  {showUpdateDebtorPanel &&
+                  counterpartyAccount &&
+                  !isExpenseLikeFlow ? (
+                    <DebtorCreatePanel
+                      debtorAccount={Number(counterpartyAccount)}
+                      initialName={counterpartyName ?? ""}
+                      onCancel={() => setShowUpdateDebtorPanel(false)}
+                      onCreated={(result) => {
+                        setValue("counterpartyName", result.name, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setShowUpdateDebtorPanel(false);
+                        setDebtorError(null);
+                      }}
+                    />
+                  ) : null}
+
                   {activeCounterpartyError ? (
                     <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                       {activeCounterpartyError}
@@ -1824,184 +1719,30 @@ export default function EigenbelegPage() {
                   ) : null}
 
                   {showCreateCreditorPanel && !counterpartyAccount && isExpenseLikeFlow ? (
-                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                      <p className="text-sm font-medium text-blue-900">
-                        Neuen Kreditor anlegen: &ldquo;{counterpartyName}&rdquo;
-                      </p>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="Zahlungsart" required>
-                          <Select
-                            value={creditorPaymentMethodType}
-                            onChange={(event) =>
-                              setCreditorPaymentMethodType(
-                                event.target.value as CreditorPaymentMethodType,
-                              )
-                            }
-                          >
-                            <option value="creditTransfer">Überweisung</option>
-                            <option value="cash">Bargeld</option>
-                          </Select>
-                        </FormField>
-
-                        {creditorPaymentMethodType === "creditTransfer" ? (
-                          <FormField label="Kontoinhaber" required>
-                            <Input
-                              placeholder="Vor- und Nachname"
-                              value={creditorKontoinhaber}
-                              onChange={(event) =>
-                                setCreditorKontoinhaber(event.target.value)
-                              }
-                            />
-                          </FormField>
-                        ) : null}
-                      </div>
-
-                      {creditorPaymentMethodType === "creditTransfer" ? (
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField label="IBAN" required>
-                            <Input
-                              placeholder="DE…"
-                              value={creditorIban}
-                              onChange={(event) => setCreditorIban(event.target.value)}
-                            />
-                          </FormField>
-                        </div>
-                      ) : null}
-
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          kind="primary"
-                          icon={faPlus}
-                          disabled={
-                            isCreatingCreditor ||
-                            !counterpartyName?.trim() ||
-                            (creditorPaymentMethodType === "creditTransfer" &&
-                              (!creditorIban.trim() || !creditorKontoinhaber.trim()))
-                          }
-                          onClick={createCreditor}
-                        >
-                          {isCreatingCreditor ? "Wird angelegt…" : "Kreditor anlegen"}
-                        </Button>
-                        <Button
-                          type="button"
-                          kind="secondary"
-                          onClick={() => setShowCreateCreditorPanel(false)}
-                        >
-                          Abbrechen
-                        </Button>
-                      </div>
-                    </div>
+                    <CreditorCreatePanel
+                      initialName={counterpartyName ?? ""}
+                      onCancel={() => setShowCreateCreditorPanel(false)}
+                      onCreated={(created) => {
+                        handleCounterpartySelect({
+                          account: created.account,
+                          name: created.name,
+                        });
+                      }}
+                    />
                   ) : null}
 
                   {showCreateDebtorPanel && !counterpartyAccount && !isExpenseLikeFlow ? (
-                    <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-blue-900">
-                          Neuen Debitor anlegen: &ldquo;{counterpartyName}&rdquo;
-                        </p>
-                        <p className="text-sm text-blue-800">
-                          Für die Anlage werden die unten eingetragene Adresse und optional die E-Mail-Adresse verwendet.
-                        </p>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="E-Mail-Adresse">
-                          <Input
-                            type="email"
-                            placeholder="kunde@beispiel.de"
-                            value={debtorEmail}
-                            onChange={(event) => setDebtorEmail(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Versand per E-Mail">
-                          <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
-                            <input
-                              type="checkbox"
-                              autoComplete="off"
-                              checked={debtorSendByMail}
-                              onChange={(event) =>
-                                setDebtorSendByMail(event.target.checked)
-                              }
-                            />
-                            Rechnung per E-Mail versenden
-                          </label>
-                        </FormField>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField label="Straße / Adresse" required>
-                          <Input
-                            placeholder="Straße und Hausnummer"
-                            value={debtorAddressLine}
-                            onChange={(event) =>
-                              setDebtorAddressLine(event.target.value)
-                            }
-                          />
-                        </FormField>
-
-                        <FormField label="Adresszusatz 1">
-                          <Input
-                            placeholder="Optional"
-                            value={debtorDetails1}
-                            onChange={(event) => setDebtorDetails1(event.target.value)}
-                          />
-                        </FormField>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <FormField label="PLZ" required>
-                          <Input
-                            placeholder="01159"
-                            value={debtorZip}
-                            onChange={(event) => setDebtorZip(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Stadt" required>
-                          <Input
-                            placeholder="Dresden"
-                            value={debtorCity}
-                            onChange={(event) => setDebtorCity(event.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField label="Adresszusatz 2">
-                          <Input
-                            placeholder="Optional"
-                            value={debtorDetails2}
-                            onChange={(event) => setDebtorDetails2(event.target.value)}
-                          />
-                        </FormField>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          kind="primary"
-                          icon={faPlus}
-                          disabled={
-                            isCreatingDebtor ||
-                            !counterpartyName?.trim() ||
-                            !debtorAddressLine.trim() ||
-                            !debtorZip.trim() ||
-                            !debtorCity.trim()
-                          }
-                          onClick={createDebtor}
-                        >
-                          {isCreatingDebtor ? "Wird angelegt…" : "Debitor anlegen"}
-                        </Button>
-                        <Button
-                          type="button"
-                          kind="secondary"
-                          onClick={() => setShowCreateDebtorPanel(false)}
-                        >
-                          Abbrechen
-                        </Button>
-                      </div>
-                    </div>
+                    <DebtorCreatePanel
+                      initialName={counterpartyName ?? ""}
+                      initialType="person"
+                      onCancel={() => setShowCreateDebtorPanel(false)}
+                      onCreated={(result) => {
+                        handleCounterpartySelect({
+                          account: result.account,
+                          name: result.name,
+                        });
+                      }}
+                    />
                   ) : null}
                 </>
               )}
@@ -2049,7 +1790,7 @@ export default function EigenbelegPage() {
             </div>
 
             <div className="ml-auto flex items-center justify-end gap-3">
-              <Button type="button" kind="secondary" href="/meine-buchungen">
+              <Button type="button" kind="secondary" href="/receipts">
                 Abbrechen
               </Button>
               <Button

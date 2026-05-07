@@ -22,6 +22,7 @@ const protectedPagePrefixes = [
   "/buchungen",
   "/budget",
   "/balance",
+  "/receipts",
 ];
 
 const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;

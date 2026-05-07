@@ -45,8 +45,11 @@ export const GET = async (request: NextRequest) => {
     const year =
       parsePositiveInt(request.nextUrl.searchParams.get("year")) ??
       new Date().getFullYear();
-    const costCenter = parsePositiveInt(
-      request.nextUrl.searchParams.get("costCenter"),
+    const costCenter1 = parsePositiveInt(
+      request.nextUrl.searchParams.get("costCenter1"),
+    );
+    const costCenter2 = parsePositiveInt(
+      request.nextUrl.searchParams.get("costCenter2"),
     );
     const account = parsePositiveInt(
       request.nextUrl.searchParams.get("account"),
@@ -58,7 +61,8 @@ export const GET = async (request: NextRequest) => {
       organizationId,
       mandateId,
       year,
-      costCenter,
+      costCenter1,
+      costCenter2,
       account,
       search,
     });

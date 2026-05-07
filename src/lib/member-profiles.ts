@@ -12,6 +12,25 @@ export type MemberProfileInput = {
   campai_name: string | null;
   avatar_url: string | null;
   short_bio: string | null;
+  preferences?: MemberProfilePreferences | null;
+};
+
+export type MemberProfileFormDefaultValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number | boolean | null>;
+
+export type MemberProfilePreferences = {
+  balance?: {
+    costCenter2?: string[];
+    columns?: {
+      order?: string[];
+      hidden?: string[];
+    };
+  };
+  formDefaults?: Record<string, Record<string, MemberProfileFormDefaultValue>>;
 };
 
 export type MemberProfile = {
@@ -23,6 +42,7 @@ export type MemberProfile = {
   campaiName: string | null;
   avatarUrl: string | null;
   shortBio: string | null;
+  preferences: MemberProfilePreferences;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -42,6 +62,7 @@ const EXTENDED_SELECT_FIELDS = [
   ...BASE_SELECT_FIELDS,
   "avatar_url",
   "short_bio",
+  "preferences",
 ];
 
 const SELECT_FIELDS = EXTENDED_SELECT_FIELDS.join(", ");
@@ -51,8 +72,13 @@ const LEGACY_SELECT_FIELDS = BASE_SELECT_FIELDS.join(", ");
 const hasMissingExtendedMemberProfileColumn = (error: unknown) => {
   return (
     isMissingColumnError(error, "avatar_url", "member_profiles") ||
-    isMissingColumnError(error, "short_bio", "member_profiles")
+    isMissingColumnError(error, "short_bio", "member_profiles") ||
+    isMissingColumnError(error, "preferences", "member_profiles")
   );
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
 const normalizeText = (value: unknown) => {
@@ -92,6 +118,163 @@ const normalizeSegments = (value: unknown) => {
   );
 };
 
+const normalizeFormDefaultValue = (
+  value: unknown,
+): MemberProfileFormDefaultValue | null => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normalizeFormDefaultValue(entry))
+      .filter(
+        (
+          entry,
+        ): entry is string | number | boolean | null =>
+          entry === null ||
+          typeof entry === "string" ||
+          typeof entry === "number" ||
+          typeof entry === "boolean",
+      );
+  }
+
+  return null;
+};
+
+export const normalizeMemberProfilePreferences = (
+  value: unknown,
+): MemberProfilePreferences => {
+  if (!isPlainObject(value)) {
+    return {};
+  }
+
+  const normalized: MemberProfilePreferences = {};
+
+  if (isPlainObject(value.balance)) {
+    const balance: NonNullable<MemberProfilePreferences["balance"]> = {};
+
+    const costCenter2 = normalizeSegments(value.balance.costCenter2);
+    if (costCenter2.length > 0) {
+      balance.costCenter2 = costCenter2;
+    }
+
+    if (isPlainObject(value.balance.columns)) {
+      const order = normalizeSegments(value.balance.columns.order);
+      const hidden = normalizeSegments(value.balance.columns.hidden);
+      const hasHiddenField = Array.isArray(value.balance.columns.hidden);
+
+      if (order.length > 0 || hidden.length > 0 || hasHiddenField) {
+        balance.columns = {
+          ...(order.length > 0 ? { order } : {}),
+          ...(hasHiddenField ? { hidden } : {}),
+        };
+      }
+    }
+
+    if (Object.keys(balance).length > 0) {
+      normalized.balance = balance;
+    }
+  }
+
+  if (isPlainObject(value.formDefaults)) {
+    const formDefaults = Object.fromEntries(
+      Object.entries(value.formDefaults)
+        .map(([formKey, formValue]) => {
+          if (!isPlainObject(formValue)) {
+            return null;
+          }
+
+          const normalizedEntries = Object.fromEntries(
+            Object.entries(formValue)
+              .map(([fieldKey, fieldValue]) => {
+                const normalizedValue = normalizeFormDefaultValue(fieldValue);
+                return normalizedValue === null && fieldValue !== null
+                  ? null
+                  : [fieldKey, normalizedValue];
+              })
+              .filter(
+                (
+                  entry,
+                ): entry is [string, MemberProfileFormDefaultValue] =>
+                  Boolean(entry),
+              ),
+          );
+
+          if (Object.keys(normalizedEntries).length === 0) {
+            return null;
+          }
+
+          return [formKey, normalizedEntries];
+        })
+        .filter(
+          (
+            entry,
+          ): entry is [
+            string,
+            Record<string, MemberProfileFormDefaultValue>,
+          ] => Boolean(entry),
+        ),
+    );
+
+    if (Object.keys(formDefaults).length > 0) {
+      normalized.formDefaults = formDefaults;
+    }
+  }
+
+  return normalized;
+};
+
+export const mergeMemberProfilePreferences = (
+  current: MemberProfilePreferences | null | undefined,
+  patch: MemberProfilePreferences | null | undefined,
+): MemberProfilePreferences => {
+  const base = normalizeMemberProfilePreferences(current);
+  const incoming = normalizeMemberProfilePreferences(patch);
+
+  const nextFormDefaults = {
+    ...(base.formDefaults ?? {}),
+    ...Object.fromEntries(
+      Object.entries(incoming.formDefaults ?? {}).map(([formKey, defaults]) => [
+        formKey,
+        {
+          ...(base.formDefaults?.[formKey] ?? {}),
+          ...defaults,
+        },
+      ]),
+    ),
+  };
+
+  return {
+    ...base,
+    ...incoming,
+    ...(incoming.balance
+      ? {
+          balance: {
+            ...(base.balance ?? {}),
+            ...incoming.balance,
+            ...(incoming.balance.columns
+              ? {
+                  columns: {
+                    ...(base.balance?.columns ?? {}),
+                    ...incoming.balance.columns,
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
+    ...(Object.keys(nextFormDefaults).length > 0
+      ? { formDefaults: nextFormDefaults }
+      : {}),
+  };
+};
+
 const mapMemberProfileRow = (
   row: Record<string, unknown>,
 ): MemberProfile | null => {
@@ -109,6 +292,7 @@ const mapMemberProfileRow = (
     campaiName: normalizeText(row.campai_name),
     avatarUrl: normalizeText(row.avatar_url),
     shortBio: normalizeText(row.short_bio),
+    preferences: normalizeMemberProfilePreferences(row.preferences),
     createdAt: normalizeText(row.created_at),
     updatedAt: normalizeText(row.updated_at),
   };
@@ -152,6 +336,7 @@ const buildUpsertPayload = (
     ? {
         avatar_url: normalizeText(profile.avatar_url),
         short_bio: normalizeText(profile.short_bio),
+        preferences: normalizeMemberProfilePreferences(profile.preferences),
       }
     : {}),
   updated_at: new Date().toISOString(),
@@ -186,6 +371,7 @@ export const memberProfileToMetadata = (profile: MemberProfile | null) => {
     campai_name: profile.campaiName,
     avatar_url: profile.avatarUrl,
     short_bio: profile.shortBio,
+    preferences: profile.preferences,
   };
 };
 
@@ -214,6 +400,8 @@ export const mergeUserMetadataWithMemberProfile = (
   if (!normalizeText(merged.short_bio) && profile.shortBio) {
     merged.short_bio = profile.shortBio;
   }
+
+  merged.preferences = profile.preferences;
 
   return merged;
 };
@@ -326,4 +514,23 @@ export const upsertMemberProfile = async (
   }
 
   return mapped;
+};
+
+export const upsertMemberProfilePreferences = async (
+  client: SupabaseClient,
+  userId: string,
+  preferences: MemberProfilePreferences,
+): Promise<MemberProfile> => {
+  const existingProfile = await getMemberProfileByUserId(client, userId);
+
+  return upsertMemberProfile(client, userId, {
+    campai_contact_id: existingProfile?.campaiContactId ?? null,
+    campai_member_number: existingProfile?.campaiMemberNumber ?? null,
+    campai_debtor_account: existingProfile?.campaiDebtorAccount ?? null,
+    campai_segments: existingProfile?.campaiSegments ?? [],
+    campai_name: existingProfile?.campaiName ?? null,
+    avatar_url: existingProfile?.avatarUrl ?? null,
+    short_bio: existingProfile?.shortBio ?? null,
+    preferences,
+  });
 };

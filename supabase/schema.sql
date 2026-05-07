@@ -262,6 +262,7 @@ create table if not exists public.member_profiles (
   campai_name text,
   avatar_url text,
   short_bio text,
+  preferences jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -273,6 +274,7 @@ alter table public.member_profiles add column if not exists campai_segments text
 alter table public.member_profiles add column if not exists campai_name text;
 alter table public.member_profiles add column if not exists avatar_url text;
 alter table public.member_profiles add column if not exists short_bio text;
+alter table public.member_profiles add column if not exists preferences jsonb not null default '{}'::jsonb;
 alter table public.member_profiles add column if not exists updated_at timestamptz not null default now();
 
 create unique index if not exists member_profiles_campai_contact_id_key

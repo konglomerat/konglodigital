@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import {
   type CampaiPaymentMethodType,
   isCampaiPaymentMethodType,
@@ -47,6 +48,7 @@ type InvoiceBody = {
   email?: string;
   recipientEmail?: string;
   debtorName?: string;
+  doNotSendReceipt?: boolean;
   sendByMail?: boolean;
   title?: string;
   intro?: string;
@@ -147,6 +149,21 @@ const normalizeDiscount = (value: unknown) => {
   }
   return 0;
 };
+
+const calculateGrossAmountCents = (positions: PositionPayload[]): number =>
+  positions.reduce((sum, position) => {
+    if (!Number.isFinite(position.unitAmount) || position.unitAmount <= 0) {
+      return sum;
+    }
+    const quantity =
+      typeof position.quantity === "number" && Number.isFinite(position.quantity)
+        ? position.quantity
+        : 0;
+    const lineTotal = Math.round(position.unitAmount * Math.max(0, quantity));
+    const discount = normalizeDiscount(position.discount);
+    const discountedLineTotal = Math.round(lineTotal * (1 - discount / 100));
+    return sum + Math.max(0, discountedLineTotal);
+  }, 0);
 
 const parseTaxRateChoice = (value: unknown): TaxRateChoice | null => {
   if (value === 0 || value === 7 || value === 19) {
@@ -362,7 +379,8 @@ export const POST = async (request: NextRequest) => {
   const fallbackDueDate = formatDate(
     new Date(Date.now() + Math.max(1, dueDays) * 86400000),
   );
-  const sendByMail = body.sendByMail === true;
+  const doNotSendReceipt = body.doNotSendReceipt === true;
+  const sendByMail = doNotSendReceipt ? false : body.sendByMail === true;
   const recipientEmail =
     typeof body.recipientEmail === "string"
       ? body.recipientEmail.trim()
@@ -418,6 +436,19 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json(
       { error: "Missing debtor name." },
       { status: 400 },
+    );
+  }
+
+  const debtorAddressValidation = await validateDebtorAddressForAmount({
+    config,
+    debtorAccount,
+    grossAmountCents: calculateGrossAmountCents(rawPositions),
+  });
+
+  if (!debtorAddressValidation.ok) {
+    return NextResponse.json(
+      { error: debtorAddressValidation.error },
+      { status: debtorAddressValidation.status },
     );
   }
 
@@ -558,12 +589,10 @@ export const POST = async (request: NextRequest) => {
       country: String(body.address.country),
     },
     title: body.title?.trim() || "Rechnung",
-    intro:
-      body.intro?.trim() ||
-      "Für [text] erlauben wir Ihnen folgenden Betrag in Rechnung zu stellen",
+    intro: body.intro?.trim() || "",
     account: debtorAccount,
     isNet: body.isNet ?? true,
-    deliveryDateType: payloadDeliveryDate ? "delivery" : null,
+    deliveryDateType: "service",
     receiptDate: payloadReceiptDate,
     dueDate: payloadDueDate,
     deliveryDate: payloadDeliveryDate ?? undefined,
@@ -580,7 +609,7 @@ export const POST = async (request: NextRequest) => {
     discount: 0,
     discountType: "%",
     positions,
-    doNotSendReceipt: !sendByMail,
+    doNotSendReceipt,
     queueReceiptDocument: sendByMail,
     tags,
   };

@@ -232,8 +232,8 @@ export default function CampaiProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
+    <div className="min-h-screen text-foreground">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <PageTitle
           title="Produkte"
           subTitle="Durchsuche Produkte und lege sie in den Warenkorb."
