@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy": "vercel --prod",
     "storage:video-previews": "node scripts/backfill-resource-video-previews.mjs",
     "storage:png-to-jpg": "node scripts/convert-supabase-png-to-jpg.mjs",
     "supabase:smoke": "node scripts/supabase-cutover-smoke.mjs",

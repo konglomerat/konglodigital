@@ -206,7 +206,7 @@ Sync database tables from source to target:
 
 ## Deployment
 
-Deploy on Vercel or any Node.js host that supports Next.js App Router.
+Deploy on Dokploy or any Node.js host that supports Next.js App Router.
 Configure the same environment variables in your hosting provider.
 
 ## i18n
