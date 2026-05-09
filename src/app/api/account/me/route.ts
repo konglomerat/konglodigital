@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { getCampaiMemberContactById } from "@/lib/campai-members";
+import { getCampaiMemberContactById } from "@/app/api/campai/contacts/route";
 import {
   getMemberProfileByUserId,
   mergeUserMetadataWithMemberProfile,
