@@ -52,10 +52,6 @@ const getRegistrationProfile = async (
       ? data.campai_member_number.trim()
       : "";
 
-  if (!firstName || !lastName || !memberNumber) {
-    return null;
-  }
-
   return { firstName, lastName, memberNumber };
 };
 
@@ -247,21 +243,23 @@ export default function RegisterCompletePage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="register-complete-member-number"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-              >
-                Mitgliedsnummer
-              </label>
-              <input
-                id="register-complete-member-number"
-                value={profile.memberNumber}
-                disabled
-                autoComplete="off"
-                className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-              />
-            </div>
+            {profile.memberNumber ? (
+              <div className="space-y-2">
+                <label
+                  htmlFor="register-complete-member-number"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
+                >
+                  Mitgliedsnummer
+                </label>
+                <input
+                  id="register-complete-member-number"
+                  value={profile.memberNumber}
+                  disabled
+                  autoComplete="off"
+                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
+                />
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <label
