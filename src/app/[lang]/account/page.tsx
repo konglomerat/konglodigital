@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendarCheck, faUser } from "@fortawesome/free-solid-svg-icons";
+
 import { type InvoicePayload } from "@/lib/campai-invoices";
+import { signOut } from "@/app/actions";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
 import PasswordInput from "../components/PasswordInput";
@@ -347,10 +351,19 @@ export default function AccountPage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        title="Konto"
-        subTitle="Verwalte deine Profildaten und dein Passwort."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageTitle
+          title="Konto"
+          subTitle="Verwalte deine Profildaten und dein Passwort."
+        />
+        {user ? (
+          <form action={signOut}>
+            <Button type="submit" kind="secondary" className="px-4 py-2 text-sm">
+              Abmelden
+            </Button>
+          </form>
+        ) : null}
+      </div>
 
       {error ? (
         <section className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
@@ -392,7 +405,8 @@ export default function AccountPage() {
           </Button>
         </section>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <div className="space-y-6 lg:columns-2 lg:gap-6 lg:space-y-0 [&>section]:break-inside-avoid lg:[&>section]:mb-6">
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-foreground">Profil</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -503,6 +517,46 @@ export default function AccountPage() {
             </form>
           </section>
 
+          <section
+            aria-disabled="true"
+            className="flex cursor-not-allowed items-start gap-4 rounded-3xl border border-dashed border-border bg-muted/40 p-6 text-muted-foreground shadow-sm"
+            title="Coming soon"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card">
+              <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Zugangskarte
+                </h2>
+                <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  Coming soon
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            aria-disabled="true"
+            className="flex cursor-not-allowed items-start gap-4 rounded-3xl border border-dashed border-border bg-muted/40 p-6 text-muted-foreground shadow-sm"
+            title="Coming soon"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card">
+              <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Ehrenamtsbonus beantragen
+                </h2>
+                <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  Coming soon
+                </span>
+              </div>
+            </div>
+          </section>
+
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-foreground">Passwort</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -554,8 +608,9 @@ export default function AccountPage() {
               ) : null}
             </form>
           </section>
+          </div>
 
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">

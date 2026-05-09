@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCube,
   faBoxOpen,
-  faCalendarCheck,
   faCalendarDays,
   faChartPie,
   faFolderOpen,
@@ -20,15 +19,19 @@ import {
   faCartShopping,
   faUser,
   faLock,
-  faRightFromBracket,
   faRightToBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mdxeditor/editor/style.css";
 import "./globals.css";
-import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
-import { getUserRole } from "@/lib/roles";
+import { getUserRole, type UserRole } from "@/lib/roles";
+
+const ROLE_LABELS_DE: Record<UserRole, string> = {
+  admin: "Admin",
+  accounting: "Buchhaltung",
+  member: "Mitglied",
+};
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
@@ -268,25 +271,6 @@ export default async function RootLayout({
                           Laser
                         </ComingSoonNavItem>
 
-                        <p className={navSectionTitleClassName}>Self Service</p>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faCalendarCheck}
-                        >
-                          Zugangskarte
-                        </ComingSoonNavItem>
-                        <ProtectedNavItem
-                          href="/account"
-                          className={navLinkClassName}
-                          icon={faUser}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          {currentUserDisplayName
-                            ? `Profil (${currentUserDisplayName})`
-                            : "Profil"}
-                        </ProtectedNavItem>
-
                         <p className={navSectionTitleClassName}>Verein</p>
 
                         <ProtectedNavItem
@@ -327,12 +311,15 @@ export default async function RootLayout({
                         >
                           Produkte
                         </ProtectedNavItem>
-                        <ComingSoonNavItem
+                        <ProtectedNavItem
+                          href="/receipts"
                           className={navLinkClassName}
-                          icon={faUser}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
                         >
-                          Ehrenamtsbonus
-                        </ComingSoonNavItem>
+                          Buchhaltung
+                        </ProtectedNavItem>
 
                         <p className={navSectionTitleClassName}>Holzwerkstatt</p>
                         <ProtectedNavItem
@@ -350,22 +337,11 @@ export default async function RootLayout({
                         >
                           Lagerplatz
                         </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>buchhaltung</p>
-                        <ProtectedNavItem
-                          href="/receipts"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Übersicht
-                        </ProtectedNavItem>
                       </nav>
-                      <div className="border-t border-border px-4 py-4">
-                        {isAuthenticated ? (
-                          <div className="space-y-3">
-                            {canAccessAdmin ? (
+                      {isAuthenticated ? (
+                        <div className="border-t border-border">
+                          {canAccessAdmin ? (
+                            <div className="px-4 pb-3 pt-4">
                               <Button
                                 href="/admin/users"
                                 kind="secondary"
@@ -377,22 +353,36 @@ export default async function RootLayout({
                                 />
                                 Admin
                               </Button>
-                            ) : null}
-                            <form action={signOut}>
-                              <Button
-                                type="submit"
-                                kind="primary"
-                                className={navButtonClassName}
-                              >
-                                <FontAwesomeIcon
-                                  icon={faRightFromBracket}
-                                  className="h-4 w-4"
-                                />
-                                Abmelden
-                              </Button>
-                            </form>
-                          </div>
-                        ) : (
+                            </div>
+                          ) : null}
+                          <Link
+                            href="/account"
+                            className={`flex items-center gap-3 px-4 py-3 transition hover:bg-muted ${canAccessAdmin ? "border-t border-border" : ""}`}
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+                              <FontAwesomeIcon
+                                icon={faUser}
+                                className="h-3.5 w-3.5"
+                              />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-bold text-foreground">
+                                {currentUserDisplayName ?? "Konto"}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                {ROLE_LABELS_DE[userRole]}
+                              </span>
+                            </span>
+                            <span
+                              aria-hidden
+                              className="text-base text-muted-foreground"
+                            >
+                              ›
+                            </span>
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="border-t border-border px-4 py-4">
                           <Button
                             href="/login"
                             kind="primary"
@@ -404,8 +394,8 @@ export default async function RootLayout({
                             />
                             Anmelden
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </AutoCloseMenuDetails>
                 </div>
@@ -476,27 +466,6 @@ export default async function RootLayout({
                 </ComingSoonNavItem>
 
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Self Service
-                </p>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faCalendarCheck}
-                >
-                  Zugangskarte
-                </ComingSoonNavItem>
-                <ProtectedNavItem
-                  href="/account"
-                  className={navItemClassName}
-                  icon={faUser}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  {currentUserDisplayName
-                    ? `Profil (${currentUserDisplayName})`
-                    : "Profil"}
-                </ProtectedNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Verein
                 </p>
                 <ActiveNavLink href="/calendar" className={navItemClassName}>
@@ -525,12 +494,15 @@ export default async function RootLayout({
                 >
                   Produkte
                 </ProtectedNavItem>
-                <ComingSoonNavItem
+                <ProtectedNavItem
+                  href="/receipts"
                   className={navItemClassName}
-                  icon={faUser}
+                  icon={faFolderOpen}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
                 >
-                  Ehrenamtsbonus
-                </ComingSoonNavItem>
+                  Buchhaltung
+                </ProtectedNavItem>
 
                 <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Holzwerkstatt
@@ -550,45 +522,43 @@ export default async function RootLayout({
                 >
                   Lagerplatz
                 </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  buchhaltung
-                </p>
-                <ProtectedNavItem
-                  href="/receipts"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Übersicht
-                </ProtectedNavItem>
               </nav>
               {isAuthenticated ? (
-                <div className="mt-auto space-y-3">
+                <div className="-mx-6 mt-auto flex flex-col">
                   {canAccessAdmin ? (
-                    <Button
-                      href="/admin/users"
-                      kind="secondary"
-                      className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                    >
-                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                      Admin
-                    </Button>
+                    <div className="px-6 pb-3">
+                      <Button
+                        href="/admin/users"
+                        kind="secondary"
+                        className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                      >
+                        <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                        Admin
+                      </Button>
+                    </div>
                   ) : null}
-                  <form action={signOut}>
-                    <Button
-                      type="submit"
-                      kind="primary"
-                      className={navButtonClassName}
+                  <Link
+                    href="/account"
+                    className="flex items-center gap-3 border-t border-sidebar-border bg-sidebar px-6 py-3 transition hover:bg-muted"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+                      <FontAwesomeIcon icon={faUser} className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-foreground">
+                        {currentUserDisplayName ?? "Konto"}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {ROLE_LABELS_DE[userRole]}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className="text-base text-muted-foreground"
                     >
-                      <FontAwesomeIcon
-                        icon={faRightFromBracket}
-                        className="h-4 w-4"
-                      />
-                      Abmelden
-                    </Button>
-                  </form>
+                      ›
+                    </span>
+                  </Link>
                 </div>
               ) : (
                 <Button
