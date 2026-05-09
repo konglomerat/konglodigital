@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ActiveNavLink from "./ActiveNavLink";
+import SidebarTile from "./SidebarTile";
 import heroHelloImage from "./hero-hello.jpg";
 import { Geist, Geist_Mono } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
@@ -8,15 +9,11 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCube,
   faBoxOpen,
+  faBuilding,
   faCalendarDays,
   faChartPie,
   faFolderOpen,
-  faLayerGroup,
-  faPrint,
-  faKey,
-  faCartShopping,
   faUser,
   faLock,
   faRightToBracket,
@@ -26,6 +23,7 @@ import "@mdxeditor/editor/style.css";
 import "./globals.css";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getUserRole, type UserRole } from "@/lib/roles";
+import { WERKBEREICHE, PROJEKTE } from "@/lib/werkbereiche";
 
 const ROLE_LABELS_DE: Record<UserRole, string> = {
   admin: "Admin",
@@ -100,6 +98,7 @@ type ProtectedNavItemProps = {
   className: string;
   isAccessible: boolean;
   tooltip: string;
+  external?: boolean;
 };
 
 function ProtectedNavItem({
@@ -109,8 +108,22 @@ function ProtectedNavItem({
   className,
   isAccessible,
   tooltip,
+  external,
 }: ProtectedNavItemProps) {
   if (isAccessible) {
+    if (external) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={className}
+        >
+          <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+          {children}
+        </a>
+      );
+    }
     return (
       <ActiveNavLink href={href} className={className}>
         <FontAwesomeIcon icon={icon} className="h-4 w-4" />
@@ -134,29 +147,15 @@ function ProtectedNavItem({
   );
 }
 
-type ComingSoonNavItemProps = {
-  icon: IconProp;
+type SidebarSectionLabelProps = {
   children: React.ReactNode;
-  className: string;
 };
 
-function ComingSoonNavItem({
-  icon,
-  children,
-  className,
-}: ComingSoonNavItemProps) {
+function SidebarSectionLabel({ children }: SidebarSectionLabelProps) {
   return (
-    <div
-      className={`${className} cursor-not-allowed select-none text-muted-foreground/80 hover:text-muted-foreground/80`}
-      aria-disabled="true"
-      title="Coming soon"
-    >
-      <FontAwesomeIcon icon={icon} className="h-4 w-4" />
-      <span>{children}</span>
-      <span className="ml-auto whitespace-nowrap rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-        Coming soon
-      </span>
-    </div>
+    <p className="px-6 pb-2 pt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground first:pt-0">
+      {children}
+    </p>
   );
 }
 
@@ -174,15 +173,81 @@ export default async function RootLayout({
     : null;
   const userRole = await getUserRole(supabase, userData.user);
   const canAccessAdmin = isAuthenticated && userRole === "admin";
+
   const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
+    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
-    "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground";
-  const navSectionTitleClassName =
-    "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:pt-0";
+    "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground";
   const navButtonClassName =
     "flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90";
   const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
+
+  const renderKonglomerat = (className: string) => (
+    <>
+      <ProtectedNavItem
+        href="https://konglomerat.org"
+        className={className}
+        icon={faBuilding}
+        isAccessible
+        tooltip=""
+        external
+      >
+        Der Verein
+      </ProtectedNavItem>
+      <ActiveNavLink href="/projects" className={className}>
+        <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+        Projekte
+      </ActiveNavLink>
+      <ActiveNavLink href="/calendar" className={className}>
+        <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+        Kalender
+      </ActiveNavLink>
+      <ProtectedNavItem
+        href="/resources"
+        className={className}
+        icon={faBoxOpen}
+        isAccessible={isAuthenticated}
+        tooltip={membersOnlyTooltip}
+      >
+        Inventar
+      </ProtectedNavItem>
+      <ProtectedNavItem
+        href="/receipts"
+        className={className}
+        icon={faChartPie}
+        isAccessible={isAuthenticated}
+        tooltip={membersOnlyTooltip}
+      >
+        Buchhaltung
+      </ProtectedNavItem>
+    </>
+  );
+
+  const renderWerkbereicheTiles = () => (
+    <div className="grid grid-cols-2 gap-1.5 px-3">
+      {WERKBEREICHE.map((w) => (
+        <SidebarTile
+          key={w.slug}
+          href={`/werkbereiche/${w.slug}`}
+          label={w.shortLabel ?? w.name}
+          activeMatch={`/werkbereiche/${w.slug}`}
+        />
+      ))}
+    </div>
+  );
+
+  const renderProjekteTiles = () => (
+    <div className="grid grid-cols-2 gap-1.5 px-3">
+      {PROJEKTE.map((p) => (
+        <SidebarTile
+          key={p.slug}
+          href={`/projekte/${p.slug}`}
+          label={p.name}
+          activeMatch={`/projekte/${p.slug}`}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -225,118 +290,18 @@ export default async function RootLayout({
                   >
                     <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg">
                       <nav className="flex flex-col px-2 py-2">
-                        <p className={navSectionTitleClassName}>
-                          Digital Fabrication
-                        </p>
-                        <ProtectedNavItem
-                          href="/printers"
-                          className={navLinkClassName}
-                          icon={faCube}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          3D-Druck
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/printers/emptying"
-                          className={navLinkClassName}
-                          icon={faPrint}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Drucker entleeren
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/printers/access-codes"
-                          className={navLinkClassName}
-                          icon={faKey}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Drucker Zugangscodes
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/checkout"
-                          className={navLinkClassName}
-                          icon={faCartShopping}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Warenkorb
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faChartPie}
-                        >
-                          Laser
-                        </ComingSoonNavItem>
+                        <SidebarSectionLabel>Konglomerat</SidebarSectionLabel>
+                        {renderKonglomerat(navLinkClassName)}
 
-                        <p className={navSectionTitleClassName}>Verein</p>
+                        <SidebarSectionLabel>Werkbereiche</SidebarSectionLabel>
+                        <div className="px-2 py-1">
+                          {renderWerkbereicheTiles()}
+                        </div>
 
-                        <ProtectedNavItem
-                          href="/resources"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Inventar
-                        </ProtectedNavItem>
-                        <ActiveNavLink
-                          href="/projects"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faFolderOpen}
-                            className="h-4 w-4"
-                          />
-                          Projekte
-                        </ActiveNavLink>
-                        <ActiveNavLink
-                          href="/calendar"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faCalendarDays}
-                            className="h-4 w-4"
-                          />
-                          Kalender
-                        </ActiveNavLink>
-                        <ProtectedNavItem
-                          href="/products"
-                          className={navLinkClassName}
-                          icon={faBoxOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Produkte
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/receipts"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Buchhaltung
-                        </ProtectedNavItem>
-
-                        <p className={navSectionTitleClassName}>Holzwerkstatt</p>
-                        <ProtectedNavItem
-                          href="/split-invoice"
-                          className={navLinkClassName}
-                          icon={faLayerGroup}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Materialbestellung
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faLayerGroup}
-                        >
-                          Lagerplatz
-                        </ComingSoonNavItem>
+                        <SidebarSectionLabel>Projekte</SidebarSectionLabel>
+                        <div className="px-2 py-1">
+                          {renderProjekteTiles()}
+                        </div>
                       </nav>
                       {isAuthenticated ? (
                         <div className="border-t border-border">
@@ -419,109 +384,14 @@ export default async function RootLayout({
                 </div>
               </div>
               <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Digital Fabrication
-                </p>
-                <ProtectedNavItem
-                  href="/printers"
-                  className={navItemClassName}
-                  icon={faCube}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  3D-Druck
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/printers/emptying"
-                  className={navItemClassName}
-                  icon={faPrint}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Drucker entleeren
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/printers/access-codes"
-                  className={navItemClassName}
-                  icon={faKey}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Drucker Zugangscodes
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/checkout"
-                  className={navItemClassName}
-                  icon={faCartShopping}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Warenkorb
-                </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faChartPie}
-                >
-                  Laser
-                </ComingSoonNavItem>
+                <SidebarSectionLabel>Konglomerat</SidebarSectionLabel>
+                {renderKonglomerat(navItemClassName)}
 
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Verein
-                </p>
-                <ActiveNavLink href="/calendar" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                  Kalender
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/resources"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Inventar
-                </ProtectedNavItem>
-                <ActiveNavLink href="/projects" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                  Projekte
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/products"
-                  className={navItemClassName}
-                  icon={faBoxOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Produkte
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/receipts"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Buchhaltung
-                </ProtectedNavItem>
+                <SidebarSectionLabel>Werkbereiche</SidebarSectionLabel>
+                <div className="pb-2">{renderWerkbereicheTiles()}</div>
 
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Holzwerkstatt
-                </p>
-                <ProtectedNavItem
-                  href="/split-invoice"
-                  className={navItemClassName}
-                  icon={faLayerGroup}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Materialbestellung
-                </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faLayerGroup}
-                >
-                  Lagerplatz
-                </ComingSoonNavItem>
+                <SidebarSectionLabel>Projekte</SidebarSectionLabel>
+                <div className="pb-2">{renderProjekteTiles()}</div>
               </nav>
               {isAuthenticated ? (
                 <div className="-mx-6 mt-auto flex flex-col">
