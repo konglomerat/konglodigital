@@ -2,9 +2,55 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { userCanAccessModule } from "@/lib/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const dynamic = "force-dynamic";
+
+type ContactInviteStatus = "pending" | "invited" | "active";
+
+type AuthSummary = {
+  status: ContactInviteStatus;
+  invitedAt: string | null;
+  userId: string | null;
+};
+
+const buildAuthSummariesByEmail = async (): Promise<Map<string, AuthSummary>> => {
+  const adminClient = createSupabaseAdminClient();
+  const summaries = new Map<string, AuthSummary>();
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
+    if (error) {
+      throw error;
+    }
+    const users = data.users ?? [];
+    for (const user of users) {
+      const email = user.email?.trim().toLowerCase();
+      if (!email) {
+        continue;
+      }
+      const isActive = Boolean(
+        user.email_confirmed_at || user.last_sign_in_at,
+      );
+      const invitedAtCandidate =
+        (user as { invited_at?: string | null }).invited_at ??
+        user.created_at ??
+        null;
+      summaries.set(email, {
+        status: isActive ? "active" : "invited",
+        invitedAt: invitedAtCandidate,
+        userId: user.id,
+      });
+    }
+    if (users.length < 1000) {
+      break;
+    }
+  }
+  return summaries;
+};
 
 export const GET = async (request: NextRequest) => {
   try {
@@ -19,18 +65,30 @@ export const GET = async (request: NextRequest) => {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const contacts = await listAllActiveCampaiContacts();
+    const [contacts, authSummariesByEmail] = await Promise.all([
+      listAllActiveCampaiContacts(),
+      buildAuthSummariesByEmail(),
+    ]);
 
     const rows = contacts
-      .map((contact) => ({
-        id: contact.id,
-        name: contact.name,
-        email: contact.email,
-        memberNumber: contact.memberNumber,
-        tags: contact.tags,
-        types: contact.types,
-        entryAt: contact.entryAt,
-      }))
+      .map((contact) => {
+        const authSummary = contact.email
+          ? authSummariesByEmail.get(contact.email.trim().toLowerCase())
+          : undefined;
+        return {
+          id: contact.id,
+          name: contact.name,
+          email: contact.email,
+          memberNumber: contact.memberNumber,
+          balance: contact.balance,
+          tags: contact.tags,
+          types: contact.types,
+          entryAt: contact.entryAt,
+          inviteStatus: (authSummary?.status ?? "pending") as ContactInviteStatus,
+          invitedAt: authSummary?.invitedAt ?? null,
+          userId: authSummary?.userId ?? null,
+        };
+      })
       .sort((left, right) => {
         const leftTime = left.entryAt ? Date.parse(left.entryAt) : NaN;
         const rightTime = right.entryAt ? Date.parse(right.entryAt) : NaN;
@@ -60,6 +118,7 @@ export type CampaiMemberContact = {
   email: string | null;
   memberNumber: string | null;
   debtorAccount: number | null;
+  balance: number | null;
   segments: string[];
   tags: string[];
   types: string[];
@@ -102,6 +161,17 @@ const toInteger = (value: unknown): number | null => {
   }
   if (typeof value === "string") {
     const parsed = Number.parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const toNumberValue = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.trim().replace(",", "."));
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
@@ -170,6 +240,7 @@ const normalizeCampaiLegacyContact = (
     email: toStringValue(communication?.email)?.toLowerCase() ?? null,
     memberNumber: toStringValue(membership?.number),
     debtorAccount: toInteger(billing?.debtorNumber),
+    balance: toNumberValue(billing?.balance),
     segments: toStringArray(record.segments),
     tags: toStringArray(record.tags),
     types: toStringArray(record.type),
@@ -282,6 +353,32 @@ export const getCampaiActiveMemberContactByEmail = async (email: string) => {
   return findCampaiContact(
     (contact) =>
       contact.email === normalizedEmail &&
+      contact.types.some((type) => type.toLowerCase() === "member") &&
+      isActiveCampaiContact(contact),
+  );
+};
+
+export const getCampaiActiveContactByEmail = async (email: string) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  return findCampaiContact(
+    (contact) =>
+      contact.email === normalizedEmail && isActiveCampaiContact(contact),
+  );
+};
+
+export const getCampaiActiveMemberContactById = async (contactId: string) => {
+  const normalizedId = contactId.trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  return findCampaiContact(
+    (contact) =>
+      contact.id === normalizedId &&
       contact.types.some((type) => type.toLowerCase() === "member") &&
       isActiveCampaiContact(contact),
   );

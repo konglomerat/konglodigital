@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
 import {
-	getUserRole,
+	listMemberProfilesByUserIds,
+	upsertMemberProfile,
+} from "@/lib/member-profiles";
+import {
 	normalizeUserRole,
 	USER_ROLES,
 	userCanAccessModule,
@@ -17,6 +19,29 @@ import {
 	syncUserAccessToAuthMetadata,
 	upsertUserAccess,
 } from "@/lib/user-access";
+
+import {
+	buildCampaiProfileData as buildCampaiContactProfileData,
+	getCampaiActiveMemberContactById as getActiveCampaiMemberContactById,
+} from "@/app/api/campai/contacts/route";
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+	if (error instanceof Error) {
+		const message = error.message.trim();
+		if (message) {
+			return message;
+		}
+	}
+
+	if (error && typeof error === "object" && "message" in error) {
+		const message = error.message;
+		if (typeof message === "string" && message.trim()) {
+			return message;
+		}
+	}
+
+	return fallback;
+};
 
 const createForbiddenResponse = () =>
 	NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -91,7 +116,10 @@ export const GET = async (request: NextRequest) => {
 			profiles,
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Profile konnten nicht geladen werden.";
+		const message = getErrorMessage(
+			error,
+			"Profile konnten nicht geladen werden.",
+		);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 };
@@ -113,16 +141,14 @@ export const PATCH = async (request: NextRequest) => {
 		const userId = typeof body.userId === "string" ? body.userId.trim() : "";
 		const requestedRole =
 			typeof body.role === "string" ? body.role.trim().toLowerCase() : "";
+		const requestedCampaiContactId =
+			typeof body.campaiContactId === "string"
+				? body.campaiContactId.trim()
+				: "";
 
 		if (!userId) {
 			return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
 		}
-
-		if (!USER_ROLES.includes(requestedRole as (typeof USER_ROLES)[number])) {
-			return NextResponse.json({ error: "Ungueltige Rolle." }, { status: 400 });
-		}
-
-		const role = normalizeUserRole(requestedRole);
 
 		const adminClient = createSupabaseAdminClient();
 		const { data: userLookup, error: userLookupError } = await adminClient.auth.admin.getUserById(
@@ -132,6 +158,48 @@ export const PATCH = async (request: NextRequest) => {
 		if (userLookupError) {
 			throw userLookupError;
 		}
+
+		if (requestedCampaiContactId) {
+			const contact = await getActiveCampaiMemberContactById(
+				requestedCampaiContactId,
+			);
+
+			if (!contact) {
+				return NextResponse.json(
+					{ error: "Campai-Konto konnte nicht gefunden werden." },
+					{ status: 404 },
+				);
+			}
+
+			const memberProfile = await upsertMemberProfile(
+				adminClient,
+				userId,
+				buildCampaiContactProfileData(contact),
+			);
+
+			return NextResponse.json({
+				profile: {
+					id: userLookup.user.id,
+					campaiContactId: memberProfile.campaiContactId,
+					campaiMemberNumber: memberProfile.campaiMemberNumber,
+					campaiDebtorAccount: memberProfile.campaiDebtorAccount,
+					campaiName: memberProfile.campaiName,
+				},
+			});
+		}
+
+		if (!requestedRole) {
+			return NextResponse.json(
+				{ error: "Keine Aenderung angegeben." },
+				{ status: 400 },
+			);
+		}
+
+		if (!USER_ROLES.includes(requestedRole as (typeof USER_ROLES)[number])) {
+			return NextResponse.json({ error: "Ungueltige Rolle." }, { status: 400 });
+		}
+
+		const role = normalizeUserRole(requestedRole);
 
 		const currentAccess = await getUserAccessByUserId(adminClient, userId);
 		const updatedAccess = await upsertUserAccess(adminClient, {
@@ -148,8 +216,10 @@ export const PATCH = async (request: NextRequest) => {
 			},
 		});
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : "Rolle konnte nicht gespeichert werden.";
+		const message = getErrorMessage(
+			error,
+			"Aenderung konnte nicht gespeichert werden.",
+		);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 };
