@@ -42,6 +42,14 @@ export default async function AdminLayout({
           Benutzer
         </ActiveNavLink>
         <ActiveNavLink
+          href={localizePathname("/admin/contacts", locale)}
+          exact
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        >
+          Mitglieder
+        </ActiveNavLink>
+        <ActiveNavLink
           href={localizePathname("/kofi", locale)}
           exact
           className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"

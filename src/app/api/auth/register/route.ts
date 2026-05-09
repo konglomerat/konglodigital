@@ -10,7 +10,7 @@ import {
   buildCampaiProfileData,
   getCampaiActiveMemberContactByEmail,
   splitCampaiContactName,
-} from "@/lib/campai-members";
+} from "@/app/api/campai/contacts/route";
 import { upsertMemberProfile } from "@/lib/member-profiles";
 import { getInitialUserRole } from "@/lib/roles";
 import {
