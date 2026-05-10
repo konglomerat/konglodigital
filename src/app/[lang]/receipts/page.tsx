@@ -14,6 +14,7 @@ import {
 
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
 import Button from "@/app/[lang]/components/Button";
+import PageTitle from "@/app/[lang]/components/PageTitle";
 import type {
   CampaiBalanceReceipt,
   CampaiReceiptPosition,
@@ -1483,20 +1484,18 @@ export default function ReceiptsPage() {
 
   return (
     <div className="mx-auto w-full px-4 py-4 md:px-0 md:py-0">
-      <div className="flex items-start justify-between gap-3 pb-4 sm:gap-4 sm:pb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            Übersicht
-          </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Wähle einen oder mehrere Werkbereiche/Projekte, um alle
-            zugehörigen Belege zu sehen.
-          </p>
-        </div>
-
-        <Button href="/receipts/expense" kind="primary" size="small">
-          Neue Buchung
-        </Button>
+      <div className="pb-4 sm:pb-6">
+        <PageTitle
+          title="Buchhaltung"
+          subTitle="Wähle einen oder mehrere Werkbereiche/Projekte, um alle zugehörigen Belege zu sehen."
+          links={[
+            {
+              href: "/receipts/expense",
+              label: "Neue Buchung",
+              kind: "primary",
+            },
+          ]}
+        />
       </div>
 
       <div className="mb-3 flex flex-wrap items-end gap-2 sm:mb-4 sm:gap-3">

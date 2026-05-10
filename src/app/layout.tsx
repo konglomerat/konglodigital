@@ -13,6 +13,7 @@ import {
   faBuilding,
   faCalendarDays,
   faChartPie,
+  faArrowUpRightFromSquare,
   faFolderOpen,
   faUser,
   faLock,
@@ -120,7 +121,14 @@ function ProtectedNavItem({
           className={className}
         >
           <FontAwesomeIcon icon={icon} className="h-4 w-4" />
-          {children}
+          <span>{children}</span>
+          <span className="ml-auto inline-flex items-center">
+            <FontAwesomeIcon
+              icon={faArrowUpRightFromSquare}
+              className="h-3 w-3"
+              aria-hidden="true"
+            />
+          </span>
         </a>
       );
     }
