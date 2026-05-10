@@ -234,6 +234,36 @@ body[data-page="batch-upload"] .mapboxgl-control-container {
   }
 }
 
+@layer components {
+  .sidebar-tile {
+    display: flex;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 2px;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .sidebar-tile--active {
+    background-color: var(--foreground);
+    color: var(--background);
+  }
+
+  .sidebar-tile--inactive {
+    background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+    color: var(--foreground);
+  }
+
+  .sidebar-tile--inactive:hover {
+    background-color: var(--muted);
+  }
+}
+
 input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;

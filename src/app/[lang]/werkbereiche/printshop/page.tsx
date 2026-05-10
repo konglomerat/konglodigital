@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import WerkbereichTemplate from "../WerkbereichTemplate";
 import TermineTile from "../tiles/TermineTile";
 import FaqTile from "../tiles/FaqTile";
+import RessourcenTile from "../tiles/RessourcenTile";
 
 export const metadata: Metadata = { title: "Printshop – Konglo Digital" };
 
@@ -24,6 +25,7 @@ export default function PrintshopPage() {
   return (
     <WerkbereichTemplate title="Printshop">
       <TermineTile tag="printshop" />
+      <RessourcenTile tag="printshop" featuredIds={[]} />
       <FaqTile faqs={FAQS} />
     </WerkbereichTemplate>
   );

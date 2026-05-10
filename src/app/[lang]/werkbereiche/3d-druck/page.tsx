@@ -3,6 +3,7 @@ import WerkbereichTemplate from "../WerkbereichTemplate";
 import WichtigsteLinksTile from "../tiles/WichtigsteLinksTile";
 import TermineTile from "../tiles/TermineTile";
 import FaqTile from "../tiles/FaqTile";
+import RessourcenTile from "../tiles/RessourcenTile";
 
 export const metadata: Metadata = { title: "3D Druck – Konglo Digital" };
 
@@ -23,9 +24,17 @@ const FAQS = [
 
 export default function DreidruckPage() {
   return (
-    <WerkbereichTemplate title="3D Druck">
+    <WerkbereichTemplate
+      title="3D Druck"
+      tools={[
+        { label: "Access Codes", href: "/printers/access-codes" },
+        { label: "Emptying", href: "/printers/emptying" },
+        { label: "Printer Dashboard", href: "/printers" },
+      ]}
+    >
       <WichtigsteLinksTile />
       <TermineTile tag="3d-druck" />
+      <RessourcenTile tag="3d-druck" featuredIds={[]} />
       <FaqTile faqs={FAQS} />
     </WerkbereichTemplate>
   );

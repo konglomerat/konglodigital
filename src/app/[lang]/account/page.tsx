@@ -131,6 +131,7 @@ export default function AccountPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
+  const [campaiLoading, setCampaiLoading] = useState(false);
   const [campaiError, setCampaiError] = useState<string | null>(null);
   const [campaiDebug, setCampaiDebug] = useState<unknown>(null);
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
@@ -167,6 +168,8 @@ export default function AccountPage() {
   const displayName = useMemo(() => {
     return campaiName || fullName || user?.email?.trim() || "";
   }, [campaiName, fullName, user?.email]);
+
+  const userEmail = user?.email ?? "";
 
   const avatarCandidateUrls = useMemo(() => {
     return Array.from(new Set([avatarUrl.trim(), gravatarUrl].filter(Boolean)));
@@ -253,6 +256,8 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!user || linkedDebtorAccount === null) {
+      setCampaiLoading(false);
+      setCampaiError(null);
       setCampaiInvoices([]);
       setDebtorAccount(null);
       setCampaiDebug(null);
@@ -261,6 +266,7 @@ export default function AccountPage() {
 
     let active = true;
     const loadInvoices = async () => {
+      setCampaiLoading(true);
       setCampaiError(null);
       try {
         setDebtorAccount(linkedDebtorAccount);
@@ -294,10 +300,14 @@ export default function AccountPage() {
               : "Campai-Belege konnten nicht geladen werden.",
           );
         }
+      } finally {
+        if (active) {
+          setCampaiLoading(false);
+        }
       }
     };
 
-    loadInvoices();
+    void loadInvoices();
 
     return () => {
       active = false;
@@ -356,13 +366,11 @@ export default function AccountPage() {
           title="Konto"
           subTitle="Verwalte deine Profildaten und dein Passwort."
         />
-        {user ? (
-          <form action={signOut}>
-            <Button type="submit" kind="secondary" className="px-4 py-2 text-sm">
-              Abmelden
-            </Button>
-          </form>
-        ) : null}
+        <form action={signOut}>
+          <Button type="submit" kind="secondary" className="px-4 py-2 text-sm">
+            Abmelden
+          </Button>
+        </form>
       </div>
 
       {error ? (
@@ -377,18 +385,14 @@ export default function AccountPage() {
         </section>
       ) : null}
 
-      {loadingUser ? (
-        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">Konto wird geladen ...</p>
-        </section>
-      ) : accountLoadError ? (
+      {accountLoadError ? (
         <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-destructive">
             Konto konnte nicht geladen werden
           </h2>
           <p className="mt-2 text-sm text-destructive">{accountLoadError}</p>
         </section>
-      ) : !user ? (
+      ) : !loadingUser && !user ? (
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-foreground">
             Anmeldung erforderlich
@@ -410,14 +414,16 @@ export default function AccountPage() {
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-foreground">Profil</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Dein Name wird direkt aus Campai übernommen.
+              {loadingUser
+                ? "Kontodaten werden geladen. Du kannst die Struktur schon sehen."
+                : "Dein Name wird direkt aus Campai übernommen."}
             </p>
             <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
               <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
                 {activeAvatarUrl ? (
                   <img
                     src={activeAvatarUrl}
-                    alt={displayName || user.email || "Profilbild"}
+                    alt={displayName || userEmail || "Profilbild"}
                     className="h-16 w-16 rounded-full object-cover"
                     onError={() => {
                       setAvatarCandidateIndex(
@@ -427,7 +433,7 @@ export default function AccountPage() {
                   />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-lg font-semibold text-muted-foreground">
-                    {getInitials(displayName || user.email || "?")}
+                    {getInitials(displayName || userEmail || "?")}
                   </div>
                 )}
                 <div className="text-sm text-muted-foreground">
@@ -449,6 +455,7 @@ export default function AccountPage() {
                   value={campaiName}
                   readOnly
                   placeholder="Kein Campai-Kontakt verknüpft"
+                  disabled={loadingUser || !user}
                   className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -462,7 +469,7 @@ export default function AccountPage() {
                 </label>
                 <input
                   type="email"
-                  value={user.email ?? ""}
+                  value={userEmail}
                   disabled
                   className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
                 />
@@ -476,6 +483,7 @@ export default function AccountPage() {
                   type="url"
                   value={avatarUrl}
                   onChange={(event) => setAvatarUrl(event.target.value)}
+                  disabled={loadingUser || !user}
                   placeholder="https://…"
                   className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
                 />
@@ -493,6 +501,7 @@ export default function AccountPage() {
                   name="shortBio"
                   value={shortBio}
                   onChange={(event) => setShortBio(event.target.value)}
+                  disabled={loadingUser || !user}
                   rows={4}
                   placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
                   className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
@@ -504,6 +513,7 @@ export default function AccountPage() {
               <Button
                 type="submit"
                 kind="primary"
+                disabled={loadingUser || !user}
                 className="w-full px-4 py-2 text-sm"
               >
                 Profil speichern
@@ -573,6 +583,7 @@ export default function AccountPage() {
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  disabled={loadingUser || !user}
                   showLabel="Anzeigen"
                   hideLabel="Ausblenden"
                   className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
@@ -588,6 +599,7 @@ export default function AccountPage() {
                   minLength={8}
                   value={passwordConfirm}
                   onChange={(event) => setPasswordConfirm(event.target.value)}
+                  disabled={loadingUser || !user}
                   showLabel="Anzeigen"
                   hideLabel="Ausblenden"
                   className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
@@ -596,6 +608,7 @@ export default function AccountPage() {
               <Button
                 type="submit"
                 kind="primary"
+                disabled={loadingUser || !user}
                 className="w-full px-4 py-2 text-sm"
               >
                 Passwort aktualisieren
@@ -617,7 +630,9 @@ export default function AccountPage() {
                   Meine Belege
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {debtorAccount
+                  {loadingUser
+                    ? "Campai-Verknüpfung wird geladen"
+                    : debtorAccount
                     ? `Debitor: ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
                     : campaiName
                       ? `Debitor: ${campaiName}`
@@ -625,15 +640,25 @@ export default function AccountPage() {
                 </p>
               </div>
               <p className="text-xs font-semibold text-muted-foreground">
-                {campaiInvoices.length} Belege
+                {loadingUser || campaiLoading
+                  ? "Belege werden geladen ..."
+                  : `${campaiInvoices.length} Belege`}
               </p>
             </div>
 
-            {campaiError ? (
+            {loadingUser ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Kontodaten werden geladen. Die Belege erscheinen danach automatisch.
+              </p>
+            ) : campaiError ? (
               <p className="mt-4 text-sm text-destructive">{campaiError}</p>
             ) : linkedDebtorAccount === null ? (
               <p className="mt-4 text-sm text-muted-foreground">
-                Dein Konto ist noch nicht mit einem Campai-Debitor verknpft.
+                Dein Konto ist noch nicht mit einem Campai-Debitor verknüpft.
+              </p>
+            ) : campaiLoading ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Belege werden aus Campai geladen. Der Rest der Seite bleibt nutzbar.
               </p>
             ) : campaiInvoices.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">

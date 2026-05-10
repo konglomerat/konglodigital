@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import WerkbereichTemplate from "../WerkbereichTemplate";
 import TermineTile from "../tiles/TermineTile";
 import FaqTile from "../tiles/FaqTile";
+import RessourcenTile from "../tiles/RessourcenTile";
 
 export const metadata: Metadata = { title: "Metall – Konglo Digital" };
 
@@ -24,6 +25,7 @@ export default function MetallPage() {
   return (
     <WerkbereichTemplate title="Metall">
       <TermineTile tag="metall" />
+      <RessourcenTile tag="metall" featuredIds={[]} />
       <FaqTile faqs={FAQS} />
     </WerkbereichTemplate>
   );

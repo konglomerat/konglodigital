@@ -175,7 +175,7 @@ export default async function RootLayout({
   const canAccessAdmin = isAuthenticated && userRole === "admin";
 
   const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
+    "group flex w-full items-center gap-3 bg-transparent px-6 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground";
   const navLinkClassName =
     "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground";
   const navButtonClassName =
@@ -224,7 +224,7 @@ export default async function RootLayout({
   );
 
   const renderWerkbereicheTiles = () => (
-    <div className="grid grid-cols-2 gap-1.5 px-3">
+    <div className="grid grid-cols-2 gap-[0.3em] px-[0.3em]">
       {WERKBEREICHE.map((w) => (
         <SidebarTile
           key={w.slug}
@@ -237,7 +237,7 @@ export default async function RootLayout({
   );
 
   const renderProjekteTiles = () => (
-    <div className="grid grid-cols-2 gap-1.5 px-3">
+    <div className="grid grid-cols-2 gap-[0.3em] px-[0.3em]">
       {PROJEKTE.map((p) => (
         <SidebarTile
           key={p.slug}
@@ -366,7 +366,7 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
-            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
+            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 pt-8 text-sidebar-foreground shadow-sm md:flex">
               <div className="space-y-3">
                 <div>
                   <Link

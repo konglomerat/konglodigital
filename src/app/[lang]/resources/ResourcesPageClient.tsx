@@ -772,6 +772,19 @@ export default function ResourcesPageClient({
     selectedResourceType,
   ]);
 
+  const activeTagFilter = (searchParams.get("tag") ?? "").trim();
+
+  const handleClearTagFilter = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.delete("tag");
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [pathname, router]);
+
   useEffect(() => {
     if (!hasRestoredState || typeof window === "undefined") {
       return;
@@ -917,6 +930,10 @@ export default function ResourcesPageClient({
       if (selectedResourceType.trim()) {
         params.set("type", selectedResourceType.trim());
       }
+      const urlTag = searchParams.get("tag")?.trim();
+      if (urlTag) {
+        params.set("tag", urlTag);
+      }
 
       const response = await fetch(
         `/api/campai/resources?${params.toString()}`,
@@ -962,6 +979,7 @@ export default function ResourcesPageClient({
     canLoadMore,
     loadingMore,
     resources.length,
+    searchParams,
     searchTerm,
     selectedResourceType,
     tx,
@@ -1103,6 +1121,25 @@ export default function ResourcesPageClient({
                 </button>
               ) : null}
             </div>
+
+            {activeTagFilter ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Tag")}
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {activeTagFilter}
+                  <button
+                    type="button"
+                    aria-label={tx("Clear tag filter")}
+                    onClick={handleClearTagFilter}
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-primary transition hover:bg-primary/20"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                  </button>
+                </span>
+              </div>
+            ) : null}
 
             <TooltipProvider delayDuration={200}>
               <div className="flex flex-wrap items-center gap-4">

@@ -23,7 +23,7 @@ export default function TermineTile({ tag }: { tag: string }) {
 
   return (
     <Tile
-      title="Termine"
+      title="Nächste Termine"
       action={{ href: "/calendar", label: "Alle Termine" }}
     >
       {events.length === 0 ? (
@@ -37,17 +37,14 @@ export default function TermineTile({ tag }: { tag: string }) {
             return (
               <li
                 key={`${e.date}-${e.title}`}
-                className="grid grid-cols-[88px_1fr] items-baseline gap-3 py-2.5 text-sm"
+                className="grid grid-cols-[124px_minmax(0,1fr)] items-center gap-3 py-2 text-sm"
               >
-                <div className="tabular-nums">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {weekdayFormatter.format(d)}
-                  </div>
-                  <div className="font-bold text-foreground">
-                    {dateFormatter.format(d)}
-                  </div>
+                <div className="tabular-nums whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {weekdayFormatter.format(d)} {dateFormatter.format(d)}
                 </div>
-                <div className="font-medium text-foreground">{e.title}</div>
+                <div className="truncate whitespace-nowrap font-medium text-foreground">
+                  {e.title}
+                </div>
               </li>
             );
           })}

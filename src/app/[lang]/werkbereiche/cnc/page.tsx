@@ -3,6 +3,7 @@ import WerkbereichTemplate from "../WerkbereichTemplate";
 import WichtigsteLinksTile from "../tiles/WichtigsteLinksTile";
 import TermineTile from "../tiles/TermineTile";
 import FaqTile from "../tiles/FaqTile";
+import RessourcenTile from "../tiles/RessourcenTile";
 
 export const metadata: Metadata = { title: "CNC – Konglo Digital" };
 
@@ -26,6 +27,7 @@ export default function CncPage() {
     <WerkbereichTemplate title="CNC">
       <WichtigsteLinksTile />
       <TermineTile tag="cnc" />
+      <RessourcenTile tag="cnc" featuredIds={[]} />
       <FaqTile faqs={FAQS} />
     </WerkbereichTemplate>
   );

@@ -28,10 +28,10 @@ export default function SidebarTile({
     <Link
       href={href}
       className={[
-        "block truncate rounded-md border px-2 py-1.5 text-center text-[10.5px] font-semibold leading-tight transition",
+        "sidebar-tile",
         isActive
-          ? "border-foreground bg-foreground text-background"
-          : "border-border bg-muted/40 text-foreground hover:bg-muted",
+          ? "sidebar-tile--active"
+          : "sidebar-tile--inactive",
       ].join(" ")}
       title={label}
     >

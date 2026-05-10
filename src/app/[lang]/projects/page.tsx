@@ -5,20 +5,52 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ProjectCard from "./ProjectCard";
 import ProjectOfTheMonthCard from "./ProjectOfTheMonthCard";
 import ProjectUploadPromptCard from "./ProjectUploadPromptCard";
-import { loadProjects } from "./project-data";
+import {
+  loadProjects,
+  loadProjectsByWorkshopResourceId,
+} from "./project-data";
+import { PROJECT_WORKSHOP_RESOURCE_ID_PARAM } from "./project-filters";
 
 const PROJECT_OF_THE_MONTH_TAG = "projectofthemonth";
 const PROJECT_UPLOAD_PROMPT_INSERT_AFTER = 5;
+
+const getSearchParam = (
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+) => {
+  const value = params[key];
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return typeof value === "string" ? value : "";
+};
 
 const hasProjectOfTheMonthTag = (tags?: string[] | null) =>
   tags?.some((tag) => tag.trim().toLowerCase() === PROJECT_OF_THE_MONTH_TAG) ??
   false;
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams?:
+    | Record<string, string | string[] | undefined>
+    | Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+  const workshopResourceId = getSearchParam(
+    resolvedSearchParams,
+    PROJECT_WORKSHOP_RESOURCE_ID_PARAM,
+  ).trim();
+
   const [{ tx, locale }, supabase, projects] = await Promise.all([
     getServerI18n(),
     createSupabaseServerClient({ readOnly: true }),
-    loadProjects(),
+    workshopResourceId
+      ? loadProjectsByWorkshopResourceId(workshopResourceId)
+      : loadProjects(),
   ]);
   const {
     data: { user },
@@ -80,7 +112,9 @@ export default async function ProjectsPage() {
       <PageTitle
         title={tx("Projekte", "de")}
         subTitle={tx(
-          "Hier kannst du Projekte, Umbauten und Prototypen unserer Werkstätten entdecken.",
+          workshopResourceId
+            ? "Hier findest du Projekte aus diesem Werkbereich."
+            : "Hier kannst du Projekte, Umbauten und Prototypen unserer Werkstätten entdecken.",
           "de",
         )}
         links={
@@ -98,7 +132,12 @@ export default async function ProjectsPage() {
 
       {projects.length === 0 ? (
         <section className="rounded-3xl border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground shadow-sm   ">
-          {tx("Es gibt noch keine Projekte.", "de")}
+          {tx(
+            workshopResourceId
+              ? "Es gibt noch keine Projekte für diesen Werkbereich."
+              : "Es gibt noch keine Projekte.",
+            "de",
+          )}
         </section>
       ) : (
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">

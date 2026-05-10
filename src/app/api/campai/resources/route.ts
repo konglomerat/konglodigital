@@ -815,6 +815,7 @@ export const GET = async (request: NextRequest) => {
   const searchTerm =
     searchParams.get("searchTerm") ?? searchParams.get("q") ?? "";
   const resourceType = searchParams.get("type") ?? "";
+  const tag = searchParams.get("tag") ?? "";
 
   let query = supabase
     .from("resources")
@@ -836,6 +837,10 @@ export const GET = async (request: NextRequest) => {
 
   if (resourceType.trim()) {
     query = query.ilike("type", resourceType.trim());
+  }
+
+  if (tag.trim()) {
+    query = query.contains("tags", [tag.trim()]);
   }
 
   const { data: rows, error, count } = await query;

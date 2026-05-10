@@ -192,9 +192,11 @@ const getRelatedResourcesMap = async (
 const loadResourcesFromDb = async ({
   queryText,
   resourceType,
+  tag,
 }: {
   queryText: string;
   resourceType: string;
+  tag: string;
 }) => {
   try {
     const supabase = createSupabaseAdminClient();
@@ -213,6 +215,10 @@ const loadResourcesFromDb = async ({
 
     if (resourceType.trim()) {
       query = query.ilike("type", resourceType.trim());
+    }
+
+    if (tag.trim()) {
+      query = query.contains("tags", [tag.trim()]);
     }
 
     const { data: rows, error, count } = await query;
@@ -257,13 +263,16 @@ const loadResourcesFromDb = async ({
 const loadResources = async ({
   queryText,
   resourceType,
+  tag,
 }: {
   queryText: string;
   resourceType: string;
+  tag: string;
 }) =>
   loadResourcesFromDb({
     queryText,
     resourceType,
+    tag,
   });
 
 const loadMapBasemapResourcesFromDb = async () => {
@@ -333,12 +342,13 @@ export default async function ResourcesPage({
     : {};
   const queryText = getSearchParam(resolvedSearchParams, "q").trim();
   const resourceType = getSearchParam(resolvedSearchParams, "type").trim();
+  const tag = getSearchParam(resolvedSearchParams, "tag").trim();
 
   const [
     { resources, count, errorMessage },
     { resources: mapBasemapResources },
   ] = await Promise.all([
-    loadResources({ queryText, resourceType }),
+    loadResources({ queryText, resourceType, tag }),
     loadMapBasemapResources(),
   ]);
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import WerkbereichTemplate from "../WerkbereichTemplate";
 import TermineTile from "../tiles/TermineTile";
 import FaqTile from "../tiles/FaqTile";
+import RessourcenTile from "../tiles/RessourcenTile";
 
 export const metadata: Metadata = { title: "Riso – Konglo Digital" };
 
@@ -24,6 +25,7 @@ export default function RisoPage() {
   return (
     <WerkbereichTemplate title="Riso">
       <TermineTile tag="riso" />
+      <RessourcenTile tag="riso" featuredIds={[]} />
       <FaqTile faqs={FAQS} />
     </WerkbereichTemplate>
   );

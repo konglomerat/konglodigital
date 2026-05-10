@@ -69,6 +69,9 @@ const UUID_PATTERN =
 
 export const PROJECTS_CACHE_TAG = "projects";
 
+const PROJECT_SELECT_FIELDS =
+  "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features";
+
 const getRelatedResourcesMap = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   sourceIds: string[],
@@ -336,20 +339,10 @@ const resolveProjectId = async (
   return resolved?.resourceId ?? null;
 };
 
-const loadProjectsFromDb = async (limit = 60) => {
-  const supabase = createSupabaseAdminClient();
-  const { data } = await supabase
-    .from("resources")
-    .select(
-      "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
-    )
-    .ilike("type", "project")
-    .order("publish_date", { ascending: false, nullsFirst: false })
-    .order("updated_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(0, Math.max(limit, 1) - 1);
-
-  const rows = (data ?? []) as ProjectRow[];
+const mapProjectRows = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  rows: ProjectRow[],
+) => {
   const workshopById = await getWorkshopResourcesMap(
     supabase,
     rows.map((row) => row.workshop_resource_id ?? null),
@@ -358,12 +351,65 @@ const loadProjectsFromDb = async (limit = 60) => {
   return rows.map((row) => toProjectRecord(row, [], workshopById, null));
 };
 
+const loadProjectsFromDb = async (limit = 60) => {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("resources")
+    .select(PROJECT_SELECT_FIELDS)
+    .ilike("type", "project")
+    .order("publish_date", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(0, Math.max(limit, 1) - 1);
+
+  const rows = (data ?? []) as ProjectRow[];
+  return mapProjectRows(supabase, rows);
+};
+
 const getCachedProjects = unstable_cache(loadProjectsFromDb, ["projects-list-v1"], {
   revalidate: 60 * 60 * 24 * 7,
   tags: [PROJECTS_CACHE_TAG],
 });
 
 export const loadProjects = async (limit = 60) => getCachedProjects(limit);
+
+const loadProjectsByWorkshopResourceIdFromDb = async (
+  workshopResourceId: string,
+  limit = 60,
+) => {
+  const normalizedWorkshopResourceId = workshopResourceId.trim();
+  if (!normalizedWorkshopResourceId) {
+    return [] as ProjectRecord[];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("resources")
+    .select(PROJECT_SELECT_FIELDS)
+    .ilike("type", "project")
+    .eq("workshop_resource_id", normalizedWorkshopResourceId)
+    .order("publish_date", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(0, Math.max(limit, 1) - 1);
+
+  const rows = (data ?? []) as ProjectRow[];
+  return mapProjectRows(supabase, rows);
+};
+
+const getCachedProjectsByWorkshopResourceId = unstable_cache(
+  loadProjectsByWorkshopResourceIdFromDb,
+  ["projects-by-workshop-resource-id-v1"],
+  {
+    revalidate: 60 * 60 * 24 * 7,
+    tags: [PROJECTS_CACHE_TAG],
+  },
+);
+
+export const loadProjectsByWorkshopResourceId = async (
+  workshopResourceId: string,
+  limit = 60,
+) => getCachedProjectsByWorkshopResourceId(workshopResourceId, limit);
 
 const loadProjectByIdentifierFromDb = async (identifier: string) => {
   const supabase = createSupabaseAdminClient();
