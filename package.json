@@ -15,7 +15,10 @@
     "i18n:sync": "npm run i18n:extract && node scripts/i18n-autotranslate.mjs",
     "supabase:compare": "node scripts/supabase-cutover-compare.mjs",
     "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
-    "supabase:table-sync": "node scripts/supabase-table-sync.mjs"
+    "supabase:table-sync": "node scripts/supabase-table-sync.mjs",
+    "campai:fix-invoice-dates": "node scripts/fix-invoice-receipt-dates.mjs",
+    "campai:fix-yearly-fee-dates": "node scripts/fix-yearly-fee-receipt-dates.mjs",
+    "campai:fix-abo-account": "node scripts/fix-abo-position-account.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
