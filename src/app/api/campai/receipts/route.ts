@@ -117,7 +117,7 @@ const uploadViaStorageUploadUrl = async (params: {
   const { apiKey, fileBytes, fileName, fileContentType } = params;
 
   const uploadUrlResponse = await fetch(
-    "https://cloud.campai.com/api/storage/uploadUrl",
+    "https://cloud.campai.com/api/misc/storage/uploadUrl",
     {
       method: "GET",
       headers: {
@@ -247,7 +247,7 @@ const tryUploadReceiptFile = async (params: {
   return {
     receiptFileId: null,
     uploadWarning:
-      "Upload von 'Nachweis über Vorgang' zu Campai fehlgeschlagen. Beleg wurde ohne Dateianhang erstellt.",
+      "Upload der Belegdatei fehlgeschlagen, Buchung wurde erstmal ohne Anhang angelegt. Bitte wende dich an die Buchhaltung, die Datei kann manuell in Campai hochgeladen werden.",
   };
 };
 
@@ -412,17 +412,6 @@ export const POST = async (request: NextRequest) => {
       fileName: receiptFileName,
       fileContentType: receiptFileContentType,
     });
-
-    if (receiptFileBase64 && !receiptFileId) {
-      return NextResponse.json(
-        {
-          error:
-            uploadWarning ??
-            "Datei-Upload zu Campai fehlgeschlagen. Beleg wurde nicht erstellt.",
-        },
-        { status: 502 },
-      );
-    }
 
     const fallbackCounterpartyAccount = isRevenueReceipt ? null : creditorAccount;
     const finalAccount = counterpartyAccount ?? fallbackCounterpartyAccount;

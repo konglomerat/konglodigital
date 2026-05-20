@@ -464,7 +464,7 @@ export default function ReimbursementPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
-                  label="Nachweis über Vorgang"
+                  label="Belegdatei"
                   required
                   hint="Eine Datei (PDF, Dokument, Bild oder Tabelle), max. 10 MB"
                   error={errors.belegDatei?.message as string | undefined}

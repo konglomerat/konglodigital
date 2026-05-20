@@ -1,7 +1,13 @@
 const DEFAULT_FILE_NAME = "nachweis.dat";
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+// A failed upload is non-fatal: the receipt is still created, only without the
+// file attached. This warning informs the user so they can re-upload manually.
 const UPLOAD_WARNING =
-  "Upload von 'Nachweis über Vorgang' zu Campai fehlgeschlagen. Beleg wurde ohne Dateianhang erstellt.";
+  "Upload der Belegdatei fehlgeschlagen, Buchung wurde erstmal ohne Anhang angelegt. Bitte wende dich an die Buchhaltung, die Datei kann manuell in Campai hochgeladen werden.";
+
+const logUploadFailure = (step: string, detail: string) => {
+  console.error(`[campai-upload] ${step}: ${detail}`);
+};
 
 type UploadCampaiReceiptFileParams = {
   apiKey: string;
@@ -38,17 +44,30 @@ const uploadViaStorageUrl = async (
   contentType: string,
 ): Promise<string | null> => {
   const urlResponse = await fetch(
-    "https://cloud.campai.com/api/storage/uploadUrl",
+    "https://cloud.campai.com/api/misc/storage/uploadUrl",
     { method: "GET", headers: { "X-API-Key": apiKey } },
   );
-  if (!urlResponse.ok) return null;
+  if (!urlResponse.ok) {
+    const detail = await urlResponse.text().catch(() => "");
+    logUploadFailure(
+      "GET /misc/storage/uploadUrl",
+      `${urlResponse.status} ${detail}`.trim(),
+    );
+    return null;
+  }
 
   const payload = (await urlResponse.json().catch(() => null)) as
     | { id?: string; url?: string }
     | null;
   const id = payload?.id;
   const url = payload?.url;
-  if (!id || !url) return null;
+  if (!id || !url) {
+    logUploadFailure(
+      "GET /misc/storage/uploadUrl",
+      `Antwort ohne id/url: ${JSON.stringify(payload)}`,
+    );
+    return null;
+  }
 
   const putResponse = await fetch(url, {
     method: "PUT",
@@ -60,11 +79,21 @@ const uploadViaStorageUrl = async (
   });
   if (putResponse.ok) return id;
 
+  const putDetail = await putResponse.text().catch(() => "");
+  logUploadFailure("PUT presigned URL", `${putResponse.status} ${putDetail}`.trim());
+
   const postResponse = await fetch(url, {
     method: "POST",
     body: buildFormData(blob, fileName),
   });
-  return postResponse.ok ? id : null;
+  if (postResponse.ok) return id;
+
+  const postDetail = await postResponse.text().catch(() => "");
+  logUploadFailure(
+    "POST presigned URL",
+    `${postResponse.status} ${postDetail}`.trim(),
+  );
+  return null;
 };
 
 const uploadViaEndpoint = async (
@@ -78,7 +107,11 @@ const uploadViaEndpoint = async (
     headers: { "X-API-Key": apiKey },
     body: buildFormData(blob, fileName),
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    logUploadFailure(`POST ${endpoint}`, `${response.status} ${detail}`.trim());
+    return null;
+  }
   return extractUploadId(await response.json().catch(() => null));
 };
 

@@ -263,17 +263,6 @@ export const handleCashReceipt = async (
       fileContentType: receipt.file.contentType,
     });
 
-    if (receipt.file.base64 && !upload.receiptFileId) {
-      return NextResponse.json(
-        {
-          error:
-            upload.uploadWarning ??
-            "Datei-Upload zu Campai fehlgeschlagen. Beleg wurde nicht erstellt.",
-        },
-        { status: 502 },
-      );
-    }
-
     if (receipt.costCenter2 !== null && receipt.costCenter1 === null) {
       receipt.costCenter1 = 9;
     }
@@ -320,10 +309,12 @@ export const handleCashReceipt = async (
         })
       : "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
 
+    const warnings = [upload.uploadWarning, noteWarning].filter(Boolean);
+
     return NextResponse.json({
       id: receiptId,
       alreadyCollected: dataResponse.alreadyCollected ?? false,
-      uploadWarning: upload.uploadWarning ?? noteWarning,
+      uploadWarning: warnings.length > 0 ? warnings.join(" ") : undefined,
       receiptFileId: upload.receiptFileId,
     });
   } catch (error) {

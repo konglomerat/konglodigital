@@ -98,7 +98,7 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    const { receiptFileId, uploadWarning } = await uploadCampaiReceiptFile({
+    const { receiptFileId } = await uploadCampaiReceiptFile({
       apiKey,
       baseUrl,
       endpointOverride: uploadEndpointOverride || undefined,
@@ -111,7 +111,6 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json(
         {
           error:
-            uploadWarning ??
             "Datei-Upload zu Campai fehlgeschlagen. Beleg konnte nicht ausgelesen werden.",
         },
         { status: 502 },

@@ -62,7 +62,6 @@ type FormValues = {
   occasion: string;
   documentReference?: string;
   transactionDate: string;
-  evidence?: FileList;
   bookingType: BookingType;
   amountEuro: string;
   counterpartyName: string;
@@ -119,7 +118,7 @@ const associationAccountOptions: Array<{
   { value: "Kreditkarte", label: "Kreditkarte" },
 ];
 
-const testFormData: Omit<FormValues, "evidence"> = {
+const testFormData: FormValues = {
   reason: "Mietkosten Raum",
   reasonOther: "",
   occasion: "Raummiete für den Vereinsabend im März.",
@@ -708,7 +707,6 @@ export default function EigenbelegPage() {
   const [debtorError, setDebtorError] = useState<string | null>(null);
 
   const selectedReason = useWatch({ control, name: "reason" });
-  const selectedEvidence = useWatch({ control, name: "evidence" });
   const selectedBookingType = useWatch({ control, name: "bookingType" });
   const selectedInvoiceStatus = useWatch({ control, name: "invoiceStatus" });
   const counterpartyName = useWatch({ control, name: "counterpartyName" });
@@ -725,22 +723,6 @@ export default function EigenbelegPage() {
     control,
     name: "transferReceiverArea",
   });
-
-  const selectedEvidenceName = useMemo(() => {
-    if (!selectedEvidence || selectedEvidence.length === 0) {
-      return "";
-    }
-
-    return selectedEvidence.item(0)?.name ?? "";
-  }, [selectedEvidence]);
-
-  const attachmentModeHint = useMemo(() => {
-    if (!selectedEvidenceName) {
-      return "An Campai wird nur die erzeugte Eigenbeleg-PDF angehängt.";
-    }
-
-    return "Der hochgeladene Nachweis bleibt separat. An Campai wird nur die erzeugte Eigenbeleg-PDF angehängt.";
-  }, [selectedEvidenceName]);
 
   const selectedAssociationAreaLabel = useMemo(() => {
     if (!selectedAssociationArea) {
@@ -1192,59 +1174,19 @@ export default function EigenbelegPage() {
                 </FormField>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="Datum der Transaktion"
-                  required
-                  hint="Wann fand die Transaktion statt?"
-                  error={errors.transactionDate?.message}
-                >
-                  <Input
-                    type="date"
-                    {...register("transactionDate", {
-                      required: "Das Transaktionsdatum ist erforderlich.",
-                    })}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Nachweis über Vorgang"
-                  hint="Eine Datei (PDF, Dokument, Zeichnung, Bild oder Tabelle), max. 10 MB"
-                  error={errors.evidence?.message as string | undefined}
-                >
-                  <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.odt,.ods,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
-                    {...register("evidence", {
-                      validate: {
-                        maxOneFile: (files) =>
-                          !files ||
-                          files.length <= 1 ||
-                          "Es ist nur eine Datei erlaubt.",
-                        maxSize: (files) => {
-                          if (!files || files.length === 0) {
-                            return true;
-                          }
-                          const file = files.item(0);
-                          if (!file) {
-                            return true;
-                          }
-                          return (
-                            file.size <= 10 * 1024 * 1024 ||
-                            "Datei darf maximal 10 MB groß sein."
-                          );
-                        },
-                      },
-                    })}
-                  />
-                  {selectedEvidenceName ? (
-                    <p className="text-xs text-zinc-500">
-                      Ausgewählt: {selectedEvidenceName}
-                    </p>
-                  ) : null}
-                  <p className="text-xs text-zinc-500">{attachmentModeHint}</p>
-                </FormField>
-              </div>
+              <FormField
+                label="Datum der Transaktion"
+                required
+                hint="Wann fand die Transaktion statt?"
+                error={errors.transactionDate?.message}
+              >
+                <Input
+                  type="date"
+                  {...register("transactionDate", {
+                    required: "Das Transaktionsdatum ist erforderlich.",
+                  })}
+                />
+              </FormField>
             </div>
           </FormSection>
 

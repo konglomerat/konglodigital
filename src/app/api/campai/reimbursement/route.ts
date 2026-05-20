@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import {
 	addCampaiReceiptNotes,
 	buildCampaiReceiptCreatorNote,
@@ -99,60 +100,6 @@ const extractId = (payload: unknown): string | null => {
 	}
 
 	return null;
-};
-
-const uploadFileToCampai = async (params: {
-	apiKey: string;
-	fileBase64: string;
-	fileName: string;
-	fileContentType: string;
-}) => {
-	const { apiKey, fileBase64, fileName, fileContentType } = params;
-
-	if (!fileBase64) {
-		return null;
-	}
-
-	const uploadUrlResponse = await fetch(
-		"https://cloud.campai.com/api/storage/uploadUrl",
-		{
-			method: "GET",
-			headers: {
-				"X-API-Key": apiKey,
-			},
-		},
-	);
-
-	if (!uploadUrlResponse.ok) {
-		return null;
-	}
-
-	const uploadMeta = (await uploadUrlResponse
-		.json()
-		.catch(() => null)) as { id?: string; url?: string } | null;
-
-	const uploadId = typeof uploadMeta?.id === "string" ? uploadMeta.id : "";
-	const uploadUrl = typeof uploadMeta?.url === "string" ? uploadMeta.url : "";
-
-	if (!uploadId || !uploadUrl) {
-		return null;
-	}
-
-	const bytes = Uint8Array.from(Buffer.from(fileBase64, "base64"));
-	const blob = new Blob([Buffer.from(bytes)], {
-		type: fileContentType || "application/octet-stream",
-	});
-
-	const putResponse = await fetch(uploadUrl, {
-		method: "PUT",
-		headers: {
-			"Content-Type": fileContentType || "application/octet-stream",
-			"Content-Disposition": `inline; filename="${fileName || "beleg.dat"}"`,
-		},
-		body: blob,
-	});
-
-	return putResponse.ok ? uploadId : null;
 };
 
 export const POST = async (request: NextRequest) => {
@@ -301,19 +248,24 @@ export const POST = async (request: NextRequest) => {
 			);
 		}
 
-		const receiptFileId = await uploadFileToCampai({
+		const uploadResult = await uploadCampaiReceiptFile({
 			apiKey,
+			baseUrl: `https://cloud.campai.com/api/${organizationId}/${mandateId}`,
 			fileBase64: receiptFileBase64,
 			fileName: receiptFileName,
 			fileContentType: receiptFileContentType,
 		});
 
-		if (!receiptFileId) {
-			return NextResponse.json(
-				{ error: "Datei-Upload zu Campai fehlgeschlagen." },
-				{ status: 502 },
+		// Upload-Fehler ist nicht fatal: Der Beleg wird trotzdem (ohne Dateianhang)
+		// angelegt und der Nutzer per uploadWarning informiert.
+		if (!uploadResult.receiptFileId) {
+			console.error(
+				"[reimbursement] Campai file upload failed:",
+				uploadResult.uploadWarning,
 			);
 		}
+
+		const receiptFileId = uploadResult.receiptFileId;
 
 		const timeStamp = new Date()
 			.toISOString()
@@ -346,9 +298,12 @@ export const POST = async (request: NextRequest) => {
 			tags,
 			queueReceiptDocument: false,
 			electronic: false,
-			receiptFileId,
-			receiptFileName,
 		};
+
+		if (receiptFileId) {
+			payload.receiptFileId = receiptFileId;
+			payload.receiptFileName = receiptFileName;
+		}
 
 		const response = await fetch(
 			`https://cloud.campai.com/api/${organizationId}/${mandateId}/receipts/expense`,
@@ -392,9 +347,11 @@ export const POST = async (request: NextRequest) => {
 			}
 		}
 
+		const warnings = [uploadResult.uploadWarning, noteWarning].filter(Boolean);
+
 		return NextResponse.json({
 			id: receiptId ?? null,
-			uploadWarning: noteWarning,
+			uploadWarning: warnings.length > 0 ? warnings.join(" ") : undefined,
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";

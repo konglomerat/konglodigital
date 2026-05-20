@@ -401,6 +401,7 @@ const getCampaiConfig = () => {
 const resolveCampaiUrl = (path: string) => {
   const { apiRoot, baseUrl, organizationId } = getCampaiConfig();
   if (
+    path.startsWith("/misc/") ||
     path.startsWith("/storage/") ||
     path.startsWith("/organizations/") ||
     path.startsWith("/apiKey/") ||
@@ -769,7 +770,7 @@ const uploadCoverImageToCampai = async (
       }
 
       const uploadTarget = await fetchCampaiJson<{ id: string; url: string }>(
-        "/storage/uploadUrl",
+        "/misc/storage/uploadUrl",
       );
 
       const fileName =
