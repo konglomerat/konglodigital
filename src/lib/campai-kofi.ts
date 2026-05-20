@@ -80,37 +80,19 @@ export type KoFiResponse = {
   funding: KoFiBlock;
 };
 
-type CampaiReceiptType =
-  | "expense"
-  | "revenue"
-  | "invoice"
-  | "deposit"
-  | "donation"
-  | "offer"
-  | "confirmation";
-
-type CampaiReceiptPosition = {
-  account: number | null;
-  costCenter1: number | null;
-  costCenter2: number | null;
-  amount: number | null;
-  description?: string;
-  details?: string;
-  reference?: string;
-  secondaryReference?: string;
-};
-
-type CampaiReceipt = {
+type CampaiPosting = {
   id: string;
-  type: CampaiReceiptType | null;
   receiptDate: string | null;
   receiptNumber?: string;
-  title?: string;
-  description?: string;
-  draft: boolean;
-  completing: boolean;
-  canceledAt: string | null;
-  positions: CampaiReceiptPosition[];
+  text?: string;
+  amount: number;
+  reverse: boolean;
+  debitAccount: number | null;
+  creditAccount: number | null;
+  debitAccountName?: string;
+  creditAccountName?: string;
+  costCenter1: number | null;
+  costCenter2: number | null;
 };
 
 type CampaiAccountPlanAccount = {
@@ -134,6 +116,11 @@ type CampaiAccountingPlan = {
 
 type KoFiBlockKey = "costs" | "funding";
 
+type AccountClassification = {
+  block: KoFiBlockKey;
+  categoryPath: string[];
+};
+
 type MutableLeaf = {
   key: string;
   label: string;
@@ -148,7 +135,24 @@ type MutableGroup = {
   children: Map<string, MutableLeaf>;
 };
 
-const RECEIPT_PAGE_LIMIT = 100;
+const POSTING_PAGE_LIMIT = 100;
+
+// Top-level income statement nodes are classified by German keyword match
+// against the category name. Accounts inherit the block from the top-level
+// node they live under, so the chart of accounts can be customized freely.
+const KOFI_COST_KEYWORDS = ["aufwand", "ausgab", "abschreibung", "kosten"];
+const KOFI_FUNDING_KEYWORDS = [
+  "ertrag",
+  "einnahm",
+  "erlös",
+  "erloes",
+  "umsatz",
+  "spende",
+  "förder",
+  "foerder",
+  "zuschuss",
+  "beitrag",
+];
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -217,19 +221,19 @@ const unwrapCampaiPayload = (raw: unknown): Record<string, unknown> => {
   return asRecord(raw) ?? {};
 };
 
-const extractReceiptArray = (
+const extractPostingArray = (
   payload: Record<string, unknown>,
 ): Record<string, unknown>[] => {
   const candidates = [
-    payload.receipts,
+    payload.postings,
     payload.items,
     payload.data,
     payload.rows,
     payload.docs,
-    asRecord(payload.receipts)?.items,
-    asRecord(payload.data)?.receipts,
+    asRecord(payload.postings)?.items,
+    asRecord(payload.data)?.postings,
     asRecord(payload.data)?.items,
-    asRecord(payload.result)?.receipts,
+    asRecord(payload.result)?.postings,
     asRecord(payload.result)?.items,
   ];
 
@@ -244,60 +248,32 @@ const extractReceiptArray = (
   return [];
 };
 
-const normalizeReceiptPosition = (
-  value: unknown,
-): CampaiReceiptPosition | null => {
-  const record = asRecord(value);
-  if (!record) {
-    return null;
-  }
-
-  const account = normalizeInt(record.account);
-  const amount = normalizeInt(record.amount);
-
-  if (!account || !amount || amount <= 0) {
-    return null;
-  }
-
-  return {
-    account,
-    costCenter1: normalizeInt(record.costCenter1),
-    costCenter2: normalizeInt(record.costCenter2),
-    amount,
-    description: normalizeString(record.description),
-    details: normalizeString(record.details),
-    reference: normalizeString(record.reference),
-    secondaryReference: normalizeString(record.secondaryReference),
-  };
-};
-
-const normalizeReceipt = (
+const normalizePosting = (
   value: Record<string, unknown>,
-): CampaiReceipt | null => {
-  const id = normalizeString(value._id ?? value.id ?? value.receiptId);
+): CampaiPosting | null => {
+  const id = normalizeString(value._id ?? value.id);
   if (!id) {
     return null;
   }
 
-  const rawType = normalizeString(value.type);
-  const type = rawType as CampaiReceiptType | null;
-  const positions = Array.isArray(value.positions)
-    ? value.positions
-        .map((item) => normalizeReceiptPosition(item))
-        .filter((item): item is CampaiReceiptPosition => Boolean(item))
-    : [];
+  const amount = normalizeInt(value.amount);
+  if (amount === null) {
+    return null;
+  }
 
   return {
     id,
-    type,
     receiptDate: normalizeString(value.receiptDate) ?? null,
     receiptNumber: normalizeString(value.receiptNumber),
-    title: normalizeString(value.title),
-    description: normalizeString(value.description),
-    draft: normalizeBoolean(value.draft),
-    completing: normalizeBoolean(value.completing),
-    canceledAt: normalizeString(value.canceledAt) ?? null,
-    positions,
+    text: normalizeString(value.text),
+    amount,
+    reverse: normalizeBoolean(value.reverse),
+    debitAccount: normalizeInt(value.debitAccount),
+    creditAccount: normalizeInt(value.creditAccount),
+    debitAccountName: normalizeString(value.debitAccountName),
+    creditAccountName: normalizeString(value.creditAccountName),
+    costCenter1: normalizeInt(value.costCenter1),
+    costCenter2: normalizeInt(value.costCenter2),
   };
 };
 
@@ -397,55 +373,57 @@ const matchesAccountReference = (
   return account >= reference[0] && account <= reference[1];
 };
 
-const findCategoryPath = (
+const classifyTopLevel = (
+  category: string | undefined,
+): KoFiBlockKey | null => {
+  if (!category) {
+    return null;
+  }
+  const lower = category.toLowerCase();
+  if (KOFI_COST_KEYWORDS.some((keyword) => lower.includes(keyword))) {
+    return "costs";
+  }
+  if (KOFI_FUNDING_KEYWORDS.some((keyword) => lower.includes(keyword))) {
+    return "funding";
+  }
+  return null;
+};
+
+const findClassification = (
   lines: CampaiIncomeStatementLine[],
   account: number,
-  parentPath: string[] = [],
-): string[] | null => {
+  topBlock: KoFiBlockKey | null,
+  parentPath: string[],
+): AccountClassification | null => {
   for (const line of lines) {
-    const path = line.category ? [...parentPath, line.category] : parentPath;
-    const nestedMatch = line.lines
-      ? findCategoryPath(line.lines, account, path)
-      : null;
+    const lineTopBlock = topBlock ?? classifyTopLevel(line.category);
+    const nextPath = line.category
+      ? [...parentPath, line.category]
+      : parentPath;
 
-    if (nestedMatch) {
-      return nestedMatch;
+    if (line.lines && line.lines.length > 0) {
+      const nested = findClassification(
+        line.lines,
+        account,
+        lineTopBlock,
+        nextPath,
+      );
+      if (nested) {
+        return nested;
+      }
     }
 
     if (
+      lineTopBlock &&
       line.accounts?.some((reference) =>
         matchesAccountReference(account, reference),
       )
     ) {
-      return path;
+      return { block: lineTopBlock, categoryPath: nextPath };
     }
   }
 
   return null;
-};
-
-const getReceiptBlock = (
-  type: CampaiReceiptType | null,
-): KoFiBlockKey | null => {
-  switch (type) {
-    case "expense":
-      return "costs";
-    case "revenue":
-    case "invoice":
-    case "deposit":
-    case "donation":
-      return "funding";
-    default:
-      return null;
-  }
-};
-
-const shouldIncludeReceipt = (receipt: CampaiReceipt) => {
-  if (receipt.draft || receipt.completing || receipt.canceledAt) {
-    return false;
-  }
-
-  return getReceiptBlock(receipt.type) !== null && receipt.positions.length > 0;
 };
 
 const createSearchText = (parts: Array<string | number | undefined | null>) =>
@@ -589,20 +567,20 @@ const fetchCampaiJson = async (url: string, init: RequestInit) => {
   return response.json().catch(() => null);
 };
 
-const fetchAllReceipts = async (params: {
+const fetchAllPostings = async (params: {
   apiKey: string;
   organizationId: string;
   mandateId: string;
 }) => {
   const { apiKey, organizationId, mandateId } = params;
-  const endpoint = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/list`;
-  const receipts: CampaiReceipt[] = [];
+  const endpoint = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/accounting/postings/list`;
+  const postings: CampaiPosting[] = [];
   let offset = 0;
   let totalCount = 0;
 
   while (offset === 0 || offset < totalCount) {
     const payload = {
-      limit: RECEIPT_PAGE_LIMIT,
+      limit: POSTING_PAGE_LIMIT,
       offset,
       returnCount: true,
       sort: { receiptDate: "asc" },
@@ -618,21 +596,21 @@ const fetchAllReceipts = async (params: {
     });
 
     const data = unwrapCampaiPayload(raw);
-    const pageReceipts = extractReceiptArray(data)
-      .map((entry) => normalizeReceipt(entry))
-      .filter((entry): entry is CampaiReceipt => Boolean(entry));
+    const pagePostings = extractPostingArray(data)
+      .map((entry) => normalizePosting(entry))
+      .filter((entry): entry is CampaiPosting => Boolean(entry));
 
-    totalCount = normalizeInt(data.count) ?? pageReceipts.length;
-    receipts.push(...pageReceipts);
+    totalCount = normalizeInt(data.count) ?? pagePostings.length;
+    postings.push(...pagePostings);
 
-    if (pageReceipts.length < RECEIPT_PAGE_LIMIT) {
+    if (pagePostings.length < POSTING_PAGE_LIMIT) {
       break;
     }
 
-    offset += RECEIPT_PAGE_LIMIT;
+    offset += POSTING_PAGE_LIMIT;
   }
 
-  return receipts;
+  return postings;
 };
 
 const fetchAccountingPlan = async (params: {
@@ -673,9 +651,9 @@ export const loadCampaiKoFi = async (params: {
     search,
   } = params;
 
-  const [receipts, costCenters, costCenters1, accountingPlan] =
+  const [postings, costCenters, costCenters1, accountingPlan] =
     await Promise.all([
-      fetchAllReceipts({ apiKey, organizationId, mandateId }),
+      fetchAllPostings({ apiKey, organizationId, mandateId }),
       fetchCampaiCostCenters(),
       fetchCampaiCostCenter1Labels(),
       fetchAccountingPlan({ apiKey, organizationId }),
@@ -692,85 +670,147 @@ export const loadCampaiKoFi = async (params: {
     ),
   );
 
-  for (const receipt of receipts) {
-    if (!shouldIncludeReceipt(receipt)) {
+  const classificationCache = new Map<number, AccountClassification | null>();
+  const classifyAccount = (
+    accountNumber: number,
+  ): AccountClassification | null => {
+    if (classificationCache.has(accountNumber)) {
+      return classificationCache.get(accountNumber) ?? null;
+    }
+    const result = accountingPlan.incomeStatement
+      ? findClassification(
+          accountingPlan.incomeStatement.lines,
+          accountNumber,
+          null,
+          [],
+        )
+      : null;
+    classificationCache.set(accountNumber, result);
+    return result;
+  };
+
+  const applyContribution = (input: {
+    block: KoFiBlockKey;
+    classification: AccountClassification;
+    accountNumber: number;
+    accountName: string | undefined;
+    signedAmount: number;
+    monthIndex: number;
+    postingSearchText: string;
+  }) => {
+    const {
+      block,
+      classification,
+      accountNumber,
+      accountName,
+      signedAmount,
+      monthIndex,
+      postingSearchText,
+    } = input;
+
+    if (account !== null && accountNumber !== account) {
+      return;
+    }
+
+    const accountLabel =
+      accountName ??
+      accountLabelByNumber.get(accountNumber) ??
+      `Konto ${accountNumber}`;
+    const groupLabel =
+      classification.categoryPath[classification.categoryPath.length - 1] ??
+      (block === "costs" ? "Sonstige Kosten" : "Sonstige Finanzierung");
+    const leafLabel = `${accountNumber} · ${accountLabel}`;
+
+    if (normalizedSearch) {
+      const searchText = `${postingSearchText} ${accountLabel.toLowerCase()} ${groupLabel.toLowerCase()} ${classification.categoryPath
+        .map((part) => part.toLowerCase())
+        .join(" ")}`;
+      if (!searchText.includes(normalizedSearch)) {
+        return;
+      }
+    }
+
+    const groups = block === "costs" ? costGroups : fundingGroups;
+    const groupKey = `${block}:${groupLabel.toLowerCase()}`;
+    const group = getOrCreateGroup(groups, groupKey, groupLabel);
+    const leafKey = `${block}:${accountNumber}`;
+    const leaf = getOrCreateLeaf(
+      group.children,
+      leafKey,
+      leafLabel,
+      accountNumber,
+    );
+
+    group.months[monthIndex] += signedAmount;
+    leaf.months[monthIndex] += signedAmount;
+
+    if (block === "costs") {
+      monthlyExpense[monthIndex] += signedAmount;
+    } else {
+      monthlyIncome[monthIndex] += signedAmount;
+    }
+  };
+
+  for (const posting of postings) {
+    const date = parseReceiptDate(posting.receiptDate);
+    if (!date || date.year !== year) {
       continue;
     }
 
-    const receiptDate = parseReceiptDate(receipt.receiptDate);
-    const block = getReceiptBlock(receipt.type);
-    if (!receiptDate || receiptDate.year !== year || !block) {
+    if (costCenter1 !== null && posting.costCenter1 !== costCenter1) {
       continue;
     }
-    const monthIndex = receiptDate.month;
 
-    for (const position of receipt.positions) {
-      if (!position.amount || !position.account) {
-        continue;
+    if (costCenter2 !== null && posting.costCenter2 !== costCenter2) {
+      continue;
+    }
+
+    const baseAmount = posting.reverse ? -posting.amount : posting.amount;
+
+    const postingSearchText = createSearchText([
+      posting.receiptNumber,
+      posting.text,
+      posting.debitAccountName,
+      posting.creditAccountName,
+      posting.debitAccount,
+      posting.creditAccount,
+    ]);
+
+    if (posting.debitAccount !== null) {
+      const classification = classifyAccount(posting.debitAccount);
+      if (classification) {
+        // Debit to a cost account increases costs; debit to a revenue account
+        // reduces revenue (e.g. revenue cancellation).
+        const signedAmount =
+          classification.block === "costs" ? baseAmount : -baseAmount;
+        applyContribution({
+          block: classification.block,
+          classification,
+          accountNumber: posting.debitAccount,
+          accountName: posting.debitAccountName,
+          signedAmount,
+          monthIndex: date.month,
+          postingSearchText,
+        });
       }
+    }
 
-      if (costCenter1 !== null && position.costCenter1 !== costCenter1) {
-        continue;
-      }
-
-      if (costCenter2 !== null && position.costCenter2 !== costCenter2) {
-        continue;
-      }
-
-      if (account !== null && position.account !== account) {
-        continue;
-      }
-
-      const categoryPath = accountingPlan.incomeStatement
-        ? findCategoryPath(
-            accountingPlan.incomeStatement.lines,
-            position.account,
-          )
-        : null;
-      const groupLabel =
-        (categoryPath && categoryPath[categoryPath.length - 1]) ||
-        (block === "costs" ? "Sonstige Kosten" : "Sonstige Finanzierung");
-      const accountLabel =
-        accountLabelByNumber.get(position.account) ??
-        `Konto ${position.account}`;
-      const leafLabel = `${position.account} · ${accountLabel}`;
-
-      const searchText = createSearchText([
-        receipt.receiptNumber,
-        receipt.title,
-        receipt.description,
-        position.description,
-        position.details,
-        position.reference,
-        position.secondaryReference,
-        position.account,
-        accountLabel,
-        groupLabel,
-        ...(categoryPath ?? []),
-      ]);
-
-      if (normalizedSearch && !searchText.includes(normalizedSearch)) {
-        continue;
-      }
-
-      const groups = block === "costs" ? costGroups : fundingGroups;
-      const groupKey = `${block}:${groupLabel.toLowerCase()}`;
-      const group = getOrCreateGroup(groups, groupKey, groupLabel);
-      const leafKey = `${block}:${position.account}`;
-      const leaf = getOrCreateLeaf(
-        group.children,
-        leafKey,
-        leafLabel,
-        position.account,
-      );
-
-      group.months[monthIndex] += position.amount;
-      leaf.months[monthIndex] += position.amount;
-
-      if (block === "costs") {
-        monthlyExpense[monthIndex] += position.amount;
-      } else {
-        monthlyIncome[monthIndex] += position.amount;
+    if (posting.creditAccount !== null) {
+      const classification = classifyAccount(posting.creditAccount);
+      if (classification) {
+        // Credit to a revenue account increases revenue; credit to a cost
+        // account reduces costs (e.g. refunds, vendor credits).
+        const signedAmount =
+          classification.block === "funding" ? baseAmount : -baseAmount;
+        applyContribution({
+          block: classification.block,
+          classification,
+          accountNumber: posting.creditAccount,
+          accountName: posting.creditAccountName,
+          signedAmount,
+          monthIndex: date.month,
+          postingSearchText,
+        });
       }
     }
   }
