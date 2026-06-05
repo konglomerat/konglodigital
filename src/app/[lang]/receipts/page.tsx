@@ -532,8 +532,12 @@ export default function ReceiptsPage() {
   const [selectedYear, setSelectedYear] = useState<FilterOption | null>(
     DEFAULT_YEAR_FILTER_OPTION,
   );
-  const [selectedStatus, setSelectedStatus] = useState<FilterOption | null>(null);
-  const [selectedType, setSelectedType] = useState<FilterOption | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<FilterOption | null>(
+    ALL_FILTER_OPTION,
+  );
+  const [selectedType, setSelectedType] = useState<FilterOption | null>(
+    ALL_FILTER_OPTION,
+  );
   const [isSaldoHidden, setIsSaldoHidden] = useState(false);
   const [selectedAccountSummaryKey, setSelectedAccountSummaryKey] = useState<string | null>(null);
 
@@ -544,7 +548,7 @@ export default function ReceiptsPage() {
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: SortDirection;
-  } | null>({ key: "receiptDate", direction: "desc" });
+  } | null>({ key: "paidAt", direction: "asc" });
   const columnPanelRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedSavedSelectionRef = useRef(false);
   const savedBalancePreferencesRef = useRef<string>(
@@ -905,8 +909,7 @@ export default function ReceiptsPage() {
     const years = new Set<string>();
 
     for (const receipt of visibleReceipts) {
-      const sourceDate = receipt.receiptDate ?? receipt.createdAt ?? receipt.paidAt;
-      const timestamp = sourceDate ? Date.parse(sourceDate) : Number.NaN;
+      const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
 
       if (Number.isNaN(timestamp)) {
         continue;
@@ -978,8 +981,7 @@ export default function ReceiptsPage() {
     return visibleReceipts.filter((receipt) => {
       const selectedYearValue = selectedYear?.value;
       if (selectedYearValue && selectedYearValue !== ALL_FILTER_OPTION.value) {
-        const sourceDate = receipt.receiptDate ?? receipt.createdAt ?? receipt.paidAt;
-        const timestamp = sourceDate ? Date.parse(sourceDate) : Number.NaN;
+        const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
 
         if (
           Number.isNaN(timestamp) ||
@@ -1501,6 +1503,12 @@ export default function ReceiptsPage() {
 
       <div className="mb-3 flex flex-wrap items-end gap-2 sm:mb-4 sm:gap-3">
         <div className="w-full min-w-[260px] sm:w-[360px] lg:w-[420px] lg:flex-none">
+          <label
+            htmlFor="cost-center-2-filter"
+            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
+          >
+            Werkbereich/Projekt
+          </label>
           {loadingCostCenters ? (
             <div className="flex min-h-10 items-center gap-2 py-2 text-sm text-muted-foreground">
               <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
@@ -1533,6 +1541,12 @@ export default function ReceiptsPage() {
         </div>
 
         <div className="min-w-[150px] sm:w-[150px]">
+          <label
+            htmlFor="balance-year-filter"
+            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
+          >
+            Zahlungsdatum
+          </label>
           <ReactSelect<FilterOption>
             inputId="balance-year-filter"
             options={yearOptions}
@@ -1553,6 +1567,12 @@ export default function ReceiptsPage() {
         </div>
 
         <div className="min-w-[170px] sm:w-[170px]">
+          <label
+            htmlFor="balance-status-filter"
+            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
+          >
+            Status
+          </label>
           <ReactSelect<FilterOption>
             inputId="balance-status-filter"
             options={statusOptions}
@@ -1573,6 +1593,12 @@ export default function ReceiptsPage() {
         </div>
 
         <div className="min-w-[170px] sm:w-[170px]">
+          <label
+            htmlFor="balance-type-filter"
+            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
+          >
+            Typ
+          </label>
           <ReactSelect<FilterOption>
             inputId="balance-type-filter"
             options={typeOptions}
