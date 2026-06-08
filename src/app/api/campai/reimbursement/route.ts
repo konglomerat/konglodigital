@@ -66,19 +66,6 @@ const parsePositiveInt = (value: unknown): number | null => {
 	return null;
 };
 
-const isValidCampaiCostCenter1 = (value: number): boolean => {
-	const firstDigit = String(value).trim().charAt(0);
-	return ["1", "2", "3", "4", "9"].includes(firstDigit);
-};
-
-const getValidDefaultCostCenter = (): number | null => {
-	const parsed = parsePositiveInt(process.env.CAMPAI_COST_CENTER1);
-	if (!parsed) {
-		return null;
-	}
-	return isValidCampaiCostCenter1(parsed) ? parsed : null;
-};
-
 const extractId = (payload: unknown): string | null => {
 	if (!payload || typeof payload !== "object") {
 		return null;
@@ -130,7 +117,6 @@ export const POST = async (request: NextRequest) => {
 			10,
 		);
 		const accountName = compactText(process.env.CAMPAI_ACCOUNT_NAME, "");
-		const defaultCostCenter1 = getValidDefaultCostCenter();
 
 		if (!Number.isInteger(expenseAccount) || expenseAccount <= 0) {
 			return NextResponse.json(
@@ -176,12 +162,11 @@ export const POST = async (request: NextRequest) => {
 		const positions = rawPositions
 			.map((position) => {
 				const positionAmount = parseEuroToCents(position.betragEuro);
-				const rawPositionCostCenter = parsePositiveInt(position.kostenstelle);
-				const positionCostCenter =
-					rawPositionCostCenter && isValidCampaiCostCenter1(rawPositionCostCenter)
-						? rawPositionCostCenter
-						: defaultCostCenter1;
-				if (!positionAmount || !positionCostCenter) {
+				// Vom Nutzer gewählte Kostenstelle ist der Werkbereich/das Projekt
+				// (costCenter2). costCenter1 wird – wie bei Einnahme/Ausgabe –
+				// fest auf 9 gesetzt.
+				const positionCostCenter2 = parsePositiveInt(position.kostenstelle);
+				if (!positionAmount || !positionCostCenter2) {
 					return null;
 				}
 
@@ -191,8 +176,8 @@ export const POST = async (request: NextRequest) => {
 					account: expenseAccount,
 					amount: positionAmount,
 					description: (positionDescription || betreff).slice(0, 140),
-					costCenter1: positionCostCenter,
-					costCenter2: null,
+					costCenter1: 9,
+					costCenter2: positionCostCenter2,
 				};
 			})
 			.filter((position): position is NonNullable<typeof position> =>
@@ -204,26 +189,6 @@ export const POST = async (request: NextRequest) => {
 				{
 					error:
 						"Bitte mindestens eine gültige Position mit Betrag und Kostenstelle angeben.",
-				},
-				{ status: 400 },
-			);
-		}
-
-		const invalidRawCostCenter = rawPositions.find((position) => {
-			const parsed = parsePositiveInt(position.kostenstelle);
-			return parsed !== null && !isValidCampaiCostCenter1(parsed);
-		});
-
-		const invalidCostCenter = positions.find(
-			(position) => !isValidCampaiCostCenter1(position.costCenter1),
-		);
-
-		if (invalidCostCenter) {
-			return NextResponse.json(
-				{
-					error: invalidRawCostCenter
-						? "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein. Bitte Kostenstelle korrigieren oder CAMPAI_COST_CENTER1 als gültigen Fallback setzen."
-						: "Ungültige Kostenstelle. Die erste Zahl muss 1, 2, 3, 4 oder 9 sein.",
 				},
 				{ status: 400 },
 			);

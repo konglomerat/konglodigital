@@ -16,7 +16,7 @@ type InternalNoteSectionProps = {
 export default function InternalNoteSection({
   error,
   fieldLabel = "Notiz",
-  hint = "Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar.",
+  hint = "Wird in der Buchhaltung (Campai) als Kommentar hinterlegt und ist auch nur dort sichtbar",
   placeholder = "z. B. Genehmigt durch Vorstand am …",
   textareaProps,
   children,

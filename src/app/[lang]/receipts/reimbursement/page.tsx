@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useFieldArray, useForm } from "react-hook-form";
 import {
-  faCartShopping,
   faFolderOpen,
   faPlus,
   faTrash,
@@ -45,17 +43,10 @@ type CostCenterOption = {
   label: string;
 };
 
-type AccountUser = {
-  email: string;
-  metadata: Record<string, unknown>;
-};
-
 type FormValues = {
   betreff: string;
   belegdatum: string;
-  rechnungStatus: "offen" | "bezahlt";
   empfaengerName: string;
-  empfaengerEmail: string;
   positions: PositionValue[];
   notiz: string;
 };
@@ -76,32 +67,6 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   return btoa(binary);
 };
 
-const readMetadataText = (metadata: Record<string, unknown>, key: string) => {
-  const value = metadata[key];
-  return typeof value === "string" ? value.trim() : "";
-};
-
-const buildRecipientNameFromUser = (user: AccountUser) => {
-  const campaiName = readMetadataText(user.metadata, "campai_name");
-  if (campaiName) {
-    return campaiName;
-  }
-
-  const fullName = readMetadataText(user.metadata, "full_name");
-  if (fullName) {
-    return fullName;
-  }
-
-  const name = readMetadataText(user.metadata, "name");
-  if (name) {
-    return name;
-  }
-
-  const firstName = readMetadataText(user.metadata, "first_name");
-  const lastName = readMetadataText(user.metadata, "last_name");
-  return [firstName, lastName].filter(Boolean).join(" ");
-};
-
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
@@ -118,16 +83,13 @@ export default function ReimbursementPage() {
     handleSubmit,
     reset,
     setValue,
-    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     mode: "onChange",
     defaultValues: {
       betreff: "",
       belegdatum: "",
-      rechnungStatus: "offen",
       empfaengerName: "",
-      empfaengerEmail: "",
       positions: [emptyPosition()],
       notiz: "",
     },
@@ -144,10 +106,6 @@ export default function ReimbursementPage() {
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [costCentersLoading, setCostCentersLoading] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
-  const [accountAutofill, setAccountAutofill] = useState<{
-    name: string;
-    email: string;
-  }>({ name: "", email: "" });
   const [result, setResult] = useState<{
     id?: string | null;
     uploadWarning?: string;
@@ -159,11 +117,6 @@ export default function ReimbursementPage() {
   const [creditorName, setCreditorName] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showUpdatePanel, setShowUpdatePanel] = useState(false);
-  const selectedInvoiceStatus = useWatch({
-    control,
-    name: "rechnungStatus",
-  });
-  const statusNoteLine = `Status: ${selectedInvoiceStatus === "bezahlt" ? "bezahlt" : "offen"}`;
 
   const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
     setCreditorAccount(suggestion.account);
@@ -187,44 +140,6 @@ export default function ReimbursementPage() {
   useEffect(() => {
     let active = true;
 
-    const loadAccountDefaults = async () => {
-      try {
-        const response = await fetchJson<{ user: AccountUser }>(
-          "/api/account/me",
-        );
-
-        if (!active) {
-          return;
-        }
-
-        const user = response.user;
-        const recipientName = buildRecipientNameFromUser(user);
-        const recipientEmail = user.email?.trim() ?? "";
-
-        setAccountAutofill({ name: recipientName, email: recipientEmail });
-
-        if (!getValues("empfaengerName") && recipientName) {
-          setValue("empfaengerName", recipientName, {
-            shouldDirty: false,
-            shouldTouch: false,
-            shouldValidate: false,
-          });
-        }
-
-        if (!getValues("empfaengerEmail") && recipientEmail) {
-          setValue("empfaengerEmail", recipientEmail, {
-            shouldDirty: false,
-            shouldTouch: false,
-            shouldValidate: false,
-          });
-        }
-      } catch {
-        if (active) {
-          setAccountAutofill({ name: "", email: "" });
-        }
-      }
-    };
-
     const loadCostCenters = async () => {
       try {
         setCostCentersLoading(true);
@@ -239,20 +154,6 @@ export default function ReimbursementPage() {
         const items = response.costCenters ?? [];
         setCostCenters(items);
         setCostCentersError(null);
-
-        if (items.length > 0) {
-          const firstValue = items[0].value;
-          const currentPositions = getValues("positions") ?? [];
-          currentPositions.forEach((position, index) => {
-            if (!position.kostenstelle) {
-              setValue(`positions.${index}.kostenstelle`, firstValue, {
-                shouldDirty: false,
-                shouldTouch: false,
-                shouldValidate: false,
-              });
-            }
-          });
-        }
       } catch (error) {
         if (!active) {
           return;
@@ -269,13 +170,12 @@ export default function ReimbursementPage() {
       }
     };
 
-    loadAccountDefaults();
     loadCostCenters();
 
     return () => {
       active = false;
     };
-  }, [getValues, setValue]);
+  }, []);
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -289,9 +189,7 @@ export default function ReimbursementPage() {
       }
 
       const bytes = new Uint8Array(await datei.arrayBuffer());
-      const internalNote = [values.notiz?.trim(), statusNoteLine]
-        .filter(Boolean)
-        .join("\n");
+      const internalNote = values.notiz?.trim() ?? "";
 
       const response = await fetch("/api/campai/reimbursement", {
         method: "POST",
@@ -301,9 +199,7 @@ export default function ReimbursementPage() {
         body: JSON.stringify({
           betreff: values.betreff,
           belegdatum: values.belegdatum,
-          bereitsBeglichen: values.rechnungStatus === "bezahlt",
           empfaengerName: values.empfaengerName,
-          empfaengerEmail: values.empfaengerEmail,
           creditorAccount: creditorAccount ?? undefined,
           positions: values.positions,
           internalNote,
@@ -331,11 +227,12 @@ export default function ReimbursementPage() {
         uploadWarning: payload.uploadWarning,
       });
 
+      // Alle Felder auf den leeren Ausgangszustand zurücksetzen.
       reset({
         betreff: "",
         belegdatum: "",
-        empfaengerName: accountAutofill.name,
-        empfaengerEmail: accountAutofill.email,
+        empfaengerName: "",
+        positions: [emptyPosition()],
         notiz: "",
       });
 
@@ -343,15 +240,6 @@ export default function ReimbursementPage() {
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
-
-      if (costCenters.length > 0) {
-        const firstValue = costCenters[0].value;
-        setValue("positions.0.kostenstelle", firstValue, {
-          shouldDirty: false,
-          shouldTouch: false,
-          shouldValidate: false,
-        });
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -361,7 +249,7 @@ export default function ReimbursementPage() {
     <BookingPageShell>
         <ReceiptsPageHeader
           title="Rückerstattungen einreichen"
-          description="Nur die wichtigsten Felder ausfüllen. Den Rest setzt das System automatisch."
+          description="Wenn du etwas für den Verein bezahlt oder gekauft hast und nun die Kohle wieder haben willst kannst du das hier einreichen. Die Ausgabe wird dann bei nächster Gelegenheit via Überweisung an das angegebene Konto rückerstattet. Falls es dringend ist bitte via Mail Bescheid geben unter vorstand@konglomerat.org"
           helperText="Pflichtfelder sind mit * markiert."
         />
 
@@ -457,13 +345,14 @@ export default function ReimbursementPage() {
 
               {/* Einzelne Positionen */}
               <div className="space-y-4 border-t border-zinc-200 pt-5">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <FontAwesomeIcon
-                    icon={faCartShopping}
-                    className="h-4 w-4 text-primary"
-                  />
-                  <span>Einzelne Positionen</span>
-                </h3>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Einzelne Positionen
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Hier bitte auflisten was alles bezahlt wurde.
+                  </p>
+                </div>
                 {fields.map((field, index) => (
                   <div
                     key={field.id}
@@ -490,18 +379,23 @@ export default function ReimbursementPage() {
 
                       <FormField
                         label="Beschreibung"
+                        required
                         error={errors.positions?.[index]?.beschreibung?.message}
                       >
                         <Input
                           placeholder="z. B. Material"
                           {...register(
                             `positions.${index}.beschreibung` as const,
+                            {
+                              required: "Beschreibung ist erforderlich.",
+                            },
                           )}
                         />
                       </FormField>
 
                       <FormField
                         label="Kostenstelle"
+                        required
                         error={errors.positions?.[index]?.kostenstelle?.message}
                       >
                         <Select
@@ -548,12 +442,7 @@ export default function ReimbursementPage() {
                 <Button
                   type="button"
                   icon={faPlus}
-                  onClick={() =>
-                    append({
-                      ...emptyPosition(),
-                      kostenstelle: costCenters[0]?.value ?? "",
-                    })
-                  }
+                  onClick={() => append(emptyPosition())}
                 >
                   Position hinzufügen
                 </Button>
@@ -563,19 +452,10 @@ export default function ReimbursementPage() {
 
           {/* 4. Interne Notiz */}
           <InternalNoteSection
-            hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar. Die Status-Zeile wird automatisch vorangestellt."
+            hint="Wird in der Buchhaltung (Campai) als Kommentar hinterlegt und ist auch nur dort sichtbar"
             error={errors.notiz?.message}
             textareaProps={register("notiz")}
-          >
-            <div className="mb-5 grid gap-4 md:grid-cols-2">
-              <FormField label="Status" required>
-                <Select {...register("rechnungStatus", { required: true })}>
-                  <option value="offen">offen</option>
-                  <option value="bezahlt">bezahlt</option>
-                </Select>
-              </FormField>
-            </div>
-          </InternalNoteSection>
+          />
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="mr-auto flex flex-wrap items-center gap-3">

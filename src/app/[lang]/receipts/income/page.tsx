@@ -218,6 +218,7 @@ export default function EinnahmePage() {
     <BookingPageShell>
         <ReceiptsPageHeader
           title="Einnahme erfassen"
+          description="Einbuchung von Belegen für Einnahmen, die nicht über eine ausgestellte Rechnung abgewickelt werden können – z. B. Zuschüsse, Fördergelder oder Bareinnahmen."
           helperText="Pflichtfelder sind mit * markiert."
         />
 
