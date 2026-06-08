@@ -16,6 +16,7 @@ import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
 import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
@@ -31,6 +32,7 @@ import {
   euroAmountPattern,
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
+import { buildReceiptFile } from "@/lib/merge-receipt-files";
 
 type PositionValue = {
   betragEuro: string;
@@ -56,7 +58,6 @@ type FormValues = {
   empfaengerEmail: string;
   positions: PositionValue[];
   notiz: string;
-  belegDatei: FileList;
 };
 
 const emptyPosition = (): PositionValue => ({
@@ -129,7 +130,6 @@ export default function ReimbursementPage() {
       empfaengerEmail: "",
       positions: [emptyPosition()],
       notiz: "",
-      belegDatei: undefined,
     },
   });
 
@@ -139,6 +139,8 @@ export default function ReimbursementPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // File state — multiple files get bundled into a single PDF
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [costCentersLoading, setCostCentersLoading] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export default function ReimbursementPage() {
     setResult(null);
 
     try {
-      const datei = values.belegDatei?.item(0) ?? null;
+      const datei = await buildReceiptFile(selectedFiles);
       if (!datei) {
         setResult({ error: "Bitte eine Belegdatei hochladen." });
         return;
@@ -335,9 +337,9 @@ export default function ReimbursementPage() {
         empfaengerName: accountAutofill.name,
         empfaengerEmail: accountAutofill.email,
         notiz: "",
-        belegDatei: undefined,
       });
 
+      setSelectedFiles([]);
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
@@ -370,41 +372,31 @@ export default function ReimbursementPage() {
         ) : null}
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <FormSection title="Empfänger & Zahlung" icon={faUser}>
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="Empfänger (Kreditor)"
-                  required
-                  error={errors.empfaengerName?.message}
-                >
-                  <AutocompleteInput
-                    placeholder="Name eingeben…"
-                    showCreateOption
-                    onSelect={handleCreditorSelect}
-                    onCreateNew={handleCreateNew}
-                    {...register("empfaengerName", {
-                      required: "Empfängername ist erforderlich.",
-                    })}
-                  />
-                </FormField>
+          {/* 1. Beleg hochladen */}
+          <ReceiptUploadSection
+            files={selectedFiles}
+            onFilesChange={setSelectedFiles}
+            required
+          />
 
-                <FormField
-                  label="E-Mail-Adresse"
-                  error={errors.empfaengerEmail?.message}
-                >
-                  <Input
-                    type="email"
-                    placeholder="name@beispiel.de"
-                    {...register("empfaengerEmail", {
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Bitte eine gültige E-Mail-Adresse angeben.",
-                      },
-                    })}
-                  />
-                </FormField>
-              </div>
+          {/* 2. Wer erhält die Rückerstattung? */}
+          <FormSection title="Wer erhält die Rückerstattung?" icon={faUser}>
+            <div className="space-y-4">
+              <FormField
+                label="Empfänger auswählen oder neu anlegen"
+                required
+                error={errors.empfaengerName?.message}
+              >
+                <AutocompleteInput
+                  placeholder="Name eingeben…"
+                  showCreateOption
+                  onSelect={handleCreditorSelect}
+                  onCreateNew={handleCreateNew}
+                  {...register("empfaengerName", {
+                    required: "Empfängername ist erforderlich.",
+                  })}
+                />
+              </FormField>
 
               {/* Creditor selected badge */}
               {creditorAccount ? (
@@ -430,6 +422,7 @@ export default function ReimbursementPage() {
             </div>
           </FormSection>
 
+          {/* 3. Belegangaben */}
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
@@ -462,143 +455,113 @@ export default function ReimbursementPage() {
                 </FormField>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="Belegdatei"
-                  required
-                  hint="Eine Datei (PDF, Dokument, Bild oder Tabelle), max. 10 MB"
-                  error={errors.belegDatei?.message as string | undefined}
-                >
-                  <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.odt,.ods,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
-                    {...register("belegDatei", {
-                      validate: {
-                        required: (files) =>
-                          !!files?.length || "Bitte eine Belegdatei hochladen.",
-                        maxOneFile: (files) =>
-                          !files ||
-                          files.length <= 1 ||
-                          "Es ist nur eine Datei erlaubt.",
-                        maxSize: (files) => {
-                          if (!files || files.length === 0) {
-                            return true;
-                          }
-                          const file = files.item(0);
-                          if (!file) {
-                            return true;
-                          }
-                          return (
-                            file.size <= 10 * 1024 * 1024 ||
-                            "Datei darf maximal 10 MB groß sein."
-                          );
-                        },
-                      },
-                    })}
+              {/* Einzelne Positionen */}
+              <div className="space-y-4 border-t border-zinc-200 pt-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <FontAwesomeIcon
+                    icon={faCartShopping}
+                    className="h-4 w-4 text-primary"
                   />
-                </FormField>
+                  <span>Einzelne Positionen</span>
+                </h3>
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="space-y-3 rounded-xl border border-zinc-200 p-2 sm:p-3"
+                  >
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <FormField
+                        label="Betrag in Euro"
+                        required
+                        error={errors.positions?.[index]?.betragEuro?.message}
+                      >
+                        <Input
+                          inputMode="decimal"
+                          placeholder="z. B. 12,90"
+                          {...register(`positions.${index}.betragEuro` as const, {
+                            required: "Betrag ist erforderlich.",
+                            pattern: {
+                              value: euroAmountPattern,
+                              message: euroAmountValidationMessage,
+                            },
+                          })}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Beschreibung"
+                        error={errors.positions?.[index]?.beschreibung?.message}
+                      >
+                        <Input
+                          placeholder="z. B. Material"
+                          {...register(
+                            `positions.${index}.beschreibung` as const,
+                          )}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Kostenstelle"
+                        error={errors.positions?.[index]?.kostenstelle?.message}
+                      >
+                        <Select
+                          disabled={
+                            costCentersLoading || costCenters.length === 0
+                          }
+                          {...register(
+                            `positions.${index}.kostenstelle` as const,
+                            {
+                              required: "Bitte eine Kostenstelle auswählen.",
+                            },
+                          )}
+                        >
+                          <option value="">
+                            {costCentersLoading
+                              ? "Kostenstellen werden geladen..."
+                              : "Kostenstelle auswählen"}
+                          </option>
+                          {costCenters.map((costCenter) => (
+                            <option
+                              key={costCenter.value}
+                              value={costCenter.value}
+                            >
+                              {costCenter.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+
+                    {fields.length > 1 ? (
+                      <Button
+                        type="button"
+                        kind="danger-secondary"
+                        icon={faTrash}
+                        onClick={() => remove(index)}
+                      >
+                        Position entfernen
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  icon={faPlus}
+                  onClick={() =>
+                    append({
+                      ...emptyPosition(),
+                      kostenstelle: costCenters[0]?.value ?? "",
+                    })
+                  }
+                >
+                  Position hinzufügen
+                </Button>
               </div>
             </div>
           </FormSection>
 
-          <FormSection title="Aufwendung" icon={faCartShopping}>
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="space-y-3 rounded-xl border border-zinc-200 p-2 sm:p-3"
-                >
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <FormField
-                      label="Betrag in Euro"
-                      required
-                      error={errors.positions?.[index]?.betragEuro?.message}
-                    >
-                      <Input
-                        inputMode="decimal"
-                        placeholder="z. B. 12,90"
-                        {...register(`positions.${index}.betragEuro` as const, {
-                          required: "Betrag ist erforderlich.",
-                          pattern: {
-                            value: euroAmountPattern,
-                            message: euroAmountValidationMessage,
-                          },
-                        })}
-                      />
-                    </FormField>
-
-                    <FormField
-                      label="Beschreibung"
-                      error={errors.positions?.[index]?.beschreibung?.message}
-                    >
-                      <Input
-                        placeholder="z. B. Material"
-                        {...register(
-                          `positions.${index}.beschreibung` as const,
-                        )}
-                      />
-                    </FormField>
-
-                    <FormField
-                      label="Kostenstelle"
-                      error={errors.positions?.[index]?.kostenstelle?.message}
-                    >
-                      <Select
-                        disabled={
-                          costCentersLoading || costCenters.length === 0
-                        }
-                        {...register(
-                          `positions.${index}.kostenstelle` as const,
-                          {
-                            required: "Bitte eine Kostenstelle auswählen.",
-                          },
-                        )}
-                      >
-                        <option value="">
-                          {costCentersLoading
-                            ? "Kostenstellen werden geladen..."
-                            : "Kostenstelle auswählen"}
-                        </option>
-                        {costCenters.map((costCenter) => (
-                          <option
-                            key={costCenter.value}
-                            value={costCenter.value}
-                          >
-                            {costCenter.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                  </div>
-
-                  {fields.length > 1 ? (
-                    <Button
-                      type="button"
-                      kind="danger-secondary"
-                      icon={faTrash}
-                      onClick={() => remove(index)}
-                    >
-                      Position entfernen
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
-
-              <Button
-                type="button"
-                icon={faPlus}
-                onClick={() =>
-                  append({
-                    ...emptyPosition(),
-                    kostenstelle: costCenters[0]?.value ?? "",
-                  })
-                }
-              >
-                Position hinzufügen
-              </Button>
-            </div>
-          </FormSection>
-
+          {/* 4. Interne Notiz */}
           <InternalNoteSection
             hint="Wird intern am Beleg in Campai hinterlegt und ist nur für Admins sichtbar. Die Status-Zeile wird automatisch vorangestellt."
             error={errors.notiz?.message}

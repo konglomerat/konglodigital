@@ -15,6 +15,7 @@ import Link from "next/link";
 import Button from "../../components/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
 import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
@@ -32,6 +33,7 @@ import {
   euroAmountPattern,
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
+import { buildReceiptFile } from "@/lib/merge-receipt-files";
 
 type CostCenterOption = { value: string; label: string };
 
@@ -90,8 +92,8 @@ export default function EinnahmePage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showUpdatePanel, setShowUpdatePanel] = useState(false);
 
-  // File state (optional)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // File state (optional) — multiple files get bundled into a single PDF
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleDebitorSelect = useCallback((suggestion: Suggestion) => {
     setDebitorAccount(suggestion.account);
@@ -156,18 +158,19 @@ export default function EinnahmePage() {
     setIsSubmitting(true);
     setResult(null);
     try {
+      const receiptFile = await buildReceiptFile(selectedFiles);
       let fileData: {
         receiptFileBase64: string;
         receiptFileName: string;
         receiptFileContentType: string;
       } | null = null;
-      if (selectedFile) {
-        const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+      if (receiptFile) {
+        const bytes = new Uint8Array(await receiptFile.arrayBuffer());
         fileData = {
           receiptFileBase64: bytesToBase64(bytes),
-          receiptFileName: selectedFile.name,
+          receiptFileName: receiptFile.name,
           receiptFileContentType:
-            selectedFile.type || "application/octet-stream",
+            receiptFile.type || "application/octet-stream",
         };
       }
       const response = await fetch("/api/campai/receipts/revenue", {
@@ -205,7 +208,7 @@ export default function EinnahmePage() {
       setDebitorAccount(null);
       setDebitorName("");
       setShowCreatePanel(false);
-      setSelectedFile(null);
+      setSelectedFiles([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -225,24 +228,13 @@ export default function EinnahmePage() {
         ) : null}
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* Beleg hochladen */}
-          <FormSection title="Beleg hochladen" icon={faFolderOpen}>
-            <FormField label="Belegdatei" hint="Optional - PDF, JPG oder PNG">
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) =>
-                  setSelectedFile(event.target.files?.item(0) ?? null)
-                }
-              />
-              {selectedFile ? (
-                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
-              ) : null}
-            </FormField>
-          </FormSection>
+          {/* 1. Beleg hochladen */}
+          <ReceiptUploadSection
+            files={selectedFiles}
+            onFilesChange={setSelectedFiles}
+          />
 
-          {/* Zahlende Person/Firma */}
+          {/* 2. Zahlende Person/Firma */}
           <FormSection title="Zahlende Person/Firma" icon={faUser}>
             <div className="space-y-4">
               <FormField
@@ -303,7 +295,7 @@ export default function EinnahmePage() {
             </div>
           </FormSection>
 
-          {/* Belegangaben */}
+          {/* 3. Belegangaben */}
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="space-y-4">
               <FormField
@@ -384,6 +376,7 @@ export default function EinnahmePage() {
             </div>
           </FormSection>
 
+          {/* 4. Interne Notiz */}
           <InternalNoteSection textareaProps={register("notes")} />
 
           {result?.id ? (

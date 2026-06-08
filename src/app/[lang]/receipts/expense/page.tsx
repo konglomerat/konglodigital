@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowTrendDown,
   faCheck,
-  faFileImport,
   faFolderOpen,
   faPlus,
   faUser,
@@ -18,6 +17,7 @@ import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
+import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
 import ReceiptsPageHeader from "../create/header";
 import {
   AutocompleteInput,
@@ -33,6 +33,7 @@ import {
   euroAmountPattern,
   euroAmountValidationMessage,
 } from "@/lib/euro-input";
+import { buildReceiptFile } from "@/lib/merge-receipt-files";
 
 type CostCenterOption = { value: string; label: string };
 
@@ -61,7 +62,6 @@ export default function AusgabePage() {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     mode: "onChange",
@@ -92,11 +92,8 @@ export default function AusgabePage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showUpdatePanel, setShowUpdatePanel] = useState(false);
 
-  // File state (optional)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
-  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
+  // File state — multiple files get bundled into a single PDF
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
     setCreditorAccount(suggestion.account);
@@ -153,77 +150,8 @@ export default function AusgabePage() {
     };
   }, []);
 
-  const handleScanReceipt = useCallback(async () => {
-    if (!selectedFile) {
-      return;
-    }
-
-    setIsScanningReceipt(true);
-    setScanFeedback(null);
-    setScanError(null);
-    setResult(null);
-
-    try {
-      const bytes = new Uint8Array(await selectedFile.arrayBuffer());
-      const response = await fetch("/api/campai/receipts/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiptType: "expense",
-          refund: false,
-          receiptFileBase64: bytesToBase64(bytes),
-          receiptFileName: selectedFile.name,
-          receiptFileContentType:
-            selectedFile.type || "application/octet-stream",
-        }),
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        receiptDate?: string | null;
-        receiptNumber?: string | null;
-        totalGrossAmount?: number | null;
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setScanError(payload.error ?? "Beleg konnte nicht ausgelesen werden.");
-        return;
-      }
-
-      setValue("belegdatum", payload.receiptDate ?? "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setValue(
-        "betragEuro",
-        typeof payload.totalGrossAmount === "number"
-          ? `${(payload.totalGrossAmount / 100).toFixed(2)}`.replace(".", ",")
-          : "",
-        {
-          shouldDirty: true,
-          shouldValidate: true,
-        },
-      );
-      setValue("belegnummer", payload.receiptNumber ?? "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setValue("beschreibung", "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setScanFeedback("Belegdaten wurden übernommen.");
-    } catch (error) {
-      setScanError(
-        error instanceof Error ? error.message : "Unbekannter Fehler",
-      );
-    } finally {
-      setIsScanningReceipt(false);
-    }
-  }, [selectedFile, setValue]);
-
   const onSubmit = async (values: FormValues) => {
-    if (!selectedFile) {
+    if (selectedFiles.length === 0) {
       setResult({ error: "Bitte einen Beleg hochladen." });
       return;
     }
@@ -234,18 +162,19 @@ export default function AusgabePage() {
     setIsSubmitting(true);
     setResult(null);
     try {
+      const receiptFile = await buildReceiptFile(selectedFiles);
       let fileData: {
         receiptFileBase64: string;
         receiptFileName: string;
         receiptFileContentType: string;
       } | null = null;
-      if (selectedFile) {
-        const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+      if (receiptFile) {
+        const bytes = new Uint8Array(await receiptFile.arrayBuffer());
         fileData = {
           receiptFileBase64: bytesToBase64(bytes),
-          receiptFileName: selectedFile.name,
+          receiptFileName: receiptFile.name,
           receiptFileContentType:
-            selectedFile.type || "application/octet-stream",
+            receiptFile.type || "application/octet-stream",
         };
       }
       const response = await fetch("/api/campai/receipts/expense", {
@@ -283,9 +212,7 @@ export default function AusgabePage() {
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
-      setSelectedFile(null);
-      setScanFeedback(null);
-      setScanError(null);
+      setSelectedFiles([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -306,47 +233,14 @@ export default function AusgabePage() {
         ) : null}
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* Beleg hochladen */}
-          <FormSection title="Beleg hochladen" icon={faFolderOpen}>
-            <FormField label="Belegdatei" required hint="PDF, JPG oder PNG">
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200"
-                onChange={(event) => {
-                  setSelectedFile(event.target.files?.item(0) ?? null);
-                  setScanFeedback(null);
-                  setScanError(null);
-                }}
-              />
-              {selectedFile ? (
-                <p className="text-xs text-zinc-500">{selectedFile.name}</p>
-              ) : null}
-              <div className="mt-3 space-y-2">
-                <Button
-                  type="button"
-                  kind="secondary"
-                  icon={faFileImport}
-                  disabled={!selectedFile || isScanningReceipt}
-                  onClick={handleScanReceipt}
-                >
-                  {isScanningReceipt ? "Beleg wird ausgelesen…" : "Beleg auslesen"}
-                </Button>
-                <p className="text-xs text-zinc-500">
-                  Liest Datum, Betrag und Belegnummer automatisch aus dem Beleg
-                  und überträgt sie ins Formular.
-                </p>
-                {scanFeedback ? (
-                  <p className="text-sm text-emerald-700">{scanFeedback}</p>
-                ) : null}
-              </div>
-              {scanError ? (
-                <p className="mt-2 text-sm text-rose-700">{scanError}</p>
-              ) : null}
-            </FormField>
-          </FormSection>
+          {/* 1. Beleg hochladen */}
+          <ReceiptUploadSection
+            files={selectedFiles}
+            onFilesChange={setSelectedFiles}
+            required
+          />
 
-          {/* Zahlungsempfänger */}
+          {/* 2. Zahlungsempfänger */}
           <FormSection title="Zahlungsempfänger" icon={faUser}>
             <div className="space-y-4">
               <FormField
@@ -404,7 +298,7 @@ export default function AusgabePage() {
             </div>
           </FormSection>
 
-          {/* Belegangaben */}
+          {/* 3. Belegangaben */}
           <FormSection title="Belegangaben" icon={faFolderOpen}>
             <div className="space-y-4">
               <FormField
@@ -488,6 +382,7 @@ export default function AusgabePage() {
             </div>
           </FormSection>
 
+          {/* 4. Interne Notiz */}
           <InternalNoteSection textareaProps={register("notes")} />
 
           {result?.id ? (
