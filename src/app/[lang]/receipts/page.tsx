@@ -984,7 +984,7 @@ export default function ReceiptsPage() {
         const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
 
         if (
-          Number.isNaN(timestamp) ||
+          !Number.isNaN(timestamp) &&
           String(new Date(timestamp).getFullYear()) !== selectedYearValue
         ) {
           return false;
