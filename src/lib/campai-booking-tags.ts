@@ -28,11 +28,3 @@ export const mergeCampaiTags = (...tagGroups: Array<Array<string | null | undefi
 
   return [...seen];
 };
-
-export const buildCampaiBookingTags = (
-  user: User,
-  extraTags: Array<string | null | undefined> = [],
-): string[] => {
-  const displayName = getCampaiBookingDisplayName(user);
-  return mergeCampaiTags(["API", displayName], extraTags);
-};

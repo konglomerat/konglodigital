@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
@@ -92,6 +92,7 @@ const parseCashReceiptInput = (
     ) || accountName;
 
   const descriptionOverride = compactText(body.description);
+  const positionDescriptionOverride = compactText(body.positionDescription);
   const description = descriptionOverride
     ? descriptionOverride.slice(0, 140)
     : [
@@ -103,7 +104,11 @@ const parseCashReceiptInput = (
         .filter(Boolean)
         .join(" | ")
         .slice(0, 140);
-  const positionDescription = (descriptionOverride || occasion).slice(0, 140);
+  const positionDescription = (
+    positionDescriptionOverride ||
+    descriptionOverride ||
+    occasion
+  ).slice(0, 140);
 
   const timeStamp = new Date()
     .toISOString()
@@ -270,7 +275,7 @@ export const handleCashReceipt = async (
     const payload = buildPayload(
       receipt,
       positionAccount,
-      buildCampaiBookingTags(data.user, receipt.extraTags),
+      mergeCampaiTags(["API"], receipt.extraTags),
       upload.receiptFileId ?? null,
     );
 

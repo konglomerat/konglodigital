@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { buildCampaiBookingTags } from "@/lib/campai-booking-tags";
+import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import {
   type CampaiPaymentMethodType,
@@ -318,7 +318,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const tags = buildCampaiBookingTags(data.user);
+  const tags = mergeCampaiTags(["API"]);
   const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
   const creatorNote = buildCampaiReceiptCreatorNote({
     user: data.user,

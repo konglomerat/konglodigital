@@ -1006,7 +1006,8 @@ export default function EigenbelegPage() {
 
         const expenseResult = await sendReceipt("expense", {
           bookingType: "ausgabe",
-          description: transferDescription,
+          description: receiptValues.occasion,
+          positionDescription: transferDescription,
           expense: values.amountEuro,
           transferAmount: values.amountEuro,
           senderName: associationName,
@@ -1021,7 +1022,8 @@ export default function EigenbelegPage() {
         try {
           revenueResult = await sendReceipt("revenue", {
             bookingType: "einnahme",
-            description: transferDescription,
+            description: receiptValues.occasion,
+            positionDescription: transferDescription,
             income: values.amountEuro,
             transferAmount: values.amountEuro,
             senderName: settlementAccountLabel,
