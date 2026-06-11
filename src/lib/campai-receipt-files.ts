@@ -9,6 +9,22 @@ const logUploadFailure = (step: string, detail: string) => {
   console.error(`[campai-upload] ${step}: ${detail}`);
 };
 
+const sanitizeHeaderFileName = (fileName: string) => {
+  const cleaned = (fileName || DEFAULT_FILE_NAME)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+  return cleaned || DEFAULT_FILE_NAME;
+};
+
+const buildContentDisposition = (fileName: string) => {
+  const safeFileName = sanitizeHeaderFileName(fileName);
+  const encodedFileName = encodeURIComponent(fileName || DEFAULT_FILE_NAME);
+  return `inline; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`;
+};
+
 type UploadCampaiReceiptFileParams = {
   apiKey: string;
   baseUrl: string;
@@ -33,7 +49,7 @@ const extractUploadId = (payload: unknown): string | null => {
 
 const buildFormData = (blob: Blob, fileName: string) => {
   const formData = new FormData();
-  formData.append("file", blob, fileName || DEFAULT_FILE_NAME);
+  formData.append("file", blob, sanitizeHeaderFileName(fileName));
   return formData;
 };
 
@@ -73,7 +89,7 @@ const uploadViaStorageUrl = async (
     method: "PUT",
     headers: {
       "Content-Type": contentType || DEFAULT_CONTENT_TYPE,
-      "Content-Disposition": `inline; filename="${fileName || DEFAULT_FILE_NAME}"`,
+      "Content-Disposition": buildContentDisposition(fileName),
     },
     body: blob,
   });
