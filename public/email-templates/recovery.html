@@ -72,8 +72,7 @@
             <td class="block-content" style="padding:40px 48px 8px 48px;background-color:rgb(255, 255, 255);">
               <div style="color:rgb(51, 51, 51);font-size:15px;line-height:18px;font-weight:400;">
                 <p><strong>Hallo</strong> {{ .Data.first_name }},</p>
-                <p>hier ist dein persönlicher Magic Link. Klicke auf den Button, um dich anzumelden oder ein neues Passwort zu setzen.</p>
-                <p>Der Link ist 60 Minuten gültig und nur einmal verwendbar.</p>
+                <p>hier ist dein persönlicher Recovery Link. Klicke auf den Button, um dich anzumelden oder ein neues Passwort zu setzen.</p>
               </div>
             </td>
           </tr>
@@ -91,6 +90,14 @@
                 </tr>
               </table>
             </td>
+          <!-- Gültigkeitshinweis -->
+          <tr>
+            <td class="block-content" style="padding:0 48px 8px 48px;background-color:rgb(255, 255, 255);">
+              <div style="color:rgb(51, 51, 51);font-size:13px;line-height:175%;font-weight:400;">
+                <p style="margin:0;">Aus Sicherheitsgründen funktioniert dieser Link nur für <strong>5 Tage</strong> ab Erhalt der Mail und lässt sich auch nur ein einziges Mal nutzen. Ist er abgelaufen, kannst du dir jederzeit <a href="https://digital.konglomerat.org/password-reset" style="color:rgb(200, 54, 105);text-decoration:underline;">selbst einen neuen anfordern</p>
+              </div>
+            </td>
+          </tr>
           </tr>
           <!-- Fallback link -->
           <tr>
