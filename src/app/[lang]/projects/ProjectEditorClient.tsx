@@ -23,6 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import ReactSelect from "../components/ui/react-select";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
@@ -618,7 +619,7 @@ export default function ProjectEditorClient({
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <PageWrapper as="main" className="flex flex-col gap-6">
       <PageTitle
         title={
           mode === "edit"
@@ -1070,6 +1071,6 @@ export default function ProjectEditorClient({
           onApply={handleApplyCrop}
         />
       ) : null}
-    </main>
+    </PageWrapper>
   );
 }

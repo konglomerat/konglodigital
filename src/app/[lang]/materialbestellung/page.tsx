@@ -5,6 +5,7 @@ import { faArrowsRotate, faPlus, faTrash } from "@fortawesome/free-solid-svg-ico
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "../components/Button";
+import PageWrapper from "../components/PageWrapper";
 import type { MaterialOrderSummary } from "@/lib/material-orders";
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
@@ -81,7 +82,7 @@ export default function MaterialbestellungListPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 md:px-0 md:py-0">
+    <PageWrapper className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Materialbestellungen
@@ -159,7 +160,6 @@ export default function MaterialbestellungListPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
-

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { listCampaiReceipts } from "@/lib/campai-list-receipts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import PageWrapper from "../components/PageWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +166,7 @@ export default async function MeineBuchungenPage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-0 md:py-0">
+    <PageWrapper>
       <div className="space-y-2 pb-6">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Meine Buchungen
@@ -337,6 +338,6 @@ export default async function MeineBuchungenPage({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </PageWrapper>
   );
 }

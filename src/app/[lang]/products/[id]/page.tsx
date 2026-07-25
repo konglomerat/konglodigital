@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, use } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../../components/Button";
+import PageWrapper from "../../components/PageWrapper";
 import PageTitle from "../../components/PageTitle";
 
 type CampaiProduct = {
@@ -131,7 +132,7 @@ export default function CampaiProductDetailPage({
 
   return (
     <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
+      <PageWrapper as="main" className="flex flex-col gap-6">
         <PageTitle
           title="Produktdetails"
           subTitle="Sieh dir Details an und passe die Menge im Warenkorb an."
@@ -197,7 +198,7 @@ export default function CampaiProductDetailPage({
             </div>
           )}
         </section>
-      </main>
+      </PageWrapper>
     </div>
   );
 }

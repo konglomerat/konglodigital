@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "../../components/Button";
 import PageTitle from "../../components/PageTitle";
+import PageWrapper from "../../components/PageWrapper";
 
 type Printer = {
   id: string;
@@ -126,7 +127,7 @@ export default function PrinterEmptyingPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <PageWrapper className="space-y-8">
       <header className="space-y-2">
         <PageTitle
           eyebrow="Printer Emptying"
@@ -233,6 +234,6 @@ export default function PrinterEmptyingPage() {
           need to be emptied.
         </div>
       ) : null}
-    </div>
+    </PageWrapper>
   );
 }

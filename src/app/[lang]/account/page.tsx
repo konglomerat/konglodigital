@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { type InvoicePayload } from "@/lib/campai-invoices";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import PasswordInput from "../components/PasswordInput";
 
 type AccountUser = {
@@ -346,7 +347,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <PageWrapper className="space-y-6">
       <PageTitle
         title="Konto"
         subTitle="Verwalte deine Profildaten und dein Passwort."
@@ -639,6 +640,6 @@ export default function AccountPage() {
           </section>
         </div>
       )}
-    </div>
+    </PageWrapper>
   );
 }

@@ -14,6 +14,7 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import PageTitle from "../../components/PageTitle";
+import PageWrapper from "../../components/PageWrapper";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
@@ -170,7 +171,7 @@ export default function ResourceDetailClient({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
+      <PageWrapper as="main" className="flex flex-col gap-6">
         <PageTitle
           title={resource?.name ?? tx("Resource not found.")}
           backLink={{
@@ -326,7 +327,7 @@ export default function ResourceDetailClient({
             </div>
           )}
         </section>
-      </main>
+      </PageWrapper>
     </div>
   );
 }

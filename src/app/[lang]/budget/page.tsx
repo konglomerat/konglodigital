@@ -23,6 +23,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
+import PageWrapper from "../components/PageWrapper";
+
 type AreaOption = {
   value: string;
   label: string;
@@ -183,7 +185,7 @@ export default function BudgetPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 md:px-0">
+    <PageWrapper>
       <h1 className="mb-6 text-2xl font-bold text-foreground ">
         Budget Werkbereiche
       </h1>
@@ -414,6 +416,6 @@ export default function BudgetPage() {
           Bitte wähle einen Werkbereich aus, um das Budget einzusehen.
         </div>
       )}
-    </div>
+    </PageWrapper>
   );
 }

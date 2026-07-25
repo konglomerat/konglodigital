@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import PageWrapper from "../../components/PageWrapper";
 import PrinterAccessCodesClient from "./PrinterAccessCodesClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,5 +12,9 @@ export default async function PrinterAccessCodesPage() {
     redirect("/login?redirectedFrom=/printers/access-codes");
   }
 
-  return <PrinterAccessCodesClient />;
+  return (
+    <PageWrapper>
+      <PrinterAccessCodesClient />
+    </PageWrapper>
+  );
 }

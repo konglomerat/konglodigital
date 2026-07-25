@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "../components/Button";
+import PageWrapper from "../components/PageWrapper";
 import PageTitle from "../components/PageTitle";
 
 type AccessCardPlanId = "none" | "quarter" | "full";
@@ -230,7 +231,7 @@ export default function MonatsbeitragPage() {
 
   return (
     <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
+      <PageWrapper as="main" className="flex flex-col gap-6">
         <PageTitle
           title="Zugangskarte"
           subTitle="Du hast genau drei Optionen: keine Zugangskarte, eine Abokarte oder eine 10er Karte."
@@ -404,7 +405,7 @@ export default function MonatsbeitragPage() {
           </div>
           </section>
         ) : null}
-      </main>
+      </PageWrapper>
     </div>
   );
 }

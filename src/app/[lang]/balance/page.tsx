@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
+import PageWrapper from "../components/PageWrapper";
 import type {
   CampaiBalanceReceipt,
   CampaiReceiptPosition,
@@ -246,7 +247,7 @@ export default function BalancePage() {
   const colSpan = tableHeaders.length;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-0 md:py-0">
+    <PageWrapper>
       <div className="space-y-2 pb-6">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Balance
@@ -479,6 +480,6 @@ export default function BalancePage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

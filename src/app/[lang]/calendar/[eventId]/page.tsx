@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import PageTitle from "../../components/PageTitle";
+import PageWrapper from "../../components/PageWrapper";
 import {
   CALENDAR_URL,
   TIME_ZONE,
@@ -45,7 +45,7 @@ export default async function CalendarEventDetailPage({
   const tags = event ? extractTags(event.description) : [];
 
   return (
-    <div className="space-y-6">
+    <PageWrapper className="space-y-6">
       <PageTitle
         eyebrow="Kalender"
         title="Termin-Details"
@@ -123,6 +123,6 @@ export default async function CalendarEventDetailPage({
           </div>
         </section>
       ) : null}
-    </div>
+    </PageWrapper>
   );
 }

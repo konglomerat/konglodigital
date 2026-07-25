@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import {
   CALENDAR_URL,
   buildDays,
@@ -40,7 +41,7 @@ export default async function CalendarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageWrapper className="space-y-6">
       <PageTitle
         eyebrow="Kalender"
         title="Nächste 7 Tage"
@@ -137,6 +138,6 @@ export default async function CalendarPage() {
           </section>
         ))}
       </div>
-    </div>
+    </PageWrapper>
   );
 }

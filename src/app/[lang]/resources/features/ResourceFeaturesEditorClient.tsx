@@ -18,6 +18,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
+import PageWrapper from "../../components/PageWrapper";
 
 import Button from "../../components/Button";
 import MdxEditorInput from "../../components/MdxEditorInput";
@@ -2228,14 +2229,8 @@ export default function ResourceFeaturesEditorClient({
     selectedResourceId,
   ]);
 
-  return (
-    <main
-      className={
-        embedded
-          ? "flex w-full flex-col gap-6"
-          : "mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10"
-      }
-    >
+  const content = (
+    <>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {!hasFixedResource ? (
@@ -2873,6 +2868,14 @@ export default function ResourceFeaturesEditorClient({
           </div>
         </div>
       </section>
-    </main>
+    </>
+  );
+
+  return embedded ? (
+    <main className="flex w-full flex-col gap-6">{content}</main>
+  ) : (
+    <PageWrapper as="main" className="flex min-h-screen flex-col gap-6">
+      {content}
+    </PageWrapper>
   );
 }

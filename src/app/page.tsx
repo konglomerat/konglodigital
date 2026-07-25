@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
+import PageWrapper from "./[lang]/components/PageWrapper";
 import ProjectOfTheMonthSection from "./ProjectOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import heroHelloImage from "./hero-hello.jpg";
@@ -63,7 +64,7 @@ export default async function Home() {
   ];
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
+    <PageWrapper as="main" className="flex flex-col gap-8 md:gap-10">
       <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
         <div className="order-2 md:order-1">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
@@ -280,6 +281,6 @@ export default async function Home() {
           konglomerat.org
         </a>
       </section>
-    </main>
+    </PageWrapper>
   );
 }

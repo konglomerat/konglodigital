@@ -20,6 +20,7 @@ import type {
   KoFiResponse,
 } from "@/lib/campai-kofi";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 
 type ViewMode = "month" | "quarter" | "year";
 
@@ -613,7 +614,7 @@ export default function KoFiPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
+    <PageWrapper>
       <PageTitle
         eyebrow="Campai / SKR 42"
         title="KoFi Kosten- und Finanzierungsplan"
@@ -806,6 +807,6 @@ export default function KoFiPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </PageWrapper>
   );
 }

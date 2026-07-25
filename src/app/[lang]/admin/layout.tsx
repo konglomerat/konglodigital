@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import ActiveNavLink from "@/app/ActiveNavLink";
+import PageWrapper from "../components/PageWrapper";
 import { localizePathname } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/server";
 import { userCanAccessModule } from "@/lib/roles";
@@ -21,17 +22,20 @@ export default async function AdminLayout({
 
   if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
     return (
-      <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+      <PageWrapper
+        as="section"
+        className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm"
+      >
         <h1 className="text-2xl font-semibold text-destructive">Kein Zugriff</h1>
         <p className="mt-2 text-sm text-destructive">
           Dieser Bereich ist nur fuer Mitglieder mit der Rolle Admin verfuegbar.
         </p>
-      </section>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <PageWrapper className="space-y-6">
       <nav className="flex flex-wrap gap-2 rounded-3xl border border-border bg-card p-2 shadow-sm">
         <ActiveNavLink
           href={localizePathname("/admin/users", locale)}
@@ -68,6 +72,6 @@ export default async function AdminLayout({
       </nav>
 
       {children}
-    </div>
+    </PageWrapper>
   );
 }

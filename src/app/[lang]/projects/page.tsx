@@ -1,4 +1,5 @@
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -76,7 +77,7 @@ export default async function ProjectsPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <PageWrapper as="main" className="flex flex-col gap-8">
       <PageTitle
         title={tx("Projekte", "de")}
         subTitle={tx(
@@ -105,6 +106,6 @@ export default async function ProjectsPage() {
           {projectGridWithPrompt}
         </section>
       )}
-    </main>
+    </PageWrapper>
   );
 }

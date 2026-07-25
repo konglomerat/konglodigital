@@ -7,6 +7,7 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import ResourceForm from "./ResourceForm";
 import {
   createResourceFormData,
@@ -355,7 +356,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
 
   return (
     <div>
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <PageWrapper as="main" className="flex flex-col gap-6">
         <PageTitle
           title={tx(config.title)}
           subTitle={tx(config.subtitle)}
@@ -414,7 +415,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
             relatedResourceLoading={relatedResourceOptionsLoading}
           />
         </section>
-      </main>
+      </PageWrapper>
     </div>
   );
 }

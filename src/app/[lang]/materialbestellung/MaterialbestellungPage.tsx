@@ -15,6 +15,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "../components/Button";
+import PageWrapper from "../components/PageWrapper";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import { FormField, FormSection, Input, Select } from "../components/ui/form";
 import {
@@ -890,7 +891,7 @@ export default function MaterialInvoicesPage({
   const bruttoTotal = roundCurrency(nettoTotal + mwstTotal);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-28 md:px-0 md:py-0 md:pb-28">
+    <PageWrapper className="space-y-6 pb-28 md:pb-28">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Materialbestellung
@@ -1499,6 +1500,6 @@ export default function MaterialInvoicesPage({
           ) : null}
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

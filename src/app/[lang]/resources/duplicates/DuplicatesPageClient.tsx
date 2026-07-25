@@ -8,6 +8,7 @@ import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import Button from "../../components/Button";
+import PageWrapper from "../../components/PageWrapper";
 
 export type DuplicateDetectionResource = {
   id: string;
@@ -344,7 +345,7 @@ export default function DuplicatesPageClient({
 
   return (
     <main className="min-h-screen bg-muted/50 text-foreground">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
+      <PageWrapper className="flex flex-col gap-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -599,7 +600,7 @@ export default function DuplicatesPageClient({
             })}
           </section>
         )}
-      </div>
+      </PageWrapper>
     </main>
   );
 }

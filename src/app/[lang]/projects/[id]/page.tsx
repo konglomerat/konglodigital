@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import heroHelloImage from "../../../hero-hello.jpg";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import PageTitle from "../../components/PageTitle";
+import PageWrapper from "../../components/PageWrapper";
 import ShareButton from "../../components/ShareButton";
 import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
@@ -239,7 +240,7 @@ export default async function ProjectDetailPage({
   const updatedDateLabel = formatDate(project.updatedAt ?? project.createdAt);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <PageWrapper as="main" className="flex flex-col gap-8">
       <header className="space-y-4 px-6 py-2 md:px-8">
         <PageTitle
           backLink={{
@@ -482,6 +483,6 @@ export default async function ProjectDetailPage({
           ) : null}
         </aside>
       </div>
-    </main>
+    </PageWrapper>
   );
 }

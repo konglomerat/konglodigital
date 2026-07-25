@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { type PrinterStatus } from "@/lib/bambu";
 import Button from "../components/Button";
+import PageWrapper from "../components/PageWrapper";
 import PageTitle from "../components/PageTitle";
 import {
   getCartJobs,
@@ -445,7 +446,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+      <PageWrapper as="main" className="flex flex-col gap-8">
         <PageTitle
           title="3D Printer Dashboard"
           links={[
@@ -820,7 +821,7 @@ export default function Home() {
             </div>
           )}
         </section>
-      </main>
+      </PageWrapper>
     </div>
   );
 }

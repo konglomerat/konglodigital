@@ -30,6 +30,7 @@ import {
   type Locale,
 } from "@/i18n/config";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 import { Input, Select } from "../components/ui/form";
 import {
   Tooltip,
@@ -990,7 +991,7 @@ export default function ResourcesPageClient({
   }, [tx]);
 
   return (
-    <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
+    <PageWrapper as="main" className="flex min-h-screen flex-col gap-8">
       <PageTitle
         title={tx("Inventar", "de")}
         subTitle={tx(
@@ -1262,6 +1263,6 @@ export default function ResourcesPageClient({
           </div>
         </aside>
       </section>
-    </main>
+    </PageWrapper>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ActiveSubnavGroup from "./ActiveSubnavGroup";
 import ActiveNavLink from "./ActiveNavLink";
 import heroHelloImage from "./hero-hello.jpg";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -32,6 +33,7 @@ import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getUserRole } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
+import PageWrapper from "./[lang]/components/PageWrapper";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
 import ChatwootWidget from "./[lang]/components/ChatwootWidget";
@@ -96,6 +98,7 @@ type ProtectedNavItemProps = {
   icon: IconProp;
   children: React.ReactNode;
   className: string;
+  activeClassName?: string;
   isAccessible: boolean;
   tooltip: string;
 };
@@ -105,12 +108,17 @@ function ProtectedNavItem({
   icon,
   children,
   className,
+  activeClassName,
   isAccessible,
   tooltip,
 }: ProtectedNavItemProps) {
   if (isAccessible) {
     return (
-      <ActiveNavLink href={href} className={className}>
+      <ActiveNavLink
+        href={href}
+        className={className}
+        activeClassName={activeClassName}
+      >
         <FontAwesomeIcon icon={icon} className="h-4 w-4" />
         {children}
       </ActiveNavLink>
@@ -172,14 +180,32 @@ export default async function RootLayout({
     : null;
   const userRole = await getUserRole(supabase, userData.user);
   const canAccessAdmin = isAuthenticated && userRole === "admin";
-  const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
     "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground";
   const navSectionTitleClassName =
     "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:pt-0";
   const navButtonClassName =
     "flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90";
+  const desktopMainNavClassName =
+    "inline-flex h-10 items-center rounded-md px-4 text-base font-semibold text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950";
+  const desktopMainNavActiveClassName =
+    "bg-primary !text-primary-foreground hover:bg-primary/90 hover:!text-primary-foreground";
+  const desktopSubNavClassName =
+    "inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground";
+  const desktopSubNavActiveClassName =
+    "border-primary bg-primary text-primary-foreground hover:text-primary-foreground";
+  const startNavPrefixes = ["/", "/projects", "/resources", "/products", "/calendar"];
+  const memberNavPrefixes = [
+    "/mitglieder",
+    "/account",
+    "/printers",
+    "/checkout",
+    "/materialbestellung",
+    "/meine-buchungen",
+    "/budget",
+    "/balance",
+    "/admin",
+  ];
   const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
 
   return (
@@ -197,15 +223,13 @@ export default async function RootLayout({
         <I18nProvider locale={locale}>
           <ChatwootWidget locale={locale} />
           <div className="min-h-screen bg-background text-foreground">
-            <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
-              <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
+            <header className="border-b border-zinc-200 bg-white text-zinc-950 md:hidden">
+              <div className="relative flex w-full items-center justify-between px-4 py-4">
                 <Link
                   href="/"
-                  className="text-xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
+                  className="text-xl font-black leading-none uppercase tracking-widest text-zinc-950 transition hover:text-primary"
                 >
-                  Konglo
-                  <br />
-                  digital
+                  KONGLODIGITAL
                 </Link>
                 <div className="flex items-center gap-3">
                   <LanguageSwitcher />
@@ -223,9 +247,66 @@ export default async function RootLayout({
                   >
                     <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg">
                       <nav className="flex flex-col px-2 py-2">
-                        <p className={navSectionTitleClassName}>
-                          Digital Fabrication
-                        </p>
+                        <p className={navSectionTitleClassName}>Start</p>
+                        <ActiveNavLink href="/" exact className={navLinkClassName}>
+                          Überblick
+                        </ActiveNavLink>
+                        <ActiveNavLink
+                          href="/projects"
+                          className={navLinkClassName}
+                        >
+                          Projekte
+                        </ActiveNavLink>
+                        <ProtectedNavItem
+                          href="/resources"
+                          className={navLinkClassName}
+                          icon={faFolderOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Inventar
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/products"
+                          className={navLinkClassName}
+                          icon={faBoxOpen}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Produkte
+                        </ProtectedNavItem>
+                        <ActiveNavLink
+                          href="/calendar"
+                          className={navLinkClassName}
+                        >
+                          <FontAwesomeIcon
+                            icon={faCalendarDays}
+                            className="h-4 w-4"
+                          />
+                          Kalender
+                        </ActiveNavLink>
+
+                        <p className={navSectionTitleClassName}>Mitglieder</p>
+                        <ProtectedNavItem
+                          href="/mitglieder"
+                          className={navLinkClassName}
+                          icon={faUser}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          Überblick
+                        </ProtectedNavItem>
+                        <ProtectedNavItem
+                          href="/account"
+                          className={navLinkClassName}
+                          icon={faUser}
+                          isAccessible={isAuthenticated}
+                          tooltip={membersOnlyTooltip}
+                        >
+                          {currentUserDisplayName
+                            ? `Profil (${currentUserDisplayName})`
+                            : "Profil"}
+                        </ProtectedNavItem>
                         <ProtectedNavItem
                           href="/printers"
                           className={navLinkClassName}
@@ -262,80 +343,6 @@ export default async function RootLayout({
                         >
                           Warenkorb
                         </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faChartPie}
-                        >
-                          Laser
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>Self Service</p>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faCalendarCheck}
-                        >
-                          Zugangskarte
-                        </ComingSoonNavItem>
-                        <ProtectedNavItem
-                          href="/account"
-                          className={navLinkClassName}
-                          icon={faUser}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          {currentUserDisplayName
-                            ? `Profil (${currentUserDisplayName})`
-                            : "Profil"}
-                        </ProtectedNavItem>
-
-                        <p className={navSectionTitleClassName}>Verein</p>
-
-                        <ProtectedNavItem
-                          href="/resources"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Inventar
-                        </ProtectedNavItem>
-                        <ActiveNavLink
-                          href="/projects"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faFolderOpen}
-                            className="h-4 w-4"
-                          />
-                          Projekte
-                        </ActiveNavLink>
-                        <ActiveNavLink
-                          href="/calendar"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faCalendarDays}
-                            className="h-4 w-4"
-                          />
-                          Kalender
-                        </ActiveNavLink>
-                        <ProtectedNavItem
-                          href="/products"
-                          className={navLinkClassName}
-                          icon={faBoxOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Produkte
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faUser}
-                        >
-                          Ehrenamtsbonus
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>Holzwerkstatt</p>
                         <ProtectedNavItem
                           href="/materialbestellung"
                           className={navLinkClassName}
@@ -345,14 +352,6 @@ export default async function RootLayout({
                         >
                           Materialbestellung
                         </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faLayerGroup}
-                        >
-                          Lagerplatz
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>buchhaltung</p>
                         <ProtectedNavItem
                           href="/meine-buchungen"
                           className={navLinkClassName}
@@ -380,23 +379,46 @@ export default async function RootLayout({
                         >
                           Balance
                         </ProtectedNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faChartPie}
+                        >
+                          Laser
+                        </ComingSoonNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faCalendarCheck}
+                        >
+                          Zugangskarte
+                        </ComingSoonNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faUser}
+                        >
+                          Ehrenamtsbonus
+                        </ComingSoonNavItem>
+                        <ComingSoonNavItem
+                          className={navLinkClassName}
+                          icon={faLayerGroup}
+                        >
+                          Lagerplatz
+                        </ComingSoonNavItem>
+                        {canAccessAdmin ? (
+                          <ActiveNavLink
+                            href="/admin/users"
+                            className={navLinkClassName}
+                          >
+                            <FontAwesomeIcon
+                              icon={faLock}
+                              className="h-4 w-4"
+                            />
+                            Admin
+                          </ActiveNavLink>
+                        ) : null}
                       </nav>
                       <div className="border-t border-border px-4 py-4">
                         {isAuthenticated ? (
                           <div className="space-y-3">
-                            {canAccessAdmin ? (
-                              <Button
-                                href="/admin/users"
-                                kind="secondary"
-                                className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                              >
-                                <FontAwesomeIcon
-                                  icon={faLock}
-                                  className="h-4 w-4"
-                                />
-                                Admin
-                              </Button>
-                            ) : null}
                             <form action={signOut}>
                               <Button
                                 type="submit"
@@ -430,30 +452,152 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
-            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
-              <div className="space-y-3">
-                <div>
-                  <Link
+            <header className="hidden border-b border-zinc-200 bg-white text-zinc-950 md:block">
+              <div className="flex w-full items-center gap-6 px-10 py-4">
+                <Link
+                  href="/"
+                  className="text-2xl font-black leading-none uppercase tracking-widest text-zinc-950 transition hover:text-primary"
+                >
+                  KONGLODIGITAL
+                </Link>
+                <nav className="ml-auto flex items-center justify-end gap-2">
+                  <ActiveNavLink
                     href="/"
-                    className="text-3xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
+                    exact
+                    activePrefixes={["/projects", "/resources", "/products", "/calendar"]}
+                    className={desktopMainNavClassName}
+                    activeClassName={desktopMainNavActiveClassName}
                   >
-                    Konglo
-                    <br />
-                    digital
-                  </Link>
-                </div>
+                    Start
+                  </ActiveNavLink>
+                  <ActiveNavLink
+                    href="/mitglieder"
+                    activePrefixes={memberNavPrefixes}
+                    className={desktopMainNavClassName}
+                    activeClassName={desktopMainNavActiveClassName}
+                  >
+                    Mitglieder
+                  </ActiveNavLink>
+                </nav>
                 <div className="flex items-center gap-2">
                   <LanguageSwitcher />
                   <ThemeToggle />
+                  {isAuthenticated ? (
+                    <>
+                      <form action={signOut}>
+                        <Button
+                          type="submit"
+                          kind="primary"
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold"
+                        >
+                          <FontAwesomeIcon
+                            icon={faRightFromBracket}
+                            className="h-4 w-4"
+                          />
+                          Abmelden
+                        </Button>
+                      </form>
+                    </>
+                  ) : (
+                    <Button
+                      href="/login"
+                      kind="primary"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon
+                        icon={faRightToBracket}
+                        className="h-4 w-4"
+                      />
+                      Anmelden
+                    </Button>
+                  )}
                 </div>
               </div>
-              <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Digital Fabrication
-                </p>
+            </header>
+            <ActiveSubnavGroup
+              activePrefixes={startNavPrefixes}
+              className="hidden md:block md:px-10"
+            >
+              <PageWrapper
+                spacing="none"
+                className="flex flex-wrap items-start gap-x-8 gap-y-3 py-4"
+              >
+                <nav
+                  aria-label="Start Subnavigation"
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <ActiveNavLink
+                    href="/"
+                    exact
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                  >
+                    Überblick
+                  </ActiveNavLink>
+                  <ActiveNavLink
+                    href="/projects"
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                  >
+                    Projekte
+                  </ActiveNavLink>
+                  <ProtectedNavItem
+                    href="/resources"
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                    icon={faFolderOpen}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Inventar
+                  </ProtectedNavItem>
+                  <ProtectedNavItem
+                    href="/products"
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                    icon={faBoxOpen}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Produkte
+                  </ProtectedNavItem>
+                  <ActiveNavLink
+                    href="/calendar"
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                  >
+                    <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                    Kalender
+                  </ActiveNavLink>
+                </nav>
+              </PageWrapper>
+            </ActiveSubnavGroup>
+            <ActiveSubnavGroup
+              activePrefixes={memberNavPrefixes}
+              className="hidden md:block md:px-10"
+            >
+              <PageWrapper
+                spacing="none"
+                className="flex flex-wrap items-start gap-x-8 gap-y-3 py-4"
+              >
+                <nav
+                  aria-label="Mitglieder Subnavigation"
+                  className="flex flex-wrap items-center gap-2"
+                >
+                <ProtectedNavItem
+                  href="/mitglieder"
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
+                  icon={faUser}
+                  isAccessible={isAuthenticated}
+                  tooltip={membersOnlyTooltip}
+                >
+                  Überblick
+                </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/printers"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faCube}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -462,7 +606,8 @@ export default async function RootLayout({
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/printers/emptying"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faPrint}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -471,7 +616,8 @@ export default async function RootLayout({
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/printers/access-codes"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faKey}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -480,32 +626,18 @@ export default async function RootLayout({
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/checkout"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faCartShopping}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
                   Warenkorb
                 </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faChartPie}
-                >
-                  Laser
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Self Service
-                </p>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faCalendarCheck}
-                >
-                  Zugangskarte
-                </ComingSoonNavItem>
                 <ProtectedNavItem
                   href="/account"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faUser}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -514,68 +646,20 @@ export default async function RootLayout({
                     ? `Profil (${currentUserDisplayName})`
                     : "Profil"}
                 </ProtectedNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Verein
-                </p>
-                <ActiveNavLink href="/calendar" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                  Kalender
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/resources"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Inventar
-                </ProtectedNavItem>
-                <ActiveNavLink href="/projects" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                  Projekte
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/products"
-                  className={navItemClassName}
-                  icon={faBoxOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Produkte
-                </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faUser}
-                >
-                  Ehrenamtsbonus
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Holzwerkstatt
-                </p>
                 <ProtectedNavItem
                   href="/materialbestellung"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faLayerGroup}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
                   Materialbestellung
                 </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faLayerGroup}
-                >
-                  Lagerplatz
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  buchhaltung
-                </p>
                 <ProtectedNavItem
                   href="/meine-buchungen"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faFolderOpen}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -584,7 +668,8 @@ export default async function RootLayout({
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/budget"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faChartPie}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
@@ -593,56 +678,50 @@ export default async function RootLayout({
                 </ProtectedNavItem>
                 <ProtectedNavItem
                   href="/balance"
-                  className={navItemClassName}
+                  className={desktopSubNavClassName}
+                  activeClassName={desktopSubNavActiveClassName}
                   icon={faTableList}
                   isAccessible={isAuthenticated}
                   tooltip={membersOnlyTooltip}
                 >
                   Balance
                 </ProtectedNavItem>
-              </nav>
-              {isAuthenticated ? (
-                <div className="mt-auto space-y-3">
-                  {canAccessAdmin ? (
-                    <Button
-                      href="/admin/users"
-                      kind="secondary"
-                      className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                    >
-                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                      Admin
-                    </Button>
-                  ) : null}
-                  <form action={signOut}>
-                    <Button
-                      type="submit"
-                      kind="primary"
-                      className={navButtonClassName}
-                    >
-                      <FontAwesomeIcon
-                        icon={faRightFromBracket}
-                        className="h-4 w-4"
-                      />
-                      Abmelden
-                    </Button>
-                  </form>
-                </div>
-              ) : (
-                <Button
-                  href="/login"
-                  kind="primary"
-                  className={navButtonClassName}
+                <ComingSoonNavItem
+                  className={desktopSubNavClassName}
+                  icon={faChartPie}
                 >
-                  <FontAwesomeIcon
-                    icon={faRightToBracket}
-                    className="h-4 w-4"
-                  />
-                  Anmelden
-                </Button>
-              )}
-            </aside>
-            <div className="ml-0 md:ml-64">
-              <main className="mx-auto w-full md:px-10 md:py-10">
+                  Laser
+                </ComingSoonNavItem>
+                <ComingSoonNavItem
+                  className={desktopSubNavClassName}
+                  icon={faCalendarCheck}
+                >
+                  Zugangskarte
+                </ComingSoonNavItem>
+                <ComingSoonNavItem className={desktopSubNavClassName} icon={faUser}>
+                  Ehrenamtsbonus
+                </ComingSoonNavItem>
+                <ComingSoonNavItem
+                  className={desktopSubNavClassName}
+                  icon={faLayerGroup}
+                >
+                  Lagerplatz
+                </ComingSoonNavItem>
+                {canAccessAdmin ? (
+                  <ActiveNavLink
+                    href="/admin/users"
+                    className={desktopSubNavClassName}
+                    activeClassName={desktopSubNavActiveClassName}
+                  >
+                    <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                    Admin
+                  </ActiveNavLink>
+                ) : null}
+              </nav>
+              </PageWrapper>
+            </ActiveSubnavGroup>
+            <div>
+              <main className="mx-auto w-full md:px-10 md:pb-10">
                 {children}
               </main>
             </div>

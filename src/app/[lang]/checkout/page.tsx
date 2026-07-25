@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import PageWrapper from "../components/PageWrapper";
 
 import {
   getCartJobs,
@@ -386,7 +387,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageWrapper className="flex flex-col gap-6">
       <PageTitle
         title="Checkout"
         subTitle="Review cart items and create a Campai invoice draft."
@@ -649,6 +650,6 @@ export default function CheckoutPage() {
           ))}
         </div>
       </section>
-    </div>
+    </PageWrapper>
   );
 }
