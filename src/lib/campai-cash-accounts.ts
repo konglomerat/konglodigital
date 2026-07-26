@@ -60,9 +60,10 @@ const normalizeNumericLike = (value: unknown): string | null => {
 const normalizeCashEntry = (
   item: RawCashEntry,
   sourceType: "cashAccount" | "cashRegister",
+  includeArchived: boolean,
 ): CampaiCashAccountOption | null => {
   const sourceId = normalizeString(item._id);
-  if (!sourceId || item.archivedAt) {
+  if (!sourceId || (!includeArchived && item.archivedAt)) {
     return null;
   }
 
@@ -81,7 +82,9 @@ const normalizeCashEntry = (
   } satisfies CampaiCashAccountOption;
 };
 
-export const fetchCampaiCashAccounts = async () => {
+export const fetchCampaiCashAccounts = async (params?: {
+  includeArchived?: boolean;
+}) => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
@@ -131,7 +134,13 @@ export const fetchCampaiCashAccounts = async () => {
 
     return Array.isArray(payload?.cashAccounts)
       ? payload.cashAccounts
-          .map((item) => normalizeCashEntry(item, "cashAccount"))
+          .map((item) =>
+            normalizeCashEntry(
+              item,
+              "cashAccount",
+              params?.includeArchived ?? false,
+            ),
+          )
           .filter((item): item is CampaiCashAccountOption => Boolean(item))
       : [];
   };
@@ -151,7 +160,13 @@ export const fetchCampaiCashAccounts = async () => {
 
     return Array.isArray(payload?.cashRegisters)
       ? payload.cashRegisters
-          .map((item) => normalizeCashEntry(item, "cashRegister"))
+          .map((item) =>
+            normalizeCashEntry(
+              item,
+              "cashRegister",
+              params?.includeArchived ?? false,
+            ),
+          )
           .filter((item): item is CampaiCashAccountOption => Boolean(item))
       : [];
   };

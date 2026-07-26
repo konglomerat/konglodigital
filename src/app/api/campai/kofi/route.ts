@@ -41,6 +41,8 @@ export const GET = async (request: NextRequest) => {
   try {
     const apiKey = requiredEnv("CAMPAI_API_KEY");
     const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
+    const appOrganizationSlug =
+      process.env.CAMPAI_APP_ORGANIZATION_SLUG ?? "bnbq6";
     const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
     const year =
       parsePositiveInt(request.nextUrl.searchParams.get("year")) ??
@@ -59,6 +61,7 @@ export const GET = async (request: NextRequest) => {
     const report = await loadCampaiKoFi({
       apiKey,
       organizationId,
+      appOrganizationSlug,
       mandateId,
       year,
       costCenter1,

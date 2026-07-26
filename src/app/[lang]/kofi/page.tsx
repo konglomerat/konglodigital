@@ -3,18 +3,23 @@
 import { Fragment, useDeferredValue, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowUpRightFromSquare,
   faArrowTrendDown,
   faArrowTrendUp,
   faChartPie,
   faChevronDown,
   faChevronRight,
+  faCircleCheck,
   faFilter,
+  faReceipt,
   faSpinner,
   faTableCellsLarge,
+  faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 
 import type {
   KoFiBlock,
+  KoFiCarryoverSummary,
   KoFiGroupRow,
   KoFiMonthlySummary,
   KoFiResponse,
@@ -68,6 +73,22 @@ const formatCurrency = (cents: number) => {
   }).format(amount);
 };
 
+const formatDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Datum unbekannt";
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatCount = (value: number) =>
+  new Intl.NumberFormat("de-DE").format(value);
+
 const numberClassName = (value: number) => {
   if (value < 0) {
     return "text-destructive";
@@ -81,32 +102,41 @@ const numberClassName = (value: number) => {
 };
 
 const projectSeries = (months: number[], viewMode: ViewMode) => {
+  const carryover = months[0] ?? 0;
+  const currentYearMonths = months.slice(1);
+
   if (viewMode === "year") {
-    return [months.reduce((sum, value) => sum + value, 0)];
+    return [
+      carryover,
+      currentYearMonths.reduce((sum, value) => sum + value, 0),
+    ];
   }
 
   if (viewMode === "quarter") {
-    return [0, 1, 2, 3].map((quarter) => {
-      const start = quarter * 3;
-      return months
-        .slice(start, start + 3)
-        .reduce((sum, value) => sum + value, 0);
-    });
+    return [
+      carryover,
+      ...[0, 1, 2, 3].map((quarter) => {
+        const start = quarter * 3;
+        return currentYearMonths
+          .slice(start, start + 3)
+          .reduce((sum, value) => sum + value, 0);
+      }),
+    ];
   }
 
   return months;
 };
 
-const getPeriodLabels = (viewMode: ViewMode) => {
+const getPeriodLabels = (viewMode: ViewMode, year: number) => {
   if (viewMode === "year") {
-    return ["Jahr"];
+    return [String(year - 1), String(year)];
   }
 
   if (viewMode === "quarter") {
-    return QUARTER_LABELS;
+    return [String(year - 1), ...QUARTER_LABELS];
   }
 
-  return MONTH_LABELS;
+  return [String(year - 1), ...MONTH_LABELS];
 };
 
 const cumulativeCellStyle = (value: number, maxMagnitude: number) => {
@@ -132,7 +162,7 @@ const SummaryCard = ({
   accent,
 }: {
   label: string;
-  value: number;
+  value: string;
   accent: string;
 }) => (
   <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -140,22 +170,34 @@ const SummaryCard = ({
       {label}
     </p>
     <p className={`mt-3 text-2xl font-semibold tabular-nums ${accent}`}>
-      {formatCurrency(value)}
+      {value}
     </p>
   </div>
 );
 
 const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
-  const total = groups.reduce((sum, group) => sum + group.total, 0);
-  const slices = groups.slice(0, 5).map((group, index) => ({
+  const currentYearGroups = groups
+    .map((group) => ({
+      label: group.label,
+      value: group.months
+        .slice(1)
+        .reduce((sum, monthValue) => sum + monthValue, 0),
+    }))
+    .filter((group) => group.value > 0)
+    .sort((left, right) => right.value - left.value);
+  const total = currentYearGroups.reduce(
+    (sum, group) => sum + group.value,
+    0,
+  );
+  const slices = currentYearGroups.slice(0, 5).map((group, index) => ({
     label: group.label,
-    value: group.total,
+    value: group.value,
     color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 
-  const remainder = groups
+  const remainder = currentYearGroups
     .slice(5)
-    .reduce((sum, group) => sum + group.total, 0);
+    .reduce((sum, group) => sum + group.value, 0);
   if (remainder > 0) {
     slices.push({
       label: "Weitere",
@@ -164,14 +206,24 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     });
   }
 
-  let progress = 0;
   const gradient = slices
-    .map((slice) => {
-      const start = progress;
-      progress += total > 0 ? (slice.value / total) * 100 : 0;
-      return `${slice.color} ${start}% ${progress}%`;
-    })
-    .join(", ");
+    .reduce(
+      (result, slice) => {
+        const start = result.progress;
+        const progress =
+          start + (total > 0 ? (slice.value / total) * 100 : 0);
+
+        return {
+          progress,
+          stops: [
+            ...result.stops,
+            `${slice.color} ${start}% ${progress}%`,
+          ],
+        };
+      },
+      { progress: 0, stops: [] as string[] },
+    )
+    .stops.join(", ");
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -341,11 +393,15 @@ const CashflowChart = ({
   );
 };
 
-type MonthlyOverviewRow = KoFiMonthlySummary & { isForecast: boolean };
+type MonthlyOverviewRow = KoFiMonthlySummary & {
+  isForecast: boolean;
+  isCarryover: boolean;
+};
 
 const buildForecastRows = (
   monthlySummary: KoFiMonthlySummary[],
   year: number,
+  carryover: KoFiCarryoverSummary,
 ): MonthlyOverviewRow[] => {
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -366,8 +422,8 @@ const buildForecastRows = (
     ? elapsed.reduce((sum, entry) => sum + entry.expense, 0) / elapsed.length
     : 0;
 
-  let cumulative = 0;
-  return monthlySummary.map((entry) => {
+  let cumulative = carryover.balance;
+  const monthRows = monthlySummary.map((entry) => {
     const isForecast = hasBasis && entry.monthIndex >= forecastStart;
     const income = isForecast ? avgIncome : entry.income;
     const expense = isForecast ? avgExpense : entry.expense;
@@ -382,18 +438,35 @@ const buildForecastRows = (
       balance,
       cumulative,
       isForecast,
+      isCarryover: false,
     };
   });
+
+  return [
+    {
+      monthIndex: -1,
+      label: carryover.label,
+      income: carryover.income,
+      expense: carryover.expense,
+      balance: carryover.balance,
+      cumulative: carryover.balance,
+      isForecast: false,
+      isCarryover: true,
+    },
+    ...monthRows,
+  ];
 };
 
 const MonthlyOverviewTable = ({
   monthlySummary,
   year,
+  carryover,
 }: {
   monthlySummary: KoFiMonthlySummary[];
   year: number;
+  carryover: KoFiCarryoverSummary;
 }) => {
-  const rows = buildForecastRows(monthlySummary, year);
+  const rows = buildForecastRows(monthlySummary, year, carryover);
   const maxMagnitude = Math.max(
     ...rows.map((entry) => Math.abs(entry.cumulative)),
     0,
@@ -427,15 +500,22 @@ const MonthlyOverviewTable = ({
             {rows.map((entry, index) => {
               const baseRow =
                 index % 2 === 0 ? "bg-card" : "bg-muted/60";
-              const rowClass = entry.isForecast
-                ? `${baseRow} italic text-muted-foreground/90`
-                : baseRow;
+              const rowClass = entry.isCarryover
+                ? "bg-amber-50/80"
+                : entry.isForecast
+                  ? `${baseRow} italic text-muted-foreground/90`
+                  : baseRow;
 
               return (
                 <tr key={entry.monthIndex} className={rowClass}>
                   <td className="border-b border-r border-border px-4 py-2 font-medium text-foreground/90">
                     <span className="inline-flex items-center gap-2">
                       {entry.label}
+                      {entry.isCarryover ? (
+                        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                          Überhang
+                        </span>
+                      ) : null}
                       {entry.isForecast ? (
                         <span className="rounded-full border border-dashed border-muted-foreground/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Prognose
@@ -481,17 +561,23 @@ const KoFiTable = ({
   block,
   kind,
   viewMode,
+  year,
   collapsedGroups,
+  expandedLeaves,
   onToggleGroup,
+  onToggleLeaf,
 }: {
   title: string;
   block: KoFiBlock;
   kind: "costs" | "funding";
   viewMode: ViewMode;
+  year: number;
   collapsedGroups: Record<string, boolean>;
+  expandedLeaves: Record<string, boolean>;
   onToggleGroup: (groupKey: string) => void;
+  onToggleLeaf: (leafKey: string) => void;
 }) => {
-  const periodLabels = getPeriodLabels(viewMode);
+  const periodLabels = getPeriodLabels(viewMode, year);
   const sectionTint =
     kind === "funding"
       ? "from-emerald-50 via-white to-white"
@@ -502,7 +588,7 @@ const KoFiTable = ({
     block.groups.reduce(
       (accumulator, group) =>
         accumulator.map((value, index) => value + group.months[index]),
-      Array.from({ length: 12 }, () => 0),
+      Array.from({ length: 13 }, () => 0),
     ),
     viewMode,
   );
@@ -532,7 +618,7 @@ const KoFiTable = ({
                 </th>
               ))}
               <th className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Gesamt
+                Gesamt inkl. {year - 1}
               </th>
               <th className="sticky top-0 z-20 border-b border-l-2 border-border bg-card px-3 py-3 pl-5 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Durchschnitt / Monat
@@ -597,33 +683,182 @@ const KoFiTable = ({
                         );
                         const rowClassName =
                           index % 2 === 0 ? "bg-card" : "bg-muted/65";
+                        const isLeafExpanded =
+                          expandedLeaves[child.key] ?? false;
 
                         return (
-                          <tr key={child.key} className={rowClassName}>
-                            <td
-                              className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 ${rowClassName}`}
-                            >
-                              <div className="pl-6 text-foreground/80">
-                                {child.label}
-                              </div>
-                            </td>
-                            {projectedChild.map((value, valueIndex) => (
+                          <Fragment key={child.key}>
+                            <tr className={rowClassName}>
                               <td
-                                key={`${child.key}:${periodLabels[valueIndex]}`}
-                                className={`border-b border-r border-border px-3 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
+                                className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 ${rowClassName}`}
                               >
-                                {formatCurrency(value)}
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleLeaf(child.key)}
+                                  className="flex w-full items-center gap-2 pl-6 text-left text-foreground/80 hover:text-foreground"
+                                  aria-expanded={isLeafExpanded}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={
+                                      isLeafExpanded
+                                        ? faChevronDown
+                                        : faChevronRight
+                                    }
+                                    className="h-2.5 w-2.5 text-muted-foreground"
+                                  />
+                                  <span className="min-w-0 flex-1 truncate">
+                                    {child.label}
+                                  </span>
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                                    {formatCount(child.transactions.length)}
+                                  </span>
+                                </button>
                               </td>
-                            ))}
-                            <td
-                              className={`border-b border-r border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
-                            >
-                              {formatCurrency(child.total)}
-                            </td>
-                            <td className="border-b border-l-2 border-border bg-card px-3 py-2.5 pl-5 text-right font-normal tabular-nums text-muted-foreground">
-                              {formatCurrency(child.average)}
-                            </td>
-                          </tr>
+                              {projectedChild.map((value, valueIndex) => (
+                                <td
+                                  key={`${child.key}:${periodLabels[valueIndex]}`}
+                                  className={`border-b border-r border-border px-3 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
+                                >
+                                  {formatCurrency(value)}
+                                </td>
+                              ))}
+                              <td
+                                className={`border-b border-r border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
+                              >
+                                {formatCurrency(child.total)}
+                              </td>
+                              <td className="border-b border-l-2 border-border bg-card px-3 py-2.5 pl-5 text-right font-normal tabular-nums text-muted-foreground">
+                                {formatCurrency(child.average)}
+                              </td>
+                            </tr>
+                            {isLeafExpanded ? (
+                              <tr>
+                                <td
+                                  colSpan={periodLabels.length + 3}
+                                  className="border-b border-border bg-muted/35 p-0"
+                                >
+                                  <div className="px-5 py-4">
+                                    <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                      <FontAwesomeIcon
+                                        icon={faReceipt}
+                                        className="h-3.5 w-3.5"
+                                      />
+                                      Einzelbuchungen
+                                    </div>
+                                    <div className="grid gap-2">
+                                      {child.transactions.map(
+                                        (transaction) => (
+                                          <div
+                                            key={transaction.id}
+                                            className="grid gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
+                                          >
+                                            <div className="text-xs text-muted-foreground">
+                                              <div className="font-medium text-foreground/80">
+                                                {formatDate(transaction.date)}
+                                              </div>
+                                              <div className="mt-1">
+                                                {transaction.sourceLabel}
+                                              </div>
+                                            </div>
+                                            <div className="min-w-0">
+                                              <div className="flex flex-wrap items-center gap-2">
+                                                {transaction.receiptNumber ? (
+                                                  <a
+                                                    href={
+                                                      transaction.campaiUrl
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                                                  >
+                                                    {
+                                                      transaction.receiptNumber
+                                                    }
+                                                    <FontAwesomeIcon
+                                                      icon={
+                                                        faArrowUpRightFromSquare
+                                                      }
+                                                      className="h-2.5 w-2.5"
+                                                    />
+                                                  </a>
+                                                ) : (
+                                                  <a
+                                                    href={
+                                                      transaction.campaiUrl
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                                                  >
+                                                    Beleglose Zuordnung
+                                                    <FontAwesomeIcon
+                                                      icon={
+                                                        faArrowUpRightFromSquare
+                                                      }
+                                                      className="h-2.5 w-2.5"
+                                                    />
+                                                  </a>
+                                                )}
+                                                {transaction.receiptless ? (
+                                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                                                    ohne Beleg
+                                                  </span>
+                                                ) : null}
+                                                {transaction.reverse ? (
+                                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                    Storno
+                                                  </span>
+                                                ) : null}
+                                              </div>
+                                              <p className="mt-1 truncate text-xs text-muted-foreground">
+                                                {transaction.text ||
+                                                  "Kein Buchungstext"}
+                                              </p>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              <p className="font-medium text-foreground/80">
+                                                {
+                                                  transaction.cashAccount
+                                                }{" "}
+                                                ·{" "}
+                                                {
+                                                  transaction.cashAccountLabel
+                                                }
+                                              </p>
+                                              <p className="mt-1">
+                                                Gegenkonto{" "}
+                                                {
+                                                  transaction.counterAccount
+                                                }{" "}
+                                                ·{" "}
+                                                {
+                                                  transaction.counterAccountLabel
+                                                }
+                                              </p>
+                                              <p className="mt-1">
+                                                KSt 1:{" "}
+                                                {transaction.costCenter1 ?? "–"}
+                                                {" · "}
+                                                KSt 2:{" "}
+                                                {transaction.costCenter2 ?? "–"}
+                                              </p>
+                                            </div>
+                                            <div
+                                              className={`self-center text-right font-semibold tabular-nums ${numberClassName(transaction.amount)}`}
+                                            >
+                                              {formatCurrency(
+                                                transaction.amount,
+                                              )}
+                                            </div>
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : null}
+                          </Fragment>
                         );
                       })}
                   </Fragment>
@@ -672,6 +907,9 @@ export default function KoFiPage() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({});
+  const [expandedLeaves, setExpandedLeaves] = useState<
     Record<string, boolean>
   >({});
   const deferredSearch = useDeferredValue(search);
@@ -746,12 +984,19 @@ export default function KoFiPage() {
     }));
   };
 
+  const toggleLeaf = (leafKey: string) => {
+    setExpandedLeaves((current) => ({
+      ...current,
+      [leafKey]: !(current[leafKey] ?? false),
+    }));
+  };
+
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
       <PageTitle
         eyebrow="Campai / SKR 42"
         title="KoFi Kosten- und Finanzierungsplan"
-        subTitle="Tabellenansicht mit Monats-, Quartals- und Jahresperspektive direkt aus den Campai-Belegen, Konten und Kostenstellen."
+        subTitle="Liquiditätsansicht mit Monats-, Quartals- und Jahresperspektive direkt aus dem Campai-Buchungsjournal und den tatsächlichen Geldkontobewegungen."
         className="border-b border-border pb-6"
         eyebrowClassName="text-xs tracking-[0.26em] text-muted-foreground"
         titleClassName="mt-2 text-foreground md:text-4xl"
@@ -888,33 +1133,130 @@ export default function KoFiPage() {
       {!isLoading && data ? (
         <div className="mt-6 space-y-8">
           <section className="space-y-5">
-            <div className="grid gap-4 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <SummaryCard
                 label="Gesamtkosten"
-                value={data.summary.totalCosts}
+                value={formatCurrency(data.summary.totalCosts)}
                 accent="text-warning"
               />
               <SummaryCard
                 label="Gesamtfinanzierung"
-                value={data.summary.totalFunding}
+                value={formatCurrency(data.summary.totalFunding)}
                 accent="text-success"
               />
               <SummaryCard
-                label="Fehl-/Mehrbetrag"
-                value={data.summary.variance}
+                label="Netto-Cashflow"
+                value={formatCurrency(data.summary.variance)}
                 accent={numberClassName(data.summary.variance)}
               />
               <SummaryCard
-                label="Liquiditätsreserve"
-                value={data.summary.liquidityReserve}
+                label="Berücksichtigte Buchungen"
+                value={formatCount(data.dataQuality.includedPostings)}
                 accent="text-foreground"
               />
+              <SummaryCard
+                label={`Überhang ${data.carryover.label}`}
+                value={formatCurrency(data.carryover.balance)}
+                accent={numberClassName(data.carryover.balance)}
+              />
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <FontAwesomeIcon
+                      icon={faCircleCheck}
+                      className="h-4 w-4 text-success"
+                    />
+                    Datenqualität und Abgrenzung
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Beträge und Buchungsdaten stammen aus den tatsächlichen
+                    Geldkontobuchungen. Interne Umbuchungen werden nicht als
+                    Kosten oder Finanzierung gezählt.
+                  </p>
+                </div>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  Aktualisiert{" "}
+                  {new Intl.DateTimeFormat("de-DE", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(new Date(data.dataQuality.refreshedAt))}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-7">
+                {[
+                  {
+                    label: "Geldbuchungen",
+                    value: data.dataQuality.totalMoneyPostings,
+                    warning: false,
+                  },
+                  {
+                    label: "Beleglose Zuordnungen",
+                    value: data.dataQuality.receiptlessPostings,
+                    warning: false,
+                  },
+                  {
+                    label: "Ohne Kostenstelle 1",
+                    value: data.dataQuality.missingCostCenter1,
+                    warning: data.dataQuality.missingCostCenter1 > 0,
+                  },
+                  {
+                    label: "Ohne Kostenstelle 2",
+                    value: data.dataQuality.missingCostCenter2,
+                    warning: data.dataQuality.missingCostCenter2 > 0,
+                  },
+                  {
+                    label: "Fallback-Kategorie",
+                    value: data.dataQuality.fallbackCategorized,
+                    warning: data.dataQuality.fallbackCategorized > 0,
+                  },
+                  {
+                    label: "Umbuchungen ignoriert",
+                    value: data.dataQuality.internalTransfers,
+                    warning: false,
+                  },
+                  {
+                    label: `Überhänge aus ${data.carryover.label}`,
+                    value: data.dataQuality.carryoverPostings,
+                    warning: false,
+                  },
+                ].map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="rounded-xl border border-border bg-muted/35 px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon
+                        icon={
+                          metric.warning
+                            ? faTriangleExclamation
+                            : faCircleCheck
+                        }
+                        className={`h-3 w-3 ${
+                          metric.warning
+                            ? "text-warning"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      <span className="text-lg font-semibold tabular-nums text-foreground">
+                        {formatCount(metric.value)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                      {metric.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
               <MonthlyOverviewTable
                 monthlySummary={data.monthlySummary}
                 year={year}
+                carryover={data.carryover}
               />
               <div className="grid gap-5">
                 <CostDistributionChart groups={data.costs.groups} />
@@ -928,8 +1270,11 @@ export default function KoFiPage() {
             block={data.costs}
             kind="costs"
             viewMode={viewMode}
+            year={year}
             collapsedGroups={collapsedGroups}
+            expandedLeaves={expandedLeaves}
             onToggleGroup={toggleGroup}
+            onToggleLeaf={toggleLeaf}
           />
 
           <KoFiTable
@@ -937,8 +1282,11 @@ export default function KoFiPage() {
             block={data.funding}
             kind="funding"
             viewMode={viewMode}
+            year={year}
             collapsedGroups={collapsedGroups}
+            expandedLeaves={expandedLeaves}
             onToggleGroup={toggleGroup}
+            onToggleLeaf={toggleLeaf}
           />
 
           <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
@@ -956,6 +1304,13 @@ export default function KoFiPage() {
                   className="h-4 w-4 text-destructive"
                 />
                 Negative Salden werden rot hervorgehoben.
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <FontAwesomeIcon
+                  icon={faReceipt}
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                Kontenzeilen lassen sich bis zur Einzelbuchung aufklappen.
               </span>
             </div>
           </div>
