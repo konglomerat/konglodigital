@@ -139,6 +139,21 @@ type CampaiPosting = {
   sourceId?: string;
 };
 
+type CampaiReceiptPosition = {
+  account: number;
+  costCenter1: number | null;
+  costCenter2: number | null;
+  amount: number;
+  taxCode?: string;
+};
+
+type CampaiReceipt = {
+  id: string;
+  receiptNumber?: string;
+  isNet: boolean;
+  positions: CampaiReceiptPosition[];
+};
+
 type CampaiAccountPlanAccount = {
   number: number;
   label: string;
@@ -177,6 +192,8 @@ type MutableGroup = {
 
 const POSTING_PAGE_LIMIT = 100;
 const POSTING_CACHE_TTL_MS = 60_000;
+const RECEIPT_PAGE_LIMIT = 100;
+const RECEIPT_CACHE_TTL_MS = 60_000;
 const FUNDING_SOURCES = new Set(["invoice", "revenue", "deposit", "donation"]);
 const COST_SOURCES = new Set(["expense"]);
 
@@ -185,7 +202,13 @@ type PostingCacheEntry = {
   postings: Promise<CampaiPosting[]>;
 };
 
+type ReceiptCacheEntry = {
+  expiresAt: number;
+  receipts: Promise<CampaiReceipt[]>;
+};
+
 const postingCache = new Map<string, PostingCacheEntry>();
+const receiptCache = new Map<string, ReceiptCacheEntry>();
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -244,6 +267,76 @@ const createMonthlySeries = () => Array.from({ length: 12 }, () => 0);
 const createPeriodSeries = () => Array.from({ length: 13 }, () => 0);
 const sumCurrentYearSeries = (values: number[]) => sumSeries(values.slice(1));
 
+const getReceiptPositionWeight = (
+  position: CampaiReceiptPosition,
+  isNet: boolean,
+) => {
+  const amount = Math.abs(position.amount);
+  if (!isNet || !position.taxCode) {
+    return amount;
+  }
+
+  const rateMatch = position.taxCode.match(/(\d{1,2})$/);
+  const taxRate = rateMatch ? Number.parseInt(rateMatch[1], 10) : 0;
+  return Number.isFinite(taxRate) && taxRate > 0
+    ? amount * (1 + taxRate / 100)
+    : amount;
+};
+
+const distributeIntegerAmount = <
+  T extends {
+    weight: number;
+  },
+>(
+  amount: number,
+  entries: T[],
+): Array<T & { allocatedAmount: number }> => {
+  const totalWeight = entries.reduce(
+    (sum, entry) => sum + Math.max(0, entry.weight),
+    0,
+  );
+  if (entries.length === 0 || totalWeight <= 0 || amount === 0) {
+    return [];
+  }
+
+  const sign = amount < 0 ? -1 : 1;
+  const absoluteAmount = Math.abs(amount);
+  const calculated = entries.map((entry, index) => {
+    const exactAmount =
+      (absoluteAmount * Math.max(0, entry.weight)) / totalWeight;
+    const roundedDown = Math.floor(exactAmount);
+    return {
+      entry,
+      index,
+      amount: roundedDown,
+      remainder: exactAmount - roundedDown,
+    };
+  });
+  let undistributed =
+    absoluteAmount -
+    calculated.reduce((sum, entry) => sum + entry.amount, 0);
+
+  calculated
+    .slice()
+    .sort(
+      (left, right) =>
+        right.remainder - left.remainder || left.index - right.index,
+    )
+    .forEach((entry) => {
+      if (undistributed > 0) {
+        entry.amount += 1;
+        undistributed -= 1;
+      }
+    });
+
+  return calculated
+    .sort((left, right) => left.index - right.index)
+    .map(({ entry, amount: entryAmount }) => ({
+      ...entry,
+      allocatedAmount: sign * entryAmount,
+    }));
+};
+
 const extractPostingArray = (
   payload: Record<string, unknown>,
 ): Record<string, unknown>[] => {
@@ -257,6 +350,31 @@ const extractPostingArray = (
     asRecord(payload.data)?.postings,
     asRecord(payload.data)?.items,
     asRecord(payload.result)?.postings,
+    asRecord(payload.result)?.items,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate
+        .map((item) => asRecord(item))
+        .filter((item): item is Record<string, unknown> => Boolean(item));
+    }
+  }
+
+  return [];
+};
+
+const extractReceiptArray = (
+  payload: Record<string, unknown>,
+): Record<string, unknown>[] => {
+  const candidates = [
+    payload.receipts,
+    payload.items,
+    payload.data,
+    asRecord(payload.receipts)?.items,
+    asRecord(payload.data)?.receipts,
+    asRecord(payload.data)?.items,
+    asRecord(payload.result)?.receipts,
     asRecord(payload.result)?.items,
   ];
 
@@ -307,6 +425,56 @@ const normalizePosting = (value: unknown): CampaiPosting | null => {
     reverse: normalizeBoolean(record.reverse),
     source: normalizeString(record.source),
     sourceId: normalizeString(record.sourceId),
+  };
+};
+
+const normalizeReceiptPosition = (
+  value: unknown,
+): CampaiReceiptPosition | null => {
+  const record = asRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const account = normalizeInt(record.account);
+  const amount = normalizeInt(record.amount);
+  if (!account || amount === null || amount === 0) {
+    return null;
+  }
+
+  return {
+    account,
+    costCenter1: normalizeInt(record.costCenter1),
+    costCenter2: normalizeInt(record.costCenter2),
+    amount,
+    taxCode: normalizeString(record.taxCode),
+  };
+};
+
+const normalizeReceipt = (value: unknown): CampaiReceipt | null => {
+  const record = asRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const id = normalizeString(record._id ?? record.id);
+  if (!id) {
+    return null;
+  }
+
+  const positions = Array.isArray(record.positions)
+    ? record.positions
+        .map((position) => normalizeReceiptPosition(position))
+        .filter(
+          (position): position is CampaiReceiptPosition => Boolean(position),
+        )
+    : [];
+
+  return {
+    id,
+    receiptNumber: normalizeString(record.receiptNumber),
+    isNet: normalizeBoolean(record.isNet),
+    positions,
   };
 };
 
@@ -707,6 +875,85 @@ const fetchAllPostings = (params: {
   return postings;
 };
 
+const fetchAllReceiptsFromCampai = async (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  year: number;
+}) => {
+  const { apiKey, organizationId, mandateId } = params;
+  const endpoint = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/list`;
+  const receipts: CampaiReceipt[] = [];
+  let offset = 0;
+  let totalCount = 0;
+
+  while (offset === 0 || offset < totalCount) {
+    const raw = await fetchCampaiJson(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        limit: RECEIPT_PAGE_LIMIT,
+        offset,
+        returnCount: true,
+        sort: { receiptDate: "asc" },
+      }),
+    });
+
+    const data = asRecord(raw) ?? {};
+    const pageEntries = extractReceiptArray(data);
+    const pageReceipts = pageEntries
+      .map((entry) => normalizeReceipt(entry))
+      .filter((entry): entry is CampaiReceipt => Boolean(entry));
+
+    totalCount = normalizeInt(data.count) ?? pageEntries.length;
+    receipts.push(...pageReceipts);
+
+    if (pageEntries.length < RECEIPT_PAGE_LIMIT) {
+      break;
+    }
+
+    offset += RECEIPT_PAGE_LIMIT;
+  }
+
+  return receipts;
+};
+
+const fetchAllReceipts = (params: {
+  apiKey: string;
+  organizationId: string;
+  mandateId: string;
+  year: number;
+}) => {
+  const cacheKey = [
+    params.organizationId,
+    params.mandateId,
+    params.year,
+  ].join(":");
+  const now = Date.now();
+  const cached = receiptCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.receipts;
+  }
+
+  const receipts = fetchAllReceiptsFromCampai(params).catch((error) => {
+    if (receiptCache.get(cacheKey)?.receipts === receipts) {
+      receiptCache.delete(cacheKey);
+    }
+    throw error;
+  });
+
+  receiptCache.set(cacheKey, {
+    expiresAt: now + RECEIPT_CACHE_TTL_MS,
+    receipts,
+  });
+
+  return receipts;
+};
+
 const getSemanticBlock = (
   source: string | undefined,
   debitIsCash: boolean,
@@ -853,13 +1100,21 @@ export const loadCampaiKoFi = async (params: {
         : ([[accountNumber, entry.label]] as Array<[number, string]>);
     }),
   );
-  const postings = await fetchAllPostings({
-    apiKey,
-    organizationId,
-    mandateId,
-    year,
-    cashAccounts: cashAccountNumbers,
-  });
+  const [postings, receipts] = await Promise.all([
+    fetchAllPostings({
+      apiKey,
+      organizationId,
+      mandateId,
+      year,
+      cashAccounts: cashAccountNumbers,
+    }),
+    fetchAllReceipts({
+      apiKey,
+      organizationId,
+      mandateId,
+      year,
+    }),
+  ]);
 
   const monthlyIncome = createMonthlySeries();
   const monthlyExpense = createMonthlySeries();
@@ -884,6 +1139,109 @@ export const loadCampaiKoFi = async (params: {
       (entry) => [entry.number, entry.label] as const,
     ),
   );
+  const receiptById = new Map(
+    receipts.map((receipt) => [receipt.id, receipt] as const),
+  );
+  const receiptByNumber = new Map(
+    receipts.flatMap((receipt) =>
+      receipt.receiptNumber
+        ? ([[receipt.receiptNumber, receipt]] as const)
+        : [],
+    ),
+  );
+
+  type PaymentAllocation = {
+    account: number;
+    categoryPath: string[];
+    costCenter1: number | null;
+    costCenter2: number | null;
+    amount: number;
+    resolvedFromReceipt: boolean;
+  };
+
+  const createReceiptAllocations = (
+    posting: CampaiPosting,
+    amount: number,
+  ): PaymentAllocation[] => {
+    const receipt =
+      (posting.sourceId ? receiptById.get(posting.sourceId) : undefined) ??
+      (posting.receiptNumber
+        ? receiptByNumber.get(posting.receiptNumber)
+        : undefined);
+
+    if (!receipt || !accountingPlan.incomeStatement) {
+      return [];
+    }
+
+    const candidates = receipt.positions.map((position) => ({
+      account: position.account,
+      categoryPath:
+        findCategoryPath(
+          accountingPlan.incomeStatement?.lines ?? [],
+          position.account,
+        ) ?? [],
+      costCenter1: position.costCenter1,
+      costCenter2: position.costCenter2,
+      weight: getReceiptPositionWeight(position, receipt.isNet),
+    }));
+
+    if (candidates.length === 0) {
+      return [];
+    }
+
+    const hasPostingCostCenter =
+      posting.costCenter1 !== null || posting.costCenter2 !== null;
+    const matchingCostCenterCandidates = hasPostingCostCenter
+      ? candidates.filter(
+          (candidate) =>
+            (posting.costCenter1 === null ||
+              candidate.costCenter1 === posting.costCenter1) &&
+            (posting.costCenter2 === null ||
+              candidate.costCenter2 === posting.costCenter2),
+        )
+      : [];
+    const selectedCandidates =
+      matchingCostCenterCandidates.length > 0
+        ? matchingCostCenterCandidates
+        : candidates;
+    const groupedCandidates = Array.from(
+      selectedCandidates
+        .reduce(
+          (grouped, candidate) => {
+            const key = [
+              candidate.account,
+              candidate.costCenter1 ?? "",
+              candidate.costCenter2 ?? "",
+            ].join(":");
+            const existing = grouped.get(key);
+            if (existing) {
+              existing.weight += candidate.weight;
+            } else {
+              grouped.set(key, { ...candidate });
+            }
+            return grouped;
+          },
+          new Map<
+            string,
+            Omit<PaymentAllocation, "amount" | "resolvedFromReceipt"> & {
+              weight: number;
+            }
+          >(),
+        )
+        .values(),
+    );
+
+    return distributeIntegerAmount(amount, groupedCandidates).map(
+      (allocation) => ({
+        account: allocation.account,
+        categoryPath: allocation.categoryPath,
+        costCenter1: allocation.costCenter1,
+        costCenter2: allocation.costCenter2,
+        amount: allocation.allocatedAmount,
+        resolvedFromReceipt: true,
+      }),
+    );
+  };
 
   for (const posting of postings) {
     const postingDate = parseReceiptDate(posting.receiptDate);
@@ -907,22 +1265,6 @@ export const loadCampaiKoFi = async (params: {
     }
 
     quality.totalMoneyPostings += 1;
-
-    if (costCenter1 !== null && posting.costCenter1 !== costCenter1) {
-      continue;
-    }
-
-    if (costCenter2 !== null && posting.costCenter2 !== costCenter2) {
-      continue;
-    }
-
-    if (
-      account !== null &&
-      posting.debitAccount !== account &&
-      posting.creditAccount !== account
-    ) {
-      continue;
-    }
 
     const counterAccount = debitIsCash
       ? posting.creditAccount
@@ -952,42 +1294,91 @@ export const loadCampaiKoFi = async (params: {
         ? "funding"
         : "costs"
       : getSemanticBlock(posting.source, debitIsCash);
-    const categoryPath = !isCarryover && accountingPlan.incomeStatement
+    const directCategoryPath = !isCarryover && accountingPlan.incomeStatement
       ? findCategoryPath(
           accountingPlan.incomeStatement.lines,
           counterAccount,
         )
       : null;
-    const usesFallbackCategory =
-      !isCarryover && (!categoryPath || categoryPath.length === 0);
-    const groupLabel = isCarryover
-      ? `Überhang aus ${year - 1}`
-      : (categoryPath && categoryPath[categoryPath.length - 1]) ||
-        getFallbackGroupLabel(block, posting.source);
-    const accountLabel =
+    const paymentCounterAccountLabel =
       counterAccountName ??
       accountLabelByNumber.get(counterAccount) ??
       `Konto ${counterAccount}`;
-    const leafLabel = isCarryover
-      ? `${cashAccount} · ${cashAccountLabel}`
-      : `${counterAccount} · ${accountLabel}`;
+    const amount = isCarryover
+      ? Math.abs(cashDelta)
+      : block === "funding"
+        ? cashDelta
+        : -cashDelta;
+    const receiptAllocations = isCarryover
+      ? []
+      : createReceiptAllocations(posting, amount);
+    const allocations: PaymentAllocation[] =
+      receiptAllocations.length > 0
+        ? receiptAllocations
+        : [
+            {
+              account: isCarryover ? cashAccount : counterAccount,
+              categoryPath: directCategoryPath ?? [],
+              costCenter1: posting.costCenter1,
+              costCenter2: posting.costCenter2,
+              amount,
+              resolvedFromReceipt: false,
+            },
+          ];
+    const preparedAllocations = allocations
+      .map((allocation) => {
+        const groupLabel = isCarryover
+          ? `Überhang aus ${year - 1}`
+          : allocation.categoryPath[allocation.categoryPath.length - 1] ||
+            getFallbackGroupLabel(block, posting.source);
+        const allocationAccountLabel = isCarryover
+          ? cashAccountLabel
+          : allocation.resolvedFromReceipt ||
+              allocation.categoryPath.length > 0
+            ? (accountLabelByNumber.get(allocation.account) ??
+              `Konto ${allocation.account}`)
+            : paymentCounterAccountLabel;
+        const leafLabel = `${allocation.account} · ${allocationAccountLabel}`;
+        const searchText = createSearchText([
+          posting.receiptNumber,
+          posting.text,
+          posting.source,
+          posting.sourceId,
+          posting.debitAccount,
+          posting.creditAccount,
+          counterAccount,
+          paymentCounterAccountLabel,
+          allocation.account,
+          allocationAccountLabel,
+          cashAccountLabel,
+          groupLabel,
+          isCarryover ? String(year - 1) : undefined,
+          ...allocation.categoryPath,
+        ]);
 
-    const searchText = createSearchText([
-      posting.receiptNumber,
-      posting.text,
-      posting.source,
-      posting.sourceId,
-      posting.debitAccount,
-      posting.creditAccount,
-      counterAccount,
-      accountLabel,
-      cashAccountLabel,
-      groupLabel,
-      isCarryover ? String(year - 1) : undefined,
-      ...(categoryPath ?? []),
-    ]);
+        return {
+          ...allocation,
+          groupLabel,
+          allocationAccountLabel,
+          leafLabel,
+          searchText,
+        };
+      })
+      .filter(
+        (allocation) =>
+          (costCenter1 === null ||
+            allocation.costCenter1 === costCenter1) &&
+          (costCenter2 === null ||
+            allocation.costCenter2 === costCenter2) &&
+          (account === null ||
+            allocation.account === account ||
+            posting.debitAccount === account ||
+            posting.creditAccount === account) &&
+          (!normalizedSearch ||
+            allocation.searchText.includes(normalizedSearch)),
+      );
 
-    if (normalizedSearch && !searchText.includes(normalizedSearch)) {
+    if (preparedAllocations.length === 0) {
       continue;
     }
 
@@ -998,76 +1389,93 @@ export const loadCampaiKoFi = async (params: {
     if (isReceiptlessSource(posting.source)) {
       quality.receiptlessPostings += 1;
     }
-    if (!isCarryover && posting.costCenter1 === null) {
+    if (
+      !isCarryover &&
+      preparedAllocations.some((allocation) => allocation.costCenter1 === null)
+    ) {
       quality.missingCostCenter1 += 1;
     }
-    if (!isCarryover && posting.costCenter2 === null) {
+    if (
+      !isCarryover &&
+      preparedAllocations.some((allocation) => allocation.costCenter2 === null)
+    ) {
       quality.missingCostCenter2 += 1;
     }
-    if (usesFallbackCategory) {
+    if (
+      !isCarryover &&
+      preparedAllocations.some(
+        (allocation) => allocation.categoryPath.length === 0,
+      )
+    ) {
       quality.fallbackCategorized += 1;
     }
     if (posting.reverse) {
       quality.reversedPostings += 1;
     }
 
-    const amount = isCarryover
-      ? Math.abs(cashDelta)
-      : block === "funding"
-        ? cashDelta
-        : -cashDelta;
-    const groups = block === "costs" ? costGroups : fundingGroups;
-    const groupKey = `${block}:${groupLabel.toLowerCase()}`;
-    const group = getOrCreateGroup(groups, groupKey, groupLabel);
-    const leafAccount = isCarryover ? cashAccount : counterAccount;
-    const leafKey = createLeafKey({
-      block,
-      groupKey,
-      account: leafAccount,
-      accountLabel,
-      isCarryover,
-    });
-    const leaf = getOrCreateLeaf(
-      group.children,
-      leafKey,
-      leafLabel,
-      leafAccount,
-    );
     const periodIndex = isCarryover ? 0 : postingDate.month + 1;
 
-    group.months[periodIndex] += amount;
-    leaf.months[periodIndex] += amount;
-    leaf.transactions.push({
-      id: posting.id,
-      date: posting.receiptDate ?? "",
-      receiptNumber: posting.receiptNumber ?? null,
-      text: posting.text ?? null,
-      amount,
-      cashAccount,
-      cashAccountLabel,
-      counterAccount,
-      counterAccountLabel: accountLabel,
-      costCenter1: posting.costCenter1,
-      costCenter2: posting.costCenter2,
-      source: posting.source ?? null,
-      sourceLabel: getSourceLabel(posting.source),
-      receiptless: isReceiptlessSource(posting.source),
-      reverse: posting.reverse,
-      campaiUrl: createCampaiPostingUrl({
-        appOrganizationSlug,
-        mandateId,
-        posting,
-      }),
-    });
+    for (const allocation of preparedAllocations) {
+      const groups = block === "costs" ? costGroups : fundingGroups;
+      const groupKey = `${block}:${allocation.groupLabel.toLowerCase()}`;
+      const group = getOrCreateGroup(
+        groups,
+        groupKey,
+        allocation.groupLabel,
+      );
+      const leafKey = createLeafKey({
+        block,
+        groupKey,
+        account: allocation.account,
+        accountLabel: allocation.allocationAccountLabel,
+        isCarryover,
+      });
+      const leaf = getOrCreateLeaf(
+        group.children,
+        leafKey,
+        allocation.leafLabel,
+        allocation.account,
+      );
 
-    if (isCarryover && block === "costs") {
-      carryoverExpense += amount;
-    } else if (isCarryover) {
-      carryoverIncome += amount;
-    } else if (block === "costs") {
-      monthlyExpense[postingDate.month] += amount;
-    } else {
-      monthlyIncome[postingDate.month] += amount;
+      group.months[periodIndex] += allocation.amount;
+      leaf.months[periodIndex] += allocation.amount;
+      leaf.transactions.push({
+        id: [
+          posting.id,
+          allocation.account,
+          allocation.costCenter1 ?? "",
+          allocation.costCenter2 ?? "",
+        ].join(":"),
+        date: posting.receiptDate ?? "",
+        receiptNumber: posting.receiptNumber ?? null,
+        text: posting.text ?? null,
+        amount: allocation.amount,
+        cashAccount,
+        cashAccountLabel,
+        counterAccount,
+        counterAccountLabel: paymentCounterAccountLabel,
+        costCenter1: allocation.costCenter1,
+        costCenter2: allocation.costCenter2,
+        source: posting.source ?? null,
+        sourceLabel: getSourceLabel(posting.source),
+        receiptless: isReceiptlessSource(posting.source),
+        reverse: posting.reverse,
+        campaiUrl: createCampaiPostingUrl({
+          appOrganizationSlug,
+          mandateId,
+          posting,
+        }),
+      });
+
+      if (isCarryover && block === "costs") {
+        carryoverExpense += allocation.amount;
+      } else if (isCarryover) {
+        carryoverIncome += allocation.amount;
+      } else if (block === "costs") {
+        monthlyExpense[postingDate.month] += allocation.amount;
+      } else {
+        monthlyIncome[postingDate.month] += allocation.amount;
+      }
     }
   }
 

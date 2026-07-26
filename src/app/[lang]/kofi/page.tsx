@@ -1174,7 +1174,9 @@ export default function KoFiPage() {
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Beträge und Buchungsdaten stammen aus den tatsächlichen
                     Geldkontobuchungen. Interne Umbuchungen werden nicht als
-                    Kosten oder Finanzierung gezählt.
+                    Kosten oder Finanzierung gezählt. Bei Belegzahlungen
+                    stammen Sachkonto und Kostenstellen aus den verknüpften
+                    Belegpositionen.
                   </p>
                 </div>
                 <span className="text-xs tabular-nums text-muted-foreground">
