@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -41,6 +42,18 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "../../components/Button";
+import attendeesOneIllustration from "./assets/volkshaus-attendees-1.webp";
+import attendeesTenIllustration from "./assets/volkshaus-attendees-10.webp";
+import attendeesTwentyIllustration from "./assets/volkshaus-attendees-20.webp";
+import attendeesFiftyIllustration from "./assets/volkshaus-attendees-50.webp";
+import attendeesChaosIllustration from "./assets/volkshaus-attendees-chaos.webp";
+import attendeesMoreIllustration from "./assets/volkshaus-attendees-more.webp";
+import bookingHeroIllustration from "./assets/volkshaus-booking-hero.webp";
+import bookingSuccessIllustration from "./assets/volkshaus-booking-success.webp";
+import contactIllustration from "./assets/volkshaus-step-contact.webp";
+import reviewIllustration from "./assets/volkshaus-step-review.webp";
+import usageIllustration from "./assets/volkshaus-step-usage.webp";
+import styles from "./BookingWizard.module.css";
 import {
   VOLKSHAUS_EQUIPMENT,
   VOLKSHAUS_ROOMS,
@@ -83,6 +96,70 @@ const STEPS = [
   { label: "Nutzung", icon: faHouse },
   { label: "Kontakt", icon: faEnvelope },
   { label: "Prüfen", icon: faReceipt },
+] as const;
+
+const STEP_ILLUSTRATIONS = [
+  {
+    src: bookingHeroIllustration,
+    alt: "Zwei Figuren bereiten einen Raum für die Buchung vor",
+  },
+  {
+    src: usageIllustration,
+    alt: "Zwei Figuren planen gemeinsam eine Veranstaltung",
+  },
+  {
+    src: contactIllustration,
+    alt: "Zwei Figuren tauschen Kontaktdaten aus",
+  },
+  {
+    src: reviewIllustration,
+    alt: "Zwei Figuren prüfen gemeinsam die Angaben der Raumanfrage",
+  },
+] as const;
+
+const ATTENDEE_PREVIEWS = [
+  {
+    min: 380,
+    src: attendeesChaosIllustration,
+    label: "Bist du sicher?",
+    alt: "Fünf gezeichnete Personen in einem lustigen Chaos",
+  },
+  {
+    min: 201,
+    src: attendeesMoreIllustration,
+    label: "Bist du sicher?",
+    alt: "Eine sehr große gezeichnete Menschenmenge",
+  },
+  {
+    min: 100,
+    src: attendeesMoreIllustration,
+    label: "Richtig was los!",
+    alt: "Eine sehr große gezeichnete Menschenmenge",
+  },
+  {
+    min: 50,
+    src: attendeesFiftyIllustration,
+    label: "Volles Haus",
+    alt: "Eine große gezeichnete Gruppe mit etwa fünfzig Personen",
+  },
+  {
+    min: 20,
+    src: attendeesTwentyIllustration,
+    label: "Schon ordentlich",
+    alt: "Eine gezeichnete Gruppe mit etwa zwanzig Personen",
+  },
+  {
+    min: 10,
+    src: attendeesTenIllustration,
+    label: "Kleine Runde",
+    alt: "Eine gezeichnete Gruppe mit zehn Personen",
+  },
+  {
+    min: 1,
+    src: attendeesOneIllustration,
+    label: "Ganz gemütlich",
+    alt: "Eine einzelne gezeichnete Person",
+  },
 ] as const;
 
 const EQUIPMENT_VISUALS: Record<
@@ -486,10 +563,13 @@ export default function BookingWizard({
       <div className="mx-auto max-w-3xl space-y-6 py-4 md:py-10">
         <section className="overflow-hidden rounded-xl border border-success-border bg-card shadow-sm">
           <div className="bg-success-soft p-8 text-center md:p-12">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-success-foreground">
-              <FontAwesomeIcon icon={faCheck} className="h-7 w-7" />
-            </span>
-            <p className="mt-6 text-sm font-bold uppercase tracking-widest text-success">
+            <Image
+              src={bookingSuccessIllustration}
+              alt="Zwei Figuren feiern die erfolgreiche Raumanfrage"
+              className="mx-auto -mt-4 h-auto w-full max-w-xl multiply negative-multiply"
+            />
+            <p className="mt-2 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-success">
+              <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
               Anfrage gespeichert
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground md:text-5xl">
@@ -551,7 +631,7 @@ export default function BookingWizard({
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-10 py-2 md:py-6">
-      <header>
+      <header className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_minmax(300px,480px)] md:gap-8">
         <div className="max-w-3xl">
           <p className="flex items-center gap-2 text-base font-bold text-primary">
             <FontAwesomeIcon icon={faHouse} className="h-3.5 w-3.5" />
@@ -566,6 +646,13 @@ export default function BookingWizard({
             wenn alles geprüft und von beiden Seiten unterschrieben ist.
           </p>
         </div>
+        <Image
+          key={step}
+          src={STEP_ILLUSTRATIONS[step].src}
+          alt={STEP_ILLUSTRATIONS[step].alt}
+          priority
+          className={`${styles.stepIllustration} mx-auto h-auto w-full max-w-sm multiply negative-multiply md:max-w-none`}
+        />
       </header>
 
       <nav
@@ -1069,13 +1156,15 @@ function BookingTimeStep({
       </section>
 
       <section className={cardClassName}>
-        <p className={sectionLabelClassName}>
-          <FontAwesomeIcon icon={faDoorOpen} className="h-3 w-3" />
-          Deine Räume
-        </p>
-        <h2 className="mt-1 text-2xl font-black text-foreground">
-          Was passt zu deinem Vorhaben?
-        </h2>
+        <div>
+          <p className={sectionLabelClassName}>
+            <FontAwesomeIcon icon={faDoorOpen} className="h-3 w-3" />
+            Deine Räume
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-foreground">
+            Was passt zu deinem Vorhaben?
+          </h2>
+        </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {VOLKSHAUS_ROOMS.map((room) => {
             const selected = form.requestedRooms.includes(room.id);
@@ -1248,6 +1337,14 @@ function UsageStep({
     (total, item) => total + Number(form.equipment[item.id] ?? 0),
     0,
   );
+  const attendeeCount = Math.min(
+    400,
+    Math.max(1, form.expectedAttendees),
+  );
+  const attendeePreview =
+    ATTENDEE_PREVIEWS.find((preview) => attendeeCount >= preview.min) ??
+    ATTENDEE_PREVIEWS.at(-1)!;
+  const attendeeSliderProgress = ((attendeeCount - 1) / 399) * 100;
 
   return (
     <>
@@ -1304,24 +1401,6 @@ function UsageStep({
               </select>
             </label>
             <label>
-              <span className={labelClassName}>Erwartete Personen</span>
-              <input
-                className={inputClassName}
-                type="number"
-                min={1}
-                max={500}
-                value={form.expectedAttendees}
-                onChange={(event) =>
-                  setField(
-                    "expectedAttendees",
-                    Number.parseInt(event.target.value || "0", 10),
-                  )
-                }
-              />
-            </label>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            <label>
               <span className={labelClassName}>Häufigkeit</span>
               <select
                 className={inputClassName}
@@ -1358,6 +1437,76 @@ function UsageStep({
                 </select>
               </label>
             ) : null}
+          </div>
+          <div className="rounded-lg border border-border bg-muted/35 p-4 md:p-5">
+            <div className="grid items-center gap-5 sm:grid-cols-[minmax(0,1fr)_180px]">
+              <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <label
+                      htmlFor="expected-attendees"
+                      className={labelClassName}
+                    >
+                      Erwartete Personen
+                    </label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Zieh den Regler, bis es ungefähr passt.
+                    </p>
+                  </div>
+                  <output
+                    htmlFor="expected-attendees"
+                    className="min-w-20 rounded-md bg-primary px-3 py-2 text-center text-primary-foreground shadow-sm"
+                  >
+                    <span className="block text-2xl font-black leading-none">
+                      {attendeeCount}
+                    </span>
+                    <span className="mt-1 block text-[11px] font-bold">
+                      {attendeeCount === 1 ? "Person" : "Personen"}
+                    </span>
+                  </output>
+                </div>
+                <input
+                  id="expected-attendees"
+                  className={`${styles.attendeeRange} mt-7`}
+                  type="range"
+                  min={1}
+                  max={400}
+                  step={1}
+                  value={attendeeCount}
+                  aria-valuetext={`${attendeeCount} ${
+                    attendeeCount === 1 ? "Person" : "Personen"
+                  }`}
+                  style={{
+                    background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${attendeeSliderProgress}%, var(--muted) ${attendeeSliderProgress}%, var(--muted) 100%)`,
+                  }}
+                  onChange={(event) =>
+                    setField(
+                      "expectedAttendees",
+                      Number.parseInt(event.target.value, 10),
+                    )
+                  }
+                />
+                <div
+                  aria-hidden="true"
+                  className="mt-2 flex justify-between text-xs font-bold text-muted-foreground"
+                >
+                  <span>1</span>
+                  <span>400</span>
+                </div>
+              </div>
+              <figure className="flex min-h-36 flex-col items-center justify-center rounded-md bg-card px-3 py-2 text-center shadow-sm">
+                <Image
+                  key={attendeePreview.min}
+                  src={attendeePreview.src}
+                  alt={attendeePreview.alt}
+                  className={`${styles.attendeePreview} h-24 w-full object-contain multiply negative-multiply`}
+                  sizes="180px"
+                />
+                <figcaption className="mt-1 text-sm font-black text-foreground">
+                  {attendeePreview.label}
+                </figcaption>
+              </figure>
+            </div>
           </div>
         </div>
         {capacityWarning ? (
