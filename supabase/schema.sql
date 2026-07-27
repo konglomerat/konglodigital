@@ -217,6 +217,107 @@ set is_current = resource_pretty_titles.pretty_title = resources.pretty_title
 from public.resources as resources
 where resources.id = resource_pretty_titles.resource_id;
 
+-- Neues Volkshaus Cotta: public room requests, contract signatures and billing
+-- state. Public clients never access these tables directly; public and token
+-- based operations go through server routes using the service role.
+create table if not exists public.volkshaus_booking_requests (
+  id uuid primary key default gen_random_uuid(),
+  reference_code text not null unique,
+  access_token text not null unique,
+  request_status text not null default 'new'
+    check (request_status in ('new', 'in_review', 'needs_info', 'approved', 'rejected')),
+  reservation_status text not null default 'none'
+    check (reservation_status in ('none', 'held', 'confirmed', 'cancelled', 'completed')),
+  contract_status text not null default 'draft'
+    check (contract_status in ('draft', 'sent', 'customer_signed', 'fully_signed', 'cancelled')),
+  invoice_status text not null default 'not_created'
+    check (invoice_status in ('not_created', 'creating', 'configuration_required', 'draft_created', 'created', 'error', 'cancelled')),
+  payment_status text not null default 'not_due'
+    check (payment_status in ('not_due', 'open', 'paid', 'overdue', 'refunded')),
+  customer_name text not null,
+  organization text,
+  email text not null,
+  phone text,
+  billing_address_line text not null,
+  billing_zip text not null,
+  billing_city text not null,
+  event_title text not null,
+  event_description text not null,
+  usage_type text not null
+    check (usage_type in ('commercial', 'neighborhood')),
+  frequency text not null
+    check (frequency in ('one_time', 'recurring')),
+  recurring_occurrences integer not null default 1
+    check (recurring_occurrences between 1 and 4),
+  expected_attendees integer not null
+    check (expected_attendees between 1 and 500),
+  booking_date date not null,
+  start_time time not null,
+  end_time time not null,
+  setup_start_time time,
+  teardown_end_time time,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  setup_start_at timestamptz,
+  teardown_end_at timestamptz,
+  requested_rooms text[] not null default '{}'::text[],
+  equipment jsonb not null default '{}'::jsonb,
+  special_requirements text,
+  price_snapshot jsonb not null default '{}'::jsonb,
+  price_adjustment_cents integer not null default 0,
+  price_adjustment_reason text,
+  internal_notes text,
+  hold_expires_at timestamptz,
+  assigned_user_id uuid references auth.users (id) on delete set null,
+  contract_version integer not null default 0,
+  contract_snapshot jsonb,
+  contract_hash text,
+  customer_signature jsonb,
+  customer_signed_at timestamptz,
+  staff_signature jsonb,
+  staff_signed_at timestamptz,
+  staff_signed_by uuid references auth.users (id) on delete set null,
+  campai_debtor_account integer,
+  campai_invoice_id text,
+  campai_error text,
+  notification_status text,
+  notification_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint volkshaus_booking_time_order
+    check (end_at > start_at),
+  constraint volkshaus_booking_rooms_present
+    check (cardinality(requested_rooms) > 0)
+);
+
+create index if not exists volkshaus_booking_requests_date_idx
+  on public.volkshaus_booking_requests (booking_date, start_at, end_at);
+create index if not exists volkshaus_booking_requests_workflow_idx
+  on public.volkshaus_booking_requests (
+    request_status,
+    reservation_status,
+    contract_status
+  );
+create index if not exists volkshaus_booking_requests_email_idx
+  on public.volkshaus_booking_requests (lower(email));
+
+create table if not exists public.volkshaus_booking_events (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references public.volkshaus_booking_requests (id) on delete cascade,
+  actor_type text not null
+    check (actor_type in ('customer', 'staff', 'system')),
+  actor_user_id uuid references auth.users (id) on delete set null,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists volkshaus_booking_events_booking_idx
+  on public.volkshaus_booking_events (booking_id, created_at);
+
+alter table public.volkshaus_booking_requests enable row level security;
+alter table public.volkshaus_booking_events enable row level security;
+
 create table if not exists public.material_orders (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references auth.users (id) on delete set null,
@@ -327,6 +428,54 @@ create policy "Users can read own access"
 on public.user_access
 for select
 using (auth.uid() = user_id);
+
+drop policy if exists "Admins can read VHC bookings" on public.volkshaus_booking_requests;
+drop policy if exists "Admins can update VHC bookings" on public.volkshaus_booking_requests;
+drop policy if exists "Admins can read VHC booking events" on public.volkshaus_booking_events;
+
+create policy "Admins can read VHC bookings"
+on public.volkshaus_booking_requests
+for select
+using (
+  exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and user_access.role = 'admin'
+  )
+);
+
+create policy "Admins can update VHC bookings"
+on public.volkshaus_booking_requests
+for update
+using (
+  exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and user_access.role = 'admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and user_access.role = 'admin'
+  )
+);
+
+create policy "Admins can read VHC booking events"
+on public.volkshaus_booking_events
+for select
+using (
+  exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and user_access.role = 'admin'
+  )
+);
 
 create table if not exists public.access_code_inbox (
   id uuid primary key default gen_random_uuid(),

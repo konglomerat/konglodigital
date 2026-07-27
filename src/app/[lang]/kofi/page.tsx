@@ -3,6 +3,7 @@
 import { Fragment, useDeferredValue, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowsLeftRight,
   faArrowUpRightFromSquare,
   faArrowTrendDown,
   faArrowTrendUp,
@@ -165,11 +166,13 @@ const SummaryCard = ({
   value: string;
   accent: string;
 }) => (
-  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+  <div className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <p className="break-words text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
       {label}
     </p>
-    <p className={`mt-3 text-2xl font-semibold tabular-nums ${accent}`}>
+    <p
+      className={`mt-3 break-words text-lg font-semibold tabular-nums sm:text-2xl ${accent}`}
+    >
       {value}
     </p>
   </div>
@@ -226,7 +229,7 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     .stops.join(", ");
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faChartPie}
@@ -234,9 +237,9 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
         />
         Kostenverteilung
       </div>
-      <div className="mt-4 flex items-center gap-5">
+      <div className="mt-4 grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
         <div
-          className="relative h-28 w-28 rounded-full border border-border"
+          className="relative mx-auto h-24 w-24 shrink-0 rounded-full border border-border sm:h-28 sm:w-28"
           style={{
             background: gradient ? `conic-gradient(${gradient})` : "#f4f4f5",
           }}
@@ -250,15 +253,18 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
             </p>
           ) : (
             slices.map((slice) => (
-              <div key={slice.label} className="flex items-center gap-3">
+              <div
+                key={slice.label}
+                className="flex min-w-0 items-center gap-2 sm:gap-3"
+              >
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: slice.color }}
                 />
                 <span className="min-w-0 flex-1 truncate text-foreground/80">
                   {slice.label}
                 </span>
-                <span className="font-medium tabular-nums text-foreground">
+                <span className="shrink-0 text-xs font-medium tabular-nums text-foreground sm:text-sm">
                   {formatCurrency(slice.value)}
                 </span>
               </div>
@@ -305,7 +311,7 @@ const CashflowChart = ({
   const endX = n > 1 ? ((n - 0.5) * 100) / n : 100;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faTableCellsLarge}
@@ -368,7 +374,7 @@ const CashflowChart = ({
           {monthlySummary.map((entry) => (
             <span
               key={entry.monthIndex}
-              className="min-w-0 flex-1 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+              className="min-w-0 flex-1 overflow-hidden text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
             >
               {entry.label}
             </span>
@@ -474,21 +480,33 @@ const MonthlyOverviewTable = ({
   const hasForecast = rows.some((entry) => entry.isForecast);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div className="border-b border-border bg-muted/50 px-4 py-3">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Monatsverlauf
         </h2>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground sm:hidden">
+          <FontAwesomeIcon icon={faArrowsLeftRight} className="h-3 w-3" />
+          wischen
+        </span>
       </div>
-      <div className="overflow-auto">
-        <table className="min-w-full border-separate border-spacing-0 text-sm">
+      <div
+        className="max-w-full overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]"
+        aria-label="Monatsverlauf horizontal scrollen"
+        tabIndex={0}
+      >
+        <table className="min-w-[620px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr>
               {["Monat", "Einnahmen", "Ausgaben", "Saldo", "Kumuliert"].map(
-                (label) => (
+                (label, index) => (
                   <th
                     key={label}
-                    className="border-b border-r border-border bg-muted/50 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0"
+                    className={`border-b border-r border-border bg-muted px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0 ${
+                      index === 0
+                        ? "sticky left-0 z-20 min-w-[132px] shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)]"
+                        : "whitespace-nowrap"
+                    }`}
                   >
                     {label}
                   </th>
@@ -499,16 +517,18 @@ const MonthlyOverviewTable = ({
           <tbody>
             {rows.map((entry, index) => {
               const baseRow =
-                index % 2 === 0 ? "bg-card" : "bg-muted/60";
+                index % 2 === 0 ? "bg-card" : "bg-muted";
               const rowClass = entry.isCarryover
-                ? "bg-amber-50/80"
+                ? "bg-amber-50"
                 : entry.isForecast
                   ? `${baseRow} italic text-muted-foreground/90`
                   : baseRow;
 
               return (
                 <tr key={entry.monthIndex} className={rowClass}>
-                  <td className="border-b border-r border-border px-4 py-2 font-medium text-foreground/90">
+                  <td
+                    className={`sticky left-0 z-10 min-w-[132px] border-b border-r border-border px-4 py-2 font-medium text-foreground/90 shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)] ${rowClass}`}
+                  >
                     <span className="inline-flex items-center gap-2">
                       {entry.label}
                       {entry.isCarryover ? (
@@ -523,19 +543,19 @@ const MonthlyOverviewTable = ({
                       ) : null}
                     </span>
                   </td>
-                  <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-success">
+                  <td className="whitespace-nowrap border-b border-r border-border px-4 py-2 text-right tabular-nums text-success">
                     {formatCurrency(entry.income)}
                   </td>
-                  <td className="border-b border-r border-border px-4 py-2 text-right tabular-nums text-warning">
+                  <td className="whitespace-nowrap border-b border-r border-border px-4 py-2 text-right tabular-nums text-warning">
                     {formatCurrency(entry.expense)}
                   </td>
                   <td
-                    className={`border-b border-r border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
+                    className={`whitespace-nowrap border-b border-r border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.balance)}`}
                   >
                     {formatCurrency(entry.balance)}
                   </td>
                   <td
-                    className={`border-b border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
+                    className={`whitespace-nowrap border-b border-border px-4 py-2 text-right font-semibold tabular-nums ${numberClassName(entry.cumulative)}`}
                     style={cumulativeCellStyle(entry.cumulative, maxMagnitude)}
                   >
                     {formatCurrency(entry.cumulative)}
@@ -581,9 +601,18 @@ const KoFiTable = ({
   const sectionTint =
     kind === "funding"
       ? "from-emerald-50 via-white to-white"
-      : "from-zinc-100 via-white to-white";
-  const headerTint = kind === "funding" ? "bg-success-soft/70" : "bg-red-200/60";
+      : "from-warning-soft/20 via-white to-white";
+  const headerTint =
+    kind === "funding" ? "bg-success-soft/70" : "bg-warning-soft/40";
   const sumTint = kind === "funding" ? "bg-success-soft/70" : "bg-muted/70";
+  const stickyHeaderTint = "bg-card";
+  const stickySumTint = "bg-muted";
+  const tableWidth =
+    viewMode === "month"
+      ? "w-[1490px] min-w-[1490px] sm:w-[1640px] sm:min-w-[1640px] lg:w-[1680px] lg:min-w-[1680px]"
+      : viewMode === "quarter"
+        ? "w-[840px] min-w-[840px] sm:w-[940px] sm:min-w-[940px] lg:w-[980px] lg:min-w-[980px]"
+        : "w-[620px] min-w-[620px] sm:w-[680px] sm:min-w-[680px]";
   const summarySeries = projectSeries(
     block.groups.reduce(
       (accumulator, group) =>
@@ -595,32 +624,55 @@ const KoFiTable = ({
 
   return (
     <section
-      className={`rounded-3xl border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
+      className={`min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
     >
-      <div className="border-b border-border px-5 py-4">
-        <h2 className="text-lg font-semibold tracking-[0.16em] text-foreground/90">
-          {title}
-        </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <h2 className="text-base font-semibold tracking-[0.16em] text-foreground/90 sm:text-lg">
+            {title}
+          </h2>
+          <span className="rounded-full border border-border bg-card/80 px-2.5 py-1 text-xs font-semibold tabular-nums text-foreground/80">
+            {formatCurrency(block.total)}
+          </span>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <FontAwesomeIcon icon={faArrowsLeftRight} className="h-3 w-3" />
+          Tabelle horizontal scrollen
+        </span>
       </div>
-      <div className="overflow-auto">
-        <table className="min-w-[1120px] border-separate border-spacing-0 text-sm">
+      <div
+        className="max-w-full overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]"
+        aria-label={`${title} horizontal scrollen`}
+        tabIndex={0}
+      >
+        <table
+          className={`${tableWidth} table-fixed border-separate border-spacing-0 text-xs`}
+        >
+          <colgroup>
+            <col className="w-[190px] sm:w-[260px] lg:w-[300px]" />
+            {periodLabels.map((label) => (
+              <col key={`column:${label}`} className="w-[82px] sm:w-[88px]" />
+            ))}
+            <col className="w-[112px]" />
+            <col className="w-[120px]" />
+          </colgroup>
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 min-w-[300px] border-b border-r border-border bg-muted/50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <th className="sticky left-0 top-0 z-30 w-[190px] min-w-[190px] border-b border-r border-border bg-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)] sm:w-[260px] sm:min-w-[260px] sm:px-4 lg:w-[300px] lg:min-w-[300px]">
                 Kategorie
               </th>
               {periodLabels.map((label) => (
                 <th
                   key={label}
-                  className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  className="sticky top-0 z-20 whitespace-nowrap border-b border-r border-border bg-muted/50 px-2 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   {label}
                 </th>
               ))}
-              <th className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <th className="sticky top-0 z-20 border-b border-r border-border bg-muted/50 px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">
                 Gesamt inkl. {year - 1}
               </th>
-              <th className="sticky top-0 z-20 border-b border-l-2 border-border bg-card px-3 py-3 pl-5 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <th className="sticky top-0 z-20 border-b border-l-2 border-border bg-card px-2 py-3 text-right text-[10px] font-normal uppercase tracking-wide text-muted-foreground sm:text-xs">
                 Durchschnitt / Monat
               </th>
             </tr>
@@ -644,34 +696,34 @@ const KoFiTable = ({
                   <Fragment key={group.key}>
                     <tr className={headerTint}>
                       <td
-                        className={`sticky left-0 z-10 border-b border-r border-border px-4 py-3 ${headerTint}`}
+                        className={`sticky left-0 z-10 w-[190px] min-w-[190px] border-b border-r border-border px-3 py-3 shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)] sm:w-[260px] sm:min-w-[260px] sm:px-4 lg:w-[300px] lg:min-w-[300px] ${stickyHeaderTint}`}
                       >
                         <button
                           type="button"
                           onClick={() => onToggleGroup(group.key)}
-                          className="flex items-center gap-2 font-semibold text-foreground/90"
+                          className="flex w-full min-w-0 items-center gap-2 text-left font-semibold text-foreground/90"
                         >
                           <FontAwesomeIcon
                             icon={isCollapsed ? faChevronRight : faChevronDown}
-                            className="h-3 w-3 text-muted-foreground"
+                            className="h-3 w-3 shrink-0 text-muted-foreground"
                           />
-                          <span>{group.label}</span>
+                          <span className="min-w-0 truncate">{group.label}</span>
                         </button>
                       </td>
                       {projectedGroup.map((value, index) => (
                         <td
                           key={`${group.key}:${periodLabels[index]}`}
-                          className={`border-b border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
+                          className={`whitespace-nowrap border-b border-r border-border px-2 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
                         >
                           {formatCurrency(value)}
                         </td>
                       ))}
                       <td
-                        className={`border-b border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(group.total)}`}
+                        className={`whitespace-nowrap border-b border-r border-border px-2 py-3 text-right font-semibold tabular-nums ${numberClassName(group.total)}`}
                       >
                         {formatCurrency(group.total)}
                       </td>
-                      <td className="border-b border-l-2 border-border bg-card px-3 py-3 pl-5 text-right font-normal tabular-nums text-muted-foreground">
+                      <td className="whitespace-nowrap border-b border-l-2 border-border bg-card px-2 py-3 text-right font-normal tabular-nums text-muted-foreground">
                         {formatCurrency(group.average)}
                       </td>
                     </tr>
@@ -682,7 +734,7 @@ const KoFiTable = ({
                           viewMode,
                         );
                         const rowClassName =
-                          index % 2 === 0 ? "bg-card" : "bg-muted/65";
+                          index % 2 === 0 ? "bg-card" : "bg-muted";
                         const isLeafExpanded =
                           expandedLeaves[child.key] ?? false;
 
@@ -690,7 +742,7 @@ const KoFiTable = ({
                           <Fragment key={child.key}>
                             <tr className={rowClassName}>
                               <td
-                                className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 ${rowClassName}`}
+                                className={`sticky left-0 z-10 w-[190px] min-w-[190px] border-b border-r border-border px-3 py-2.5 shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)] sm:w-[260px] sm:min-w-[260px] sm:px-4 lg:w-[300px] lg:min-w-[300px] ${rowClassName}`}
                               >
                                 <button
                                   type="button"
@@ -709,7 +761,7 @@ const KoFiTable = ({
                                   <span className="min-w-0 flex-1 truncate">
                                     {child.label}
                                   </span>
-                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                                     {formatCount(child.transactions.length)}
                                   </span>
                                 </button>
@@ -717,17 +769,17 @@ const KoFiTable = ({
                               {projectedChild.map((value, valueIndex) => (
                                 <td
                                   key={`${child.key}:${periodLabels[valueIndex]}`}
-                                  className={`border-b border-r border-border px-3 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
+                                  className={`whitespace-nowrap border-b border-r border-border px-2 py-2.5 text-right tabular-nums ${numberClassName(value)}`}
                                 >
                                   {formatCurrency(value)}
                                 </td>
                               ))}
                               <td
-                                className={`border-b border-r border-border px-3 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
+                                className={`whitespace-nowrap border-b border-r border-border px-2 py-2.5 text-right font-medium tabular-nums ${numberClassName(child.total)}`}
                               >
                                 {formatCurrency(child.total)}
                               </td>
-                              <td className="border-b border-l-2 border-border bg-card px-3 py-2.5 pl-5 text-right font-normal tabular-nums text-muted-foreground">
+                              <td className="whitespace-nowrap border-b border-l-2 border-border bg-card px-2 py-2.5 text-right font-normal tabular-nums text-muted-foreground">
                                 {formatCurrency(child.average)}
                               </td>
                             </tr>
@@ -737,7 +789,7 @@ const KoFiTable = ({
                                   colSpan={periodLabels.length + 3}
                                   className="border-b border-border bg-muted/35 p-0"
                                 >
-                                  <div className="px-5 py-4">
+                                  <div className="sticky left-0 w-[calc(100vw-3.25rem)] max-w-[calc(100vw-3.25rem)] px-3 py-4 sm:w-[calc(100vw-5rem)] sm:max-w-[calc(100vw-5rem)] sm:px-5 md:static md:w-auto md:max-w-none">
                                     <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                                       <FontAwesomeIcon
                                         icon={faReceipt}
@@ -750,7 +802,7 @@ const KoFiTable = ({
                                         (transaction) => (
                                           <div
                                             key={transaction.id}
-                                            className="grid gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
+                                            className="grid min-w-0 gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
                                           >
                                             <div className="text-xs text-muted-foreground">
                                               <div className="font-medium text-foreground/80">
@@ -771,9 +823,11 @@ const KoFiTable = ({
                                                     rel="noreferrer"
                                                     className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
                                                   >
-                                                    {
-                                                      transaction.receiptNumber
-                                                    }
+                                                    <span className="min-w-0 break-all">
+                                                      {
+                                                        transaction.receiptNumber
+                                                      }
+                                                    </span>
                                                     <FontAwesomeIcon
                                                       icon={
                                                         faArrowUpRightFromSquare
@@ -815,7 +869,7 @@ const KoFiTable = ({
                                                   "Kein Buchungstext"}
                                               </p>
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
+                                            <div className="min-w-0 break-words text-xs text-muted-foreground">
                                               <p className="font-medium text-foreground/80">
                                                 {
                                                   transaction.cashAccount
@@ -844,7 +898,7 @@ const KoFiTable = ({
                                               </p>
                                             </div>
                                             <div
-                                              className={`self-center text-right font-semibold tabular-nums ${numberClassName(transaction.amount)}`}
+                                              className={`self-center text-left font-semibold tabular-nums md:text-right ${numberClassName(transaction.amount)}`}
                                             >
                                               {formatCurrency(
                                                 transaction.amount,
@@ -867,24 +921,24 @@ const KoFiTable = ({
             )}
             <tr className={sumTint}>
               <td
-                className={`sticky left-0 z-10 border-r border-border px-4 py-3 font-semibold ${sumTint}`}
+                className={`sticky left-0 z-10 w-[190px] min-w-[190px] border-r border-border px-3 py-3 font-semibold shadow-[8px_0_14px_-14px_rgba(0,0,0,0.45)] sm:w-[260px] sm:min-w-[260px] sm:px-4 lg:w-[300px] lg:min-w-[300px] ${stickySumTint}`}
               >
                 {kind === "costs" ? "SUMME KOSTEN" : "SUMME FINANZIERUNG"}
               </td>
               {summarySeries.map((value, index) => (
                 <td
                   key={`sum:${title}:${periodLabels[index]}`}
-                  className={`border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
+                  className={`whitespace-nowrap border-r border-border px-2 py-3 text-right font-semibold tabular-nums ${numberClassName(value)}`}
                 >
                   {formatCurrency(value)}
                 </td>
               ))}
               <td
-                className={`border-r border-border px-3 py-3 text-right font-semibold tabular-nums ${numberClassName(block.total)}`}
+                className={`whitespace-nowrap border-r border-border px-2 py-3 text-right font-semibold tabular-nums ${numberClassName(block.total)}`}
               >
                 {formatCurrency(block.total)}
               </td>
-              <td className="border-l-2 border-border bg-card px-3 py-3 pl-5 text-right font-normal tabular-nums text-muted-foreground">
+              <td className="whitespace-nowrap border-l-2 border-border bg-card px-2 py-3 text-right font-normal tabular-nums text-muted-foreground">
                 {formatCurrency(block.average)}
               </td>
             </tr>
@@ -992,7 +1046,7 @@ export default function KoFiPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
+    <div className="mx-auto w-full min-w-0 max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
       <PageTitle
         eyebrow="Campai / SKR 42"
         title="KoFi Kosten- und Finanzierungsplan"
@@ -1003,7 +1057,7 @@ export default function KoFiPage() {
         subTitleClassName="mt-3 max-w-3xl leading-6"
       />
 
-      <section className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-sm">
+      <section className="mt-6 min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
           <FontAwesomeIcon
             icon={faFilter}
@@ -1012,7 +1066,7 @@ export default function KoFiPage() {
           Filter
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
-          <label className="block text-sm text-foreground/80">
+          <label className="block min-w-0 text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Jahr
             </span>
@@ -1031,7 +1085,7 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-foreground/80">
+          <label className="block min-w-0 text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Kostenstelle 1 (Sphäre)
             </span>
@@ -1049,7 +1103,7 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-foreground/80">
+          <label className="block min-w-0 text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Kostenstelle 2 (Werkbereiche/Projekte)
             </span>
@@ -1067,7 +1121,7 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-foreground/80">
+          <label className="block min-w-0 text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               SKR-42-Konto
             </span>
@@ -1085,7 +1139,7 @@ export default function KoFiPage() {
             </select>
           </label>
 
-          <label className="block text-sm text-foreground/80">
+          <label className="block min-w-0 text-sm text-foreground/80">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Buchungstext oder Kategorie
             </span>
@@ -1099,19 +1153,21 @@ export default function KoFiPage() {
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           {VIEW_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => setViewMode(option.value)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+              aria-label={option.buttonLabel}
+              className={`min-w-0 rounded-full border px-2 py-2 text-sm font-medium transition sm:px-4 ${
                 viewMode === option.value
                   ? "border-foreground bg-foreground text-background"
                   : "border-input bg-card text-foreground/80 hover:border-ring/80"
               }`}
             >
-              {option.buttonLabel}
+              <span className="sm:hidden">{option.label}</span>
+              <span className="hidden sm:inline">{option.buttonLabel}</span>
             </button>
           ))}
         </div>
@@ -1131,9 +1187,9 @@ export default function KoFiPage() {
       ) : null}
 
       {!isLoading && data ? (
-        <div className="mt-6 space-y-8">
-          <section className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-6 min-w-0 space-y-8">
+          <section className="min-w-0 space-y-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
               <SummaryCard
                 label="Gesamtkosten"
                 value={formatCurrency(data.summary.totalCosts)}
@@ -1163,7 +1219,7 @@ export default function KoFiPage() {
 
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0 flex-1 basis-[420px]">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <FontAwesomeIcon
                       icon={faCircleCheck}
@@ -1187,7 +1243,7 @@ export default function KoFiPage() {
                   }).format(new Date(data.dataQuality.refreshedAt))}
                 </span>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-7">
+              <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-7">
                 {[
                   {
                     label: "Geldbuchungen",
@@ -1254,13 +1310,13 @@ export default function KoFiPage() {
               </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
+            <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
               <MonthlyOverviewTable
                 monthlySummary={data.monthlySummary}
                 year={year}
                 carryover={data.carryover}
               />
-              <div className="grid gap-5">
+              <div className="grid min-w-0 gap-5">
                 <CostDistributionChart groups={data.costs.groups} />
                 <CashflowChart monthlySummary={data.monthlySummary} />
               </div>

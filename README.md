@@ -14,6 +14,8 @@ Campai for products and invoices and Supabase for authentication and data.
 - Resource inventory (Inventar) with location mapping
 - Auth-protected UI via Supabase
 - Campai integration for products and invoice drafts
+- End-to-end room requests for the Neues Volkshaus Cotta, including pricing,
+  contract signatures and Campai invoice creation
 
 ## Tech Stack
 
@@ -73,6 +75,34 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 - CAMPAI_COST_CENTER1
 - CAMPAI_ACCOUNT_NAME (optional)
 - CAMPAI_DUE_DAYS (optional, default 14)
+
+### Neues Volkshaus Cotta room bookings
+
+Run the SQL in [supabase/schema.sql](supabase/schema.sql) after updating the
+application. It creates `volkshaus_booking_requests` and
+`volkshaus_booking_events`.
+
+- `CAMPAI_VOLKSHAUS_COST_CENTER2` (required before VHC invoices can be created)
+- `SUPABASE_SERVICE_ROLE_KEY` (required for server-side booking persistence)
+- `NEXT_PUBLIC_SITE_URL` (recommended in production; canonical origin used in
+  personal request and contract links)
+- `VOLKSHAUS_CAMPAI_FINALIZE_INVOICE` (optional; `false` by default, so the
+  integration creates a Campai draft)
+- `RESEND_API_KEY` and `VOLKSHAUS_FROM_EMAIL` (optional; send request and
+  contract emails)
+- `VOLKSHAUS_STAFF_EMAIL` (optional; receives new-request and signature notices)
+- `VOLKSHAUS_AUDIT_SALT` (recommended; salts the pseudonymized signature audit
+  value)
+- `VOLKSHAUS_BOOKING_STORAGE=memory` (development only; uses volatile in-memory
+storage instead of Supabase)
+
+At least one staff account needs `role = 'admin'` in `public.user_access` to
+process requests in `/admin/volkshaus`.
+
+The public MVP deliberately uses a mock availability calendar. Existing
+confirmed and unexpired held requests are merged into its free/busy response.
+Replace the mock slots in `src/lib/volkshaus-booking.ts` when the production
+calendar source is connected.
 
 ### Campai Expense Receipts (Eigenbeleg)
 

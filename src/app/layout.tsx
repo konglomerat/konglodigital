@@ -22,6 +22,7 @@ import {
   faLock,
   faRightFromBracket,
   faRightToBracket,
+  faHouse,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mdxeditor/editor/style.css";
@@ -318,6 +319,16 @@ export default async function RootLayout({
                           />
                           Kalender
                         </ActiveNavLink>
+                        <ActiveNavLink
+                          href="/volkshaus/buchen"
+                          className={navLinkClassName}
+                        >
+                          <FontAwesomeIcon
+                            icon={faHouse}
+                            className="h-4 w-4"
+                          />
+                          Volkshaus buchen
+                        </ActiveNavLink>
                         <ProtectedNavItem
                           href="/products"
                           className={navLinkClassName}
@@ -502,6 +513,13 @@ export default async function RootLayout({
                 <ActiveNavLink href="/calendar" className={navItemClassName}>
                   <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
                   Kalender
+                </ActiveNavLink>
+                <ActiveNavLink
+                  href="/volkshaus/buchen"
+                  className={navItemClassName}
+                >
+                  <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
+                  Volkshaus buchen
                 </ActiveNavLink>
                 <ProtectedNavItem
                   href="/resources"

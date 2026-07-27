@@ -21,7 +21,7 @@ export default async function AdminLayout({
 
   if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
     return (
-      <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+      <section className="rounded-xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-destructive">Kein Zugriff</h1>
         <p className="mt-2 text-sm text-destructive">
           Dieser Bereich ist nur fuer Mitglieder mit der Rolle Admin verfuegbar.
@@ -32,11 +32,19 @@ export default async function AdminLayout({
 
   return (
     <div className="space-y-6">
-      <nav className="flex flex-wrap gap-2 rounded-3xl border border-border bg-card p-2 shadow-sm">
+      <nav className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-2 shadow-sm">
+        <ActiveNavLink
+          href={localizePathname("/admin/volkshaus", locale)}
+          exact
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        >
+          VHC-Buchungen
+        </ActiveNavLink>
         <ActiveNavLink
           href={localizePathname("/admin/users", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
           activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Benutzer
@@ -44,7 +52,7 @@ export default async function AdminLayout({
         <ActiveNavLink
           href={localizePathname("/admin/contacts", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
           activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Mitglieder
@@ -52,7 +60,7 @@ export default async function AdminLayout({
         <ActiveNavLink
           href={localizePathname("/kofi", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
           activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           KoFi
@@ -60,7 +68,7 @@ export default async function AdminLayout({
         <ActiveNavLink
           href={localizePathname("/admin/generate-newsletter", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
           activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Newsletter erzeugen
@@ -68,7 +76,7 @@ export default async function AdminLayout({
         <ActiveNavLink
           href={localizePathname("/admin/generate-story", locale)}
           exact
-          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
           activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         >
           Storys erzeugen
