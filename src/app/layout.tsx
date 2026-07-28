@@ -147,12 +147,12 @@ function ComingSoonNavItem({
     <div
       className={`${className} cursor-not-allowed select-none text-muted-foreground/80 hover:text-muted-foreground/80`}
       aria-disabled="true"
-      title="Coming soon"
+      title="Soon"
     >
       <FontAwesomeIcon icon={icon} className="h-4 w-4" />
       <span>{children}</span>
       <span className="ml-auto whitespace-nowrap rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-        Coming soon
+        Soon
       </span>
     </div>
   );
@@ -323,10 +323,7 @@ export default async function RootLayout({
                           href="/volkshaus/buchen"
                           className={navLinkClassName}
                         >
-                          <FontAwesomeIcon
-                            icon={faHouse}
-                            className="h-4 w-4"
-                          />
+                          <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
                           Volkshaus buchen
                         </ActiveNavLink>
                         <ProtectedNavItem
@@ -345,7 +342,9 @@ export default async function RootLayout({
                           Ehrenamtsbonus
                         </ComingSoonNavItem>
 
-                        <p className={navSectionTitleClassName}>Holzwerkstatt</p>
+                        <p className={navSectionTitleClassName}>
+                          Holzwerkstatt
+                        </p>
                         <ProtectedNavItem
                           href="/split-invoice"
                           className={navLinkClassName}
@@ -543,10 +542,7 @@ export default async function RootLayout({
                 >
                   Produkte
                 </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faUser}
-                >
+                <ComingSoonNavItem className={navItemClassName} icon={faUser}>
                   Ehrenamtsbonus
                 </ComingSoonNavItem>
 
