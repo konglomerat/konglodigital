@@ -88,9 +88,12 @@ application. It creates `volkshaus_booking_requests` and
   personal request and contract links)
 - `VOLKSHAUS_CAMPAI_FINALIZE_INVOICE` (optional; `false` by default, so the
   integration creates a Campai draft)
-- `RESEND_API_KEY` and `VOLKSHAUS_FROM_EMAIL` (optional; send request and
-  contract emails)
-- `VOLKSHAUS_STAFF_EMAIL` (optional; receives new-request and signature notices)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` (required to send
+  request and contract emails; port `587` uses STARTTLS and port `465` uses
+  implicit TLS)
+- `SMTP_SENDER_NAME` (optional; display name, defaults to `SMTP_USER`)
+- `SMTP_ADMIN_EMAIL` (optional; receives new-request and signature notices and
+  is used as the reply-to address)
 - `VOLKSHAUS_AUDIT_SALT` (recommended; salts the pseudonymized signature audit
   value)
 - `VOLKSHAUS_BOOKING_STORAGE=memory` (development only; uses volatile in-memory

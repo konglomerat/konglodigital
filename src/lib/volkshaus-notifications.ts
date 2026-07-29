@@ -6,9 +6,13 @@ import {
   getRoomLabel,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
+import {
+  sendSmtpMail,
+  SmtpConfigurationError,
+} from "@/lib/smtp-mail";
 
 type NotificationResult =
-  | { sent: true; provider: "resend" }
+  | { sent: true; provider: "smtp" }
   | { sent: false; reason: "not_configured" | "provider_error"; error?: string };
 
 const escapeHtml = (value: string) =>
@@ -28,40 +32,32 @@ const sendEmail = async ({
   subject: string;
   html: string;
 }): Promise<NotificationResult> => {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from =
-    process.env.VOLKSHAUS_FROM_EMAIL?.trim() ||
-    process.env.RESEND_FROM_EMAIL?.trim();
-
-  if (!apiKey || !from) {
-    return { sent: false, reason: "not_configured" };
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: Array.isArray(to) ? to : [to],
+  try {
+    await sendSmtpMail({
       subject,
       html,
-    }),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
+      to,
+      replyTo: process.env.SMTP_ADMIN_EMAIL?.trim(),
+    });
+  } catch (error) {
+    if (error instanceof SmtpConfigurationError) {
+      return {
+        sent: false,
+        reason: "not_configured",
+        error: error.message,
+      };
+    }
     return {
       sent: false,
       reason: "provider_error",
-      error: body || `E-Mail-Versand fehlgeschlagen (HTTP ${response.status}).`,
+      error:
+        error instanceof Error
+          ? error.message
+          : "E-Mail-Versand über SMTP fehlgeschlagen.",
     };
   }
 
-  return { sent: true, provider: "resend" };
+  return { sent: true, provider: "smtp" };
 };
 
 const bookingSummaryHtml = (booking: VolkshausBooking) => {
@@ -97,7 +93,7 @@ export const notifyVolkshausRequestSubmitted = async ({
     `,
   });
 
-  const staffAddress = process.env.VOLKSHAUS_STAFF_EMAIL?.trim();
+  const staffAddress = process.env.SMTP_ADMIN_EMAIL?.trim();
   if (staffAddress) {
     await sendEmail({
       to: staffAddress,
@@ -139,7 +135,7 @@ export const notifyVolkshausCustomerSigned = async ({
   booking: VolkshausBooking;
   adminUrl: string;
 }) => {
-  const staffAddress = process.env.VOLKSHAUS_STAFF_EMAIL?.trim();
+  const staffAddress = process.env.SMTP_ADMIN_EMAIL?.trim();
   if (!staffAddress) {
     return { sent: false, reason: "not_configured" } as const;
   }
@@ -173,4 +169,3 @@ export const notifyVolkshausContractCompleted = async ({
       <p>Viele Grüße<br>Team Neues Volkshaus Cotta</p>
     `,
   });
-
