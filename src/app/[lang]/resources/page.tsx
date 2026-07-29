@@ -348,6 +348,8 @@ export default async function ResourcesPage({
       initialMapBasemapResources={mapBasemapResources}
       initialCount={count}
       initialErrorMessage={errorMessage}
+      initialQueryText={queryText}
+      initialResourceType={resourceType}
     />
   );
 }

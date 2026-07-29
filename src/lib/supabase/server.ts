@@ -1,8 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-
 const requiredEnv = (name: string) => {
   const value = process.env[name];
   if (!value) {
@@ -20,24 +18,18 @@ export const createSupabaseServerClient = async (options?: {
   const readOnly = options?.readOnly ?? false;
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions: {
-      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-    },
     cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name, value, options) {
+      setAll(cookiesToSet) {
         if (readOnly) {
           return;
         }
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        if (readOnly) {
-          return;
+
+        for (const { name, value, options } of cookiesToSet) {
+          cookieStore.set(name, value, options);
         }
-        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
       },
     },
   });

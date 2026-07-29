@@ -173,45 +173,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-body[data-page="batch-upload"] > div > header,
-body[data-page="batch-upload"] > div > aside {
-  display: none;
-}
-
-body[data-page="batch-upload"] > div {
-  overflow: hidden;
-  min-height: 100svh;
-  min-height: 100dvh;
-  max-height: 100svh;
-  max-height: 100dvh;
-}
-
-body[data-page="batch-upload"] > div > div {
-  margin-left: 0 !important;
-  overflow: hidden;
-  min-height: 100svh;
-  min-height: 100dvh;
-}
-
-body[data-page="batch-upload"] > div > div > main {
-  max-width: none;
-  padding: 0;
-  overflow: hidden;
-  height: 100svh;
-  height: 100dvh;
-  min-height: 100svh;
-  min-height: 100dvh;
-  max-height: 100svh;
-  max-height: 100dvh;
-}
-
-body[data-page="batch-upload"] {
-  overflow: hidden;
-}
-
-body[data-page="batch-upload"] .mapboxgl-map,
-body[data-page="batch-upload"] .mapboxgl-canvas,
-body[data-page="batch-upload"] .mapboxgl-control-container {
+[data-page="batch-upload"] .mapboxgl-map,
+[data-page="batch-upload"] .mapboxgl-canvas,
+[data-page="batch-upload"] .mapboxgl-control-container {
   z-index: 0;
 }
 

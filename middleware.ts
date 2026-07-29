@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import {
   DEFAULT_LOCALE,
   ENGLISH_LOCALE,
@@ -8,8 +8,6 @@ import {
   localizePathname,
   stripLocalePrefix,
 } from "@/i18n/config";
-
-const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 const protectedPagePrefixes = [
   "/account",
@@ -52,6 +50,18 @@ const shouldBypassLocaleHandling = (pathname: string) => {
   return (
     looksLikeStaticAsset ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico"
+  );
+};
+
+const shouldRefreshAuthSession = (pathname: string) => {
+  const looksLikeStaticAsset = /\.[a-z0-9]+$/i.test(pathname);
+
+  return !(
+    looksLikeStaticAsset ||
+    pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
@@ -101,25 +111,71 @@ const createLocalizedResponse = (
   return response;
 };
 
+type AuthCookie = {
+  name: string;
+  value: string;
+  options: CookieOptions;
+};
+
+const applyAuthCookies = (
+  response: NextResponse,
+  authCookies: AuthCookie[],
+) => {
+  for (const { name, value, options } of authCookies) {
+    response.cookies.set(name, value, options);
+  }
+
+  return response;
+};
+
 export async function middleware(request: NextRequest) {
   const { pathname: pathnameWithoutLocalePrefix, localeFromPath } =
     stripLocalePrefix(request.nextUrl.pathname);
   const locale = localeFromPath ?? DEFAULT_LOCALE;
 
+  const authCookies: AuthCookie[] = [];
+  let isAuthenticated = false;
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+  if (
+    supabaseUrl &&
+    supabaseAnonKey &&
+    shouldRefreshAuthSession(pathnameWithoutLocalePrefix)
+  ) {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value, options } of cookiesToSet) {
+            request.cookies.set(name, value);
+            authCookies.push({ name, value, options });
+          }
+        },
+      },
+    });
+
+    const { data } = await supabase.auth.getClaims();
+    isAuthenticated = Boolean(data?.claims.sub);
+  }
+
   if (shouldBypassLocaleHandling(pathnameWithoutLocalePrefix)) {
     if (localeFromPath) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = pathnameWithoutLocalePrefix;
-      return NextResponse.redirect(redirectUrl);
+      return applyAuthCookies(NextResponse.redirect(redirectUrl), authCookies);
     }
 
-    return NextResponse.next();
+    return applyAuthCookies(NextResponse.next({ request }), authCookies);
   }
 
   if (localeFromPath === DEFAULT_LOCALE) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = pathnameWithoutLocalePrefix;
-    return NextResponse.redirect(redirectUrl);
+    return applyAuthCookies(NextResponse.redirect(redirectUrl), authCookies);
   }
 
   const internalPathname = localeFromPath
@@ -135,40 +191,16 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isPublicPath(pathnameWithoutLocalePrefix)) {
-    return response;
+    return applyAuthCookies(response, authCookies);
   }
 
   const needsAuthentication = requiresAuthentication(pathnameWithoutLocalePrefix);
-
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return response;
   }
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions: {
-      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-    },
-    cookies: {
-      get(name) {
-        return request.cookies.get(name)?.value;
-      },
-      set(name, value, options) {
-        request.cookies.set({ name, value, ...options });
-        response.cookies.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        request.cookies.delete(name);
-        response.cookies.set({ name, value: "", ...options, maxAge: 0 });
-      },
-    },
-  });
-
-  const { data } = await supabase.auth.getUser();
-
-  if (!data.user && needsAuthentication) {
+  if (!isAuthenticated && needsAuthentication) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = localizePathname("/login", locale);
     redirectUrl.searchParams.set(
@@ -184,10 +216,10 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(redirectUrl);
+    return applyAuthCookies(NextResponse.redirect(redirectUrl), authCookies);
   }
 
-  return response;
+  return applyAuthCookies(response, authCookies);
 }
 
 export const config = {

@@ -39,6 +39,7 @@ import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
+import AppShell from "./AppShell";
 
 config.autoAddCss = false;
 
@@ -196,7 +197,8 @@ export default async function RootLayout({
       >
         <I18nProvider locale={locale}>
           <ChatwootWidget locale={locale} />
-          <div className="min-h-screen bg-background text-foreground">
+          <AppShell
+            mobileNavigation={
             <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
               <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                 <Link
@@ -421,6 +423,8 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
+            }
+            desktopNavigation={
             <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
               <div className="space-y-3">
                 <div>
@@ -618,12 +622,10 @@ export default async function RootLayout({
                 </Button>
               )}
             </aside>
-            <div className="ml-0 md:ml-64">
-              <main className="mx-auto w-full px-3 py-4 md:px-10 md:py-10">
-                {children}
-              </main>
-            </div>
-          </div>
+            }
+          >
+            {children}
+          </AppShell>
         </I18nProvider>
       </body>
     </html>

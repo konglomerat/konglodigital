@@ -24,6 +24,7 @@ import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 
 const MAX_IMAGE_EDGE = 1500;
+const MAX_CAMERA_EDGE = 1920;
 const DEFAULT_COVER_PROMPT =
   'Isolate the "{{title}}" on the photo in front of a pure white background. Professional high-end studio lighting, similar to Apple product photography. Soft, diffused light with subtle natural shadows. Perfectly centered composition. Square aspect ratio. It should fit the frame. Not too much white space. Ultra-clean, sharp focus, high resolution, no additional objects. no frontal view. Make sure background is full white (#fff)';
 
@@ -135,48 +136,6 @@ const canvasToFile = async (canvas: HTMLCanvasElement) =>
     );
   });
 
-const blobToFile = (blob: Blob) =>
-  new File([blob], `resource-${Date.now()}.jpg`, {
-    type: blob.type || "image/jpeg",
-  });
-
-const blobToScaledFile = async (
-  blob: Blob,
-  maxEdge: number,
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-): Promise<File | null> => {
-  if (!("createImageBitmap" in window)) {
-    return blobToFile(blob);
-  }
-  let bitmap: ImageBitmap | null = null;
-  try {
-    bitmap = await createImageBitmap(blob);
-    const { width, height } = scaleDimensions(
-      bitmap.width,
-      bitmap.height,
-      maxEdge,
-    );
-    if (width === bitmap.width && height === bitmap.height) {
-      return blobToFile(blob);
-    }
-    const canvas = canvasRef.current ?? document.createElement("canvas");
-    canvasRef.current = canvas;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return blobToFile(blob);
-    }
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    return await canvasToFile(canvas);
-  } catch (error) {
-    console.log("Batch capture: blob scaling failed", error);
-    return blobToFile(blob);
-  } finally {
-    bitmap?.close?.();
-  }
-};
-
 const captureFrame = async (
   video: HTMLVideoElement,
   maxEdge: number,
@@ -225,38 +184,6 @@ const captureFrame = async (
   }
 
   return await canvasToFile(canvas);
-};
-
-const captureBestPhoto = async (
-  video: HTMLVideoElement,
-  stream: MediaStream | null,
-  maxEdge: number,
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-): Promise<File | null> => {
-  const track = stream?.getVideoTracks?.()[0];
-  const ImageCaptureCtor = (
-    window as typeof window & {
-      ImageCapture?: new (track: MediaStreamTrack) => {
-        takePhoto: () => Promise<Blob>;
-      };
-    }
-  ).ImageCapture;
-  if (track && ImageCaptureCtor) {
-    try {
-      const imageCapture = new ImageCaptureCtor(track);
-      const blob = await imageCapture.takePhoto();
-      const file = await blobToScaledFile(blob, maxEdge, canvasRef);
-      if (file) {
-        console.log("Batch capture: captured via ImageCapture", {
-          size: file.size,
-        });
-        return file;
-      }
-    } catch (error) {
-      console.log("Batch capture: ImageCapture failed", error);
-    }
-  }
-  return await captureFrame(video, maxEdge, canvasRef);
 };
 
 export default function BatchResourcePage() {
@@ -386,16 +313,20 @@ export default function BatchResourcePage() {
             const caps = videoTrack.getCapabilities();
             const bestConstraints: MediaTrackConstraints = {};
             if (caps.width?.max) {
-              bestConstraints.width = { ideal: caps.width.max };
+              bestConstraints.width = {
+                ideal: Math.min(caps.width.max, MAX_CAMERA_EDGE),
+              };
             }
             if (caps.height?.max) {
-              bestConstraints.height = { ideal: caps.height.max };
+              bestConstraints.height = {
+                ideal: Math.min(caps.height.max, MAX_CAMERA_EDGE),
+              };
             }
             if (Object.keys(bestConstraints).length > 0) {
               await videoTrack.applyConstraints(bestConstraints);
-              console.log("Batch capture: applied max resolution", {
-                width: caps.width?.max,
-                height: caps.height?.max,
+              console.log("Batch capture: applied capped resolution", {
+                width: Math.min(caps.width?.max ?? 0, MAX_CAMERA_EDGE),
+                height: Math.min(caps.height?.max ?? 0, MAX_CAMERA_EDGE),
               });
             }
           } catch (error) {
@@ -451,21 +382,6 @@ export default function BatchResourcePage() {
 
     return () => {
       active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    const previous = document.body.dataset.page;
-    document.body.dataset.page = "batch-upload";
-    return () => {
-      if (previous) {
-        document.body.dataset.page = previous;
-      } else {
-        delete document.body.dataset.page;
-      }
     };
   }, []);
 
@@ -575,7 +491,6 @@ export default function BatchResourcePage() {
     console.log("Batch capture: handle capture");
     setFormError(null);
     await new Promise(requestAnimationFrame);
-    console.log("Batch capture: shutter click");
     try {
       console.log("Batch capture: shutter click");
       if (!videoRef.current) {
@@ -600,9 +515,9 @@ export default function BatchResourcePage() {
         return;
       }
       setIsCapturing(true);
-      const file = await captureBestPhoto(
+      const captureStartedAt = performance.now();
+      const file = await captureFrame(
         videoRef.current,
-        streamRef.current,
         MAX_IMAGE_EDGE,
         canvasRef,
       );
@@ -623,7 +538,10 @@ export default function BatchResourcePage() {
         );
         return;
       }
-      console.log("Batch capture: photo captured", { size: file.size });
+      console.log("Batch capture: photo captured", {
+        size: file.size,
+        durationMs: Math.round(performance.now() - captureStartedAt),
+      });
       setPhotos((prev) => [...prev, { id: getJobId(), file, previewUrl }]);
     } catch (error) {
       console.log("Batch capture: capture exception", error);
@@ -890,7 +808,10 @@ export default function BatchResourcePage() {
   );
 
   return (
-    <main className="h-dvh max-h-dvh overflow-hidden bg-zinc-950 text-white flex flex-col">
+    <main
+      data-page="batch-upload"
+      className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-zinc-950 text-white"
+    >
       {cameraError ? (
         <section className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
           {cameraError}

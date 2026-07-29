@@ -61,6 +61,8 @@ type ResourcesPageClientProps = {
   initialMapBasemapResources: Resource[];
   initialCount: number | null;
   initialErrorMessage: string | null;
+  initialQueryText: string;
+  initialResourceType: string;
 };
 
 type ResourcesListResponse = {
@@ -359,6 +361,8 @@ export default function ResourcesPageClient({
   initialMapBasemapResources,
   initialCount,
   initialErrorMessage,
+  initialQueryText,
+  initialResourceType,
 }: ResourcesPageClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
   const overviewStorageKey = "resourcesOverviewState";
@@ -898,7 +902,12 @@ export default function ResourcesPageClient({
     [],
   );
 
-  const canLoadMore = count === null || resources.length < count;
+  const filtersMatchLoadedResources =
+    normalizedSearchTerm === initialQueryText &&
+    selectedResourceType.trim() === initialResourceType;
+  const canLoadMore =
+    filtersMatchLoadedResources &&
+    (count === null || resources.length < count);
 
   const handleLoadMore = useCallback(async () => {
     if (loadingMore || !canLoadMore) {
@@ -911,11 +920,11 @@ export default function ResourcesPageClient({
         limit: String(RESOURCES_PAGE_SIZE),
         offset: String(resources.length),
       });
-      if (searchTerm.trim()) {
-        params.set("searchTerm", searchTerm.trim());
+      if (initialQueryText) {
+        params.set("searchTerm", initialQueryText);
       }
-      if (selectedResourceType.trim()) {
-        params.set("type", selectedResourceType.trim());
+      if (initialResourceType) {
+        params.set("type", initialResourceType);
       }
 
       const response = await fetch(
@@ -960,10 +969,10 @@ export default function ResourcesPageClient({
     }
   }, [
     canLoadMore,
+    initialQueryText,
+    initialResourceType,
     loadingMore,
     resources.length,
-    searchTerm,
-    selectedResourceType,
     tx,
   ]);
 

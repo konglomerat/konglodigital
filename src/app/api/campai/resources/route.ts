@@ -834,6 +834,8 @@ export const GET = async (request: NextRequest) => {
   const searchTerm =
     searchParams.get("searchTerm") ?? searchParams.get("q") ?? "";
   const resourceType = searchParams.get("type") ?? "";
+  const effectiveLimit = Number.isNaN(limit) ? 50 : Math.max(1, limit);
+  const effectiveOffset = Number.isNaN(offset) ? 0 : Math.max(0, offset);
 
   let query = supabase
     .from("resources")
@@ -842,10 +844,8 @@ export const GET = async (request: NextRequest) => {
     .order("priority", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(
-      Number.isNaN(offset) ? 0 : offset,
-      (Number.isNaN(offset) ? 0 : offset) +
-        (Number.isNaN(limit) ? 50 : limit) -
-        1,
+      effectiveOffset,
+      effectiveOffset + effectiveLimit - 1,
     );
 
   if (searchTerm.trim()) {
@@ -859,6 +859,36 @@ export const GET = async (request: NextRequest) => {
 
   const { data: rows, error, count } = await query;
   if (error) {
+    const rangeNotSatisfiable =
+      error.code === "PGRST103" ||
+      error.message.toLowerCase().includes("range not satisfiable");
+
+    if (rangeNotSatisfiable) {
+      let countQuery = supabase
+        .from("resources")
+        .select("*", { count: "exact", head: true })
+        .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE);
+
+      if (searchTerm.trim()) {
+        const term = `%${searchTerm.trim()}%`;
+        countQuery = countQuery.or(
+          `name.ilike.${term},description.ilike.${term}`,
+        );
+      }
+
+      if (resourceType.trim()) {
+        countQuery = countQuery.ilike("type", resourceType.trim());
+      }
+
+      const { count: matchingCount, error: countError } = await countQuery;
+      if (!countError) {
+        return NextResponse.json({
+          resources: [],
+          count: matchingCount ?? 0,
+        });
+      }
+    }
+
     return NextResponse.json(
       { error: error.message || "Unable to load resources." },
       { status: 500 },
