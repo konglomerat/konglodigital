@@ -370,12 +370,12 @@ export default function AdminUsersClient() {
       />
 
       {testEmailError ? (
-        <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
           {testEmailError}
         </div>
       ) : null}
       {testEmailSuccess ? (
-        <div className="rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
+        <div className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
           {testEmailSuccess}
         </div>
       ) : null}
@@ -404,29 +404,29 @@ export default function AdminUsersClient() {
         </div>
 
         {profileListError ? (
-          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
             {profileListError}
           </div>
         ) : null}
 
         {roleError ? (
-          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
             {roleError}
           </div>
         ) : null}
 
         {campaiLinkError && editingCampaiForId === null ? (
-          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
             {campaiLinkError}
           </div>
         ) : null}
 
         {!profileListError && profiles.length === 0 ? (
-          <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
             Noch keine aktiven Profile gefunden.
           </div>
         ) : (
-          <div className="rounded-3xl border border-border bg-card shadow-sm">
+          <div className="rounded-lg border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-border text-sm whitespace-nowrap">
                 <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -538,7 +538,7 @@ export default function AdminUsersClient() {
             onClick={cancelCampaiLink}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-border bg-card p-5 shadow-2xl">
+          <div className="relative z-10 w-full max-w-2xl rounded-lg border border-border bg-card p-5 shadow-2xl">
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>

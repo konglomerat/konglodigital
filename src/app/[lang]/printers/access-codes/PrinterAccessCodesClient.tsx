@@ -74,7 +74,7 @@ export default function PrinterAccessCodesClient() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-success-border bg-success-soft p-4 shadow-sm md:p-5">
+      <section className="rounded-lg border border-success-border bg-success-soft p-4 shadow-sm md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="mx-auto w-full max-w-[320px] md:mx-0 md:max-w-[320px]">
             <Image
@@ -142,7 +142,7 @@ export default function PrinterAccessCodesClient() {
       ) : null}
 
       {entries.length > 0 ? (
-        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">

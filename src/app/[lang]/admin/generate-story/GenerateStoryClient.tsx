@@ -680,25 +680,25 @@ export default function GenerateStoryClient({
         </div>
 
         {submitError ? (
-          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {submitError}
           </div>
         ) : null}
 
         {submitWarning ? (
-          <div className="mt-4 rounded-3xl border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
+          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
             {submitWarning}
           </div>
         ) : null}
 
         {layoutError ? (
-          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {layoutError}
           </div>
         ) : null}
 
         {layoutWarning ? (
-          <div className="mt-4 rounded-3xl border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
+          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
             {layoutWarning}
           </div>
         ) : null}

@@ -29,7 +29,7 @@ export function FormSection({
   return (
     <section
       className={cn(
-        "rounded-3xl border border-border bg-card p-6 shadow-sm",
+        "rounded-lg border border-border bg-card p-6 shadow-sm",
         className,
       )}
       {...props}
@@ -42,7 +42,9 @@ export function FormSection({
           <span>{title}</span>
         </h2>
         {description ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {description}
+          </p>
         ) : null}
       </header>
       {children}

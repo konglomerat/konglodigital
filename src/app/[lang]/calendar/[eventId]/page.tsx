@@ -50,7 +50,7 @@ export default async function CalendarEventDetailPage({
         eyebrow="Kalender"
         title="Termin-Details"
         subTitle="Informationen zu einem ausgewählten Termin."
-        className="rounded-3xl border border-border bg-card p-6 shadow-sm"
+        className="rounded-lg border border-border bg-card p-6 shadow-sm"
         backLink={{ href: "/calendar", label: "Zurück zur Übersicht" }}
         links={[
           {

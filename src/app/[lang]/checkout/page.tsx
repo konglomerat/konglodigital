@@ -406,7 +406,7 @@ export default function CheckoutPage() {
         <p className="text-sm text-destructive">{descriptionsError}</p>
       ) : null}
 
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-foreground">Cart summary</h2>
         <p className="mt-2 text-xs text-muted-foreground">
           {cartJobs.length} print(s) • {cartProducts.length} product(s)
@@ -569,7 +569,7 @@ export default function CheckoutPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-foreground">Cart items</h2>
         <div className="mt-4 space-y-3">
           {cartJobs.length === 0 && cartProducts.length === 0 ? (

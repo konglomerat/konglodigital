@@ -193,7 +193,7 @@ export default function RegisterCompletePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-foreground">
           Registrierung abschliessen
         </h1>

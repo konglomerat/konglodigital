@@ -163,7 +163,7 @@ export default function PrinterEmptyingPage() {
         {printers.map((printer) => (
           <div
             key={printer.id}
-            className="rounded-3xl border border-border bg-card p-6 shadow-sm"
+            className="rounded-lg border border-border bg-card p-6 shadow-sm"
           >
             <div className="flex items-start justify-between gap-4">
               <div>

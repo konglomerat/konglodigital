@@ -243,7 +243,7 @@ export default function MonatsbeitragPage() {
             : (currentPlanInfo?.title ?? "—")}
         </p>
 
-        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="grid gap-4 md:grid-cols-3">
             {accessCardOptions.map((option) => (
               <label
@@ -281,7 +281,7 @@ export default function MonatsbeitragPage() {
         </section>
 
         {selectedOption === "subscription" ? (
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
@@ -373,7 +373,7 @@ export default function MonatsbeitragPage() {
         ) : null}
 
         {selectedOption === "ten-visit" ? (
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">

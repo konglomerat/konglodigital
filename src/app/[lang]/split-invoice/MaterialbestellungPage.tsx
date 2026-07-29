@@ -1228,7 +1228,7 @@ export default function MaterialInvoicesPage({
           </FormSection>
         )}
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <header className="mb-4 flex items-start justify-between gap-4">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">

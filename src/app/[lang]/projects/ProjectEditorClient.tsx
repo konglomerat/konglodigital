@@ -653,7 +653,7 @@ export default function ProjectEditorClient({
         className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]"
         onSubmit={handleSubmit(onSubmit)}
       >
-        <section className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Titel", "de")}
@@ -888,7 +888,7 @@ export default function ProjectEditorClient({
           </div>
         </section>
 
-        <section className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Autor", "de")}

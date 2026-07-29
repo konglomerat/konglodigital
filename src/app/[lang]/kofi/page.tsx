@@ -616,7 +616,7 @@ const KoFiTable = ({
 
   return (
     <section
-      className={`min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
+      className={`min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -1031,7 +1031,7 @@ export default function KoFiPage() {
         subTitleClassName="mt-3 max-w-3xl leading-6"
       />
 
-      <section className="mt-6 min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="mt-6 min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
           <FontAwesomeIcon
             icon={faFilter}
@@ -1154,7 +1154,7 @@ export default function KoFiPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="mt-8 flex items-center justify-center gap-3 rounded-3xl border border-border bg-card px-6 py-16 text-muted-foreground shadow-sm">
+        <div className="mt-8 flex items-center justify-center gap-3 rounded-lg border border-border bg-card px-6 py-16 text-muted-foreground shadow-sm">
           <FontAwesomeIcon icon={faSpinner} spin className="h-5 w-5" />
           KoFi-Daten werden geladen…
         </div>

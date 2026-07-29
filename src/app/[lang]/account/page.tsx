@@ -365,20 +365,20 @@ export default function AccountPage() {
       ) : null}
 
       {loadingUser ? (
-        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <p className="text-sm text-muted-foreground">
             Konto wird geladen ...
           </p>
         </section>
       ) : accountLoadError ? (
-        <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-destructive">
             Konto konnte nicht geladen werden
           </h2>
           <p className="mt-2 text-sm text-destructive">{accountLoadError}</p>
         </section>
       ) : !user ? (
-        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-foreground">
             Anmeldung erforderlich
           </h2>
@@ -395,7 +395,7 @@ export default function AccountPage() {
         </section>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-foreground">Profil</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Dein Name wird direkt aus Campai übernommen.
@@ -505,7 +505,7 @@ export default function AccountPage() {
             </form>
           </section>
 
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-foreground">Passwort</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Wähle ein neues Passwort mit mindestens 8 Zeichen.
@@ -557,7 +557,7 @@ export default function AccountPage() {
             </form>
           </section>
 
-          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
+          <section className="rounded-lg border border-border bg-card p-6 shadow-sm lg:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">

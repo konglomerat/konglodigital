@@ -97,7 +97,7 @@ export default async function ProjectsPage() {
       />
 
       {projects.length === 0 ? (
-        <section className="rounded-3xl border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground shadow-sm   ">
+        <section className="rounded-lg border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground shadow-sm   ">
           {tx("Es gibt noch keine Projekte.", "de")}
         </section>
       ) : (

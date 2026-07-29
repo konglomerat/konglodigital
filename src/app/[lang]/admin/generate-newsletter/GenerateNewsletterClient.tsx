@@ -363,7 +363,7 @@ export default function GenerateNewsletterClient({
         </div>
 
         {rapidmailError ? (
-          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {rapidmailError}
           </div>
         ) : null}
@@ -413,7 +413,7 @@ export default function GenerateNewsletterClient({
         </div>
       </FormSection>
 
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-foreground">
@@ -454,13 +454,13 @@ export default function GenerateNewsletterClient({
         </div>
 
         {submitError ? (
-          <div className="mt-4 rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
             {submitError}
           </div>
         ) : null}
 
         {submitSuccess ? (
-          <div className="mt-4 rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
+          <div className="mt-4 rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
             <p>{submitSuccess}</p>
             {createdDraftUrl ? (
               <p className="mt-2">

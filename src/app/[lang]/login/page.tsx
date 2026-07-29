@@ -60,7 +60,7 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Melde dich mit deinen Zugangsdaten an.
@@ -130,7 +130,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-background px-6">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
             <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
             <p className="mt-2 text-sm text-muted-foreground">Lädt ...</p>
           </div>

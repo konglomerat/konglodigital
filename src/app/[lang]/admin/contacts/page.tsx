@@ -227,13 +227,13 @@ const ContactSection = ({
       </div>
 
       {error ? (
-        <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
           {error}
         </div>
       ) : null}
 
       {isLoading && !rows ? (
-        <div className="flex items-center justify-center gap-2 rounded-3xl border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm">
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm">
           <FontAwesomeIcon
             icon={faSpinner}
             className="animate-spin text-base"
@@ -244,7 +244,7 @@ const ContactSection = ({
 
       {filteredRows ? (
         filteredRows.length === 0 ? (
-          <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
             {emptyText}
           </div>
         ) : (
@@ -331,7 +331,7 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
 };
 
 const ContactTable = ({ rows }: { rows: CampaiContactRow[] }) => (
-  <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+  <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-border text-sm">
         <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">

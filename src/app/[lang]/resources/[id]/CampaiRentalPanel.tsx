@@ -165,7 +165,7 @@ export default function CampaiRentalPanel({
   };
 
   return (
-    <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-bold text-foreground">
           {tx("Rent resource", "en")}
