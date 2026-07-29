@@ -1,7 +1,0 @@
-[     436ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
-[     504ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
-[     768ms] Uncaught TypeError: Cannot read properties of null (reading 'classList')
-    at y (https://support.konglomerat.org/packs/js/sdk.js:294:340)
-    at toggleBubbleVisibility (https://support.konglomerat.org/packs/js/sdk.js:299:12948)
-    at ChatwootWidget.useEffect.syncWidgetState (http://localhost:3000/_next/static/chunks/src_0da243f3._.js:305:27)
-    at ChatwootWidget.useEffect.ensureChatwoot (http://localhost:3000/_next/static/chunks/src_0da243f3._.js:323:20)

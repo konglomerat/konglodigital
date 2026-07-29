@@ -13,7 +13,7 @@ import ResourceDetailClient from "./ResourceDetailClient";
 import { normalizeResourceMapFeatures } from "../map-features";
 import {
   getSupabaseRenderedImageUrl,
-  isImageUrl,
+  isImageMediaUrl,
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
@@ -325,8 +325,11 @@ const getResourceOgImage = (resource: ResourcePayload) => {
   const resourceImage =
     resource.images?.find(
       (media): media is string =>
-        typeof media === "string" && isImageUrl(media),
-    ) ?? (resource.image && isImageUrl(resource.image) ? resource.image : null);
+        typeof media === "string" && isImageMediaUrl(media),
+    ) ??
+    (resource.image && isImageMediaUrl(resource.image)
+      ? resource.image
+      : null);
 
   if (resourceImage) {
     return getSupabaseRenderedImageUrl(resourceImage, { width: 1600 });

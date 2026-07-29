@@ -392,6 +392,8 @@ const readResourcePayload = async (request: NextRequest) => {
       ),
       socialMediaConsent:
         String(formData.get("socialMediaConsent") ?? "0") === "1",
+      allowNameFallback:
+        String(formData.get("allowNameFallback") ?? "0") === "1",
       imageFiles: images,
       mapFeatures: null,
       maxImageWidth:
@@ -416,6 +418,7 @@ const readResourcePayload = async (request: NextRequest) => {
     imageUrl?: string | null;
     imageUrls?: string[] | null;
     mapFeatures?: unknown;
+    allowNameFallback?: boolean;
   };
   return {
     name: body.name ?? "",
@@ -436,6 +439,7 @@ const readResourcePayload = async (request: NextRequest) => {
     workshopResourceId: body.workshopResourceId ?? "",
     projectLinks: normalizeProjectLinks(body.projectLinks),
     socialMediaConsent: body.socialMediaConsent ?? false,
+    allowNameFallback: body.allowNameFallback ?? false,
     imageFiles: [] as File[],
     imageUrl: body.imageUrl ?? null,
     imageUrls: body.imageUrls ?? null,
@@ -617,6 +621,21 @@ const resizeImageBuffer = async (file: File, maxWidth: number) => {
 const describeImage = async (files: File[], imageUrls?: string[] | null) => {
   return describeInventoryImages({ files, imageUrls });
 };
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error && error.message.trim()
+    ? error.message.trim()
+    : "Unknown image analysis error.";
+
+const getErrorCode = (error: unknown) => {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return null;
+  }
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" && code.trim() ? code.trim() : null;
+};
+
+const FALLBACK_RESOURCE_NAME = "Nicht analysierte Ressource";
 
 const buildPreviewVideoPath = (path: string) => {
   const lastDotIndex = path.lastIndexOf(".");
@@ -944,6 +963,7 @@ export const POST = async (request: NextRequest) => {
   let description = payload.description?.trim() ?? "";
   let name = payload.name.trim();
   let tags = payload.tags ? splitList(payload.tags) : [];
+  let imageAnalysisError: unknown = null;
   const workshopResourceId = await resolveWorkshopResourceId(
     supabase,
     payload.workshopResourceId ?? "",
@@ -1026,9 +1046,13 @@ export const POST = async (request: NextRequest) => {
     isImageUrl(url),
   );
   if (imageFiles.length > 0 || imageUrlsForAnalysis.length > 0) {
-    const vision = await describeImage(imageFiles, imageUrlsForAnalysis).catch(
-      () => null,
-    );
+    let vision: Awaited<ReturnType<typeof describeImage>> | null = null;
+    try {
+      vision = await describeImage(imageFiles, imageUrlsForAnalysis);
+    } catch (error) {
+      imageAnalysisError = error;
+      console.error("Unable to analyze resource images:", error);
+    }
     if (vision) {
       if (!description && vision.description) {
         description = vision.description;
@@ -1039,6 +1063,20 @@ export const POST = async (request: NextRequest) => {
       if (tags.length === 0 && vision.tags) {
         tags = vision.tags.map((tag) => tag.trim()).filter(Boolean);
       }
+    }
+  }
+
+  if (!name) {
+    if (payload.allowNameFallback && hasIncomingMedia) {
+      name = FALLBACK_RESOURCE_NAME;
+    } else if (imageAnalysisError) {
+      return NextResponse.json(
+        {
+          error: `Image analysis failed: ${getErrorMessage(imageAnalysisError)}`,
+          code: getErrorCode(imageAnalysisError),
+        },
+        { status: 502 },
+      );
     }
   }
 
@@ -1118,5 +1156,18 @@ export const POST = async (request: NextRequest) => {
   if (resource.type === INVENTORY_HIDDEN_RESOURCE_TYPE) {
     revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
   }
-  return NextResponse.json({ id: resource.id, resource, campaiSync: syncResult });
+  return NextResponse.json({
+    id: resource.id,
+    resource,
+    campaiSync: syncResult,
+    warnings: imageAnalysisError
+      ? [
+          {
+            code: "image_analysis_failed",
+            providerCode: getErrorCode(imageAnalysisError),
+            message: getErrorMessage(imageAnalysisError),
+          },
+        ]
+      : [],
+  });
 };

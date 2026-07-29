@@ -751,6 +751,11 @@ export default function BatchResourcePage() {
             name?: string;
             prettyTitle?: string | null;
           };
+          warnings?: Array<{
+            code?: string;
+            providerCode?: string | null;
+            message?: string;
+          }>;
         }>("/api/campai/resources", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -764,6 +769,7 @@ export default function BatchResourcePage() {
             attachable: false,
             imageUrl: imageUrls[0] ?? null,
             imageUrls,
+            allowNameFallback: true,
             mapFeatures: [
               {
                 id: "gps-point",
@@ -778,8 +784,11 @@ export default function BatchResourcePage() {
         const createdId = created.id ?? created.resource?.id;
         const createdPrettyTitle = created.resource?.prettyTitle ?? null;
         const createdTitle = created.resource?.name ?? "";
+        const imageAnalysisFailed = created.warnings?.some(
+          (warning) => warning.code === "image_analysis_failed",
+        );
 
-        if (autoGenerateCover && createdId) {
+        if (autoGenerateCover && createdId && !imageAnalysisFailed) {
           await fetchJson<{ resource?: { id: string } }>(
             `/api/campai/resources/${createdId}/cover`,
             {
@@ -799,13 +808,21 @@ export default function BatchResourcePage() {
               ? {
                   ...job,
                   status: "success",
-                  message: createdId
-                    ? autoGenerateCover
-                      ? tx("AI cover generated · Open resource")
-                      : tx("Resource created · Open resource")
-                    : autoGenerateCover
-                      ? tx("AI cover skipped (resource id missing).")
-                      : tx("Resource created (id missing)."),
+                  message: imageAnalysisFailed
+                    ? createdId
+                      ? tx(
+                          "Resource created without AI analysis · Open resource",
+                        )
+                      : tx(
+                          "Resource created without AI analysis (id missing).",
+                        )
+                    : createdId
+                      ? autoGenerateCover
+                        ? tx("AI cover generated · Open resource")
+                        : tx("Resource created · Open resource")
+                      : autoGenerateCover
+                        ? tx("AI cover skipped (resource id missing).")
+                        : tx("Resource created (id missing)."),
                   resourceId: createdId,
                   resourcePrettyTitle: createdPrettyTitle,
                 }

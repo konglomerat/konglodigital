@@ -147,6 +147,8 @@
     "Resource and map features saved.": "Ressource und Kartenfunktionen gespeichert.",
     "Resource created · Open resource": "Ressource erstellt · Ressource öffnen",
     "Resource created (id missing).": "Ressource erstellt (ID fehlt).",
+    "Resource created without AI analysis · Open resource": "Ressource ohne KI-Analyse erstellt · Ressource öffnen",
+    "Resource created without AI analysis (id missing).": "Ressource ohne KI-Analyse erstellt (ID fehlt).",
     "Resource created.": "Ressource erstellt.",
     "Resource details": "Ressourcendetails",
     "Resource name": "Ressourcenname",

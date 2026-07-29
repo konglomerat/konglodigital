@@ -95,6 +95,15 @@ export const getResourceMediaKindFromUrl = (
 export const isImageUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "image";
 
+export const isImageMediaUrl = (value?: string | null) => {
+  if (!value) {
+    return false;
+  }
+
+  const mediaKind = getResourceMediaKindFromUrl(value);
+  return mediaKind === "image" || mediaKind === "unknown";
+};
+
 export const isVideoUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "video";
 

@@ -301,7 +301,7 @@ const ResourceCard = ({
           <h3 className="flex items-center justify-between gap-4 text-md font-semibold text-foreground">
             <Link
               href={resourcePath}
-              className="inline-flex items-center gap-2 font-semibold text-foreground hover:underline"
+              className="font-semibold text-foreground hover:underline"
               onClick={onNavigate}
             >
               {highlightText(resource.name, normalizedSearchTerm)}

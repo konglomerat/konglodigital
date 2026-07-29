@@ -21,7 +21,7 @@ import { hasRight } from "@/lib/permissions";
 import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
-  isImageUrl,
+  isImageMediaUrl,
 } from "@/lib/resource-media";
 import { loadProjectByIdentifier } from "../project-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
@@ -81,8 +81,9 @@ const getProjectOgImage = (
   const projectImage =
     project?.images?.find(
       (media): media is string =>
-        typeof media === "string" && isImageUrl(media),
-    ) ?? (project?.image && isImageUrl(project.image) ? project.image : null);
+        typeof media === "string" && isImageMediaUrl(media),
+    ) ??
+    (project?.image && isImageMediaUrl(project.image) ? project.image : null);
 
   if (projectImage) {
     return getSupabaseRenderedImageUrl(projectImage, { width: 1600 });
