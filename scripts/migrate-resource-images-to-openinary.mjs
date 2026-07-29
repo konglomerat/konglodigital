@@ -7,8 +7,20 @@ const APPLY = process.argv.includes("--apply");
 const limitArgument = process.argv.find((argument) =>
   argument.startsWith("--limit="),
 );
+const maxUploadsArgument = process.argv.find((argument) =>
+  argument.startsWith("--max-uploads="),
+);
+const typeArgument = process.argv.find((argument) =>
+  argument.startsWith("--type="),
+);
 const LIMIT = limitArgument
   ? Number.parseInt(limitArgument.slice("--limit=".length), 10)
+  : null;
+const MAX_UPLOADS = maxUploadsArgument
+  ? Number.parseInt(maxUploadsArgument.slice("--max-uploads=".length), 10)
+  : null;
+const RESOURCE_TYPE = typeArgument
+  ? typeArgument.slice("--type=".length).trim()
   : null;
 const NON_IMAGE_EXTENSIONS = new Set([
   "m4v",
@@ -171,7 +183,9 @@ const uploadImage = async ({
   sourceUrl,
 }) => {
   const originalUrl = getOriginalSupabaseUrl(sourceUrl);
-  const downloadResponse = await fetch(originalUrl);
+  const downloadResponse = await fetch(originalUrl, {
+    signal: AbortSignal.timeout(120_000),
+  });
   if (!downloadResponse.ok) {
     throw new Error(
       `Download failed (HTTP ${downloadResponse.status}): ${sourceUrl}`,
@@ -229,6 +243,7 @@ const uploadImage = async ({
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
+      signal: AbortSignal.timeout(120_000),
     },
   );
   const responseText = await uploadResponse.text();
@@ -280,36 +295,50 @@ const supabase = createClient(
 let query = supabase
   .from("resources")
   .select("id,image,images,media_previews,media_posters,type")
-  .ilike("type", "project")
   .order("created_at", { ascending: true });
+if (RESOURCE_TYPE) {
+  query = query.ilike("type", RESOURCE_TYPE);
+}
 if (Number.isFinite(LIMIT) && LIMIT > 0) {
   query = query.limit(LIMIT);
 }
 
-const { data: projects, error: projectsError } = await query;
-if (projectsError) {
-  throw new Error(projectsError.message);
+const { data: resources, error: resourcesError } = await query;
+if (resourcesError) {
+  throw new Error(resourcesError.message);
 }
 
 const replacements = new Map();
+const candidateUrls = new Set();
 let uploadCount = 0;
 let updateCount = 0;
 let failureCount = 0;
 
-for (const [projectIndex, project] of (projects ?? []).entries()) {
+for (const [resourceIndex, resource] of (resources ?? []).entries()) {
   const mediaUrls = new Set([
-    project.image,
-    ...(Array.isArray(project.images) ? project.images : []),
-    ...Object.keys(project.media_previews ?? {}),
-    ...Object.values(project.media_previews ?? {}),
-    ...Object.keys(project.media_posters ?? {}),
-    ...Object.values(project.media_posters ?? {}),
+    resource.image,
+    ...(Array.isArray(resource.images) ? resource.images : []),
+    ...Object.keys(resource.media_previews ?? {}),
+    ...Object.values(resource.media_previews ?? {}),
+    ...Object.keys(resource.media_posters ?? {}),
+    ...Object.values(resource.media_posters ?? {}),
   ]);
   const imageUrls = [...mediaUrls].filter(isMigratableImageUrl);
+  for (const sourceUrl of imageUrls) {
+    candidateUrls.add(sourceUrl);
+  }
 
   for (const sourceUrl of imageUrls) {
     if (replacements.has(sourceUrl)) {
       continue;
+    }
+    if (
+      APPLY &&
+      Number.isFinite(MAX_UPLOADS) &&
+      MAX_UPLOADS > 0 &&
+      uploadCount >= MAX_UPLOADS
+    ) {
+      break;
     }
     if (!APPLY) {
       replacements.set(sourceUrl, sourceUrl);
@@ -321,7 +350,7 @@ for (const [projectIndex, project] of (projects ?? []).entries()) {
         apiKey,
         baseUrl,
         uploadBaseUrl,
-        resourceId: project.id,
+        resourceId: resource.id,
         sourceUrl,
       });
       if (!openinaryUrl) {
@@ -329,13 +358,15 @@ for (const [projectIndex, project] of (projects ?? []).entries()) {
       }
       replacements.set(sourceUrl, openinaryUrl);
       uploadCount += 1;
-      console.log(
-        `[${projectIndex + 1}/${projects.length}] uploaded ${uploadCount}: ${project.id}`,
-      );
+      if (uploadCount <= 3 || uploadCount % 10 === 0) {
+        console.log(
+          `[${resourceIndex + 1}/${resources.length}] uploaded ${uploadCount}: ${resource.id}`,
+        );
+      }
     } catch (error) {
       failureCount += 1;
       console.error(
-        `[${projectIndex + 1}/${projects.length}] ${
+        `[${resourceIndex + 1}/${resources.length}] ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -347,22 +378,24 @@ for (const [projectIndex, project] of (projects ?? []).entries()) {
   }
 
   const nextImage =
-    typeof project.image === "string"
-      ? (replacements.get(project.image) ?? project.image)
-      : project.image;
-  const nextImages = Array.isArray(project.images)
-    ? project.images.map((url) => replacements.get(url) ?? url)
-    : project.images;
+    typeof resource.image === "string"
+      ? (replacements.get(resource.image) ?? resource.image)
+      : resource.image;
+  const nextImages = Array.isArray(resource.images)
+    ? resource.images.map((url) => replacements.get(url) ?? url)
+    : resource.images;
   const nextMediaPreviews = replaceMediaMap(
-    project.media_previews,
+    resource.media_previews,
     replacements,
   );
-  const nextMediaPosters = replaceMediaMap(project.media_posters, replacements);
+  const nextMediaPosters = replaceMediaMap(resource.media_posters, replacements);
   const changed =
-    nextImage !== project.image ||
-    JSON.stringify(nextImages) !== JSON.stringify(project.images) ||
-    JSON.stringify(nextMediaPreviews) !== JSON.stringify(project.media_previews) ||
-    JSON.stringify(nextMediaPosters) !== JSON.stringify(project.media_posters);
+    nextImage !== resource.image ||
+    JSON.stringify(nextImages) !== JSON.stringify(resource.images) ||
+    JSON.stringify(nextMediaPreviews) !==
+      JSON.stringify(resource.media_previews) ||
+    JSON.stringify(nextMediaPosters) !==
+      JSON.stringify(resource.media_posters);
 
   if (!changed) {
     continue;
@@ -377,11 +410,11 @@ for (const [projectIndex, project] of (projects ?? []).entries()) {
       media_posters: nextMediaPosters,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", project.id);
+    .eq("id", resource.id);
   if (updateError) {
     failureCount += 1;
     console.error(
-      `[${projectIndex + 1}/${projects.length}] update failed: ${updateError.message}`,
+      `[${resourceIndex + 1}/${resources.length}] update failed: ${updateError.message}`,
     );
     continue;
   }
@@ -392,10 +425,11 @@ console.log(
   JSON.stringify(
     {
       apply: APPLY,
-      projects: projects?.length ?? 0,
-      candidateImages: replacements.size,
+      resourceType: RESOURCE_TYPE,
+      resources: resources?.length ?? 0,
+      candidateImages: candidateUrls.size,
       uploadedImages: uploadCount,
-      updatedProjects: updateCount,
+      updatedResources: updateCount,
       failures: failureCount,
       supabaseOriginalsDeleted: 0,
     },
