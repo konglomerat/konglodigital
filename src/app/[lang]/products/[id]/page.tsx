@@ -140,16 +140,20 @@ export default function CampaiProductDetailPage({
         />
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Produkt wird geladen ...</p>
+            <p className="text-sm text-muted-foreground">
+              Produkt wird geladen ...
+            </p>
           ) : !product ? (
-            <p className="text-sm text-muted-foreground">Produkt nicht gefunden.</p>
+            <p className="text-sm text-muted-foreground">
+              Produkt nicht gefunden.
+            </p>
           ) : (
             <div className="flex flex-col gap-6">
               <div>

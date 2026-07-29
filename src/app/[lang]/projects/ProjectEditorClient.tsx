@@ -639,12 +639,12 @@ export default function ProjectEditorClient({
       />
 
       {formError ? (
-        <section className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {formError}
         </section>
       ) : null}
       {formMessage ? (
-        <section className="rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+        <section className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
           {formMessage}
         </section>
       ) : null}
@@ -661,7 +661,7 @@ export default function ProjectEditorClient({
             <input
               type="text"
               {...register("title", { required: true })}
-              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
               placeholder={tx(
                 "z. B. Modulares Regal für die Holzwerkstatt",
                 "de",
@@ -719,7 +719,7 @@ export default function ProjectEditorClient({
               type="file"
               accept="image/*,video/*,.pdf,application/pdf"
               multiple
-              className="w-full rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-5 text-sm"
+              className="w-full rounded-lg border border-dashed border-input bg-muted/50 px-4 py-5 text-sm"
               onChange={(event) => {
                 void handleAddImages(event);
               }}
@@ -751,9 +751,9 @@ export default function ProjectEditorClient({
                         stiffness: 420,
                         damping: 32,
                       }}
-                      className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-2xl border border-border bg-accent p-3 active:cursor-grabbing"
+                      className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-lg border border-border bg-accent p-3 active:cursor-grabbing"
                     >
-                      <div className="overflow-hidden rounded-xl bg-card">
+                      <div className="overflow-hidden rounded-lg bg-card">
                         {imageItem.mediaType === "video" ? (
                           <video
                             src={imageItem.previewUrl}
@@ -853,18 +853,18 @@ export default function ProjectEditorClient({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid gap-3 rounded-2xl border border-border bg-muted/50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+                  className="grid gap-3 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
                 >
                   <input
                     type="text"
                     {...register(`links.${index}.label`)}
-                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
                     placeholder={tx("Linktitel", "de")}
                   />
                   <input
                     type="text"
                     {...register(`links.${index}.url`)}
-                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
                     placeholder="https://…"
                   />
                   <Button
@@ -896,7 +896,7 @@ export default function ProjectEditorClient({
             <input
               type="text"
               {...register("authorName")}
-              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
               placeholder={tx("z. B. Anna Beispiel", "de")}
             />
             <p className="text-xs text-muted-foreground">
@@ -916,7 +916,7 @@ export default function ProjectEditorClient({
             <input
               type="date"
               {...register("publishDate")}
-              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
             />
             <p className="text-xs text-muted-foreground">
               {tx(
@@ -982,7 +982,7 @@ export default function ProjectEditorClient({
               {tx("Tags", "de")}
             </label>
             <input type="hidden" {...register("tags")} />
-            <div className="rounded-2xl border border-border bg-card px-4 py-3 focus-within:border-ring/80">
+            <div className="rounded-lg border border-border bg-card px-4 py-3 focus-within:border-ring/80">
               <div className="flex flex-wrap items-center gap-2">
                 {projectTags.map((tag) => (
                   <span
@@ -1021,7 +1021,7 @@ export default function ProjectEditorClient({
             </p>
           </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
             <input
               type="checkbox"
               {...register("socialMediaConsent")}

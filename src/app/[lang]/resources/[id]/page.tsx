@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import heroHelloImage from "../../../hero-hello.jpg";
 import {
   buildResourcePath,
   resolveResourceIdByPrettyTitle,
@@ -10,6 +12,8 @@ import { localizePathname } from "@/i18n/config";
 import ResourceDetailClient from "./ResourceDetailClient";
 import { normalizeResourceMapFeatures } from "../map-features";
 import {
+  getSupabaseRenderedImageUrl,
+  isImageUrl,
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
@@ -39,6 +43,7 @@ type ResourceRow = {
 const MAP_BASE_RESOURCE_TYPES = ["place", "furniture"] as const;
 const MAP_BASE_RESOURCE_LIMIT = 1000;
 const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
+const SITE_TITLE = "Konglomerat Digitale Werkstätten";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -275,6 +280,117 @@ const loadResource = async (id: string | undefined) => {
 
   return getCachedResource(id);
 };
+
+const stripMarkdown = (value: string | null | undefined) => {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/(^|\s)([#>*_~-]+)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const truncateText = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+};
+
+const getResourceDescription = (
+  resource: ResourcePayload,
+  locale: "de" | "en",
+) => {
+  const plainDescription = truncateText(
+    stripMarkdown(resource.description),
+    180,
+  );
+  if (plainDescription) {
+    return plainDescription;
+  }
+
+  return locale === "en"
+    ? `${resource.name}. View this inventory item.`
+    : `${resource.name}. Sieh dir diesen Inventargegenstand an.`;
+};
+
+const getResourceOgImage = (resource: ResourcePayload) => {
+  const resourceImage =
+    resource.images?.find(
+      (media): media is string =>
+        typeof media === "string" && isImageUrl(media),
+    ) ?? (resource.image && isImageUrl(resource.image) ? resource.image : null);
+
+  if (resourceImage) {
+    return getSupabaseRenderedImageUrl(resourceImage, { width: 1600 });
+  }
+
+  return heroHelloImage.src;
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params:
+    | { id: string; lang?: string }
+    | Promise<{ id: string; lang?: string }>;
+}): Promise<Metadata> {
+  const { id, lang } = await Promise.resolve(params);
+  const locale = lang === "en" ? "en" : "de";
+  const { resource } = await loadResource(id);
+
+  if (!resource) {
+    return {};
+  }
+
+  const canonicalPath = localizePathname(
+    buildResourcePath(resource),
+    locale,
+  );
+  const description = getResourceDescription(resource, locale);
+  const ogImage = getResourceOgImage(resource);
+  const title = `${resource.name} | ${SITE_TITLE}`;
+
+  return {
+    title,
+    description,
+    keywords: resource.tags ?? undefined,
+    alternates: {
+      canonical: canonicalPath,
+      languages: {
+        de: localizePathname(buildResourcePath(resource), "de"),
+        en: localizePathname(buildResourcePath(resource), "en"),
+      },
+    },
+    openGraph: {
+      type: "website",
+      url: canonicalPath,
+      title,
+      description,
+      siteName: SITE_TITLE,
+      locale: locale === "en" ? "en_US" : "de_DE",
+      images: [
+        {
+          url: ogImage,
+          alt: resource.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
 
 const loadMapBasemapResourcesFromDb = async () => {
   try {

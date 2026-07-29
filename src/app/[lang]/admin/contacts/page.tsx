@@ -200,7 +200,7 @@ const ContactSection = ({
               value={searchTerm}
               placeholder="Suche nach Name, Nummer oder Tag"
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="min-w-64 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
+              className="min-w-64 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
             />
           ) : null}
           <Button
@@ -234,7 +234,10 @@ const ContactSection = ({
 
       {isLoading && !rows ? (
         <div className="flex items-center justify-center gap-2 rounded-3xl border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm">
-          <FontAwesomeIcon icon={faSpinner} className="animate-spin text-base" />
+          <FontAwesomeIcon
+            icon={faSpinner}
+            className="animate-spin text-base"
+          />
           Lade Kontakte ...
         </div>
       ) : null}
@@ -262,7 +265,10 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
   if (contact.inviteStatus === "invited" && state.status !== "sent") {
     const invitedAt = formatInvitedAt(contact.invitedAt);
     return (
-      <span className="whitespace-nowrap text-xs text-foreground/80" title="Eingeladen am">
+      <span
+        className="whitespace-nowrap text-xs text-foreground/80"
+        title="Eingeladen am"
+      >
         {invitedAt ?? "Eingeladen"}
       </span>
     );

@@ -399,7 +399,9 @@ export default function CheckoutPage() {
         ]}
       />
 
-      {jobsError ? <p className="text-sm text-destructive">{jobsError}</p> : null}
+      {jobsError ? (
+        <p className="text-sm text-destructive">{jobsError}</p>
+      ) : null}
       {descriptionsError ? (
         <p className="text-sm text-destructive">{descriptionsError}</p>
       ) : null}
@@ -576,7 +578,7 @@ export default function CheckoutPage() {
           {cartJobs.map((job) => (
             <div
               key={job.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/60 p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/60 p-4"
             >
               <div>
                 <p className="text-sm font-semibold text-foreground">
@@ -612,7 +614,7 @@ export default function CheckoutPage() {
           {cartProducts.map((product) => (
             <div
               key={`product-${product.id}`}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/60 p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/60 p-4"
             >
               <div>
                 <p className="text-sm font-semibold text-foreground">

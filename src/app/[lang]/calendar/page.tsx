@@ -59,7 +59,7 @@ export default async function CalendarPage() {
       />
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
@@ -68,7 +68,7 @@ export default async function CalendarPage() {
         {days.map((day) => (
           <section
             key={day.key}
-            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+            className="rounded-lg border border-border bg-card p-4 shadow-sm"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-foreground">

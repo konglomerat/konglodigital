@@ -366,7 +366,7 @@ export default function DuplicatesPageClient({
           </Button>
         </header>
 
-        <section className="rounded-2xl border border-border bg-card p-4 text-sm text-foreground/80">
+        <section className="rounded-lg border border-border bg-card p-4 text-sm text-foreground/80">
           {tx(
             "Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown.",
             "en",
@@ -374,19 +374,19 @@ export default function DuplicatesPageClient({
         </section>
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
 
         {successMessage ? (
-          <section className="rounded-2xl border border-success-border bg-success-soft p-4 text-sm text-success">
+          <section className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success">
             {successMessage}
           </section>
         ) : null}
 
         {duplicatePairs.length === 0 ? (
-          <section className="rounded-2xl border border-border bg-card p-8 text-sm text-muted-foreground">
+          <section className="rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
             {tx("No high-confidence duplicates found.")}
           </section>
         ) : (
@@ -402,7 +402,7 @@ export default function DuplicatesPageClient({
               return (
                 <article
                   key={pair.id}
-                  className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+                  className="rounded-lg border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
@@ -430,7 +430,7 @@ export default function DuplicatesPageClient({
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                    <div className="rounded-xl border border-border bg-muted/50 p-3">
+                    <div className="rounded-lg border border-border bg-muted/50 p-3">
                       <div className="flex flex-col gap-3">
                         {leftImage ? (
                           <img
@@ -480,7 +480,7 @@ export default function DuplicatesPageClient({
                       </span>
                     </div>
 
-                    <div className="rounded-xl border border-border bg-muted/50 p-3">
+                    <div className="rounded-lg border border-border bg-muted/50 p-3">
                       <div className="flex flex-col gap-3">
                         {rightImage ? (
                           <img

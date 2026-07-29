@@ -77,7 +77,8 @@ const ALL_FILTER_OPTION: FilterOption = {
 const isTwoDigitCostCenterOption = (option: CostCenterOption): boolean =>
   /^\d{2}$/.test(option.value.trim());
 
-const isThreeDigitCostCenterValue = (value: string): boolean => /^\d{3}$/.test(value);
+const isThreeDigitCostCenterValue = (value: string): boolean =>
+  /^\d{3}$/.test(value);
 
 const DEFAULT_YEAR_FILTER_OPTION: FilterOption = {
   value: "2026",
@@ -243,7 +244,9 @@ const getSplitDotClassName = (splitKey: string): string => {
   return ACCOUNT_DOT_CLASS_NAMES[hash % ACCOUNT_DOT_CLASS_NAMES.length];
 };
 
-const normalizePaymentStatusTone = (status: string | null): PaymentStatusTone => {
+const normalizePaymentStatusTone = (
+  status: string | null,
+): PaymentStatusTone => {
   const normalized = status?.trim().toLowerCase();
 
   if (!normalized) {
@@ -417,7 +420,9 @@ const sanitizeHiddenColumns = (
   return nextHiddenColumns;
 };
 
-const getHeaderAlignmentClassName = (alignment: TableColumn["align"]): string => {
+const getHeaderAlignmentClassName = (
+  alignment: TableColumn["align"],
+): string => {
   if (alignment === "center") {
     return "text-center";
   }
@@ -519,12 +524,15 @@ const compareNullableValues = (
 
 export default function ReceiptsPage() {
   const [isColumnPanelOpen, setIsColumnPanelOpen] = useState(false);
-  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
+  const [columnOrder, setColumnOrder] =
+    useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [hiddenColumnKeys, setHiddenColumnKeys] = useState<ColumnKey[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [allCostCenters, setAllCostCenters] = useState<CostCenterOption[]>([]);
-  const [costCenter1Labels, setCostCenter1Labels] = useState<CostCenterOption[]>([]);
+  const [costCenter1Labels, setCostCenter1Labels] = useState<
+    CostCenterOption[]
+  >([]);
   const [loadingCostCenters, setLoadingCostCenters] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
@@ -539,12 +547,16 @@ export default function ReceiptsPage() {
     ALL_FILTER_OPTION,
   );
   const [isSaldoHidden, setIsSaldoHidden] = useState(false);
-  const [selectedAccountSummaryKey, setSelectedAccountSummaryKey] = useState<string | null>(null);
+  const [selectedAccountSummaryKey, setSelectedAccountSummaryKey] = useState<
+    string | null
+  >(null);
 
   const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>([]);
   const [loadingReceipts, setLoadingReceipts] = useState(false);
   const [receiptsError, setReceiptsError] = useState<string | null>(null);
-  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(
+    null,
+  );
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: SortDirection;
@@ -562,11 +574,12 @@ export default function ReceiptsPage() {
     setCostCentersError(null);
 
     try {
-      const [bookableResponse, allResponse, costCenter1Response] = await Promise.all([
-        fetch("/api/campai/cost-centers"),
-        fetch("/api/campai/cost-centers?includeNonBookable=1"),
-        fetch("/api/campai/cost-center1-labels"),
-      ]);
+      const [bookableResponse, allResponse, costCenter1Response] =
+        await Promise.all([
+          fetch("/api/campai/cost-centers"),
+          fetch("/api/campai/cost-centers?includeNonBookable=1"),
+          fetch("/api/campai/cost-center1-labels"),
+        ]);
 
       if (!bookableResponse.ok || !allResponse.ok || !costCenter1Response.ok) {
         throw new Error("Werkbereiche konnten nicht geladen werden.");
@@ -603,9 +616,9 @@ export default function ReceiptsPage() {
 
     const loadPreferences = async () => {
       try {
-        const response = await fetchJson<{ preferences?: MemberProfilePreferences }>(
-          "/api/account/preferences",
-        );
+        const response = await fetchJson<{
+          preferences?: MemberProfilePreferences;
+        }>("/api/account/preferences");
 
         if (!active) {
           return;
@@ -747,23 +760,32 @@ export default function ReceiptsPage() {
   }, [allCostCenters, costCenters, selected]);
 
   const selectedPreferenceValues = useMemo(() => {
-    if (selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
+    if (
+      selected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)
+    ) {
       return [ALL_COST_CENTERS_OPTION.value];
     }
 
     return selected.map((option) => option.value);
   }, [selected]);
 
-  const handleSelectedChange = useCallback((value: readonly CostCenterOption[] | null) => {
-    const nextSelected = value ? [...value] : [];
+  const handleSelectedChange = useCallback(
+    (value: readonly CostCenterOption[] | null) => {
+      const nextSelected = value ? [...value] : [];
 
-    if (nextSelected.some((option) => option.value === ALL_COST_CENTERS_OPTION.value)) {
-      setSelected([ALL_COST_CENTERS_OPTION]);
-      return;
-    }
+      if (
+        nextSelected.some(
+          (option) => option.value === ALL_COST_CENTERS_OPTION.value,
+        )
+      ) {
+        setSelected([ALL_COST_CENTERS_OPTION]);
+        return;
+      }
 
-    setSelected(nextSelected);
-  }, []);
+      setSelected(nextSelected);
+    },
+    [],
+  );
 
   const loadReceipts = useCallback(async (values: string[]) => {
     if (values.length === 0) {
@@ -814,9 +836,7 @@ export default function ReceiptsPage() {
       return;
     }
 
-    if (
-      savedSelectedCostCenterValues.includes(ALL_COST_CENTERS_OPTION.value)
-    ) {
+    if (savedSelectedCostCenterValues.includes(ALL_COST_CENTERS_OPTION.value)) {
       setSelected([ALL_COST_CENTERS_OPTION]);
       hasAppliedSavedSelectionRef.current = true;
       return;
@@ -901,7 +921,10 @@ export default function ReceiptsPage() {
   ]);
 
   const visibleReceipts = useMemo(
-    () => receipts.filter((receipt) => !(receipt.type && EXCLUDED_TYPES.has(receipt.type))),
+    () =>
+      receipts.filter(
+        (receipt) => !(receipt.type && EXCLUDED_TYPES.has(receipt.type)),
+      ),
     [receipts],
   );
 
@@ -909,7 +932,9 @@ export default function ReceiptsPage() {
     const years = new Set<string>();
 
     for (const receipt of visibleReceipts) {
-      const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
+      const timestamp = receipt.paidAt
+        ? Date.parse(receipt.paidAt)
+        : Number.NaN;
 
       if (Number.isNaN(timestamp)) {
         continue;
@@ -981,7 +1006,9 @@ export default function ReceiptsPage() {
     return visibleReceipts.filter((receipt) => {
       const selectedYearValue = selectedYear?.value;
       if (selectedYearValue && selectedYearValue !== ALL_FILTER_OPTION.value) {
-        const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
+        const timestamp = receipt.paidAt
+          ? Date.parse(receipt.paidAt)
+          : Number.NaN;
 
         if (
           !Number.isNaN(timestamp) &&
@@ -992,8 +1019,13 @@ export default function ReceiptsPage() {
       }
 
       const selectedStatusValue = selectedStatus?.value;
-      if (selectedStatusValue && selectedStatusValue !== ALL_FILTER_OPTION.value) {
-        if (receipt.paymentStatus?.trim().toLowerCase() !== selectedStatusValue) {
+      if (
+        selectedStatusValue &&
+        selectedStatusValue !== ALL_FILTER_OPTION.value
+      ) {
+        if (
+          receipt.paymentStatus?.trim().toLowerCase() !== selectedStatusValue
+        ) {
           return false;
         }
       }
@@ -1150,7 +1182,10 @@ export default function ReceiptsPage() {
           }
 
           const key = getPositionCostCenter2Key(position);
-          const label = getPositionCostCenter2Label(position, costCenterLabelMap);
+          const label = getPositionCostCenter2Label(
+            position,
+            costCenterLabelMap,
+          );
           const current = accountSummaryMap.get(key) ?? {
             key,
             label,
@@ -1170,7 +1205,10 @@ export default function ReceiptsPage() {
           }
 
           const key = getPositionCostCenter2Key(position);
-          const label = getPositionCostCenter2Label(position, costCenterLabelMap);
+          const label = getPositionCostCenter2Label(
+            position,
+            costCenterLabelMap,
+          );
           const current = accountSummaryMap.get(key) ?? {
             key,
             label,
@@ -1271,20 +1309,29 @@ export default function ReceiptsPage() {
       const isExpense = receipt.type ? EXPENSE_TYPES.has(receipt.type) : false;
       const amount = receipt.totalGrossAmount;
       const incomeCell = isIncome && amount !== null ? formatCents(amount) : "";
-      const expenseCell = isExpense && amount !== null ? formatCents(amount) : "";
+      const expenseCell =
+        isExpense && amount !== null ? formatCents(amount) : "";
       const receiptDescription = getReceiptDescription(receipt);
       const paymentAccountsLabel =
         receipt.paymentAccountNames.length > 0
           ? receipt.paymentAccountNames.join(", ")
           : receipt.paymentAccounts.length > 0
-            ? receipt.paymentAccounts.map((account) => `Konto ${account}`).join(", ")
+            ? receipt.paymentAccounts
+                .map((account) => `Konto ${account}`)
+                .join(", ")
             : "—";
 
       switch (columnKey) {
         case "receiptNumber":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={receipt.receiptNumber ?? "—"}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={receipt.receiptNumber ?? "—"}
+              >
                 {receipt.receiptNumber ?? "—"}
               </span>
             </td>
@@ -1295,9 +1342,13 @@ export default function ReceiptsPage() {
               {receipt.paymentStatus ? (
                 <span
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getPaymentStatusChipClassName(receipt.paymentStatus)}`}
-                  title={getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
+                  title={
+                    getPaymentStatusLabel(receipt.paymentStatus) ??
+                    receipt.paymentStatus
+                  }
                 >
-                  {getPaymentStatusLabel(receipt.paymentStatus) ?? receipt.paymentStatus}
+                  {getPaymentStatusLabel(receipt.paymentStatus) ??
+                    receipt.paymentStatus}
                 </span>
               ) : (
                 "—"
@@ -1306,15 +1357,24 @@ export default function ReceiptsPage() {
           );
         case "paidAt":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.paidAt)}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={formatDate(receipt.paidAt)}
+              >
                 {formatDate(receipt.paidAt)}
               </span>
             </td>
           );
         case "Sphäre":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
               <span
                 className={CELL_TEXT_CLASS_NAME}
                 title={formatFirstPositionField(
@@ -1329,23 +1389,38 @@ export default function ReceiptsPage() {
           );
         case "description":
           return (
-            <td key={cellKey} className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`} title={receiptDescription}>
+            <td
+              key={cellKey}
+              className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`}
+                title={receiptDescription}
+              >
                 {receiptDescription}
               </span>
             </td>
           );
         case "accountName":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={receipt.accountName ?? "—"}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={receipt.accountName ?? "—"}
+              >
                 {receipt.accountName ?? "—"}
               </span>
             </td>
           );
         case "Einnahmen":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400">
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400"
+            >
               <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
                 {incomeCell || "—"}
               </span>
@@ -1353,7 +1428,10 @@ export default function ReceiptsPage() {
           );
         case "Ausgaben":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400">
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400"
+            >
               <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
                 {expenseCell || "—"}
               </span>
@@ -1361,15 +1439,24 @@ export default function ReceiptsPage() {
           );
         case "paymentAccounts":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={paymentAccountsLabel}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={paymentAccountsLabel}
+              >
                 {paymentAccountsLabel}
               </span>
             </td>
           );
         case "positions.account":
           return (
-            <td key={cellKey} className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
+            <td
+              key={cellKey}
+              className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
               {receipt.positions.length > 0 ? (
                 <div
                   className="flex max-w-[180px] items-center gap-3 overflow-hidden"
@@ -1388,7 +1475,9 @@ export default function ReceiptsPage() {
                         aria-hidden="true"
                       />
                       <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                        {position.amount !== null ? formatCents(position.amount) : "—"}
+                        {position.amount !== null
+                          ? formatCents(position.amount)
+                          : "—"}
                       </span>
                     </span>
                   ))}
@@ -1404,7 +1493,11 @@ export default function ReceiptsPage() {
               {receipt.type ? (
                 <span
                   className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                  title={TABLE_COLUMN_MAP.get("type")?.title ?? TYPE_LABELS[receipt.type] ?? receipt.type}
+                  title={
+                    TABLE_COLUMN_MAP.get("type")?.title ??
+                    TYPE_LABELS[receipt.type] ??
+                    receipt.type
+                  }
                 >
                   {TYPE_LABELS[receipt.type] ?? receipt.type}
                 </span>
@@ -1415,16 +1508,28 @@ export default function ReceiptsPage() {
           );
         case "receiptDate":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={formatDate(receipt.receiptDate)}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={formatDate(receipt.receiptDate)}
+              >
                 {formatDate(receipt.receiptDate)}
               </span>
             </td>
           );
         case "createdAt":
           return (
-            <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100">
-              <span className={CELL_TEXT_CLASS_NAME} title={formatDateTime(receipt.createdAt)}>
+            <td
+              key={cellKey}
+              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+            >
+              <span
+                className={CELL_TEXT_CLASS_NAME}
+                title={formatDateTime(receipt.createdAt)}
+              >
                 {formatDateTime(receipt.createdAt)}
               </span>
             </td>
@@ -1491,8 +1596,8 @@ export default function ReceiptsPage() {
             Übersicht
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Wähle einen oder mehrere Werkbereiche/Projekte, um alle
-            zugehörigen Belege zu sehen.
+            Wähle einen oder mehrere Werkbereiche/Projekte, um alle zugehörigen
+            Belege zu sehen.
           </p>
         </div>
 
@@ -1621,7 +1726,7 @@ export default function ReceiptsPage() {
 
       {hasSelection && !isSaldoHidden ? (
         <div className="mb-4 flex items-start gap-2 overflow-hidden sm:gap-3">
-          <div className="shrink-0 rounded-xl border border-border bg-card p-3 text-right shadow-sm sm:p-4">
+          <div className="shrink-0 rounded-lg border border-border bg-card p-3 text-right shadow-sm sm:p-4">
             <p className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Saldo
             </p>
@@ -1654,8 +1759,10 @@ export default function ReceiptsPage() {
                   type="button"
                   key={accountSummary.key}
                   onClick={() => toggleAccountSummaryFilter(accountSummary.key)}
-                  aria-pressed={selectedAccountSummaryKey === accountSummary.key}
-                  className={`shrink-0 rounded-xl border p-3 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 sm:p-4 ${
+                  aria-pressed={
+                    selectedAccountSummaryKey === accountSummary.key
+                  }
+                  className={`shrink-0 rounded-lg border p-3 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 sm:p-4 ${
                     selectedAccountSummaryKey === accountSummary.key
                       ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800/80"
                       : "border-zinc-200/70 bg-zinc-50/75 hover:border-zinc-300 hover:bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
@@ -1692,7 +1799,10 @@ export default function ReceiptsPage() {
                     <span className="text-emerald-600/80 dark:text-emerald-400/80">
                       +{formatCents(accountSummary.income)}
                     </span>
-                    <span className="text-muted-foreground/70" aria-hidden="true">
+                    <span
+                      className="text-muted-foreground/70"
+                      aria-hidden="true"
+                    >
                       &middot;
                     </span>
                     <span className="text-rose-600/80 dark:text-rose-400/80">
@@ -1735,7 +1845,7 @@ export default function ReceiptsPage() {
 
           {isColumnPanelOpen ? (
             <div
-              className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg"
+              className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg"
               role="dialog"
               aria-label="Spalten verwalten"
             >
@@ -1780,7 +1890,10 @@ export default function ReceiptsPage() {
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`${column.label} nach oben verschieben`}
                         >
-                          <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
+                          <FontAwesomeIcon
+                            icon={faArrowUp}
+                            className="h-3.5 w-3.5"
+                          />
                         </button>
                         <button
                           type="button"
@@ -1789,7 +1902,10 @@ export default function ReceiptsPage() {
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`${column.label} nach unten verschieben`}
                         >
-                          <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
+                          <FontAwesomeIcon
+                            icon={faArrowDown}
+                            className="h-3.5 w-3.5"
+                          />
                         </button>
                       </div>
                     </div>
@@ -1811,7 +1927,7 @@ export default function ReceiptsPage() {
         }}
       />
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="min-w-full table-fixed divide-y divide-zinc-200 dark:divide-zinc-800">
           <thead className="bg-zinc-50 dark:bg-zinc-900/80">
             <tr>
@@ -1850,9 +1966,9 @@ export default function ReceiptsPage() {
                             toggleSort(sortableKey);
                           }
                         }}
-                        className={`group inline-flex w-full items-center gap-1 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900 ${
-                          getHeaderButtonAlignmentClassName(column.align)
-                        } ${
+                        className={`group inline-flex w-full items-center gap-1 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900 ${getHeaderButtonAlignmentClassName(
+                          column.align,
+                        )} ${
                           isActiveSort
                             ? "font-bold text-zinc-900 dark:text-zinc-50"
                             : ""
@@ -1936,7 +2052,9 @@ export default function ReceiptsPage() {
                     }}
                     className="cursor-pointer transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
                   >
-                    {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
+                    {visibleColumns.map((column) =>
+                      renderReceiptCell(column.key, receipt),
+                    )}
                   </tr>
                 );
               })
@@ -1952,7 +2070,10 @@ export default function ReceiptsPage() {
                         key={column.key}
                         className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-emerald-700 dark:text-emerald-400"
                       >
-                        <span className={CELL_TEXT_CLASS_NAME} title={formatCents(tableTotals.income)}>
+                        <span
+                          className={CELL_TEXT_CLASS_NAME}
+                          title={formatCents(tableTotals.income)}
+                        >
                           {formatCents(tableTotals.income)}
                         </span>
                       </td>
@@ -1965,7 +2086,10 @@ export default function ReceiptsPage() {
                         key={column.key}
                         className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-rose-700 dark:text-rose-400"
                       >
-                        <span className={CELL_TEXT_CLASS_NAME} title={formatCents(tableTotals.expense)}>
+                        <span
+                          className={CELL_TEXT_CLASS_NAME}
+                          title={formatCents(tableTotals.expense)}
+                        >
                           {formatCents(tableTotals.expense)}
                         </span>
                       </td>

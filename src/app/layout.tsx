@@ -221,7 +221,7 @@ export default async function RootLayout({
                       </summary>
                     }
                   >
-                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg">
+                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
                       <nav className="flex flex-col px-2 py-2">
                         <p className={navSectionTitleClassName}>
                           Digital Fabrication

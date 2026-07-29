@@ -320,7 +320,7 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
   return (
     <div
       className={[
-        "space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4",
+        "space-y-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4",
         className,
       ]
         .filter(Boolean)

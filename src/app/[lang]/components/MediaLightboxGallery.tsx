@@ -170,7 +170,7 @@ export default function MediaLightboxGallery({
             {renderThumbnailButton(
               normalizedPreviewMedia[0],
               0,
-              "overflow-hidden rounded-[2rem] text-left",
+              "overflow-hidden rounded-lg text-left",
               "h-auto w-full",
             )}
             {normalizedMedia.length > 1 ? (
@@ -190,14 +190,14 @@ export default function MediaLightboxGallery({
           </section>
         ) : null
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-muted/60">
+        <div className="overflow-hidden rounded-lg border border-border bg-muted/60">
           {normalizedMedia.length > 0 ? (
             <div className="flex flex-wrap gap-2 p-2">
               {normalizedPreviewMedia.map((mediaUrl, index) =>
                 renderThumbnailButton(
                   mediaUrl,
                   index,
-                  "inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-xl bg-accent text-left",
+                  "inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-lg bg-accent text-left",
                   "h-60 w-auto object-cover",
                 ),
               )}
@@ -279,13 +279,13 @@ export default function MediaLightboxGallery({
               playsInline
               preload="metadata"
               aria-label={previewLabel ?? title}
-              className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl bg-foreground object-contain shadow-2xl"
+              className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg bg-foreground object-contain shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             />
           ) : getResourceMediaKindFromUrl(activeLightboxMedia) ===
             "document" ? (
             <div
-              className="flex w-full max-w-xl flex-col items-center rounded-2xl bg-popover px-8 py-10 text-center text-popover-foreground shadow-2xl"
+              className="flex w-full max-w-xl flex-col items-center rounded-lg bg-popover px-8 py-10 text-center text-popover-foreground shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <FontAwesomeIcon
@@ -312,7 +312,7 @@ export default function MediaLightboxGallery({
             <img
               src={activeLightboxMedia}
               alt={previewLabel ?? title}
-              className="max-h-[85vh] w-auto max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+              className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg object-contain shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             />
           )}

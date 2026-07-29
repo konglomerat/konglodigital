@@ -480,7 +480,7 @@ export default function Home() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-xl border border-border bg-accent animate-pulse" />
+                      <div className="h-16 w-16 rounded-lg border border-border bg-accent animate-pulse" />
                       <div className="space-y-2">
                         <div className="h-4 w-40 rounded-full bg-accent animate-pulse" />
                         <div className="h-3 w-32 rounded-full bg-accent animate-pulse" />
@@ -515,7 +515,7 @@ export default function Home() {
                         <img
                           src={getPrinterImage(printer.name)?.url}
                           alt={getPrinterImage(printer.name)?.alt}
-                          className="h-16 w-16 rounded-xl border border-border object-cover"
+                          className="h-16 w-16 rounded-lg border border-border object-cover"
                         />
                       ) : null}
                       <div>
@@ -568,7 +568,9 @@ export default function Home() {
               <h3 className="text-lg font-semibold text-foreground">
                 Recent print jobs
               </h3>
-              <p className="text-sm text-muted-foreground">{jobs.length} jobs</p>
+              <p className="text-sm text-muted-foreground">
+                {jobs.length} jobs
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" onClick={handleToggleAll} kind="secondary">
@@ -623,7 +625,7 @@ export default function Home() {
               {jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-muted/60 p-4"
+                  className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/60 p-4"
                 >
                   {(() => {
                     const estimatedWeight = estimatePrintedWeight(
@@ -657,11 +659,11 @@ export default function Home() {
                                 <img
                                   src={job.imageUrl}
                                   alt={`${job.title} preview`}
-                                  className="h-full w-full rounded-2xl border border-border object-cover"
+                                  className="h-full w-full rounded-lg border border-border object-cover"
                                   loading="lazy"
                                 />
                               ) : (
-                                <div className="flex h-full w-full items-center justify-center rounded-2xl border border-dashed border-input bg-card text-[10px] font-semibold uppercase text-muted-foreground/80">
+                                <div className="flex h-full w-full items-center justify-center rounded-lg border border-dashed border-input bg-card text-[10px] font-semibold uppercase text-muted-foreground/80">
                                   No image
                                 </div>
                               )}

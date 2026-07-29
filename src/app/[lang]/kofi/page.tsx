@@ -166,7 +166,7 @@ const SummaryCard = ({
   value: string;
   accent: string;
 }) => (
-  <div className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm">
+  <div className="min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm">
     <p className="break-words text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
       {label}
     </p>
@@ -188,10 +188,7 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     }))
     .filter((group) => group.value > 0)
     .sort((left, right) => right.value - left.value);
-  const total = currentYearGroups.reduce(
-    (sum, group) => sum + group.value,
-    0,
-  );
+  const total = currentYearGroups.reduce((sum, group) => sum + group.value, 0);
   const slices = currentYearGroups.slice(0, 5).map((group, index) => ({
     label: group.label,
     value: group.value,
@@ -213,15 +210,11 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     .reduce(
       (result, slice) => {
         const start = result.progress;
-        const progress =
-          start + (total > 0 ? (slice.value / total) * 100 : 0);
+        const progress = start + (total > 0 ? (slice.value / total) * 100 : 0);
 
         return {
           progress,
-          stops: [
-            ...result.stops,
-            `${slice.color} ${start}% ${progress}%`,
-          ],
+          stops: [...result.stops, `${slice.color} ${start}% ${progress}%`],
         };
       },
       { progress: 0, stops: [] as string[] },
@@ -229,7 +222,7 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     .stops.join(", ");
 
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faChartPie}
@@ -311,7 +304,7 @@ const CashflowChart = ({
   const endX = n > 1 ? ((n - 0.5) * 100) / n : 100;
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faTableCellsLarge}
@@ -480,7 +473,7 @@ const MonthlyOverviewTable = ({
   const hasForecast = rows.some((entry) => entry.isForecast);
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Monatsverlauf
@@ -516,8 +509,7 @@ const MonthlyOverviewTable = ({
           </thead>
           <tbody>
             {rows.map((entry, index) => {
-              const baseRow =
-                index % 2 === 0 ? "bg-card" : "bg-muted";
+              const baseRow = index % 2 === 0 ? "bg-card" : "bg-muted";
               const rowClass = entry.isCarryover
                 ? "bg-amber-50"
                 : entry.isForecast
@@ -707,7 +699,9 @@ const KoFiTable = ({
                             icon={isCollapsed ? faChevronRight : faChevronDown}
                             className="h-3 w-3 shrink-0 text-muted-foreground"
                           />
-                          <span className="min-w-0 truncate">{group.label}</span>
+                          <span className="min-w-0 truncate">
+                            {group.label}
+                          </span>
                         </button>
                       </td>
                       {projectedGroup.map((value, index) => (
@@ -798,115 +792,95 @@ const KoFiTable = ({
                                       Einzelbuchungen
                                     </div>
                                     <div className="grid gap-2">
-                                      {child.transactions.map(
-                                        (transaction) => (
-                                          <div
-                                            key={transaction.id}
-                                            className="grid min-w-0 gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
-                                          >
-                                            <div className="text-xs text-muted-foreground">
-                                              <div className="font-medium text-foreground/80">
-                                                {formatDate(transaction.date)}
-                                              </div>
-                                              <div className="mt-1">
-                                                {transaction.sourceLabel}
-                                              </div>
+                                      {child.transactions.map((transaction) => (
+                                        <div
+                                          key={transaction.id}
+                                          className="grid min-w-0 gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
+                                        >
+                                          <div className="text-xs text-muted-foreground">
+                                            <div className="font-medium text-foreground/80">
+                                              {formatDate(transaction.date)}
                                             </div>
-                                            <div className="min-w-0">
-                                              <div className="flex flex-wrap items-center gap-2">
-                                                {transaction.receiptNumber ? (
-                                                  <a
-                                                    href={
-                                                      transaction.campaiUrl
-                                                    }
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
-                                                  >
-                                                    <span className="min-w-0 break-all">
-                                                      {
-                                                        transaction.receiptNumber
-                                                      }
-                                                    </span>
-                                                    <FontAwesomeIcon
-                                                      icon={
-                                                        faArrowUpRightFromSquare
-                                                      }
-                                                      className="h-2.5 w-2.5"
-                                                    />
-                                                  </a>
-                                                ) : (
-                                                  <a
-                                                    href={
-                                                      transaction.campaiUrl
-                                                    }
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
-                                                  >
-                                                    Beleglose Zuordnung
-                                                    <FontAwesomeIcon
-                                                      icon={
-                                                        faArrowUpRightFromSquare
-                                                      }
-                                                      className="h-2.5 w-2.5"
-                                                    />
-                                                  </a>
-                                                )}
-                                                {transaction.receiptless ? (
-                                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
-                                                    ohne Beleg
-                                                  </span>
-                                                ) : null}
-                                                {transaction.reverse ? (
-                                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                                    Storno
-                                                  </span>
-                                                ) : null}
-                                              </div>
-                                              <p className="mt-1 truncate text-xs text-muted-foreground">
-                                                {transaction.text ||
-                                                  "Kein Buchungstext"}
-                                              </p>
-                                            </div>
-                                            <div className="min-w-0 break-words text-xs text-muted-foreground">
-                                              <p className="font-medium text-foreground/80">
-                                                {
-                                                  transaction.cashAccount
-                                                }{" "}
-                                                ·{" "}
-                                                {
-                                                  transaction.cashAccountLabel
-                                                }
-                                              </p>
-                                              <p className="mt-1">
-                                                Gegenkonto{" "}
-                                                {
-                                                  transaction.counterAccount
-                                                }{" "}
-                                                ·{" "}
-                                                {
-                                                  transaction.counterAccountLabel
-                                                }
-                                              </p>
-                                              <p className="mt-1">
-                                                KSt 1:{" "}
-                                                {transaction.costCenter1 ?? "–"}
-                                                {" · "}
-                                                KSt 2:{" "}
-                                                {transaction.costCenter2 ?? "–"}
-                                              </p>
-                                            </div>
-                                            <div
-                                              className={`self-center text-left font-semibold tabular-nums md:text-right ${numberClassName(transaction.amount)}`}
-                                            >
-                                              {formatCurrency(
-                                                transaction.amount,
-                                              )}
+                                            <div className="mt-1">
+                                              {transaction.sourceLabel}
                                             </div>
                                           </div>
-                                        ),
-                                      )}
+                                          <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              {transaction.receiptNumber ? (
+                                                <a
+                                                  href={transaction.campaiUrl}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                                                >
+                                                  <span className="min-w-0 break-all">
+                                                    {transaction.receiptNumber}
+                                                  </span>
+                                                  <FontAwesomeIcon
+                                                    icon={
+                                                      faArrowUpRightFromSquare
+                                                    }
+                                                    className="h-2.5 w-2.5"
+                                                  />
+                                                </a>
+                                              ) : (
+                                                <a
+                                                  href={transaction.campaiUrl}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                                                >
+                                                  Beleglose Zuordnung
+                                                  <FontAwesomeIcon
+                                                    icon={
+                                                      faArrowUpRightFromSquare
+                                                    }
+                                                    className="h-2.5 w-2.5"
+                                                  />
+                                                </a>
+                                              )}
+                                              {transaction.receiptless ? (
+                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                                                  ohne Beleg
+                                                </span>
+                                              ) : null}
+                                              {transaction.reverse ? (
+                                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                  Storno
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                                              {transaction.text ||
+                                                "Kein Buchungstext"}
+                                            </p>
+                                          </div>
+                                          <div className="min-w-0 break-words text-xs text-muted-foreground">
+                                            <p className="font-medium text-foreground/80">
+                                              {transaction.cashAccount} ·{" "}
+                                              {transaction.cashAccountLabel}
+                                            </p>
+                                            <p className="mt-1">
+                                              Gegenkonto{" "}
+                                              {transaction.counterAccount} ·{" "}
+                                              {transaction.counterAccountLabel}
+                                            </p>
+                                            <p className="mt-1">
+                                              KSt 1:{" "}
+                                              {transaction.costCenter1 ?? "–"}
+                                              {" · "}
+                                              KSt 2:{" "}
+                                              {transaction.costCenter2 ?? "–"}
+                                            </p>
+                                          </div>
+                                          <div
+                                            className={`self-center text-left font-semibold tabular-nums md:text-right ${numberClassName(transaction.amount)}`}
+                                          >
+                                            {formatCurrency(transaction.amount)}
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 </td>
@@ -963,9 +937,9 @@ export default function KoFiPage() {
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
-  const [expandedLeaves, setExpandedLeaves] = useState<
-    Record<string, boolean>
-  >({});
+  const [expandedLeaves, setExpandedLeaves] = useState<Record<string, boolean>>(
+    {},
+  );
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
@@ -1073,7 +1047,7 @@ export default function KoFiPage() {
             <select
               value={year}
               onChange={(event) => setYear(Number(event.target.value))}
-              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               {Array.from({ length: 6 }, (_, index) => currentYear - index).map(
                 (optionYear) => (
@@ -1092,7 +1066,7 @@ export default function KoFiPage() {
             <select
               value={costCenter1}
               onChange={(event) => setCostCenter1(event.target.value)}
-              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               <option value="">Alle Kostenstellen 1</option>
               {data?.filters.costCenters1.map((option) => (
@@ -1110,7 +1084,7 @@ export default function KoFiPage() {
             <select
               value={costCenter2}
               onChange={(event) => setCostCenter2(event.target.value)}
-              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               <option value="">Alle Kostenstellen 2</option>
               {data?.filters.costCenters.map((option) => (
@@ -1128,7 +1102,7 @@ export default function KoFiPage() {
             <select
               value={account}
               onChange={(event) => setAccount(event.target.value)}
-              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
             >
               <option value="">Alle Konten</option>
               {data?.filters.accounts.map((option) => (
@@ -1148,7 +1122,7 @@ export default function KoFiPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="z. B. Miete, Fördermittel, Kulturamt"
-              className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/80 focus:border-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/80 focus:border-ring"
             />
           </label>
         </div>
@@ -1174,7 +1148,7 @@ export default function KoFiPage() {
       </section>
 
       {error ? (
-        <div className="mt-6 rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <div className="mt-6 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -1217,7 +1191,7 @@ export default function KoFiPage() {
               />
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 basis-[420px]">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
@@ -1230,8 +1204,8 @@ export default function KoFiPage() {
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Beträge und Buchungsdaten stammen aus den tatsächlichen
                     Geldkontobuchungen. Interne Umbuchungen werden nicht als
-                    Kosten oder Finanzierung gezählt. Bei Belegzahlungen
-                    stammen Sachkonto und Kostenstellen aus den verknüpften
+                    Kosten oder Finanzierung gezählt. Bei Belegzahlungen stammen
+                    Sachkonto und Kostenstellen aus den verknüpften
                     Belegpositionen.
                   </p>
                 </div>
@@ -1283,14 +1257,12 @@ export default function KoFiPage() {
                 ].map((metric) => (
                   <div
                     key={metric.label}
-                    className="rounded-xl border border-border bg-muted/35 px-3 py-2.5"
+                    className="rounded-lg border border-border bg-muted/35 px-3 py-2.5"
                   >
                     <div className="flex items-center gap-2">
                       <FontAwesomeIcon
                         icon={
-                          metric.warning
-                            ? faTriangleExclamation
-                            : faCircleCheck
+                          metric.warning ? faTriangleExclamation : faCircleCheck
                         }
                         className={`h-3 w-3 ${
                           metric.warning
@@ -1347,7 +1319,7 @@ export default function KoFiPage() {
             onToggleLeaf={toggleLeaf}
           />
 
-          <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <span className="inline-flex items-center gap-2">
                 <FontAwesomeIcon

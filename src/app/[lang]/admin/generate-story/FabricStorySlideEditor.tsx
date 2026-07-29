@@ -57,9 +57,7 @@ const createDownloadName = (baseName: string, slideNumber: number) =>
   `${baseName}-slide-${slideNumber}.png`;
 
 const getTextFontFamily = (role: StoryTextRole) =>
-  role === "headline"
-    ? STORY_HEADING_FONT_FAMILY
-    : STORY_CONTENT_FONT_FAMILY;
+  role === "headline" ? STORY_HEADING_FONT_FAMILY : STORY_CONTENT_FONT_FAMILY;
 
 const attachDownload = (dataUrl: string, fileName: string) => {
   const anchor = document.createElement("a");
@@ -105,13 +103,11 @@ const applyRectSpec = (rect: FabricRect, spec: StoryLayoutRectObject) => {
   });
 };
 
-const findRoleSpec = (
-  objects: StoryLayoutObject[],
-  role: StoryTextRole,
-) => objects.find(
-  (object): object is StoryLayoutTextObject =>
-    object.kind === "textbox" && object.role === role,
-);
+const findRoleSpec = (objects: StoryLayoutObject[], role: StoryTextRole) =>
+  objects.find(
+    (object): object is StoryLayoutTextObject =>
+      object.kind === "textbox" && object.role === role,
+  );
 
 const createViewportTransform = (scale: number): FabricTransformMatrix => [
   scale,
@@ -132,7 +128,9 @@ export default function FabricStorySlideEditor({
 }: FabricStorySlideEditorProps) {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
-  const fabricRefsRef = useRef<FabricRefs | null>(null) as MutableRefObject<FabricRefs | null>;
+  const fabricRefsRef = useRef<FabricRefs | null>(
+    null,
+  ) as MutableRefObject<FabricRefs | null>;
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [canvasError, setCanvasError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -154,7 +152,10 @@ export default function FabricStorySlideEditor({
       return null;
     }
 
-    const scale = Math.min(hostWidth / CANVAS_WIDTH, hostHeight / CANVAS_HEIGHT);
+    const scale = Math.min(
+      hostWidth / CANVAS_WIDTH,
+      hostHeight / CANVAS_HEIGHT,
+    );
 
     return {
       width: Math.round(CANVAS_WIDTH * scale),
@@ -280,8 +281,11 @@ export default function FabricStorySlideEditor({
               image.scaleToHeight(CANVAS_HEIGHT);
             }
             image.set({
-              left: (CANVAS_WIDTH - (image.getScaledWidth?.() ?? CANVAS_WIDTH)) / 2,
-              top: (CANVAS_HEIGHT - (image.getScaledHeight?.() ?? CANVAS_HEIGHT)) / 2,
+              left:
+                (CANVAS_WIDTH - (image.getScaledWidth?.() ?? CANVAS_WIDTH)) / 2,
+              top:
+                (CANVAS_HEIGHT - (image.getScaledHeight?.() ?? CANVAS_HEIGHT)) /
+                2,
             });
             canvas.add(image);
             canvas.sendObjectToBack(image);
@@ -430,8 +434,11 @@ export default function FabricStorySlideEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm">
-      <div ref={canvasHostRef} className="relative aspect-[9/16] w-full overflow-hidden bg-accent">
+    <div className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm">
+      <div
+        ref={canvasHostRef}
+        className="relative aspect-[9/16] w-full overflow-hidden bg-accent"
+      >
         <canvas
           ref={canvasElementRef}
           width={CANVAS_WIDTH}

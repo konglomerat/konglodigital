@@ -22,7 +22,7 @@ export default function ProjectOfTheMonthCard({
   );
 
   return (
-    <article className="group relative isolate h-full overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(186,230,253,0.98)_0%,rgba(125,211,252,0.96)_52%,rgba(56,189,248,0.94)_100%)] transition dark:bg-[linear-gradient(135deg,rgba(7,24,39,0.98)_0%,rgba(12,74,110,0.95)_52%,rgba(14,116,144,0.92)_100%)] md:col-span-2 md:grid md:grid-cols-[minmax(0,0.55fr)_minmax(200px,0.88fr)] xl:col-span-2">
+    <article className="group relative isolate h-full overflow-hidden rounded-lg bg-[linear-gradient(135deg,rgba(186,230,253,0.98)_0%,rgba(125,211,252,0.96)_52%,rgba(56,189,248,0.94)_100%)] transition dark:bg-[linear-gradient(135deg,rgba(7,24,39,0.98)_0%,rgba(12,74,110,0.95)_52%,rgba(14,116,144,0.92)_100%)] md:col-span-2 md:grid md:grid-cols-[minmax(0,0.55fr)_minmax(200px,0.88fr)] xl:col-span-2">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-12 top-0 h-36 w-36 rounded-full bg-card/35 blur-3xl dark:bg-card/10"

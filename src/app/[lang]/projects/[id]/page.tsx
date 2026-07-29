@@ -449,12 +449,12 @@ export default async function ProjectDetailPage({
                       }),
                       locale,
                     )}
-                    className="flex items-center gap-3 rounded-2xl border border-border bg-muted/50 p-2 text-sm text-foreground/80 transition hover:border-primary-border hover:text-primary"
+                    className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-2 text-sm text-foreground/80 transition hover:border-primary-border hover:text-primary"
                   >
                     {resource.image ? (
                       getResourceMediaKindFromUrl(resource.image) ===
                       "document" ? (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-destructive-soft text-destructive">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-destructive-soft text-destructive">
                           <FontAwesomeIcon
                             icon={faFilePdf}
                             className="h-6 w-6"
@@ -464,11 +464,11 @@ export default async function ProjectDetailPage({
                         <img
                           src={resource.image}
                           alt={resource.name ?? resource.id}
-                          className="h-14 w-14 rounded-xl object-cover"
+                          className="h-14 w-14 rounded-lg object-cover"
                         />
                       )
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-accent text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         {tx("Bild", "de")}
                       </div>
                     )}

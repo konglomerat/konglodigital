@@ -114,7 +114,7 @@ export default async function Home() {
       </section>
 
       {!isAuthenticated ? (
-        <section className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-sm ring-1 ring-primary md:p-6">
+        <section className="rounded-lg bg-primary p-5 text-primary-foreground shadow-sm ring-1 ring-primary md:p-6">
           <h2 className="text-xl font-semibold tracking-tight text-primary-foreground md:text-2xl">
             {tx("Neu hier? So funktioniert die Registrierung", "de")}
           </h2>
@@ -193,7 +193,7 @@ export default async function Home() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-input hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="group overflow-hidden rounded-lg border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-input hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {action.href === "/checkout" ? (
                   <div className="relative">

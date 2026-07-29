@@ -187,13 +187,11 @@ const EQUIPMENT_VISUALS: Record<
   },
   microphone: {
     icon: faMicrophone,
-    className:
-      "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+    className: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
   },
   laptop: {
     icon: faLaptop,
-    className:
-      "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   },
   tablet: {
     icon: faTabletScreenButton,
@@ -202,8 +200,7 @@ const EQUIPMENT_VISUALS: Record<
   },
   pavilion: {
     icon: faTent,
-    className:
-      "bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300",
+    className: "bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300",
   },
   cable_reel: {
     icon: faPlug,
@@ -283,7 +280,9 @@ const createCalendarDays = (monthValue: string) => {
   );
   const mondayBasedOffset = (firstOfMonth.getUTCDay() + 6) % 7;
   const firstCalendarDay = new Date(firstOfMonth);
-  firstCalendarDay.setUTCDate(firstCalendarDay.getUTCDate() - mondayBasedOffset);
+  firstCalendarDay.setUTCDate(
+    firstCalendarDay.getUTCDate() - mondayBasedOffset,
+  );
 
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(firstCalendarDay);
@@ -377,12 +376,7 @@ export default function BookingWizard({
         startTime: requestedStart,
         endTime: requestedEnd,
       }),
-    [
-      availabilitySlots,
-      form.requestedRooms,
-      requestedEnd,
-      requestedStart,
-    ],
+    [availabilitySlots, form.requestedRooms, requestedEnd, requestedStart],
   );
   const capacity = useMemo(
     () =>
@@ -421,7 +415,9 @@ export default function BookingWizard({
       .then(async (response) => {
         const data = (await response.json()) as AvailabilityResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? "Kalender konnte nicht geladen werden.");
+          throw new Error(
+            data.error ?? "Kalender konnte nicht geladen werden.",
+          );
         }
         setAvailabilitySlots(data.slots ?? []);
         setAvailabilityNotice(data.notice ?? "");
@@ -488,16 +484,10 @@ export default function BookingWizard({
       if (calculateDurationMinutes(form.startTime, form.endTime) < 60) {
         return "Die Veranstaltungszeit muss mindestens eine Stunde dauern.";
       }
-      if (
-        form.setupStartTime &&
-        form.setupStartTime > form.startTime
-      ) {
+      if (form.setupStartTime && form.setupStartTime > form.startTime) {
         return "Der Aufbau muss vor dem Veranstaltungsbeginn liegen.";
       }
-      if (
-        form.teardownEndTime &&
-        form.teardownEndTime < form.endTime
-      ) {
+      if (form.teardownEndTime && form.teardownEndTime < form.endTime) {
         return "Die Rückgabe muss nach dem Veranstaltungsende liegen.";
       }
       if (conflicts.length > 0) {
@@ -577,7 +567,9 @@ export default function BookingWizard({
         | (SubmissionResult & { error?: string })
         | { error?: string };
       if (!response.ok) {
-        throw new Error(data.error ?? "Anfrage konnte nicht gespeichert werden.");
+        throw new Error(
+          data.error ?? "Anfrage konnte nicht gespeichert werden.",
+        );
       }
       setSubmission(data as SubmissionResult);
     } catch (error) {
@@ -594,7 +586,7 @@ export default function BookingWizard({
   if (submission) {
     return (
       <div className="mx-auto max-w-3xl space-y-6 py-4 md:py-10">
-        <section className="overflow-hidden rounded-xl border border-success-border bg-card shadow-sm">
+        <section className="overflow-hidden rounded-lg border border-success-border bg-card shadow-sm">
           <div className="bg-success-soft p-8 text-center md:p-12">
             <Image
               src={bookingSuccessIllustration}
@@ -774,9 +766,7 @@ export default function BookingWizard({
             />
           ) : null}
 
-          {step === 2 ? (
-            <ContactStep form={form} setField={setField} />
-          ) : null}
+          {step === 2 ? <ContactStep form={form} setField={setField} /> : null}
 
           {step === 3 ? <ReviewStep form={form} price={price} /> : null}
 
@@ -951,7 +941,8 @@ function BookingTimeStep({
     [visibleMonth],
   );
   const visibleMonthDate =
-    parseIsoDate(`${visibleMonth}-01`) ?? new Date(`${minimumMonth}-01T12:00:00Z`);
+    parseIsoDate(`${visibleMonth}-01`) ??
+    new Date(`${minimumMonth}-01T12:00:00Z`);
   const hasValidBookingDate = Boolean(parseIsoDate(form.bookingDate));
 
   return (
@@ -1380,10 +1371,7 @@ function UsageStep({
     (total, item) => total + Number(form.equipment[item.id] ?? 0),
     0,
   );
-  const attendeeCount = Math.min(
-    400,
-    Math.max(1, form.expectedAttendees),
-  );
+  const attendeeCount = Math.min(400, Math.max(1, form.expectedAttendees));
   const attendeePreview =
     ATTENDEE_PREVIEWS.find((preview) => attendeeCount >= preview.min) ??
     ATTENDEE_PREVIEWS.at(-1)!;
@@ -1604,10 +1592,7 @@ function UsageStep({
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${visual.className}`}
                     >
-                      <FontAwesomeIcon
-                        icon={visual.icon}
-                        className="h-4 w-4"
-                      />
+                      <FontAwesomeIcon icon={visual.icon} className="h-4 w-4" />
                     </span>
                     <div>
                       <p className="font-semibold text-foreground">
@@ -1869,8 +1854,7 @@ function ReviewStep({
           </p>
           {form.setupStartTime || form.teardownEndTime ? (
             <p className="text-muted-foreground">
-              inklusive Blockierung{" "}
-              {form.setupStartTime || form.startTime}–
+              inklusive Blockierung {form.setupStartTime || form.startTime}–
               {form.teardownEndTime || form.endTime} Uhr
             </p>
           ) : null}
@@ -1913,9 +1897,7 @@ function ReviewStep({
         </ReviewBlock>
         <ReviewBlock title="Preis" icon={faReceipt}>
           <p className="text-xl font-black">{formatEuro(price.grossCents)}</p>
-          <p className="text-muted-foreground">
-            inklusive 19 % Umsatzsteuer
-          </p>
+          <p className="text-muted-foreground">inklusive 19 % Umsatzsteuer</p>
         </ReviewBlock>
       </div>
 
@@ -1981,9 +1963,7 @@ function PriceSummary({
         <p className="text-4xl font-black tracking-tight text-white">
           {formatEuro(price.grossCents)}
         </p>
-        <p className="mt-1 text-sm text-white/65">
-          inklusive Umsatzsteuer
-        </p>
+        <p className="mt-1 text-sm text-white/65">inklusive Umsatzsteuer</p>
       </div>
 
       <details className="group mt-5 border-t border-white/15 pt-4">
@@ -2003,9 +1983,7 @@ function PriceSummary({
                 className="flex items-start justify-between gap-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-medium text-white">
-                    {line.description}
-                  </p>
+                  <p className="font-medium text-white">{line.description}</p>
                   {line.quantity > 1 ? (
                     <p className="text-xs text-white/60">
                       {line.quantity} × {formatEuro(line.unitNetCents)}
@@ -2039,10 +2017,7 @@ function PriceSummary({
       {price.requiresManualReview ? (
         <div className="mt-5 rounded-md bg-white/10 p-3 text-xs leading-relaxed text-white/80">
           <p className="flex items-center gap-2 font-bold">
-            <FontAwesomeIcon
-              icon={faTriangleExclamation}
-              className="h-3 w-3"
-            />
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
             Manuelle Preisprüfung
           </p>
           <ul className="mt-1 list-disc space-y-1 pl-4">

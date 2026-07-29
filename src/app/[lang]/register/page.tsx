@@ -32,7 +32,9 @@ export default function RegisterPage() {
     });
 
     if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
       setError(body.error ?? "Registrierung konnte nicht gestartet werden.");
       setIsLoading(false);
       return;
@@ -48,9 +50,12 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-foreground">Konto erstellen</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          Konto erstellen
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Gib deine Mailadresse ein. Wenn sie zu einem aktiven Mitgliedskonto passt, schicken wir dir einen Link zum Abschliessen der Registrierung.
+          Gib deine Mailadresse ein. Wenn sie zu einem aktiven Mitgliedskonto
+          passt, schicken wir dir einen Link zum Abschliessen der Registrierung.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
@@ -69,16 +74,17 @@ export default function RegisterPage() {
               className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Wir gleichen diese Adresse mit Campai ab und senden dir danach den Registrierungslink nur bei einem aktiven Mitgliedskonto.
+              Wir gleichen diese Adresse mit Campai ab und senden dir danach den
+              Registrierungslink nur bei einem aktiven Mitgliedskonto.
             </p>
           </div>
           {error ? (
-            <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
           {success ? (
-            <div className="space-y-2 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+            <div className="space-y-2 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
               <p>{success}</p>
               <Link className="font-semibold underline" href="/login">
                 Zur Anmeldung

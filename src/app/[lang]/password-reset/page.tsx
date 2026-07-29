@@ -80,13 +80,13 @@ export default function PasswordResetPage() {
           </div>
 
           {error ? (
-            <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <div className="space-y-2 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+            <div className="space-y-2 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
               <p>{success}</p>
               <Link className="font-semibold underline" href="/login">
                 Zur Anmeldung

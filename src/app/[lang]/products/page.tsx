@@ -70,7 +70,8 @@ const productVisualLookup: Record<string, ProductVisual> = {
   },
   "overhead verein": {
     icon: faPercent,
-    accentClassName: "bg-destructive-soft text-destructive ring-destructive-border",
+    accentClassName:
+      "bg-destructive-soft text-destructive ring-destructive-border",
   },
   "teilnahme an cnc-workshop": {
     icon: faGraduationCap,
@@ -240,7 +241,7 @@ export default function CampaiProductsPage() {
         />
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
@@ -248,7 +249,9 @@ export default function CampaiProductsPage() {
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Produkte</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                Produkte
+              </h2>
               <p className="text-sm text-muted-foreground">
                 {loading ? "Lädt ..." : `${products.length} Artikel`}
               </p>
@@ -274,10 +277,10 @@ export default function CampaiProductsPage() {
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full gap-4 rounded-2xl border border-border/60 bg-muted/60 p-4"
+                    className="flex h-full gap-4 rounded-lg border border-border/60 bg-muted/60 p-4"
                   >
                     <span
-                      className={`flex h-16 w-16 shrink-0 items-center justify-center self-start rounded-2xl ring-1 ${productVisual.accentClassName}`}
+                      className={`flex h-16 w-16 shrink-0 items-center justify-center self-start rounded-lg ring-1 ${productVisual.accentClassName}`}
                       aria-hidden="true"
                     >
                       <FontAwesomeIcon

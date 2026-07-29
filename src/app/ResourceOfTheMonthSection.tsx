@@ -71,7 +71,7 @@ export default async function ResourceOfTheMonthSection() {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-[#c8df8c]">
+    <section className="overflow-hidden rounded-lg bg-[#c8df8c]">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,460px)] lg:items-stretch">
         <div className="flex flex-col justify-center px-6 py-7 md:px-8 md:py-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-800">

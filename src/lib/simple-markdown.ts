@@ -23,7 +23,7 @@ const INLINE_CODE_CLASS =
 const LINK_CLASS =
   "text-primary underline underline-offset-2 hover:text-primary/80";
 
-const IMAGE_CLASS = "w-full rounded-2xl border border-border";
+const IMAGE_CLASS = "w-full rounded-lg border border-border";
 
 const STRONG_CLASS = "font-semibold text-foreground";
 

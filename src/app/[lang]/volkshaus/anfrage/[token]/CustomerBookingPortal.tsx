@@ -131,7 +131,10 @@ const WORKFLOW_STEPS = [
 
 const getWorkflowPosition = (booking: CustomerBooking) => {
   if (booking.reservationStatus === "confirmed") return 4;
-  if (booking.invoiceStatus === "created" || booking.invoiceStatus === "draft_created") {
+  if (
+    booking.invoiceStatus === "created" ||
+    booking.invoiceStatus === "draft_created"
+  ) {
     return 3;
   }
   if (
@@ -221,7 +224,9 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
         error?: string;
       };
       if (!response.ok || !data.booking) {
-        throw new Error(data.error ?? "Unterschrift konnte nicht gespeichert werden.");
+        throw new Error(
+          data.error ?? "Unterschrift konnte nicht gespeichert werden.",
+        );
       }
       setBooking(data.booking);
     } catch (error) {
@@ -245,7 +250,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
   if (loadError || !booking) {
     return (
-      <section className="mx-auto max-w-2xl rounded-xl border border-destructive-border bg-destructive-soft p-8 text-center shadow-sm">
+      <section className="mx-auto max-w-2xl rounded-lg border border-destructive-border bg-destructive-soft p-8 text-center shadow-sm">
         <FontAwesomeIcon
           icon={faTriangleExclamation}
           className="h-8 w-8 text-destructive"
@@ -273,7 +278,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
   return (
     <div className="space-y-6 py-3 md:py-8">
-      <header className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8">
+      <header className="rounded-lg border border-border bg-card p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-primary">
@@ -288,11 +293,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
             </p>
           </div>
           <StatusBadge
-            label={
-              isCancelled
-                ? "Nicht aktiv"
-                : booking.reservationStatusLabel
-            }
+            label={isCancelled ? "Nicht aktiv" : booking.reservationStatusLabel}
             tone={
               isCancelled
                 ? "danger"
@@ -305,9 +306,12 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
       </header>
 
       {!isCancelled ? (
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
           <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-            <FontAwesomeIcon icon={faListCheck} className="h-3.5 w-3.5 text-primary" />
+            <FontAwesomeIcon
+              icon={faListCheck}
+              className="h-3.5 w-3.5 text-primary"
+            />
             Stand deiner Anfrage
           </h2>
           <ol className="mt-5 grid gap-3 md:grid-cols-5">
@@ -351,7 +355,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
           </ol>
         </section>
       ) : (
-        <section className="rounded-xl border border-destructive-border bg-destructive-soft p-5 text-sm text-destructive shadow-sm">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-5 text-sm text-destructive shadow-sm">
           Diese Anfrage ist nicht mehr aktiv. Bei Rückfragen antworte bitte auf
           die Korrespondenz des Volkshaus-Teams.
         </section>
@@ -359,7 +363,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
-          <section className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
+          <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
             <h2 className="flex items-center gap-2 text-xl font-black text-foreground">
               <FontAwesomeIcon
                 icon={faCalendarCheck}
@@ -451,7 +455,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
               contractUrl={contractUrl}
             />
           ) : (
-            <section className="rounded-xl border border-info-border bg-info-soft p-5 text-sm text-info shadow-sm md:p-6">
+            <section className="rounded-lg border border-info-border bg-info-soft p-5 text-sm text-info shadow-sm md:p-6">
               <div className="flex gap-3">
                 <FontAwesomeIcon
                   icon={faCircleInfo}
@@ -470,9 +474,12 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
-          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon icon={faEuroSign} className="h-3 w-3 text-primary" />
+              <FontAwesomeIcon
+                icon={faEuroSign}
+                className="h-3 w-3 text-primary"
+              />
               Vereinbarter Preis
             </p>
             <div className="mt-4 divide-y divide-border">
@@ -506,9 +513,12 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
             </dl>
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-5 text-sm shadow-sm">
+          <section className="rounded-lg border border-border bg-card p-5 text-sm shadow-sm">
             <h2 className="flex items-center gap-2 font-bold text-foreground">
-              <FontAwesomeIcon icon={faReceipt} className="h-3.5 w-3.5 text-primary" />
+              <FontAwesomeIcon
+                icon={faReceipt}
+                className="h-3.5 w-3.5 text-primary"
+              />
               Abrechnung
             </h2>
             <dl className="mt-3 space-y-2 text-muted-foreground">
@@ -557,7 +567,7 @@ function ContractSection({
   const snapshot = booking.contractSnapshot!;
   const canSign = booking.contractStatus === "sent";
   return (
-    <section className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
+    <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
@@ -581,7 +591,9 @@ function ContractSection({
       <div className="mt-6 rounded-lg border border-border bg-background p-5">
         <p className="text-sm text-muted-foreground">
           Zwischen <strong>{snapshot.provider.name}</strong> und{" "}
-          <strong>{snapshot.customer.organization || snapshot.customer.name}</strong>
+          <strong>
+            {snapshot.customer.organization || snapshot.customer.name}
+          </strong>
         </p>
         <div className="mt-5 space-y-5">
           {snapshot.terms.map((section) => (
@@ -687,7 +699,8 @@ function SignatureCard({
       <div className="text-sm">
         <p className="font-bold text-foreground">{label}</p>
         <p className="mt-1 text-muted-foreground">
-          {signature.name} · {dateTimeFormatter.format(new Date(signature.signedAt))}
+          {signature.name} ·{" "}
+          {dateTimeFormatter.format(new Date(signature.signedAt))}
         </p>
       </div>
     </div>

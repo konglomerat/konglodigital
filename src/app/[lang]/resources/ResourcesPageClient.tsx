@@ -201,7 +201,7 @@ const ResourceCard = ({
     <article
       onMouseEnter={() => onHover(resource.id)}
       onMouseLeave={() => onHover(null)}
-      className="group cursor-pointer overflow-hidden rounded-2xl"
+      className="group cursor-pointer overflow-hidden rounded-lg"
     >
       <div className="relative aspect-[4/3.7] w-full overflow-hidden">
         {typeConfig ? (
@@ -224,7 +224,7 @@ const ResourceCard = ({
               {displayImages.map((image, index) => (
                 <div
                   key={`${resource.id}-slide-${index}`}
-                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-xl bg-accent"
+                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-lg bg-accent"
                 >
                   {getResourceMediaKindFromUrl(images[index]) === "document" ? (
                     <div className="flex h-full w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
@@ -1061,7 +1061,7 @@ export default function ResourcesPageClient({
       </div>
 
       {errorMessage ? (
-        <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </section>
       ) : null}
@@ -1248,13 +1248,13 @@ export default function ResourcesPageClient({
         <aside
           className={`${viewMode === "map" ? "block" : "hidden"} lg:block`}
         >
-          <div className="rounded-2xl lg:sticky lg:top-[30px] lg:h-[calc(100vh-60px)]">
+          <div className="rounded-lg lg:sticky lg:top-[30px] lg:h-[calc(100vh-60px)]">
             <ResourcesMapView
               resources={mapOverlayResources}
               pointResources={searchAndTypeFilteredResources}
               highlightedResourceId={hoveredResourceId}
               onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
-              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-2xl lg:h-full"
+              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-full"
             />
             <p className="mt-2 text-xs text-muted-foreground">
               {tx("Showing resources with saved locations.")}

@@ -19,13 +19,14 @@ import {
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
-import { FormField, FormSection, Input, Select } from "../../components/ui/form";
+import {
+  FormField,
+  FormSection,
+  Input,
+  Select,
+} from "../../components/ui/form";
 
-import type {
-  PretixDocument,
-  PretixEvent,
-  PretixRow,
-} from "./types";
+import type { PretixDocument, PretixEvent, PretixRow } from "./types";
 
 const STATUS_LABELS: Record<string, string> = {
   p: "Bezahlt",
@@ -160,20 +161,22 @@ export default function PretixImportPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<RowResult[]>([]);
-  const [selectedCashAccountId, setSelectedCashAccountId] = useState<string>("");
-  const [selectedCostCenter2, setSelectedCostCenter2] =
-    useState<string>(DEFAULT_COST_CENTER_2);
+  const [selectedCashAccountId, setSelectedCashAccountId] =
+    useState<string>("");
+  const [selectedCostCenter2, setSelectedCostCenter2] = useState<string>(
+    DEFAULT_COST_CENTER_2,
+  );
   const [invoiceDate, setInvoiceDate] = useState<string>(todayISO());
   const [serviceDate, setServiceDate] = useState<string>(todayISO());
   const [bankConnectionOptions, setBankConnectionOptions] = useState<
     BankConnectionOption[]
   >([]);
-  const [costCenter2Options, setCostCenter2Options] = useState<CostCenter2Option[]>(
-    [],
-  );
-  const [invoiceSettingsError, setInvoiceSettingsError] = useState<string | null>(
-    null,
-  );
+  const [costCenter2Options, setCostCenter2Options] = useState<
+    CostCenter2Option[]
+  >([]);
+  const [invoiceSettingsError, setInvoiceSettingsError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let active = true;
@@ -186,11 +189,12 @@ export default function PretixImportPage() {
           bankConnections?: BankConnectionOption[];
           error?: string;
         };
-        const costCenterPayload =
-          (await costCenterResponse.json().catch(() => ({}))) as {
-            costCenters?: CostCenter2Option[];
-            error?: string;
-          };
+        const costCenterPayload = (await costCenterResponse
+          .json()
+          .catch(() => ({}))) as {
+          costCenters?: CostCenter2Option[];
+          error?: string;
+        };
         if (!active) return;
 
         if (!bankResponse.ok) {
@@ -223,7 +227,9 @@ export default function PretixImportPage() {
           (item) => item.value === DEFAULT_COST_CENTER_2,
         );
         setSelectedCostCenter2(
-          preferredCostCenter?.value ?? costCenters[0]?.value ?? DEFAULT_COST_CENTER_2,
+          preferredCostCenter?.value ??
+            costCenters[0]?.value ??
+            DEFAULT_COST_CENTER_2,
         );
 
         if (bankConnections.length === 0) {
@@ -248,39 +254,36 @@ export default function PretixImportPage() {
     };
   }, []);
 
-  const handleFileChange = useCallback(
-    async (file: File | null) => {
-      setParseError(null);
-      setEvent(undefined);
-      setRows([]);
-      setSelectedKeys(new Set());
-      setDebtorByKey(new Map());
-      setCreatePanel(null);
-      setResults([]);
-      if (!file) {
-        setFileName("");
-        return;
+  const handleFileChange = useCallback(async (file: File | null) => {
+    setParseError(null);
+    setEvent(undefined);
+    setRows([]);
+    setSelectedKeys(new Set());
+    setDebtorByKey(new Map());
+    setCreatePanel(null);
+    setResults([]);
+    if (!file) {
+      setFileName("");
+      return;
+    }
+    setFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as PretixDocument;
+      if (!parsed?.event || !Array.isArray(parsed.event.orders)) {
+        throw new Error("Keine pretix-Buchungen in der Datei gefunden.");
       }
-      setFileName(file.name);
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text) as PretixDocument;
-        if (!parsed?.event || !Array.isArray(parsed.event.orders)) {
-          throw new Error("Keine pretix-Buchungen in der Datei gefunden.");
-        }
-        const built = buildRows(parsed.event);
-        setEvent(parsed.event);
-        setRows(built);
-      } catch (error) {
-        setParseError(
-          error instanceof Error
-            ? error.message
-            : "JSON konnte nicht gelesen werden.",
-        );
-      }
-    },
-    [],
-  );
+      const built = buildRows(parsed.event);
+      setEvent(parsed.event);
+      setRows(built);
+    } catch (error) {
+      setParseError(
+        error instanceof Error
+          ? error.message
+          : "JSON konnte nicht gelesen werden.",
+      );
+    }
+  }, []);
 
   const allSelected = rows.length > 0 && selectedKeys.size === rows.length;
 
@@ -334,8 +337,7 @@ export default function PretixImportPage() {
   }, []);
 
   const selectedRowsMissingDebtor = useMemo(
-    () =>
-      Array.from(selectedKeys).some((key) => !debtorByKey.has(key)),
+    () => Array.from(selectedKeys).some((key) => !debtorByKey.has(key)),
     [selectedKeys, debtorByKey],
   );
 
@@ -358,12 +360,7 @@ export default function PretixImportPage() {
       return "Werkbereich muss eine gültige Kostenstelle sein.";
     }
     return null;
-  }, [
-    invoiceDate,
-    parsedCostCenter2,
-    selectedCashAccountId,
-    serviceDate,
-  ]);
+  }, [invoiceDate, parsedCostCenter2, selectedCashAccountId, serviceDate]);
 
   const submit = useCallback(async () => {
     if (!selectedCashAccountId || !invoiceDate || !serviceDate) return;
@@ -433,41 +430,38 @@ export default function PretixImportPage() {
           continue;
         }
 
-        const invoiceResponse = await fetch(
-          "/api/campai/receipts/invoice",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              debtorName: debtor.name,
-              customerNumber: debtor.account,
-              address: invoiceAddress,
-              email: row.email || debtorPayload.debtor?.email || "",
-              doNotSendReceipt: true,
-              sendByMail: false,
-              title: POSITION_DESCRIPTION_TITLE,
-              description: "",
-              isNet: false,
-              paid: false,
-              paymentMethod: "sepaCreditTransfer",
-              paymentCashAccountId: selectedCashAccountId,
-              invoiceDate,
-              deliveryDate: serviceDate,
-              positions: [
-                {
-                  description: `${row.eventName} - ${row.itemName}`,
-                  details: `${row.eventSlug.toUpperCase()}-${row.orderCode}`,
-                  quantity: 1,
-                  unit: "1",
-                  unitAmount: row.unitAmountCents,
-                  discount: 0,
-                  taxCode: row.taxRate,
-                  costCenter2: parsedCostCenter2,
-                },
-              ],
-            }),
-          },
-        );
+        const invoiceResponse = await fetch("/api/campai/receipts/invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            debtorName: debtor.name,
+            customerNumber: debtor.account,
+            address: invoiceAddress,
+            email: row.email || debtorPayload.debtor?.email || "",
+            doNotSendReceipt: true,
+            sendByMail: false,
+            title: POSITION_DESCRIPTION_TITLE,
+            description: "",
+            isNet: false,
+            paid: false,
+            paymentMethod: "sepaCreditTransfer",
+            paymentCashAccountId: selectedCashAccountId,
+            invoiceDate,
+            deliveryDate: serviceDate,
+            positions: [
+              {
+                description: `${row.eventName} - ${row.itemName}`,
+                details: `${row.eventSlug.toUpperCase()}-${row.orderCode}`,
+                quantity: 1,
+                unit: "1",
+                unitAmount: row.unitAmountCents,
+                discount: 0,
+                taxCode: row.taxRate,
+                costCenter2: parsedCostCenter2,
+              },
+            ],
+          }),
+        });
         const invoicePayload = (await invoiceResponse
           .json()
           .catch(() => ({}))) as {
@@ -637,165 +631,172 @@ export default function PretixImportPage() {
                 : undefined
             }
           >
-          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-            <table className="min-w-full divide-y divide-zinc-200">
-              <thead className="bg-zinc-50">
-                <tr>
-                  <th className="px-3 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      aria-label="Alle auswählen"
-                    />
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Code
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    E-Mail
-                  </th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Total
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Status
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Debitor
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                    Ergebnis
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200">
-                {rows.map((row) => {
-                  const debtor = debtorByKey.get(row.key);
-                  const result = resultByKey.get(row.key);
-                  return (
-                    <tr key={row.key}>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.has(row.key)}
-                          onChange={() => toggleRow(row.key)}
-                          aria-label={`${row.orderCode} auswählen`}
-                        />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 font-mono text-sm text-zinc-800">
-                        {row.orderCode}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
-                        {row.email || "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right text-sm text-zinc-800">
-                        {row.totalDisplay}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
-                        {row.statusLabel}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-sm">
-                        {debtor ? (
-                          <span className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
-                            <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                            #{debtor.account} {debtor.name}
-                            <button
-                              type="button"
-                              className="ml-1 rounded p-0.5 text-emerald-600 hover:bg-emerald-100"
-                              onClick={() => clearDebtor(row.key)}
-                              aria-label="Debitor entfernen"
-                            >
-                              <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ) : (
-                          <div className="min-w-[16rem]">
-                            <AutocompleteInput
-                              apiPath="/api/campai/debtors"
-                              entityLabelSingular="Debitor"
-                              placeholder={
-                                row.attendeeName ||
-                                row.user ||
-                                "Name oder Kontonummer…"
+            <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+              <table className="min-w-full divide-y divide-zinc-200">
+                <thead className="bg-zinc-50">
+                  <tr>
+                    <th className="px-3 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        aria-label="Alle auswählen"
+                      />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      Code
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      E-Mail
+                    </th>
+                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      Total
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      Status
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      Debitor
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                      Ergebnis
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {rows.map((row) => {
+                    const debtor = debtorByKey.get(row.key);
+                    const result = resultByKey.get(row.key);
+                    return (
+                      <tr key={row.key}>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedKeys.has(row.key)}
+                            onChange={() => toggleRow(row.key)}
+                            aria-label={`${row.orderCode} auswählen`}
+                          />
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 font-mono text-sm text-zinc-800">
+                          {row.orderCode}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
+                          {row.email || "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right text-sm text-zinc-800">
+                          {row.totalDisplay}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
+                          {row.statusLabel}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-sm">
+                          {debtor ? (
+                            <span className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
+                              <FontAwesomeIcon
+                                icon={faCheck}
+                                className="h-3 w-3"
+                              />
+                              #{debtor.account} {debtor.name}
+                              <button
+                                type="button"
+                                className="ml-1 rounded p-0.5 text-emerald-600 hover:bg-emerald-100"
+                                onClick={() => clearDebtor(row.key)}
+                                aria-label="Debitor entfernen"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faXmark}
+                                  className="h-3 w-3"
+                                />
+                              </button>
+                            </span>
+                          ) : (
+                            <div className="min-w-[16rem]">
+                              <AutocompleteInput
+                                apiPath="/api/campai/debtors"
+                                entityLabelSingular="Debitor"
+                                placeholder={
+                                  row.attendeeName ||
+                                  row.user ||
+                                  "Name oder Kontonummer…"
+                                }
+                                showCreateOption
+                                onSelect={handleDebtorSelect(row.key)}
+                                onCreateNew={handleDebtorCreateNew(
+                                  row.key,
+                                  row,
+                                )}
+                              />
+                            </div>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">
+                          {result ? (
+                            <span
+                              className={
+                                result.ok ? "text-emerald-700" : "text-rose-700"
                               }
-                              showCreateOption
-                              onSelect={handleDebtorSelect(row.key)}
-                              onCreateNew={handleDebtorCreateNew(row.key, row)}
-                            />
-                          </div>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs">
-                        {result ? (
-                          <span
-                            className={
-                              result.ok
-                                ? "text-emerald-700"
-                                : "text-rose-700"
-                            }
-                          >
-                            {result.message}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            >
+                              {result.message}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-          {createPanel ? (
-            <DebtorCreatePanel
-              className="mt-4"
-              initialName={createPanel.name}
-              email={createPanel.email}
-              addressRequirementHint={
-                (createPanelRow?.unitAmountCents ?? 0) >
+            {createPanel ? (
+              <DebtorCreatePanel
+                className="mt-4"
+                initialName={createPanel.name}
+                email={createPanel.email}
+                addressRequirementHint={
+                  (createPanelRow?.unitAmountCents ?? 0) >
                   ADDRESS_REQUIRED_THRESHOLD_CENTS
-                  ? "Ab Beträgen über 250 € ist die vollständige Adresse Pflicht."
-                  : undefined
-              }
-              onCancel={() => setCreatePanel(null)}
-              onCreated={(result) => {
-                setDebtorByKey((prev) => {
-                  const next = new Map(prev);
-                  next.set(createPanel.key, {
-                    account: result.account,
-                    name: result.name,
+                    ? "Ab Beträgen über 250 € ist die vollständige Adresse Pflicht."
+                    : undefined
+                }
+                onCancel={() => setCreatePanel(null)}
+                onCreated={(result) => {
+                  setDebtorByKey((prev) => {
+                    const next = new Map(prev);
+                    next.set(createPanel.key, {
+                      account: result.account,
+                      name: result.name,
+                    });
+                    return next;
                   });
-                  return next;
-                });
-                setCreatePanel(null);
-              }}
-            />
-          ) : null}
+                  setCreatePanel(null);
+                }}
+              />
+            ) : null}
 
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-xs text-zinc-500">
-              {selectedKeys.size} ausgewählt
-              {selectedRowsMissingDebtor
-                ? " — nicht alle ausgewählten Buchungen haben einen Debitor."
-                : ""}
-              {!selectedRowsMissingDebtor && invoiceSettingsValidationMessage
-                ? ` — ${invoiceSettingsValidationMessage}`
-                : ""}
-            </p>
-            <Button
-              type="button"
-              kind="primary"
-              icon={faFileImport}
-              disabled={submitDisabled}
-              onClick={() => void submit()}
-            >
-              {submitting
-                ? "Erstelle Rechnungen…"
-                : `Rechnungen erstellen (${selectedKeys.size})`}
-            </Button>
-          </div>
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-xs text-zinc-500">
+                {selectedKeys.size} ausgewählt
+                {selectedRowsMissingDebtor
+                  ? " — nicht alle ausgewählten Buchungen haben einen Debitor."
+                  : ""}
+                {!selectedRowsMissingDebtor && invoiceSettingsValidationMessage
+                  ? ` — ${invoiceSettingsValidationMessage}`
+                  : ""}
+              </p>
+              <Button
+                type="button"
+                kind="primary"
+                icon={faFileImport}
+                disabled={submitDisabled}
+                onClick={() => void submit()}
+              >
+                {submitting
+                  ? "Erstelle Rechnungen…"
+                  : `Rechnungen erstellen (${selectedKeys.size})`}
+              </Button>
+            </div>
           </FormSection>
         </>
       ) : null}

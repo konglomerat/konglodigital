@@ -346,7 +346,7 @@ export default function ResourceForm({
       {onGpsChange ? (
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className={themeStyles.label}>{tx("Location")}</label>
-          <div className="overflow-hidden rounded-xl border border-border/60">
+          <div className="overflow-hidden rounded-lg border border-border/60">
             <ResourceMapCrosshair
               gps={gpsLocation}
               onChange={onGpsChange}
@@ -487,34 +487,32 @@ export default function ResourceForm({
                         onReorderImages(order);
                       }
                     }}
-                    className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-card relative"
+                    className="flex shrink-0 items-center gap-3 rounded-lg border border-border bg-card relative"
                   >
                     {mediaKind === "document" ? (
-                      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-destructive-soft text-destructive">
+                      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-lg bg-destructive-soft text-destructive">
                         <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6" />
                         <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
                           PDF
                         </span>
                       </div>
+                    ) : mediaKind === "video" ? (
+                      <video
+                        src={preview}
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className="h-16 w-16 rounded-lg bg-foreground object-cover"
+                      />
                     ) : (
-                      mediaKind === "video" ? (
-                        <video
-                          src={preview}
-                          muted
-                          loop
-                          playsInline
-                          preload="metadata"
-                          className="h-16 w-16 rounded-xl bg-foreground object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={preview}
-                          alt={`Preview ${renderIndex + 1}`}
-                          draggable={false}
-                          onDragStart={(event) => event.preventDefault()}
-                          className="h-16 w-16 rounded-xl object-cover"
-                        />
-                      )
+                      <img
+                        src={preview}
+                        alt={`Preview ${renderIndex + 1}`}
+                        draggable={false}
+                        onDragStart={(event) => event.preventDefault()}
+                        className="h-16 w-16 rounded-lg object-cover"
+                      />
                     )}
 
                     <button

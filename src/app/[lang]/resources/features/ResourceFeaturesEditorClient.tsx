@@ -2307,19 +2307,19 @@ export default function ResourceFeaturesEditorClient({
       </header>
 
       {errorMessage ? (
-        <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </section>
       ) : null}
 
       {message ? (
-        <section className="rounded-2xl border border-success-border bg-success-soft p-4 text-sm text-success">
+        <section className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success">
           {message}
         </section>
       ) : null}
 
       {isLocationDataLoading ? (
-        <section className="rounded-2xl border border-warning-border bg-warning-soft p-4 text-sm text-warning">
+        <section className="rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
           <span className="inline-flex items-center gap-2">
             <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
             {tx(
@@ -2331,8 +2331,8 @@ export default function ResourceFeaturesEditorClient({
       ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
-        <aside className="space-y-4 rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
-          <div className="rounded-xl border border-border bg-muted/50 p-3">
+        <aside className="space-y-4 rounded-lg border border-border bg-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+          <div className="rounded-lg border border-border bg-muted/50 p-3">
             <p className="text-xs text-muted-foreground">
               {tx("Fast actions:")}{" "}
               <span className="font-semibold text-foreground/90">⌘/Ctrl+S</span>{" "}
@@ -2457,7 +2457,7 @@ export default function ResourceFeaturesEditorClient({
                       <button
                         type="button"
                         onClick={() => setActiveFeatureId(feature.id)}
-                        className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                           isActive
                             ? "border-primary-border bg-primary-soft text-primary"
                             : "border-border bg-card text-foreground/80 hover:border-input"
@@ -2484,7 +2484,7 @@ export default function ResourceFeaturesEditorClient({
           </div>
 
           {activeFeature ? (
-            <div className="space-y-3 rounded-xl border border-border bg-muted/50 p-3">
+            <div className="space-y-3 rounded-lg border border-border bg-muted/50 p-3">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Edit selected feature")}
               </p>
@@ -2580,7 +2580,7 @@ export default function ResourceFeaturesEditorClient({
           ) : null}
         </aside>
 
-        <section className="relative overflow-hidden rounded-2xl border border-border bg-card lg:min-h-[70vh]">
+        <section className="relative overflow-hidden rounded-lg border border-border bg-card lg:min-h-[70vh]">
           {mapboxError ? (
             <div className="flex h-[70vh] items-center justify-center p-6 text-sm text-muted-foreground">
               {mapboxError}
@@ -2643,7 +2643,7 @@ export default function ResourceFeaturesEditorClient({
         </section>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <section className="rounded-lg border border-border bg-card p-3 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
@@ -2685,13 +2685,13 @@ export default function ResourceFeaturesEditorClient({
         {resourceFormError || resourceFormMessage ? (
           <div className="mt-2 space-y-2">
             {resourceFormError ? (
-              <div className="rounded-xl border border-destructive-border bg-destructive-soft p-2.5 text-sm text-destructive">
+              <div className="rounded-lg border border-destructive-border bg-destructive-soft p-2.5 text-sm text-destructive">
                 {resourceFormError}
               </div>
             ) : null}
 
             {resourceFormMessage ? (
-              <div className="rounded-xl border border-success-border bg-success-soft p-2.5 text-sm text-success">
+              <div className="rounded-lg border border-success-border bg-success-soft p-2.5 text-sm text-success">
                 {resourceFormMessage}
               </div>
             ) : null}
@@ -2735,7 +2735,7 @@ export default function ResourceFeaturesEditorClient({
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4">
+      <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-lg font-semibold text-foreground">
           {tx("Generate cover image")}
         </h2>

@@ -79,8 +79,7 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
     onCreated,
   } = props;
 
-  const isUpdate =
-    typeof creditorAccount === "number" && creditorAccount > 0;
+  const isUpdate = typeof creditorAccount === "number" && creditorAccount > 0;
   const resolvedSubmitLabel =
     submitLabel ?? (isUpdate ? "Änderungen speichern" : "Kreditor anlegen");
 
@@ -200,7 +199,8 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
   const handleNameChange = (value: string) => {
     setDraft((current) => {
       const shouldSyncAccountHolderName =
-        !current.accountHolderName.trim() || current.accountHolderName === current.name;
+        !current.accountHolderName.trim() ||
+        current.accountHolderName === current.name;
 
       return {
         ...current,
@@ -216,7 +216,8 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
     const trimmedName = draft.name.trim();
     const trimmedDetails = draft.details.trim();
     const normalizedIban = draft.iban.replace(/\s+/g, "").toUpperCase();
-    const trimmedAccountHolderName = draft.accountHolderName.trim() || trimmedName;
+    const trimmedAccountHolderName =
+      draft.accountHolderName.trim() || trimmedName;
 
     if (!trimmedName) {
       setError("Name ist erforderlich.");
@@ -319,7 +320,7 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
   return (
     <div
       className={[
-        "space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4",
+        "space-y-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4",
         className,
       ]
         .filter(Boolean)

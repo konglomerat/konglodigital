@@ -10,7 +10,7 @@ export default async function ProjectUploadPromptCard() {
   const articleLink = localizePathname("/projects/new", locale);
 
   return (
-    <aside className="relative isolate h-full overflow-hidden rounded-2xl border border-red-500 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0)_38%),linear-gradient(135deg,#b91c1c_0%,#dc2626_52%,#ef4444_100%)] shadow-sm md:col-span-2 xl:col-span-2">
+    <aside className="relative isolate h-full overflow-hidden rounded-lg border border-red-500 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0)_38%),linear-gradient(135deg,#b91c1c_0%,#dc2626_52%,#ef4444_100%)] shadow-sm md:col-span-2 xl:col-span-2">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-8 top-5 h-28 w-28 rounded-full bg-red-300/30 blur-3xl"

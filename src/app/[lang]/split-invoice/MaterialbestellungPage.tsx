@@ -1,6 +1,13 @@
 "use client";
 
-import { type FocusEvent, Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FocusEvent,
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   faFileArrowUp,
   faFilePdf,
@@ -26,9 +33,7 @@ import {
   type MaterialOrderSummary,
 } from "@/lib/material-orders";
 import { type MaterialInvoiceParseResult } from "@/lib/material-invoice";
-import {
-  euroAmountValidationMessage,
-} from "@/lib/euro-input";
+import { euroAmountValidationMessage } from "@/lib/euro-input";
 
 type DebtorDetails = {
   account?: number | null;
@@ -89,9 +94,13 @@ const parseNumberInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const toInputEuro = (value: number) => roundCurrency(value).toFixed(2).replace(".", ",");
+const toInputEuro = (value: number) =>
+  roundCurrency(value).toFixed(2).replace(".", ",");
 
-const calculateDueDate = (invoiceDate: string, dueDays: MaterialOrderDueDays) => {
+const calculateDueDate = (
+  invoiceDate: string,
+  dueDays: MaterialOrderDueDays,
+) => {
   if (!invoiceDate) {
     return "";
   }
@@ -168,18 +177,23 @@ const buildParticipantsFromParse = (
     creating: false,
   }));
 
-const sumParticipantSubtotal = (participant: MaterialOrderEditableParticipant) =>
+const sumParticipantSubtotal = (
+  participant: MaterialOrderEditableParticipant,
+) =>
   roundCurrency(
     participant.positions.reduce(
       (sum, position) =>
-        sum + parseNumberInput(position.quantity) * parseNumberInput(position.unitAmountEuro),
+        sum +
+        parseNumberInput(position.quantity) *
+          parseNumberInput(position.unitAmountEuro),
       0,
     ),
   );
 
 const calculatePositionTotal = (position: MaterialOrderEditablePosition) =>
   roundCurrency(
-    parseNumberInput(position.quantity) * parseNumberInput(position.unitAmountEuro),
+    parseNumberInput(position.quantity) *
+      parseNumberInput(position.unitAmountEuro),
   );
 
 const allocateShipping = (
@@ -218,7 +232,9 @@ const allocateShipping = (
         const share =
           index === subtotalByParticipant.length - 1
             ? roundCurrency(shippingAmountEuro - assigned)
-            : roundCurrency((shippingAmountEuro * entry.subtotal) / totalSubtotal);
+            : roundCurrency(
+                (shippingAmountEuro * entry.subtotal) / totalSubtotal,
+              );
         assigned = roundCurrency(assigned + share);
         result.set(entry.id, share);
       });
@@ -226,7 +242,8 @@ const allocateShipping = (
     }
   }
 
-  const base = Math.floor((shippingAmountEuro / participants.length) * 100) / 100;
+  const base =
+    Math.floor((shippingAmountEuro / participants.length) * 100) / 100;
   let assigned = 0;
   participants.forEach((participant, index) => {
     const share =
@@ -280,23 +297,33 @@ export default function MaterialInvoicesPage({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [participants, setParticipants] = useState<MaterialOrderEditableParticipant[]>([]);
-  const [unassignedPositions, setUnassignedPositions] = useState<MaterialOrderEditablePosition[]>([]);
+  const [participants, setParticipants] = useState<
+    MaterialOrderEditableParticipant[]
+  >([]);
+  const [unassignedPositions, setUnassignedPositions] = useState<
+    MaterialOrderEditablePosition[]
+  >([]);
   const [supplierName, setSupplierName] = useState("");
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
   const [totalAmountEuro, setTotalAmountEuro] = useState(0);
   const [dueDays, setDueDays] = useState<MaterialOrderDueDays>("30");
-  const [invoiceSendMode, setInvoiceSendMode] = useState<MaterialOrderInvoiceSendMode>("none");
+  const [invoiceSendMode, setInvoiceSendMode] =
+    useState<MaterialOrderInvoiceSendMode>("none");
   const [shippingAmountEuro, setShippingAmountEuro] = useState("0,00");
   const [shippingMode, setShippingMode] = useState<ShippingMode>("equal");
   const [globalTaxRate, setGlobalTaxRate] = useState<TaxRate>("19");
   const [issues, setIssues] = useState<string[]>([]);
 
   const [selectedCashAccountId, setSelectedCashAccountId] = useState("");
-  const [bankConnectionsError, setBankConnectionsError] = useState<string | null>(null);
-  const [costCenter2Options, setCostCenter2Options] = useState<CostCenter2Option[]>([]);
-  const [selectedCostCenter2, setSelectedCostCenter2] = useState(HOLZ_COST_CENTER2);
+  const [bankConnectionsError, setBankConnectionsError] = useState<
+    string | null
+  >(null);
+  const [costCenter2Options, setCostCenter2Options] = useState<
+    CostCenter2Option[]
+  >([]);
+  const [selectedCostCenter2, setSelectedCostCenter2] =
+    useState(HOLZ_COST_CENTER2);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isCreatingAll, setIsCreatingAll] = useState(false);
@@ -309,8 +336,12 @@ export default function MaterialInvoicesPage({
     const loadInitialData = async () => {
       try {
         const [bankResponse, cc2Response] = await Promise.all([
-          fetchJson<{ bankConnections: BankConnectionOption[] }>("/api/campai/bank-connections"),
-          fetchJson<{ costCenters: CostCenter2Option[] }>("/api/campai/cost-centers"),
+          fetchJson<{ bankConnections: BankConnectionOption[] }>(
+            "/api/campai/bank-connections",
+          ),
+          fetchJson<{ costCenters: CostCenter2Option[] }>(
+            "/api/campai/cost-centers",
+          ),
         ]);
 
         if (!active) {
@@ -321,15 +352,21 @@ export default function MaterialInvoicesPage({
         const preferredAccount = items.find(
           (item) => item.account === DEFAULT_TRANSFER_ACCOUNT,
         );
-        setSelectedCashAccountId(preferredAccount?.value ?? items[0]?.value ?? "");
+        setSelectedCashAccountId(
+          preferredAccount?.value ?? items[0]?.value ?? "",
+        );
         setBankConnectionsError(
           items.length === 0 ? "Kein Konto fuer Überweisung gefunden." : null,
         );
 
         const cc2Items = cc2Response.costCenters ?? [];
         setCostCenter2Options(cc2Items);
-        const preferredCc2 = cc2Items.find((item) => item.value === HOLZ_COST_CENTER2);
-        setSelectedCostCenter2(preferredCc2?.value ?? cc2Items[0]?.value ?? HOLZ_COST_CENTER2);
+        const preferredCc2 = cc2Items.find(
+          (item) => item.value === HOLZ_COST_CENTER2,
+        );
+        setSelectedCostCenter2(
+          preferredCc2?.value ?? cc2Items[0]?.value ?? HOLZ_COST_CENTER2,
+        );
       } catch (error) {
         if (!active) {
           return;
@@ -350,7 +387,7 @@ export default function MaterialInvoicesPage({
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shippingAmount = roundCurrency(parseNumberInput(shippingAmountEuro));
@@ -502,7 +539,13 @@ export default function MaterialInvoicesPage({
   const handleEditorBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
     const target = event.target;
 
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+      )
+    ) {
       return;
     }
 
@@ -580,12 +623,14 @@ export default function MaterialInvoicesPage({
             quantity: String(position.quantity).replace(".", ","),
             unit: position.unit || "Stk",
             unitAmountEuro: toInputEuro(position.unitAmountEuro),
-          }))
-        )
+          })),
+        ),
       );
     } catch (error) {
       setParseError(
-        error instanceof Error ? error.message : "PDF konnte nicht analysiert werden.",
+        error instanceof Error
+          ? error.message
+          : "PDF konnte nicht analysiert werden.",
       );
     } finally {
       setIsParsing(false);
@@ -604,15 +649,20 @@ export default function MaterialInvoicesPage({
       }>(`/api/materialbestellung/orders?id=${orderId}`);
 
       if (!data.draft) {
-        throw new Error("Gespeicherte Materialbestellung konnte nicht geladen werden.");
+        throw new Error(
+          "Gespeicherte Materialbestellung konnte nicht geladen werden.",
+        );
       }
 
-      const normalizedParticipants = data.draft.participants.map((participant) => ({
-        ...participant,
-        shippingDescription: participant.shippingDescription ?? "Anteilige Lieferkosten",
-        createError: null,
-        creating: false,
-      }));
+      const normalizedParticipants = data.draft.participants.map(
+        (participant) => ({
+          ...participant,
+          shippingDescription:
+            participant.shippingDescription ?? "Anteilige Lieferkosten",
+          createError: null,
+          creating: false,
+        }),
+      );
 
       lastSavedDraftRef.current = JSON.stringify(
         buildDraft({
@@ -653,7 +703,9 @@ export default function MaterialInvoicesPage({
 
   const updateParticipant = (
     participantId: string,
-    updater: (current: MaterialOrderEditableParticipant) => MaterialOrderEditableParticipant,
+    updater: (
+      current: MaterialOrderEditableParticipant,
+    ) => MaterialOrderEditableParticipant,
   ) => {
     setParticipants((current) =>
       current.map((participant) =>
@@ -662,10 +714,15 @@ export default function MaterialInvoicesPage({
     );
   };
 
-  const assignPositionToParticipant = (positionId: string, participantId: string) => {
+  const assignPositionToParticipant = (
+    positionId: string,
+    participantId: string,
+  ) => {
     const position = unassignedPositions.find((p) => p.id === positionId);
     if (!position || !participantId) return;
-    setUnassignedPositions((current) => current.filter((p) => p.id !== positionId));
+    setUnassignedPositions((current) =>
+      current.filter((p) => p.id !== positionId),
+    );
     setParticipants((current) =>
       current.map((participant) =>
         participant.id === participantId
@@ -685,9 +742,15 @@ export default function MaterialInvoicesPage({
     }
 
     setParticipants((current) => {
-      const source = current.find((participant) => participant.id === fromParticipantId);
-      const target = current.find((participant) => participant.id === toParticipantId);
-      const position = source?.positions.find((entry) => entry.id === positionId);
+      const source = current.find(
+        (participant) => participant.id === fromParticipantId,
+      );
+      const target = current.find(
+        (participant) => participant.id === toParticipantId,
+      );
+      const position = source?.positions.find(
+        (entry) => entry.id === positionId,
+      );
 
       if (!source || !target || !position) {
         return current;
@@ -697,7 +760,9 @@ export default function MaterialInvoicesPage({
         if (participant.id === fromParticipantId) {
           return {
             ...participant,
-            positions: participant.positions.filter((entry) => entry.id !== positionId),
+            positions: participant.positions.filter(
+              (entry) => entry.id !== positionId,
+            ),
           };
         }
 
@@ -739,15 +804,22 @@ export default function MaterialInvoicesPage({
   };
 
   const createInvoiceForParticipant = async (participantId: string) => {
-    const participant = participants.find((entry) => entry.id === participantId);
+    const participant = participants.find(
+      (entry) => entry.id === participantId,
+    );
     if (!participant) {
       return;
     }
 
-    if (!participant.debtorAccount || !participant.debtorName || !participant.debtorAddress) {
+    if (
+      !participant.debtorAccount ||
+      !participant.debtorName ||
+      !participant.debtorAddress
+    ) {
       updateParticipant(participantId, (current) => ({
         ...current,
-        createError: "Bitte zuerst einen Debitor mit vollstaendiger Adresse zuordnen.",
+        createError:
+          "Bitte zuerst einen Debitor mit vollstaendiger Adresse zuordnen.",
       }));
       return;
     }
@@ -809,8 +881,10 @@ export default function MaterialInvoicesPage({
         dueDate: dueDate || undefined,
         deliveryDate: supplierInvoiceDate,
         title: "Rechnung",
-        intro: `Materialbestellung aus Sammelrechnung ${supplierInvoiceNumber || ""}`.trim(),
-        description: `Aufgeteilt aus Lieferantenrechnung ${supplierName || "Lieferant"} ${supplierInvoiceNumber || ""}`.trim(),
+        intro:
+          `Materialbestellung aus Sammelrechnung ${supplierInvoiceNumber || ""}`.trim(),
+        description:
+          `Aufgeteilt aus Lieferantenrechnung ${supplierName || "Lieferant"} ${supplierInvoiceNumber || ""}`.trim(),
         note: `Besteller: ${participant.name}`,
         isNet: true,
         paid: false,
@@ -831,7 +905,8 @@ export default function MaterialInvoicesPage({
           ...(shippingShare > 0
             ? [
                 {
-                  description: participant.shippingDescription || "Anteilige Lieferkosten",
+                  description:
+                    participant.shippingDescription || "Anteilige Lieferkosten",
                   unit: SHIPPING_UNIT,
                   quantity: 1,
                   unitAmount: Math.round(shippingShare * 100),
@@ -886,7 +961,7 @@ export default function MaterialInvoicesPage({
 
   const taxRatePercent = Number(globalTaxRate);
   const nettoTotal = calculatedTotal;
-  const mwstTotal = roundCurrency(nettoTotal * taxRatePercent / 100);
+  const mwstTotal = roundCurrency((nettoTotal * taxRatePercent) / 100);
   const bruttoTotal = roundCurrency(nettoTotal + mwstTotal);
 
   return (
@@ -897,11 +972,15 @@ export default function MaterialInvoicesPage({
         </h1>
       </div>
 
-      <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 dark:border-indigo-800 dark:from-indigo-950/30 dark:to-blue-950/30">
+      <div className="rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 dark:border-indigo-800 dark:from-indigo-950/30 dark:to-blue-950/30">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-indigo-900 dark:text-indigo-200">PDF Auslesen</h2>
+          <h2 className="text-base font-semibold text-indigo-900 dark:text-indigo-200">
+            PDF Auslesen
+          </h2>
           <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-400">
-            Hier kann die PDF vom Händler hochgeladen und ausgelesen werden. Die Positionen werden automatisch erkannt und müssen dann nur noch zugeordnet werden.
+            Hier kann die PDF vom Händler hochgeladen und ausgelesen werden. Die
+            Positionen werden automatisch erkannt und müssen dann nur noch
+            zugeordnet werden.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -933,9 +1012,11 @@ export default function MaterialInvoicesPage({
             <FontAwesomeIcon icon={faArrowRotateLeft} />
           </button>
         </div>
-        {parseError ? <p className="mt-3 text-sm text-rose-600">{parseError}</p> : null}
+        {parseError ? (
+          <p className="mt-3 text-sm text-rose-600">{parseError}</p>
+        ) : null}
         {issues.length > 0 ? (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {issues.map((issue, index) => (
               <p key={`${issue}-${index}`}>{issue}</p>
             ))}
@@ -944,185 +1025,244 @@ export default function MaterialInvoicesPage({
       </div>
 
       <div className="space-y-6" onBlurCapture={handleEditorBlurCapture}>
-
-          {participants.length > 0 && (
-            <dl className="grid gap-x-6 gap-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm sm:grid-cols-2 xl:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900/50">
-              <div>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Lieferant</dt>
-                <dd className="mt-0.5 font-medium">{supplierName || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Rechnungsnummer</dt>
-                <dd className="mt-0.5 font-medium">{supplierInvoiceNumber || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Rechnungsdatum</dt>
-                <dd className="mt-0.5 font-medium">{supplierInvoiceDate ? formatStoredDate(`${supplierInvoiceDate}T00:00:00`) : "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Umsatzsteuer</dt>
-                <dd className="mt-0.5 font-medium">
-                  {toInputEuro(Math.round((totalAmountEuro - totalAmountEuro / (1 + parseInt(globalTaxRate) / 100)) * 100) / 100)} EUR ({globalTaxRate} %)
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Lieferkosten</dt>
-                <dd className="mt-0.5 font-medium">{shippingAmountEuro} EUR</dd>
-              </div>
-              <div className="xl:text-right">
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">Gesamtbetrag</dt>
-                <dd className="mt-0.5 font-medium">{toInputEuro(totalAmountEuro)} EUR</dd>
-              </div>
-            </dl>
-          )}
-
-          <FormSection
-            title="Einstellungen Teilrechnungen"
-            description="Diese Einstellungen gelten für alle Teilrechnungen dieser Bestellung."
-          >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <FormField label="Fälligkeit (ab Erstellung)">
-                <Select
-                  value={dueDays}
-                  onChange={(event) => setDueDays(event.target.value as MaterialOrderDueDays)}
-                >
-                  <option value="7">7 Tage</option>
-                  <option value="10">10 Tage</option>
-                  <option value="14">14 Tage</option>
-                  <option value="30">30 Tage</option>
-                </Select>
-              </FormField>
-              <FormField label="Rechnungsversand">
-                <Select
-                  value={invoiceSendMode}
-                  onChange={(event) =>
-                    setInvoiceSendMode(event.target.value as MaterialOrderInvoiceSendMode)
-                  }
-                >
-                  <option value="none">Kein Versand</option>
-                  <option value="email">Versand per Mail</option>
-                </Select>
-              </FormField>
-              <FormField label="Lieferkosten gesamt in EUR">
-                <Input
-                  value={shippingAmountEuro}
-                  disabled
-                />
-              </FormField>
-              <FormField label="Werkbereich">
-                <Select
-                  value={selectedCostCenter2}
-                  onChange={(event) => setSelectedCostCenter2(event.target.value)}
-                  disabled={costCenter2Options.length === 0}
-                >
-                  {costCenter2Options.length === 0 ? (
-                    <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
-                  ) : (
-                    costCenter2Options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))
-                  )}
-                </Select>
-              </FormField>
-              <FormField label="Lieferkosten verteilen">
-                <Select
-                  value={shippingMode}
-                  onChange={(event) => setShippingMode(event.target.value as ShippingMode)}
-                >
-                  <option value="equal">Gleichmäßig pro Person</option>
-                  <option value="byValue">Nach Positionswert</option>
-                  <option value="manual">Manuell</option>
-                </Select>
-              </FormField>
-              <FormField label="MwSt">
-                <Select
-                  value={globalTaxRate}
-                  onChange={(event) => setGlobalTaxRate(event.target.value as TaxRate)}
-                >
-                  <option value="0">0%</option>
-                  <option value="7">7%</option>
-                  <option value="19">19%</option>
-                </Select>
-              </FormField>
+        {participants.length > 0 && (
+          <dl className="grid gap-x-6 gap-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm sm:grid-cols-2 xl:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Lieferant
+              </dt>
+              <dd className="mt-0.5 font-medium">{supplierName || "—"}</dd>
             </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Rechnungsnummer
+              </dt>
+              <dd className="mt-0.5 font-medium">
+                {supplierInvoiceNumber || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Rechnungsdatum
+              </dt>
+              <dd className="mt-0.5 font-medium">
+                {supplierInvoiceDate
+                  ? formatStoredDate(`${supplierInvoiceDate}T00:00:00`)
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Umsatzsteuer
+              </dt>
+              <dd className="mt-0.5 font-medium">
+                {toInputEuro(
+                  Math.round(
+                    (totalAmountEuro -
+                      totalAmountEuro / (1 + parseInt(globalTaxRate) / 100)) *
+                      100,
+                  ) / 100,
+                )}{" "}
+                EUR ({globalTaxRate} %)
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Lieferkosten
+              </dt>
+              <dd className="mt-0.5 font-medium">{shippingAmountEuro} EUR</dd>
+            </div>
+            <div className="xl:text-right">
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                Gesamtbetrag
+              </dt>
+              <dd className="mt-0.5 font-medium">
+                {toInputEuro(totalAmountEuro)} EUR
+              </dd>
+            </div>
+          </dl>
+        )}
 
-            {bankConnectionsError ? (
-              <p className="text-sm text-rose-600">{bankConnectionsError}</p>
-            ) : null}
-          </FormSection>
-
-          {unassignedPositions.length > 0 && (
-            <FormSection title={`Nicht Zugeordnet (${unassignedPositions.length})`} description="Weise jede Position einem Mitbesteller zu.">
-              <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-                  <thead className="bg-zinc-50 dark:bg-zinc-900/70">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Artikelbezeichnung</th>
-                      <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Artikelbeschreibung</th>
-                      <th className="w-52 px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">Zuweisen an</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {unassignedPositions.map((position) => (
-                      <tr key={position.id}>
-                        <td className="px-3 py-2 font-medium">{position.description}</td>
-                        <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">{position.articleDescription || <span className="italic">—</span>}</td>
-                        <td className="px-3 py-2">
-                          <Select
-                            value=""
-                            disabled={participants.length === 0}
-                            onChange={(event) => {
-                              if (event.target.value) assignPositionToParticipant(position.id, event.target.value);
-                            }}
-                          >
-                            <option value="">{participants.length === 0 ? "Erst Mitbesteller anlegen" : "Person auswählen …"}</option>
-                            {participants.map((participant) => (
-                              <option key={participant.id} value={participant.id}>
-                                {participant.name}
-                              </option>
-                            ))}
-                          </Select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </FormSection>
-          )}
-
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <header className="mb-4 flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  {`Mitbesteller${participants.length > 0 ? ` (${participants.length})` : ""}`}
-                </h2>
-                <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">Pro Person werden Positionen und Lieferkostenanteil aufgeteilt.</p>
-              </div>
-              <Button
-                kind="secondary"
-                size="small"
-                icon={faPlus}
-                onClick={() =>
-                  setParticipants((current) => [...current, createEmptyParticipant()])
+        <FormSection
+          title="Einstellungen Teilrechnungen"
+          description="Diese Einstellungen gelten für alle Teilrechnungen dieser Bestellung."
+        >
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <FormField label="Fälligkeit (ab Erstellung)">
+              <Select
+                value={dueDays}
+                onChange={(event) =>
+                  setDueDays(event.target.value as MaterialOrderDueDays)
                 }
               >
-                Person hinzufügen
-              </Button>
-            </header>
-          <div className="space-y-5">
+                <option value="7">7 Tage</option>
+                <option value="10">10 Tage</option>
+                <option value="14">14 Tage</option>
+                <option value="30">30 Tage</option>
+              </Select>
+            </FormField>
+            <FormField label="Rechnungsversand">
+              <Select
+                value={invoiceSendMode}
+                onChange={(event) =>
+                  setInvoiceSendMode(
+                    event.target.value as MaterialOrderInvoiceSendMode,
+                  )
+                }
+              >
+                <option value="none">Kein Versand</option>
+                <option value="email">Versand per Mail</option>
+              </Select>
+            </FormField>
+            <FormField label="Lieferkosten gesamt in EUR">
+              <Input value={shippingAmountEuro} disabled />
+            </FormField>
+            <FormField label="Werkbereich">
+              <Select
+                value={selectedCostCenter2}
+                onChange={(event) => setSelectedCostCenter2(event.target.value)}
+                disabled={costCenter2Options.length === 0}
+              >
+                {costCenter2Options.length === 0 ? (
+                  <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
+                ) : (
+                  costCenter2Options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                )}
+              </Select>
+            </FormField>
+            <FormField label="Lieferkosten verteilen">
+              <Select
+                value={shippingMode}
+                onChange={(event) =>
+                  setShippingMode(event.target.value as ShippingMode)
+                }
+              >
+                <option value="equal">Gleichmäßig pro Person</option>
+                <option value="byValue">Nach Positionswert</option>
+                <option value="manual">Manuell</option>
+              </Select>
+            </FormField>
+            <FormField label="MwSt">
+              <Select
+                value={globalTaxRate}
+                onChange={(event) =>
+                  setGlobalTaxRate(event.target.value as TaxRate)
+                }
+              >
+                <option value="0">0%</option>
+                <option value="7">7%</option>
+                <option value="19">19%</option>
+              </Select>
+            </FormField>
+          </div>
 
+          {bankConnectionsError ? (
+            <p className="text-sm text-rose-600">{bankConnectionsError}</p>
+          ) : null}
+        </FormSection>
+
+        {unassignedPositions.length > 0 && (
+          <FormSection
+            title={`Nicht Zugeordnet (${unassignedPositions.length})`}
+            description="Weise jede Position einem Mitbesteller zu."
+          >
+            <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/70">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                      Artikelbezeichnung
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                      Artikelbeschreibung
+                    </th>
+                    <th className="w-52 px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                      Zuweisen an
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {unassignedPositions.map((position) => (
+                    <tr key={position.id}>
+                      <td className="px-3 py-2 font-medium">
+                        {position.description}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">
+                        {position.articleDescription || (
+                          <span className="italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Select
+                          value=""
+                          disabled={participants.length === 0}
+                          onChange={(event) => {
+                            if (event.target.value)
+                              assignPositionToParticipant(
+                                position.id,
+                                event.target.value,
+                              );
+                          }}
+                        >
+                          <option value="">
+                            {participants.length === 0
+                              ? "Erst Mitbesteller anlegen"
+                              : "Person auswählen …"}
+                          </option>
+                          {participants.map((participant) => (
+                            <option key={participant.id} value={participant.id}>
+                              {participant.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </FormSection>
+        )}
+
+        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <header className="mb-4 flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                {`Mitbesteller${participants.length > 0 ? ` (${participants.length})` : ""}`}
+              </h2>
+              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Pro Person werden Positionen und Lieferkostenanteil aufgeteilt.
+              </p>
+            </div>
+            <Button
+              kind="secondary"
+              size="small"
+              icon={faPlus}
+              onClick={() =>
+                setParticipants((current) => [
+                  ...current,
+                  createEmptyParticipant(),
+                ])
+              }
+            >
+              Person hinzufügen
+            </Button>
+          </header>
+          <div className="space-y-5">
             {participants.map((participant) => {
               const subtotal = sumParticipantSubtotal(participant);
-              const shippingShare = shippingByParticipant.get(participant.id) ?? 0;
+              const shippingShare =
+                shippingByParticipant.get(participant.id) ?? 0;
               const total = roundCurrency(subtotal + shippingShare);
 
               return (
                 <section
                   key={participant.id}
-                  className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >
                   <div className="flex w-full flex-wrap items-center gap-3">
                     <div className="max-w-sm flex-none">
@@ -1148,22 +1288,35 @@ export default function MaterialInvoicesPage({
                             debtorName: suggestion.name,
                             debtorAccount: suggestion.account,
                           }));
-                          void fetchDebtorDetails(participant.id, suggestion.account);
+                          void fetchDebtorDetails(
+                            participant.id,
+                            suggestion.account,
+                          );
                         }}
                       />
                     </div>
                     {participant.debtorAccount ? (
                       <div className="min-w-0 text-sm text-zinc-500 dark:text-zinc-400">
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">#{participant.debtorAccount}</span>
+                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                          #{participant.debtorAccount}
+                        </span>
                         {participant.debtorAddress ? (
-                          <span className="ml-2">{participant.debtorAddress.addressLine || ""}, {participant.debtorAddress.zip || ""} {participant.debtorAddress.city || ""}</span>
+                          <span className="ml-2">
+                            {participant.debtorAddress.addressLine || ""},{" "}
+                            {participant.debtorAddress.zip || ""}{" "}
+                            {participant.debtorAddress.city || ""}
+                          </span>
                         ) : null}
                         {participant.debtorEmail ? (
-                          <span className="ml-2">{participant.debtorEmail}</span>
+                          <span className="ml-2">
+                            {participant.debtorEmail}
+                          </span>
                         ) : null}
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-400 dark:text-zinc-500">Kein Debitor zugeordnet</span>
+                      <span className="text-sm text-zinc-400 dark:text-zinc-500">
+                        Kein Debitor zugeordnet
+                      </span>
                     )}
                     {participant.invoiceId ? (
                       <p className="ml-auto whitespace-nowrap text-sm text-emerald-700 dark:text-emerald-300">
@@ -1173,150 +1326,213 @@ export default function MaterialInvoicesPage({
                   </div>
 
                   <div className="space-y-2">
-                      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
                       <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
                         <thead className="bg-zinc-50 dark:bg-zinc-900/70">
                           <tr>
                             <th className="px-3 py-2 text-left">Posten</th>
                             <th className="w-16 px-3 py-2 text-left">Menge</th>
-                            <th className="w-20 px-3 py-2 text-left">Einheit</th>
-                            <th className="w-28 px-3 py-2 text-left">Einzelpreis</th>
-                            <th className="w-28 px-3 py-2 text-left">Gesamtpreis</th>
-                            <th className="w-20 px-3 py-2 text-right">Aktion</th>
+                            <th className="w-20 px-3 py-2 text-left">
+                              Einheit
+                            </th>
+                            <th className="w-28 px-3 py-2 text-left">
+                              Einzelpreis
+                            </th>
+                            <th className="w-28 px-3 py-2 text-left">
+                              Gesamtpreis
+                            </th>
+                            <th className="w-20 px-3 py-2 text-right">
+                              Aktion
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                           {participant.positions.map((position) => (
                             <Fragment key={position.id}>
-                            <tr className="align-top position-row">
-                              <td className="px-3 py-2">
-                                <div className="flex flex-col gap-1">
-                                <Input
-                                  value={position.description}
-                                  className="min-w-0 whitespace-nowrap"
-                                  onChange={(event) =>
-                                    updateParticipant(participant.id, (current) => ({
-                                      ...current,
-                                      positions: current.positions.map((entry) =>
-                                        entry.id === position.id
-                                          ? { ...entry, description: event.target.value }
-                                          : entry,
-                                      ),
-                                    }))
-                                  }
-                                />
-                                <Input
-                                  placeholder="Details"
-                                  className="min-w-0 whitespace-nowrap text-xs text-zinc-500 placeholder:text-zinc-400 dark:text-zinc-400"
-                                  value={position.articleDescription}
-                                  onChange={(event) =>
-                                    updateParticipant(participant.id, (current) => ({
-                                      ...current,
-                                      positions: current.positions.map((entry) =>
-                                        entry.id === position.id
-                                          ? { ...entry, articleDescription: event.target.value }
-                                          : entry,
-                                      ),
-                                    }))
-                                  }
-                                />
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Input
-                                  value={position.quantity}
-                                  onChange={(event) =>
-                                    updateParticipant(participant.id, (current) => ({
-                                      ...current,
-                                      positions: current.positions.map((entry) =>
-                                        entry.id === position.id
-                                          ? { ...entry, quantity: event.target.value }
-                                          : entry,
-                                      ),
-                                    }))
-                                  }
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <Input
-                                  value={position.unit}
-                                  onChange={(event) =>
-                                    updateParticipant(participant.id, (current) => ({
-                                      ...current,
-                                      positions: current.positions.map((entry) =>
-                                        entry.id === position.id
-                                          ? { ...entry, unit: event.target.value }
-                                          : entry,
-                                      ),
-                                    }))
-                                  }
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <Input
-                                  value={position.unitAmountEuro}
-                                  inputMode="decimal"
-                                  title={euroAmountValidationMessage}
-                                  onChange={(event) =>
-                                    updateParticipant(participant.id, (current) => ({
-                                      ...current,
-                                      positions: current.positions.map((entry) =>
-                                        entry.id === position.id
-                                          ? { ...entry, unitAmountEuro: event.target.value }
-                                          : entry,
-                                      ),
-                                    }))
-                                  }
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <Input value={toInputEuro(calculatePositionTotal(position))} disabled />
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <div className="row-actions inline-flex gap-1">
-                                  <div className="relative inline-flex">
+                              <tr className="align-top position-row">
+                                <td className="px-3 py-2">
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      value={position.description}
+                                      className="min-w-0 whitespace-nowrap"
+                                      onChange={(event) =>
+                                        updateParticipant(
+                                          participant.id,
+                                          (current) => ({
+                                            ...current,
+                                            positions: current.positions.map(
+                                              (entry) =>
+                                                entry.id === position.id
+                                                  ? {
+                                                      ...entry,
+                                                      description:
+                                                        event.target.value,
+                                                    }
+                                                  : entry,
+                                            ),
+                                          }),
+                                        )
+                                      }
+                                    />
+                                    <Input
+                                      placeholder="Details"
+                                      className="min-w-0 whitespace-nowrap text-xs text-zinc-500 placeholder:text-zinc-400 dark:text-zinc-400"
+                                      value={position.articleDescription}
+                                      onChange={(event) =>
+                                        updateParticipant(
+                                          participant.id,
+                                          (current) => ({
+                                            ...current,
+                                            positions: current.positions.map(
+                                              (entry) =>
+                                                entry.id === position.id
+                                                  ? {
+                                                      ...entry,
+                                                      articleDescription:
+                                                        event.target.value,
+                                                    }
+                                                  : entry,
+                                            ),
+                                          }),
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Input
+                                    value={position.quantity}
+                                    onChange={(event) =>
+                                      updateParticipant(
+                                        participant.id,
+                                        (current) => ({
+                                          ...current,
+                                          positions: current.positions.map(
+                                            (entry) =>
+                                              entry.id === position.id
+                                                ? {
+                                                    ...entry,
+                                                    quantity:
+                                                      event.target.value,
+                                                  }
+                                                : entry,
+                                          ),
+                                        }),
+                                      )
+                                    }
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Input
+                                    value={position.unit}
+                                    onChange={(event) =>
+                                      updateParticipant(
+                                        participant.id,
+                                        (current) => ({
+                                          ...current,
+                                          positions: current.positions.map(
+                                            (entry) =>
+                                              entry.id === position.id
+                                                ? {
+                                                    ...entry,
+                                                    unit: event.target.value,
+                                                  }
+                                                : entry,
+                                          ),
+                                        }),
+                                      )
+                                    }
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Input
+                                    value={position.unitAmountEuro}
+                                    inputMode="decimal"
+                                    title={euroAmountValidationMessage}
+                                    onChange={(event) =>
+                                      updateParticipant(
+                                        participant.id,
+                                        (current) => ({
+                                          ...current,
+                                          positions: current.positions.map(
+                                            (entry) =>
+                                              entry.id === position.id
+                                                ? {
+                                                    ...entry,
+                                                    unitAmountEuro:
+                                                      event.target.value,
+                                                  }
+                                                : entry,
+                                          ),
+                                        }),
+                                      )
+                                    }
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Input
+                                    value={toInputEuro(
+                                      calculatePositionTotal(position),
+                                    )}
+                                    disabled
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <div className="row-actions inline-flex gap-1">
+                                    <div className="relative inline-flex">
+                                      <button
+                                        type="button"
+                                        title="Position neu zuweisen"
+                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-xs text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={participants.length <= 1}
+                                      >
+                                        <FontAwesomeIcon icon={faRightLeft} />
+                                      </button>
+                                      {participants.length > 1 && (
+                                        <select
+                                          className="absolute inset-0 cursor-pointer opacity-0"
+                                          value={participant.id}
+                                          onChange={(event) =>
+                                            movePosition(
+                                              participant.id,
+                                              event.target.value,
+                                              position.id,
+                                            )
+                                          }
+                                        >
+                                          {participants.map((option) => (
+                                            <option
+                                              key={option.id}
+                                              value={option.id}
+                                            >
+                                              {option.name}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </div>
                                     <button
                                       type="button"
-                                      title="Position neu zuweisen"
-                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-xs text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                      disabled={participants.length <= 1}
+                                      title="Position entfernen"
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-rose-200 bg-white text-xs text-rose-700 transition hover:bg-rose-50"
+                                      onClick={() =>
+                                        updateParticipant(
+                                          participant.id,
+                                          (current) => ({
+                                            ...current,
+                                            positions: current.positions.filter(
+                                              (entry) =>
+                                                entry.id !== position.id,
+                                            ),
+                                          }),
+                                        )
+                                      }
                                     >
-                                      <FontAwesomeIcon icon={faRightLeft} />
+                                      <FontAwesomeIcon icon={faTrash} />
                                     </button>
-                                    {participants.length > 1 && (
-                                      <select
-                                        className="absolute inset-0 cursor-pointer opacity-0"
-                                        value={participant.id}
-                                        onChange={(event) =>
-                                          movePosition(participant.id, event.target.value, position.id)
-                                        }
-                                      >
-                                        {participants.map((option) => (
-                                          <option key={option.id} value={option.id}>
-                                            {option.name}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    )}
                                   </div>
-                                  <button
-                                    type="button"
-                                    title="Position entfernen"
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-rose-200 bg-white text-xs text-rose-700 transition hover:bg-rose-50"
-                                    onClick={() =>
-                                      updateParticipant(participant.id, (current) => ({
-                                        ...current,
-                                        positions: current.positions.filter(
-                                          (entry) => entry.id !== position.id,
-                                        ),
-                                      }))
-                                    }
-                                  >
-                                    <FontAwesomeIcon icon={faTrash} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                                </td>
+                              </tr>
                             </Fragment>
                           ))}
                           <tr className="position-row align-top">
@@ -1324,10 +1540,13 @@ export default function MaterialInvoicesPage({
                               <Input
                                 value={participant.shippingDescription}
                                 onChange={(event) =>
-                                  updateParticipant(participant.id, (current) => ({
-                                    ...current,
-                                    shippingDescription: event.target.value,
-                                  }))
+                                  updateParticipant(
+                                    participant.id,
+                                    (current) => ({
+                                      ...current,
+                                      shippingDescription: event.target.value,
+                                    }),
+                                  )
                                 }
                               />
                             </td>
@@ -1361,36 +1580,50 @@ export default function MaterialInvoicesPage({
                           </tr>
                         </tbody>
                       </table>
-                      </div>
-                      <div className="flex items-start justify-between gap-4">
-                        <Button
-                          kind="secondary"
-                          size="small"
-                          icon={faPlus}
-                          onClick={() =>
-                            updateParticipant(participant.id, (current) => ({
-                              ...current,
-                              positions: [...current.positions, createEmptyPosition()],
-                            }))
-                          }
-                        >
-                          Neue Position
-                        </Button>
-                        <div className="text-sm">
-                          <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
-                            <span>Summe netto</span>
-                            <span>{euroFormatter.format(total)}</span>
-                          </div>
-                          <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
-                            <span>MwSt ({globalTaxRate}%)</span>
-                            <span>{euroFormatter.format(roundCurrency(total * taxRatePercent / 100))}</span>
-                          </div>
-                          <div className="mt-0.5 flex justify-between gap-8 border-t border-zinc-200 pt-1 font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
-                            <span>Summe brutto</span>
-                            <span>{euroFormatter.format(roundCurrency(total + roundCurrency(total * taxRatePercent / 100)))}</span>
-                          </div>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <Button
+                        kind="secondary"
+                        size="small"
+                        icon={faPlus}
+                        onClick={() =>
+                          updateParticipant(participant.id, (current) => ({
+                            ...current,
+                            positions: [
+                              ...current.positions,
+                              createEmptyPosition(),
+                            ],
+                          }))
+                        }
+                      >
+                        Neue Position
+                      </Button>
+                      <div className="text-sm">
+                        <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                          <span>Summe netto</span>
+                          <span>{euroFormatter.format(total)}</span>
+                        </div>
+                        <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                          <span>MwSt ({globalTaxRate}%)</span>
+                          <span>
+                            {euroFormatter.format(
+                              roundCurrency((total * taxRatePercent) / 100),
+                            )}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex justify-between gap-8 border-t border-zinc-200 pt-1 font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
+                          <span>Summe brutto</span>
+                          <span>
+                            {euroFormatter.format(
+                              roundCurrency(
+                                total +
+                                  roundCurrency((total * taxRatePercent) / 100),
+                              ),
+                            )}
+                          </span>
                         </div>
                       </div>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 pt-1">
@@ -1400,7 +1633,9 @@ export default function MaterialInvoicesPage({
                       icon={faTrash}
                       onClick={() =>
                         setParticipants((current) =>
-                          current.filter((entry) => entry.id !== participant.id),
+                          current.filter(
+                            (entry) => entry.id !== participant.id,
+                          ),
                         )
                       }
                     >
@@ -1408,7 +1643,9 @@ export default function MaterialInvoicesPage({
                     </Button>
                     <div className="flex items-center gap-3">
                       {participant.createError ? (
-                        <p className="text-sm text-rose-600">{participant.createError}</p>
+                        <p className="text-sm text-rose-600">
+                          {participant.createError}
+                        </p>
                       ) : null}
                       {participant.invoiceId ? (
                         <Button
@@ -1433,7 +1670,9 @@ export default function MaterialInvoicesPage({
                         kind="secondary"
                         size="small"
                         icon={faFileArrowUp}
-                        onClick={() => void createInvoiceForParticipant(participant.id)}
+                        onClick={() =>
+                          void createInvoiceForParticipant(participant.id)
+                        }
                         disabled={participant.creating}
                       >
                         {participant.creating
@@ -1450,19 +1689,28 @@ export default function MaterialInvoicesPage({
               );
             })}
           </div>
-          </section>
+        </section>
       </div>
 
-      <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
+      <div className="sticky bottom-4 z-20 rounded-lg border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
         <div className="flex flex-wrap items-center gap-4">
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            Netto: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{euroFormatter.format(nettoTotal)}</span>
+            Netto:{" "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              {euroFormatter.format(nettoTotal)}
+            </span>
           </p>
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            MwSt. ({globalTaxRate}%): <span className="font-semibold text-zinc-900 dark:text-zinc-100">{euroFormatter.format(mwstTotal)}</span>
+            MwSt. ({globalTaxRate}%):{" "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              {euroFormatter.format(mwstTotal)}
+            </span>
           </p>
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            Brutto gesamt: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{euroFormatter.format(bruttoTotal)}</span>
+            Brutto gesamt:{" "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              {euroFormatter.format(bruttoTotal)}
+            </span>
           </p>
           {participants.length > 0 ? (
             <p
@@ -1473,7 +1721,7 @@ export default function MaterialInvoicesPage({
                     ? "text-amber-700 dark:text-amber-400"
                     : hasUnsavedChanges
                       ? "text-zinc-600 dark:text-zinc-300"
-                    : "text-emerald-700"
+                      : "text-emerald-700"
               }`}
               aria-live="polite"
             >
@@ -1483,7 +1731,7 @@ export default function MaterialInvoicesPage({
                   ? "Speichert Änderungen…"
                   : hasUnsavedChanges
                     ? "Noch nicht gespeichert"
-                    : saveMessage ?? "Alle Änderungen gespeichert"}
+                    : (saveMessage ?? "Alle Änderungen gespeichert")}
             </p>
           ) : null}
           {participants.length > 0 ? (
@@ -1494,7 +1742,9 @@ export default function MaterialInvoicesPage({
               onClick={() => void handleCreateAll()}
               disabled={isCreatingAll}
             >
-              {isCreatingAll ? "Erzeuge alle Rechnungen…" : "Alle Teilrechnungen erzeugen"}
+              {isCreatingAll
+                ? "Erzeuge alle Rechnungen…"
+                : "Alle Teilrechnungen erzeugen"}
             </Button>
           ) : null}
         </div>

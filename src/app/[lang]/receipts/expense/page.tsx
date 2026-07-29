@@ -200,14 +200,16 @@ export default function AusgabePage() {
       };
       if (!response.ok) {
         setResult({
-          error:
-            payload.hint
-              ? `${payload.error ?? "Fehler"} — ${payload.hint}`
-              : (payload.error ?? "Speichern fehlgeschlagen."),
+          error: payload.hint
+            ? `${payload.error ?? "Fehler"} — ${payload.hint}`
+            : (payload.error ?? "Speichern fehlgeschlagen."),
         });
         return;
       }
-      setResult({ id: payload.id ?? null, uploadWarning: payload.uploadWarning });
+      setResult({
+        id: payload.id ?? null,
+        uploadWarning: payload.uploadWarning,
+      });
       reset();
       setCreditorAccount(null);
       setCreditorName("");
@@ -220,204 +222,196 @@ export default function AusgabePage() {
 
   return (
     <BookingPageShell>
-        <ReceiptsPageHeader
-          title="Ausgabe erfassen"
-          description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
-          helperText="Pflichtfelder sind mit * markiert."
+      <ReceiptsPageHeader
+        title="Ausgabe erfassen"
+        description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
+        helperText="Pflichtfelder sind mit * markiert."
+      />
+
+      {costCentersError ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          {costCentersError}
+        </div>
+      ) : null}
+
+      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        {/* 1. Beleg hochladen */}
+        <ReceiptUploadSection
+          files={selectedFiles}
+          onFilesChange={setSelectedFiles}
+          required
         />
 
-        {costCentersError ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {costCentersError}
+        {/* 2. Zahlungsempfänger */}
+        <FormSection title="Zahlungsempfänger" icon={faUser}>
+          <div className="space-y-4">
+            <FormField
+              label="Empfänger auswählen oder neu anlegen"
+              required
+              error={errors.kreditorName?.message}
+            >
+              <AutocompleteInput
+                placeholder="Name oder Kontonummer eingeben…"
+                showCreateOption
+                onSelect={handleCreditorSelect}
+                onCreateNew={handleCreateNew}
+                {...register("kreditorName", {
+                  required: "Bitte einen Zahlungsempfänger auswählen.",
+                })}
+              />
+            </FormField>
+
+            {creditorAccount ? (
+              <SelectedCreditorBadge
+                account={creditorAccount}
+                entityLabel="Empfänger"
+                fallbackName={creditorName}
+                tone="emerald"
+                onClear={resetCreditor}
+                onEdit={() => setShowUpdatePanel((current) => !current)}
+              />
+            ) : null}
+
+            {showUpdatePanel && creditorAccount ? (
+              <CreditorCreatePanel
+                creditorAccount={creditorAccount}
+                initialName={creditorName}
+                onCancel={() => setShowUpdatePanel(false)}
+                onCreated={(updated) => {
+                  setCreditorName(updated.name);
+                  setShowUpdatePanel(false);
+                }}
+              />
+            ) : null}
+
+            {showCreatePanel && !creditorAccount ? (
+              <CreditorCreatePanel
+                initialName={creditorName}
+                title={`Neuen Empfänger anlegen: "${creditorName}"`}
+                submitLabel="Empfänger anlegen"
+                onCancel={() => setShowCreatePanel(false)}
+                onCreated={(created) => {
+                  setCreditorAccount(created.account);
+                  setCreditorName(created.name);
+                  setShowCreatePanel(false);
+                }}
+              />
+            ) : null}
+          </div>
+        </FormSection>
+
+        {/* 3. Belegangaben */}
+        <FormSection title="Belegangaben" icon={faFolderOpen}>
+          <div className="space-y-4">
+            <FormField
+              label="Buchungstext"
+              required
+              error={errors.beschreibung?.message}
+            >
+              <p className="text-xs text-zinc-500">
+                Kurze Beschreibung wofür die Ausgabe getätigt wurde
+              </p>
+              <Input
+                placeholder="z. B. Materialkosten Werkstatt"
+                {...register("beschreibung", {
+                  required: "Buchungstext ist erforderlich.",
+                })}
+              />
+            </FormField>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                label="Belegdatum"
+                required
+                error={errors.belegdatum?.message}
+              >
+                <Input
+                  type="date"
+                  {...register("belegdatum", {
+                    required: "Belegdatum ist erforderlich.",
+                  })}
+                />
+              </FormField>
+              <FormField
+                label="Belegnummer"
+                hint="Optional – wird automatisch vergeben wenn leer."
+                error={errors.belegnummer?.message}
+              >
+                <Input
+                  placeholder="z. B. RE-2024-001"
+                  {...register("belegnummer")}
+                />
+              </FormField>
+              <FormField
+                label="Betrag (€)"
+                required
+                hint="Format: 12,50"
+                error={errors.betragEuro?.message}
+              >
+                <Input
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  {...register("betragEuro", {
+                    required: "Betrag ist erforderlich.",
+                    pattern: {
+                      value: euroAmountPattern,
+                      message: euroAmountValidationMessage,
+                    },
+                  })}
+                />
+              </FormField>
+              <FormField
+                label="Werkbereich/Projekt"
+                required
+                error={errors.costCenter2?.message}
+              >
+                <Select
+                  disabled={costCentersLoading}
+                  {...register("costCenter2", {
+                    required: "Bitte einen Werkbereich/Projekt auswählen.",
+                  })}
+                >
+                  <option value="">
+                    {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
+                  </option>
+                  {costCenters.map((cc) => (
+                    <option key={cc.value} value={cc.value}>
+                      {cc.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+          </div>
+        </FormSection>
+
+        {/* 4. Interne Notiz */}
+        <InternalNoteSection textareaProps={register("notes")} />
+
+        {result?.id ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <p className="font-medium">Ausgabe gespeichert!</p>
+            <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
+            {result.uploadWarning ? (
+              <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
+            ) : null}
           </div>
         ) : null}
 
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* 1. Beleg hochladen */}
-          <ReceiptUploadSection
-            files={selectedFiles}
-            onFilesChange={setSelectedFiles}
-            required
-          />
-
-          {/* 2. Zahlungsempfänger */}
-          <FormSection title="Zahlungsempfänger" icon={faUser}>
-            <div className="space-y-4">
-              <FormField
-                label="Empfänger auswählen oder neu anlegen"
-                required
-                error={errors.kreditorName?.message}
-              >
-                <AutocompleteInput
-                  placeholder="Name oder Kontonummer eingeben…"
-                  showCreateOption
-                  onSelect={handleCreditorSelect}
-                  onCreateNew={handleCreateNew}
-                  {...register("kreditorName", {
-                    required: "Bitte einen Zahlungsempfänger auswählen.",
-                  })}
-                />
-              </FormField>
-
-              {creditorAccount ? (
-                <SelectedCreditorBadge
-                  account={creditorAccount}
-                  entityLabel="Empfänger"
-                  fallbackName={creditorName}
-                  tone="emerald"
-                  onClear={resetCreditor}
-                  onEdit={() => setShowUpdatePanel((current) => !current)}
-                />
-              ) : null}
-
-              {showUpdatePanel && creditorAccount ? (
-                <CreditorCreatePanel
-                  creditorAccount={creditorAccount}
-                  initialName={creditorName}
-                  onCancel={() => setShowUpdatePanel(false)}
-                  onCreated={(updated) => {
-                    setCreditorName(updated.name);
-                    setShowUpdatePanel(false);
-                  }}
-                />
-              ) : null}
-
-              {showCreatePanel && !creditorAccount ? (
-                <CreditorCreatePanel
-                  initialName={creditorName}
-                  title={`Neuen Empfänger anlegen: "${creditorName}"`}
-                  submitLabel="Empfänger anlegen"
-                  onCancel={() => setShowCreatePanel(false)}
-                  onCreated={(created) => {
-                    setCreditorAccount(created.account);
-                    setCreditorName(created.name);
-                    setShowCreatePanel(false);
-                  }}
-                />
-              ) : null}
-            </div>
-          </FormSection>
-
-          {/* 3. Belegangaben */}
-          <FormSection title="Belegangaben" icon={faFolderOpen}>
-            <div className="space-y-4">
-              <FormField
-                label="Buchungstext"
-                required
-                error={errors.beschreibung?.message}
-              >
-                <p className="text-xs text-zinc-500">
-                  Kurze Beschreibung wofür die Ausgabe getätigt wurde
-                </p>
-                <Input
-                  placeholder="z. B. Materialkosten Werkstatt"
-                  {...register("beschreibung", {
-                    required: "Buchungstext ist erforderlich.",
-                  })}
-                />
-              </FormField>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="Belegdatum"
-                  required
-                  error={errors.belegdatum?.message}
-                >
-                  <Input
-                    type="date"
-                    {...register("belegdatum", {
-                      required: "Belegdatum ist erforderlich.",
-                    })}
-                  />
-                </FormField>
-                <FormField
-                  label="Belegnummer"
-                  hint="Optional – wird automatisch vergeben wenn leer."
-                  error={errors.belegnummer?.message}
-                >
-                  <Input
-                    placeholder="z. B. RE-2024-001"
-                    {...register("belegnummer")}
-                  />
-                </FormField>
-                <FormField
-                  label="Betrag (€)"
-                  required
-                  hint="Format: 12,50"
-                  error={errors.betragEuro?.message}
-                >
-                  <Input
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    {...register("betragEuro", {
-                      required: "Betrag ist erforderlich.",
-                      pattern: {
-                        value: euroAmountPattern,
-                        message: euroAmountValidationMessage,
-                      },
-                    })}
-                  />
-                </FormField>
-                <FormField
-                  label="Werkbereich/Projekt"
-                  required
-                  error={errors.costCenter2?.message}
-                >
-                  <Select
-                    disabled={costCentersLoading}
-                    {...register("costCenter2", {
-                      required: "Bitte einen Werkbereich/Projekt auswählen.",
-                    })}
-                  >
-                    <option value="">
-                      {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
-                    </option>
-                    {costCenters.map((cc) => (
-                      <option key={cc.value} value={cc.value}>
-                        {cc.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-            </div>
-          </FormSection>
-
-          {/* 4. Interne Notiz */}
-          <InternalNoteSection textareaProps={register("notes")} />
-
-          {result?.id ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              <p className="font-medium">Ausgabe gespeichert!</p>
-              <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
-              {result.uploadWarning ? (
-                <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {result?.error ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {result.error}
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-end gap-3">
-            <Button
-              type="button"
-              kind="secondary"
-              href="/receipts"
-            >
-              Abbrechen
-            </Button>
-            <Button
-              type="submit"
-              kind="primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
-            </Button>
+        {result?.error ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {result.error}
           </div>
-        </form>
+        ) : null}
+
+        <div className="flex items-center justify-end gap-3">
+          <Button type="button" kind="secondary" href="/receipts">
+            Abbrechen
+          </Button>
+          <Button type="submit" kind="primary" disabled={isSubmitting}>
+            {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
+          </Button>
+        </div>
+      </form>
     </BookingPageShell>
   );
 }

@@ -353,20 +353,22 @@ export default function AccountPage() {
       />
 
       {error ? (
-        <section className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {decodeURIComponent(error)}
         </section>
       ) : null}
 
       {status ? (
-        <section className="rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+        <section className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
           {message ? decodeURIComponent(message) : "Gespeichert."}
         </section>
       ) : null}
 
       {loadingUser ? (
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">Konto wird geladen ...</p>
+          <p className="text-sm text-muted-foreground">
+            Konto wird geladen ...
+          </p>
         </section>
       ) : accountLoadError ? (
         <section className="rounded-3xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
@@ -399,7 +401,7 @@ export default function AccountPage() {
               Dein Name wird direkt aus Campai übernommen.
             </p>
             <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
-              <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
+              <div className="flex items-center gap-4 rounded-lg border border-border bg-muted/50 px-4 py-4">
                 {activeAvatarUrl ? (
                   <img
                     src={activeAvatarUrl}
@@ -591,7 +593,7 @@ export default function AccountPage() {
                   return (
                     <article
                       key={invoice.id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/60 px-4 py-3"
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/60 px-4 py-3"
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-foreground">
@@ -632,7 +634,7 @@ export default function AccountPage() {
               </div>
             )}
             {debug && campaiDebug ? (
-              <pre className="mt-4 max-h-64 overflow-auto rounded-2xl bg-foreground p-4 text-xs text-background">
+              <pre className="mt-4 max-h-64 overflow-auto rounded-lg bg-foreground p-4 text-xs text-background">
                 {JSON.stringify(campaiDebug, null, 2)}
               </pre>
             ) : null}

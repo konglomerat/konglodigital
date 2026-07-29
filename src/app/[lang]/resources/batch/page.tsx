@@ -726,8 +726,8 @@ export default function BatchResourcePage() {
         createdAt: new Date().toLocaleTimeString(
           locale === "en" ? "en-US" : "de-DE",
           {
-          hour: "2-digit",
-          minute: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
           },
         ),
         status: "uploading",
@@ -875,12 +875,12 @@ export default function BatchResourcePage() {
   return (
     <main className="h-dvh max-h-dvh overflow-hidden bg-zinc-950 text-white flex flex-col">
       {cameraError ? (
-        <section className="mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+        <section className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
           {cameraError}
         </section>
       ) : null}
       {formError ? (
-        <section className="mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+        <section className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
           {formError}
         </section>
       ) : null}
@@ -944,9 +944,8 @@ export default function BatchResourcePage() {
                     />
                   )}
                   <span>
-                    {job.createdAt} · {job.count} {job.count > 1
-                      ? tx("photos")
-                      : tx("photo")}
+                    {job.createdAt} · {job.count}{" "}
+                    {job.count > 1 ? tx("photos") : tx("photo")}
                   </span>
                   {job.message ? (
                     job.status === "success" && job.resourceId ? (
@@ -1005,7 +1004,7 @@ export default function BatchResourcePage() {
                     <img
                       src={photo.previewUrl}
                       alt={tx("Captured preview")}
-                      className="h-16 w-16 rounded-xl object-cover border border-white/30"
+                      className="h-16 w-16 rounded-lg object-cover border border-white/30"
                     />
                     <button
                       type="button"
@@ -1017,7 +1016,7 @@ export default function BatchResourcePage() {
                   </div>
                 ))}
                 {isCapturing ? (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/30 bg-white/10">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-white/30 bg-white/10">
                     <FontAwesomeIcon
                       icon={faSpinner}
                       className="animate-spin text-base text-white"

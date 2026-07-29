@@ -66,19 +66,19 @@ export default async function CalendarEventDetailPage({
       />
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {!errorMessage && !event ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           Dieser Termin ist nicht mehr in den nächsten 7 Tagen verfügbar.
         </div>
       ) : null}
 
       {event ? (
-        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold text-foreground">
@@ -91,7 +91,9 @@ export default async function CalendarEventDetailPage({
                   : ` • ${getTimeRange(event.start, event.end)}`}
               </p>
               {event.location ? (
-                <p className="text-sm text-muted-foreground">{event.location}</p>
+                <p className="text-sm text-muted-foreground">
+                  {event.location}
+                </p>
               ) : null}
             </div>
             {tags.length > 0 ? (

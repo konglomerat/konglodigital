@@ -49,7 +49,8 @@ const bookingActions = [
   {
     href: "/receipts/pretix-import",
     title: "pretix Bulk Import",
-    description: "Rechnungen aus exportierten Pretix Bestellungen (JSON) erstellen",
+    description:
+      "Rechnungen aus exportierten Pretix Bestellungen (JSON) erstellen",
     cardClassName:
       "hover:border-violet-300 hover:bg-violet-50 dark:hover:border-violet-900/60 dark:hover:bg-violet-950/30",
     iconClassName:
@@ -126,7 +127,7 @@ export default function ReceiptsPageHeader({
           <Link
             key={action.href}
             href={action.href}
-            className={`group flex min-h-0 min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 sm:h-20 sm:gap-3 sm:p-3 ${action.cardClassName}`}
+            className={`group flex min-h-0 min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 sm:h-20 sm:gap-3 sm:p-3 ${action.cardClassName}`}
           >
             <span
               className={`flex h-10 w-10 flex-none items-center justify-center rounded-full transition sm:h-12 sm:w-12 ${action.iconClassName}`}
@@ -167,7 +168,9 @@ export default function ReceiptsPageHeader({
         </p>
       ) : null}
 
-      {helperText ? <p className="text-xs text-zinc-500">{helperText}</p> : null}
+      {helperText ? (
+        <p className="text-xs text-zinc-500">{helperText}</p>
+      ) : null}
     </header>
   );
 }

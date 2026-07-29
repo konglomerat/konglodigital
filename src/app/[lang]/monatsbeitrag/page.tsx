@@ -68,8 +68,7 @@ const tenVisitCard = {
   id: "ten-visit-card",
   title: "10er Karte",
   unitAmount: 5000,
-  details:
-    "Einmalzahlung für 10 Zugänge innerhalb von 12 Monaten.",
+  details: "Einmalzahlung für 10 Zugänge innerhalb von 12 Monaten.",
 };
 
 const formatPlanName = (planId: AccessCardPlanId) => {
@@ -79,12 +78,12 @@ const formatPlanName = (planId: AccessCardPlanId) => {
 export default function MonatsbeitragPage() {
   const [currentPlan, setCurrentPlan] = useState<AccessCardPlanId>("none");
   const [draftPlan, setDraftPlan] = useState<AccessCardPlanId>("none");
-  const [selectedOption, setSelectedOption] = useState<AccessCardOptionId>("none");
+  const [selectedOption, setSelectedOption] =
+    useState<AccessCardOptionId>("none");
   const [subscriptionPlanDraft, setSubscriptionPlanDraft] =
     useState<SubscriptionPlanId>("quarter");
-  const [submittedChange, setSubmittedChange] = useState<SubmittedChange | null>(
-    null,
-  );
+  const [submittedChange, setSubmittedChange] =
+    useState<SubmittedChange | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [cartProducts, setCartProductsState] = useState<CartProduct[]>(() =>
     getCartProducts(),
@@ -238,7 +237,10 @@ export default function MonatsbeitragPage() {
         />
 
         <p className="text-sm text-muted-foreground">
-          Aktuell aktiv: {currentPlan === "none" ? "Keine Zugangskarte" : (currentPlanInfo?.title ?? "—")}
+          Aktuell aktiv:{" "}
+          {currentPlan === "none"
+            ? "Keine Zugangskarte"
+            : (currentPlanInfo?.title ?? "—")}
         </p>
 
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
@@ -246,7 +248,7 @@ export default function MonatsbeitragPage() {
             {accessCardOptions.map((option) => (
               <label
                 key={option.id}
-                className={`flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
+                className={`flex cursor-pointer flex-col justify-between gap-4 rounded-lg border p-4 text-sm transition ${
                   selectedOption === option.id
                     ? "border-primary bg-primary-soft"
                     : "border-border bg-muted/50 hover:border-input"
@@ -280,128 +282,138 @@ export default function MonatsbeitragPage() {
 
         {selectedOption === "subscription" ? (
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                Abokarte auswählen
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Wähle aus wieviele Zugänge du pro Monat benötigst. Du kannst deine Auswahl jederzeit ändern, die Änderung wird aber immer erst ab dem nächsten Monat wirksam.
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Abokarte auswählen
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Wähle aus wieviele Zugänge du pro Monat benötigst. Du kannst
+                  deine Auswahl jederzeit ändern, die Änderung wird aber immer
+                  erst ab dem nächsten Monat wirksam.
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Ausgewählt: {draftPlanInfo?.priceLabel ?? "—"}
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              Ausgewählt: {draftPlanInfo?.priceLabel ?? "—"}
-            </div>
-          </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {accessCardPlans.map((plan) => (
-              <label
-                key={plan.id}
-                className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 text-sm transition ${
-                  draftPlan === plan.id
-                    ? "border-primary bg-primary-soft"
-                    : "border-border bg-muted/50 hover:border-input"
-                }`}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {plan.title}
-                      </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {plan.description}
-                      </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {accessCardPlans.map((plan) => (
+                <label
+                  key={plan.id}
+                  className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-lg border p-4 text-sm transition ${
+                    draftPlan === plan.id
+                      ? "border-primary bg-primary-soft"
+                      : "border-border bg-muted/50 hover:border-input"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {plan.title}
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {plan.description}
+                        </p>
+                      </div>
+                      <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+                        {plan.priceLabel}
+                      </span>
                     </div>
-                    <span className="whitespace-nowrap text-sm font-semibold text-foreground">
-                      {plan.priceLabel}
-                    </span>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {draftPlan === plan.id ? "Zur Bestätigung markiert" : "Auswählen"}
-                  </span>
-                  <input
-                    type="radio"
-                    name="access-card-plan"
-                    value={plan.id}
-                    checked={draftPlan === plan.id}
-                    onChange={() => {
-                      setSubscriptionPlanDraft(plan.id);
-                      setSelectedOption("subscription");
-                      setDraftPlan(plan.id);
-                      setSaveStatus(null);
-                    }}
-                    className="h-4 w-4 rounded-md accent-blue-600"
-                  />
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {submittedChange ? (
-              <p className="text-sm text-warning">
-                Bereits eingereicht: {formatPlanName(submittedChange.requestedPlan)} – wirksam ab nächstem Monat.
-              </p>
-            ) : null}
-            {saveStatus ? <p className="text-sm text-success">{saveStatus}</p> : null}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                kind="primary"
-                onClick={handleSubmitSubscriptionChange}
-                disabled={!hasUnsavedSubscriptionChange}
-              >
-                Abokarte buchen
-              </Button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {draftPlan === plan.id
+                        ? "Zur Bestätigung markiert"
+                        : "Auswählen"}
+                    </span>
+                    <input
+                      type="radio"
+                      name="access-card-plan"
+                      value={plan.id}
+                      checked={draftPlan === plan.id}
+                      onChange={() => {
+                        setSubscriptionPlanDraft(plan.id);
+                        setSelectedOption("subscription");
+                        setDraftPlan(plan.id);
+                        setSaveStatus(null);
+                      }}
+                      className="h-4 w-4 rounded-md accent-blue-600"
+                    />
+                  </div>
+                </label>
+              ))}
             </div>
-          </div>
+
+            <div className="mt-6 space-y-3">
+              {submittedChange ? (
+                <p className="text-sm text-warning">
+                  Bereits eingereicht:{" "}
+                  {formatPlanName(submittedChange.requestedPlan)} – wirksam ab
+                  nächstem Monat.
+                </p>
+              ) : null}
+              {saveStatus ? (
+                <p className="text-sm text-success">{saveStatus}</p>
+              ) : null}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  kind="primary"
+                  onClick={handleSubmitSubscriptionChange}
+                  disabled={!hasUnsavedSubscriptionChange}
+                >
+                  Abokarte buchen
+                </Button>
+              </div>
+            </div>
           </section>
         ) : null}
 
         {selectedOption === "ten-visit" ? (
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                10er Karte buchen
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {tenVisitCard.details}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  10er Karte buchen
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {tenVisitCard.details}
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Einmalzahlung: 50 €
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">Einmalzahlung: 50 €</div>
-          </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-muted-foreground">
-              {tenVisitInCart
-                ? `Im Warenkorb × ${tenVisitInCart.quantity ?? 1}`
-                : "Noch nicht im Warenkorb"}
-            </div>
-            <div className="flex items-center gap-2">
-              {tenVisitInCart ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground">
+                {tenVisitInCart
+                  ? `Im Warenkorb × ${tenVisitInCart.quantity ?? 1}`
+                  : "Noch nicht im Warenkorb"}
+              </div>
+              <div className="flex items-center gap-2">
+                {tenVisitInCart ? (
+                  <Button
+                    type="button"
+                    onClick={handleDecreaseTenVisitCard}
+                    kind="secondary"
+                    className="px-3 py-1 text-xs"
+                  >
+                    −
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
-                  onClick={handleDecreaseTenVisitCard}
-                  kind="secondary"
-                  className="px-3 py-1 text-xs"
+                  kind="primary"
+                  onClick={handleAddTenVisitCard}
                 >
-                  −
+                  In den Warenkorb
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                kind="primary"
-                onClick={handleAddTenVisitCard}
-              >
-                In den Warenkorb
-              </Button>
+              </div>
             </div>
-          </div>
           </section>
         ) : null}
       </main>

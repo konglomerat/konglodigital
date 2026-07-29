@@ -80,7 +80,7 @@ export default function PrinterAccessCodesClient() {
             <Image
               src={print3dImage}
               alt="3D-Druck"
-              className="h-48 w-full rounded-2xl object-cover object-center multiply md:h-53"
+              className="h-48 w-full rounded-lg object-cover object-center multiply md:h-53"
               priority={false}
             />
           </div>
@@ -124,19 +124,19 @@ export default function PrinterAccessCodesClient() {
       </header>
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Lade E-Mails...
         </div>
       ) : null}
 
       {!loading && !errorMessage && entries.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Noch keine weitergeleiteten E-Mails gefunden.
         </div>
       ) : null}
@@ -171,7 +171,9 @@ export default function PrinterAccessCodesClient() {
                               {entry.access_code}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/80">Kein Treffer</span>
+                            <span className="text-muted-foreground/80">
+                              Kein Treffer
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-4">
@@ -191,7 +193,7 @@ export default function PrinterAccessCodesClient() {
                       {isExpanded ? (
                         <tr className="bg-muted/70">
                           <td colSpan={4} className="px-4 pb-4 pt-1">
-                            <div className="rounded-2xl border border-border bg-card p-3">
+                            <div className="rounded-lg border border-border bg-card p-3">
                               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Voller E-Mail-Body
                               </p>

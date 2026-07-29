@@ -376,12 +376,12 @@ export default function ResourceEditorPage({}: Record<string, never>) {
         />
 
         {formError ? (
-          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {formError}
           </section>
         ) : null}
         {formMessage ? (
-          <section className="rounded-2xl border border-success-border bg-success-soft p-4 text-sm text-success">
+          <section className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success">
             {formMessage}
           </section>
         ) : null}

@@ -300,7 +300,7 @@ export default function ImageCropDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/75 px-4 py-6 backdrop-blur-sm">
-      <div className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-card shadow-2xl">
+      <div className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-card shadow-2xl">
         <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <div>
             <h2 className="text-xl font-semibold text-foreground">
@@ -322,7 +322,7 @@ export default function ImageCropDialog({
           <div className="space-y-4">
             <div
               ref={frameRef}
-              className="relative mx-auto w-full max-w-3xl cursor-grab overflow-hidden rounded-[2rem] bg-foreground active:cursor-grabbing"
+              className="relative mx-auto w-full max-w-3xl cursor-grab overflow-hidden rounded-lg bg-foreground active:cursor-grabbing"
               style={{ aspectRatio }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -347,7 +347,7 @@ export default function ImageCropDialog({
                   transform: `translate(calc(-50% + ${clampedPosition.x}px), calc(-50% + ${clampedPosition.y}px))`,
                 }}
               />
-              <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-background/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]" />
+              <div className="pointer-events-none absolute inset-0 rounded-lg border border-background/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]" />
             </div>
 
             <p className="text-center text-xs text-muted-foreground">
@@ -378,8 +378,8 @@ export default function ImageCropDialog({
                     onClick={() => setAspect(value)}
                     className={
                       aspect === value
-                        ? "rounded-xl border border-primary bg-primary-soft px-3 py-2 text-sm font-semibold text-primary"
-                        : "rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground/80 transition hover:border-input hover:bg-accent"
+                        ? "rounded-lg border border-primary bg-primary-soft px-3 py-2 text-sm font-semibold text-primary"
+                        : "rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground/80 transition hover:border-input hover:bg-accent"
                     }
                   >
                     {label}
@@ -407,7 +407,7 @@ export default function ImageCropDialog({
             </div>
 
             {errorMessage ? (
-              <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+              <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 {errorMessage}
               </div>
             ) : null}

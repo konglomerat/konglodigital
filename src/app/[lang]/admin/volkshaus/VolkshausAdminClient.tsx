@@ -102,9 +102,7 @@ const FILTERS: Array<{
   { value: "all", label: "Alle", icon: faReceipt },
 ];
 
-const ACTION_CONFIRMATIONS: Partial<
-  Record<AdminAction, ActionConfirmation>
-> = {
+const ACTION_CONFIRMATIONS: Partial<Record<AdminAction, ActionConfirmation>> = {
   reject: {
     title: "Anfrage wirklich ablehnen?",
     description:
@@ -154,8 +152,7 @@ const ACTION_CONFIRMATIONS: Partial<
   },
   mark_paid: {
     title: "Zahlung als bezahlt markieren?",
-    description:
-      "Der interne Zahlungsstatus wird auf „Bezahlt“ gesetzt.",
+    description: "Der interne Zahlungsstatus wird auf „Bezahlt“ gesetzt.",
     confirmLabel: "Als bezahlt markieren",
     tone: "warning",
     icon: faEuroSign,
@@ -171,9 +168,7 @@ const ACTION_CONFIRMATIONS: Partial<
     confirmLabel: "Als überfällig markieren",
     tone: "warning",
     icon: faClock,
-    consequences: [
-      "Es wird dadurch keine automatische Mahnung versendet.",
-    ],
+    consequences: ["Es wird dadurch keine automatische Mahnung versendet."],
   },
   send_contract: {
     title: "Vertrag freigeben und senden?",
@@ -249,7 +244,10 @@ export default function VolkshausAdminClient() {
       );
       setBookings(data.bookings ?? []);
       setSelectedId((current) => {
-        if (current && data.bookings.some((booking) => booking.id === current)) {
+        if (
+          current &&
+          data.bookings.some((booking) => booking.id === current)
+        ) {
           return current;
         }
         return data.bookings[0]?.id ?? null;
@@ -394,153 +392,161 @@ export default function VolkshausAdminClient() {
   return (
     <>
       <div className="space-y-6">
-      <PageTitle
-        eyebrow="Neues Volkshaus Cotta"
-        title="Raumbuchungen"
-        subTitle="Anfragen prüfen, Termine reservieren, Verträge gegenzeichnen und Campai-Rechnungen anlegen."
-        links={[
-          {
-            href: "/volkshaus/buchen",
-            label: "Öffentliches Formular",
-            target: "_blank",
-            size: "medium",
-          },
-        ]}
-      />
+        <PageTitle
+          eyebrow="Neues Volkshaus Cotta"
+          title="Raumbuchungen"
+          subTitle="Anfragen prüfen, Termine reservieren, Verträge gegenzeichnen und Campai-Rechnungen anlegen."
+          links={[
+            {
+              href: "/volkshaus/buchen",
+              label: "Öffentliches Formular",
+              target: "_blank",
+              size: "medium",
+            },
+          ]}
+        />
 
-      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-          <div className="relative">
-            <FontAwesomeIcon
-              icon={faMagnifyingGlass}
-              className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-            />
-            <input
-              className={`${inputClassName} pl-9`}
-              type="search"
-              value={search}
-              placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map(({ value, label, icon }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFilter(value)}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold transition ${
-                  filter === value
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <FontAwesomeIcon icon={icon} className="h-3 w-3" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {loadError ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
-          <span>{loadError}</span>
-          <Button
-            kind="danger-secondary"
-            icon={faRotate}
-            onClick={() => void load()}
-          >
-            Erneut laden
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="grid min-h-[620px] items-start gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
-        <aside className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="border-b border-border px-5 py-4">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
-              {filtered.length} Anfrage{filtered.length === 1 ? "" : "n"}
-            </p>
-          </div>
-          {isLoading ? (
-            <p className="p-5 text-sm text-muted-foreground">Wird geladen …</p>
-          ) : filtered.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">
-              Keine passenden Anfragen.
-            </p>
-          ) : (
-            <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
-              {filtered.map((booking) => (
-                <li key={booking.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(booking.id)}
-                    className={`w-full p-4 text-left transition ${
-                      booking.id === selectedId
-                        ? "bg-primary-soft"
-                        : "hover:bg-muted/60"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-foreground">
-                          {booking.eventTitle}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {booking.customerName}
-                        </p>
-                      </div>
-                      <StatusDot booking={booking} />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <FontAwesomeIcon
-                          icon={faCalendarDays}
-                          className="h-3 w-3"
-                        />
-                        {dateFormatter.format(
-                          new Date(`${booking.bookingDate}T12:00:00Z`),
-                        )}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 font-mono">
-                        <FontAwesomeIcon icon={faReceipt} className="h-3 w-3" />
-                        {booking.referenceCode}
-                      </span>
-                    </div>
-                  </button>
-                </li>
+        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <div className="relative">
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                className={`${inputClassName} pl-9`}
+                type="search"
+                value={search}
+                placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {FILTERS.map(({ value, label, icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFilter(value)}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold transition ${
+                    filter === value
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <FontAwesomeIcon icon={icon} className="h-3 w-3" />
+                  {label}
+                </button>
               ))}
-            </ul>
-          )}
-        </aside>
+            </div>
+          </div>
+        </section>
 
-        {selected ? (
-          <BookingDetail
-            booking={selected}
-            internalNotes={internalNotes}
-            adjustmentEuro={adjustmentEuro}
-            adjustmentReason={adjustmentReason}
-            activeAction={activeAction}
-            actionError={actionError}
-            actionWarning={actionWarning}
-            copySuccess={copySuccess}
-            setInternalNotes={setInternalNotes}
-            setAdjustmentEuro={setAdjustmentEuro}
-            setAdjustmentReason={setAdjustmentReason}
-            performAction={performAction}
-            copyLink={copyLink}
-          />
-        ) : (
-          <section className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-            <FontAwesomeIcon
-              icon={faListCheck}
-              className="mx-auto mb-3 h-6 w-6 text-primary"
+        {loadError ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+            <span>{loadError}</span>
+            <Button
+              kind="danger-secondary"
+              icon={faRotate}
+              onClick={() => void load()}
+            >
+              Erneut laden
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="grid min-h-[620px] items-start gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
+          <aside className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+            <div className="border-b border-border px-5 py-4">
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <FontAwesomeIcon
+                  icon={faListCheck}
+                  className="h-3 w-3 text-primary"
+                />
+                {filtered.length} Anfrage{filtered.length === 1 ? "" : "n"}
+              </p>
+            </div>
+            {isLoading ? (
+              <p className="p-5 text-sm text-muted-foreground">
+                Wird geladen …
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="p-5 text-sm text-muted-foreground">
+                Keine passenden Anfragen.
+              </p>
+            ) : (
+              <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
+                {filtered.map((booking) => (
+                  <li key={booking.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(booking.id)}
+                      className={`w-full p-4 text-left transition ${
+                        booking.id === selectedId
+                          ? "bg-primary-soft"
+                          : "hover:bg-muted/60"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-foreground">
+                            {booking.eventTitle}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            {booking.customerName}
+                          </p>
+                        </div>
+                        <StatusDot booking={booking} />
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <FontAwesomeIcon
+                            icon={faCalendarDays}
+                            className="h-3 w-3"
+                          />
+                          {dateFormatter.format(
+                            new Date(`${booking.bookingDate}T12:00:00Z`),
+                          )}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 font-mono">
+                          <FontAwesomeIcon
+                            icon={faReceipt}
+                            className="h-3 w-3"
+                          />
+                          {booking.referenceCode}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+
+          {selected ? (
+            <BookingDetail
+              booking={selected}
+              internalNotes={internalNotes}
+              adjustmentEuro={adjustmentEuro}
+              adjustmentReason={adjustmentReason}
+              activeAction={activeAction}
+              actionError={actionError}
+              actionWarning={actionWarning}
+              copySuccess={copySuccess}
+              setInternalNotes={setInternalNotes}
+              setAdjustmentEuro={setAdjustmentEuro}
+              setAdjustmentReason={setAdjustmentReason}
+              performAction={performAction}
+              copyLink={copyLink}
             />
-            <p>Wähle eine Anfrage aus.</p>
-          </section>
-        )}
+          ) : (
+            <section className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+              <FontAwesomeIcon
+                icon={faListCheck}
+                className="mx-auto mb-3 h-6 w-6 text-primary"
+              />
+              <p>Wähle eine Anfrage aus.</p>
+            </section>
+          )}
         </div>
       </div>
       {pendingConfirmation && selected ? (
@@ -565,10 +571,7 @@ function ActionConfirmationModal({
   onCancel,
   onConfirm,
 }: {
-  booking: Pick<
-    AdminBooking,
-    "eventTitle" | "referenceCode" | "bookingDate"
-  >;
+  booking: Pick<AdminBooking, "eventTitle" | "referenceCode" | "bookingDate">;
   confirmation: ActionConfirmation;
   error: string | null;
   isExecuting: boolean;
@@ -655,17 +658,14 @@ function ActionConfirmationModal({
         aria-labelledby="volkshaus-confirmation-title"
         aria-describedby="volkshaus-confirmation-description"
         aria-busy={isExecuting}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl"
       >
         <header className="flex items-start justify-between gap-4 border-b border-border p-5">
           <div className="flex min-w-0 items-start gap-3">
             <span
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${toneClasses}`}
             >
-              <FontAwesomeIcon
-                icon={confirmation.icon}
-                className="h-4 w-4"
-              />
+              <FontAwesomeIcon icon={confirmation.icon} className="h-4 w-4" />
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -751,11 +751,7 @@ function ActionConfirmationModal({
             Abbrechen
           </Button>
           <Button
-            kind={
-              confirmation.tone === "danger"
-                ? "danger-primary"
-                : "primary"
-            }
+            kind={confirmation.tone === "danger" ? "danger-primary" : "primary"}
             icon={confirmation.icon}
             disabled={isExecuting}
             onClick={onConfirm}
@@ -812,7 +808,7 @@ function BookingDetail({
 
   return (
     <main className="space-y-5">
-      <section className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -838,7 +834,10 @@ function BookingDetail({
               />
             </div>
             <h2 className="mt-4 flex items-center gap-3 text-3xl font-black tracking-tight text-foreground">
-              <FontAwesomeIcon icon={faHouse} className="h-5 w-5 text-primary" />
+              <FontAwesomeIcon
+                icon={faHouse}
+                className="h-5 w-5 text-primary"
+              />
               {booking.eventTitle}
             </h2>
             <p className="mt-2 font-mono text-sm text-muted-foreground">
@@ -892,7 +891,10 @@ function BookingDetail({
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <div>
             <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
+              <FontAwesomeIcon
+                icon={faListCheck}
+                className="h-3 w-3 text-primary"
+              />
               Nutzung
             </h3>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
@@ -952,8 +954,7 @@ function BookingDetail({
               <p className="mt-2 text-sm text-foreground">
                 {equipment
                   .map(
-                    (item) =>
-                      `${booking.equipment[item.id]} × ${item.label}`,
+                    (item) => `${booking.equipment[item.id]} × ${item.label}`,
                   )
                   .join(", ")}
               </p>
@@ -994,9 +995,12 @@ function BookingDetail({
       ) : null}
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4 text-primary" />
+            <FontAwesomeIcon
+              icon={faEuroSign}
+              className="h-4 w-4 text-primary"
+            />
             Preisprüfung
           </h3>
           <div className="mt-4 divide-y divide-border">
@@ -1074,9 +1078,12 @@ function BookingDetail({
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <FontAwesomeIcon icon={faNoteSticky} className="h-4 w-4 text-primary" />
+            <FontAwesomeIcon
+              icon={faNoteSticky}
+              className="h-4 w-4 text-primary"
+            />
             Interne Notizen
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -1093,16 +1100,14 @@ function BookingDetail({
             kind="secondary"
             icon={faSave}
             disabled={isBusy}
-            onClick={() =>
-              void performAction("save_notes", { internalNotes })
-            }
+            onClick={() => void performAction("save_notes", { internalNotes })}
           >
             Notiz speichern
           </Button>
         </section>
       </div>
 
-      <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon
             icon={faFileCircleCheck}
@@ -1172,7 +1177,7 @@ function WorkflowActions({
     activeAction === action ? "Wird ausgeführt …" : fallback;
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
         Nächste Schritte

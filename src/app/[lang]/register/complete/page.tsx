@@ -203,7 +203,7 @@ export default function RegisterCompletePage() {
         </p>
 
         {isLoading ? (
-          <p className="mt-6 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <p className="mt-6 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
             Registrierungslink wird geladen ...
           </p>
         ) : null}
@@ -300,13 +300,13 @@ export default function RegisterCompletePage() {
             </div>
 
             {error ? (
-              <p className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+              <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 {error}
               </p>
             ) : null}
 
             {success ? (
-              <div className="space-y-2 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+              <div className="space-y-2 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
                 <p>{success}</p>
                 <Link className="font-semibold underline" href="/login">
                   Zur Anmeldung
@@ -328,7 +328,7 @@ export default function RegisterCompletePage() {
         ) : null}
 
         {!isLoading && !profile && error ? (
-          <div className="mt-6 space-y-3 rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-4 text-sm text-destructive">
+          <div className="mt-6 space-y-3 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-4 text-sm text-destructive">
             <p>{error}</p>
             <Link className="font-semibold underline" href="/register">
               Neue Registrierung starten

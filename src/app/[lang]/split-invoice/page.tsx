@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { faArrowsRotate, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowsRotate,
+  faPlus,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "../components/Button";
@@ -60,9 +64,12 @@ export default function MaterialbestellungListPage() {
     }
     try {
       setDeletingId(order.id);
-      await fetchJson(`/api/materialbestellung/orders?id=${encodeURIComponent(order.id)}`, {
-        method: "DELETE",
-      });
+      await fetchJson(
+        `/api/materialbestellung/orders?id=${encodeURIComponent(order.id)}`,
+        {
+          method: "DELETE",
+        },
+      );
       setOrders((current) => current.filter((o) => o.id !== order.id));
     } catch (error) {
       setErrorMessage(
@@ -77,7 +84,7 @@ export default function MaterialbestellungListPage() {
 
   useEffect(() => {
     void loadOrders();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -86,28 +93,50 @@ export default function MaterialbestellungListPage() {
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Materialbestellungen
         </h1>
-        <Button href="/split-invoice/new" kind="primary" size="small" icon={faPlus}>
+        <Button
+          href="/split-invoice/new"
+          kind="primary"
+          size="small"
+          icon={faPlus}
+        >
           Neue Materialbestellung
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
           <thead className="bg-zinc-50 dark:bg-zinc-900/80">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Rechnungsnummer</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Bestelldatum</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Gesamtbetrag</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Mitbesteller</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Lieferant</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Zuletzt gespeichert</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">Aktionen</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Rechnungsnummer
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Bestelldatum
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Gesamtbetrag
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Mitbesteller
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Lieferant
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Zuletzt gespeichert
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                Aktionen
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-zinc-500">
+                <td
+                  colSpan={7}
+                  className="px-4 py-8 text-center text-sm text-zinc-500"
+                >
                   Wird geladen…
                 </td>
               </tr>
@@ -116,7 +145,12 @@ export default function MaterialbestellungListPage() {
                 <td colSpan={7} className="px-4 py-8 text-sm text-rose-600">
                   <div className="flex flex-col items-center justify-center gap-4 text-center">
                     <span>{errorMessage}</span>
-                    <Button kind="secondary" size="small" icon={faArrowsRotate} onClick={() => void loadOrders()}>
+                    <Button
+                      kind="secondary"
+                      size="small"
+                      icon={faArrowsRotate}
+                      onClick={() => void loadOrders()}
+                    >
                       Erneut laden
                     </Button>
                   </div>
@@ -124,19 +158,34 @@ export default function MaterialbestellungListPage() {
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300">
+                <td
+                  colSpan={7}
+                  className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300"
+                >
                   Noch keine Materialbestellungen vorhanden.
                 </td>
               </tr>
             ) : (
               orders.map((order) => (
                 <tr key={order.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{order.supplierInvoiceNumber || "-"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{formatDate(order.supplierInvoiceDate)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{euroFormatter.format(order.totalAmountEuro)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{order.participantCount}</td>
-                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{order.supplierName || "-"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">{formatDate(order.updatedAt)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {order.supplierInvoiceNumber || "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {formatDate(order.supplierInvoiceDate)}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {euroFormatter.format(order.totalAmountEuro)}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {order.participantCount}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {order.supplierName || "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                    {formatDate(order.updatedAt)}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button href={`/split-invoice/${order.id}`} size="small">
@@ -162,4 +211,3 @@ export default function MaterialbestellungListPage() {
     </div>
   );
 }
-

@@ -21,8 +21,10 @@ export default async function AdminLayout({
 
   if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
     return (
-      <section className="rounded-xl border border-destructive-border bg-destructive-soft p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-destructive">Kein Zugriff</h1>
+      <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold text-destructive">
+          Kein Zugriff
+        </h1>
         <p className="mt-2 text-sm text-destructive">
           Dieser Bereich ist nur fuer Mitglieder mit der Rolle Admin verfuegbar.
         </p>
@@ -32,7 +34,7 @@ export default async function AdminLayout({
 
   return (
     <div className="space-y-6">
-      <nav className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-2 shadow-sm">
+      <nav className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-2 shadow-sm">
         <ActiveNavLink
           href={localizePathname("/admin/volkshaus", locale)}
           exact

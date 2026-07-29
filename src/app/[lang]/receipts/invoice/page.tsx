@@ -37,9 +37,7 @@ import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
-import {
-  euroAmountValidationMessage,
-} from "@/lib/euro-input";
+import { euroAmountValidationMessage } from "@/lib/euro-input";
 import ReceiptsPageHeader from "../create/header";
 
 type InvoicePosition = {
@@ -160,7 +158,9 @@ const getTaxRatePercent = (value: InvoiceTaxCode) => {
   return 0;
 };
 
-const getDefaultPaymentMethod = (items: PaymentMethodOption[]): PaymentMethod => {
+const getDefaultPaymentMethod = (
+  items: PaymentMethodOption[],
+): PaymentMethod => {
   const preferred = CAMPAI_PAYMENT_METHOD_TYPES.find((value) =>
     items.some((item) => item.value === value),
   );
@@ -187,14 +187,23 @@ export default function NewSimpleInvoicePage() {
   const [details2, setDetails2] = useState("");
   const [paid, setPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>(
+    [],
+  );
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
-  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
-  const [bankConnections, setBankConnections] = useState<BankConnectionOption[]>([]);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(
+    null,
+  );
+  const [bankConnections, setBankConnections] = useState<
+    BankConnectionOption[]
+  >([]);
   const [selectedCashAccountId, setSelectedCashAccountId] = useState("");
   const [bankConnectionsLoading, setBankConnectionsLoading] = useState(false);
-  const [bankConnectionsError, setBankConnectionsError] = useState<string | null>(null);
-  const [hasLoadedBankConnections, setHasLoadedBankConnections] = useState(false);
+  const [bankConnectionsError, setBankConnectionsError] = useState<
+    string | null
+  >(null);
+  const [hasLoadedBankConnections, setHasLoadedBankConnections] =
+    useState(false);
   const [invoiceDate, setInvoiceDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -273,9 +282,9 @@ export default function NewSimpleInvoicePage() {
     const loadPaymentMethods = async () => {
       try {
         setPaymentMethodsLoading(true);
-        const response = await fetchJson<{ paymentMethods: PaymentMethodOption[] }>(
-          "/api/campai/payment-methods",
-        );
+        const response = await fetchJson<{
+          paymentMethods: PaymentMethodOption[];
+        }>("/api/campai/payment-methods");
 
         if (!active) {
           return;
@@ -434,7 +443,9 @@ export default function NewSimpleInvoicePage() {
   const totals = useMemo(() => {
     return validPositions.reduce(
       (sum, position) => {
-        const lineAmountCents = Math.round(position.quantity * position.unitAmount);
+        const lineAmountCents = Math.round(
+          position.quantity * position.unitAmount,
+        );
         const taxRate = getTaxRatePercent(position.taxCode);
 
         if (isNet) {
@@ -482,7 +493,9 @@ export default function NewSimpleInvoicePage() {
     }
 
     try {
-      const params = new URLSearchParams({ account: String(suggestion.account) });
+      const params = new URLSearchParams({
+        account: String(suggestion.account),
+      });
       const response = await fetchJson<{
         debtor?: {
           account?: number | null;
@@ -613,7 +626,9 @@ export default function NewSimpleInvoicePage() {
     }
 
     if (sendByMail && !recipientEmail.trim()) {
-      setErrorMessage("Bitte E-Mail-Empfänger eintragen, wenn Versand aktiv ist.");
+      setErrorMessage(
+        "Bitte E-Mail-Empfänger eintragen, wenn Versand aktiv ist.",
+      );
       return;
     }
 
@@ -698,7 +713,8 @@ export default function NewSimpleInvoicePage() {
   };
 
   const showCostCenterWarning =
-    !costCentersLoading && (costCenters.length === 0 || Boolean(costCentersError));
+    !costCentersLoading &&
+    (costCenters.length === 0 || Boolean(costCentersError));
 
   return (
     <BookingPageShell>
@@ -709,7 +725,6 @@ export default function NewSimpleInvoicePage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-
         <FormSection
           title="Versand & Kunde"
           icon={faUser}
@@ -737,7 +752,10 @@ export default function NewSimpleInvoicePage() {
                 />
               </FormField>
 
-              <FormField label="E-Mail-Empfänger" hint="Für Versand und Neuanlage des Debitors.">
+              <FormField
+                label="E-Mail-Empfänger"
+                hint="Für Versand und Neuanlage des Debitors."
+              >
                 <Input
                   type="email"
                   value={recipientEmail}
@@ -795,11 +813,13 @@ export default function NewSimpleInvoicePage() {
                 initialCity={city}
                 email={recipientEmail}
                 paymentMethodType={paymentMethod || undefined}
-                receiptSendMethod={recipientEmail.trim()
-                  ? sendByMail
-                    ? "email"
+                receiptSendMethod={
+                  recipientEmail.trim()
+                    ? sendByMail
+                      ? "email"
+                      : "postal"
                     : "postal"
-                  : "postal"}
+                }
                 onCancel={() => setShowCreateDebtorPanel(false)}
                 onCreated={(result, draft) => {
                   setDebtorAccount(result.account);
@@ -824,65 +844,67 @@ export default function NewSimpleInvoicePage() {
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-2xl border border-border p-2 sm:p-3">
-              <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
-                <input
-                  type="checkbox"
-                  checked={sendByMail}
-                  onChange={(event) => setSendByMail(event.target.checked)}
-                />
-                Automatisch per E-Mail versenden
-              </label>
-            </div>
+              <div className="md:col-span-2 rounded-lg border border-border p-2 sm:p-3">
+                <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
+                  <input
+                    type="checkbox"
+                    checked={sendByMail}
+                    onChange={(event) => setSendByMail(event.target.checked)}
+                  />
+                  Automatisch per E-Mail versenden
+                </label>
+              </div>
 
-            {sendByMail ? (
+              {sendByMail ? (
+                <div className="md:col-span-2">
+                  <FormField label="Automatischer Versand per E-Mail" required>
+                    <Input
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(event) =>
+                        setRecipientEmail(event.target.value)
+                      }
+                      placeholder="kunde@beispiel.de"
+                    />
+                  </FormField>
+                </div>
+              ) : null}
+
               <div className="md:col-span-2">
-                <FormField label="Automatischer Versand per E-Mail" required>
+                <FormField label="Straße / Adresse" required>
                   <Input
-                    type="email"
-                    value={recipientEmail}
-                    onChange={(event) => setRecipientEmail(event.target.value)}
-                    placeholder="kunde@beispiel.de"
+                    value={addressLine}
+                    onChange={(event) => setAddressLine(event.target.value)}
+                    required
                   />
                 </FormField>
               </div>
-            ) : null}
-
-            <div className="md:col-span-2">
-              <FormField label="Straße / Adresse" required>
+              <FormField label="PLZ" required>
                 <Input
-                  value={addressLine}
-                  onChange={(event) => setAddressLine(event.target.value)}
+                  value={zip}
+                  onChange={(event) => setZip(event.target.value)}
                   required
                 />
               </FormField>
-            </div>
-            <FormField label="PLZ" required>
-              <Input
-                value={zip}
-                onChange={(event) => setZip(event.target.value)}
-                required
-              />
-            </FormField>
-            <FormField label="Stadt" required>
-              <Input
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                required
-              />
-            </FormField>
-            <FormField label="Adresszusatz 1">
-              <Input
-                value={details1}
-                onChange={(event) => setDetails1(event.target.value)}
-              />
-            </FormField>
-            <FormField label="Adresszusatz 2">
-              <Input
-                value={details2}
-                onChange={(event) => setDetails2(event.target.value)}
-              />
-            </FormField>
+              <FormField label="Stadt" required>
+                <Input
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                  required
+                />
+              </FormField>
+              <FormField label="Adresszusatz 1">
+                <Input
+                  value={details1}
+                  onChange={(event) => setDetails1(event.target.value)}
+                />
+              </FormField>
+              <FormField label="Adresszusatz 2">
+                <Input
+                  value={details2}
+                  onChange={(event) => setDetails2(event.target.value)}
+                />
+              </FormField>
             </div>
           </div>
         </FormSection>
@@ -895,7 +917,8 @@ export default function NewSimpleInvoicePage() {
           <div className="mb-4">
             <FormField label="Rechnungsgegenstand" required>
               <p className="mb-2 text-xs text-muted-foreground">
-                Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang der Dienstleistung
+                Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang
+                der Dienstleistung
               </p>
               <Input
                 value={intro}
@@ -906,9 +929,12 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           {showCostCenterWarning ? (
-            <div className="mb-4 rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
+            <div className="mb-4 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
               <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
+                <FontAwesomeIcon
+                  icon={faTriangleExclamation}
+                  className="h-4 w-4"
+                />
                 <span>
                   Kostenstellen konnten nicht aus Campai geladen werden.
                   {costCentersError ? ` ${costCentersError}` : ""}
@@ -918,12 +944,20 @@ export default function NewSimpleInvoicePage() {
           ) : null}
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-border p-2 sm:p-3">
+            <div className="rounded-lg border border-border p-2 sm:p-3">
               <div className="mb-2 hidden grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] gap-2 px-1 xl:grid">
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einheit</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menge</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Einzelbetrag €</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Name
+                </p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Einheit
+                </p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Menge
+                </p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Einzelbetrag €
+                </p>
                 <div
                   ref={taxHintContainerRef}
                   className="group relative inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -949,18 +983,27 @@ export default function NewSimpleInvoicePage() {
                         : "invisible opacity-0 group-hover:visible group-hover:opacity-100"
                     }`}
                   >
-                    19% für reguläre Dienstleistungen/Verkäufe, 7% nur für begünstigte Leistungen, 0% für steuerfreie Positionen.
+                    19% für reguläre Dienstleistungen/Verkäufe, 7% nur für
+                    begünstigte Leistungen, 0% für steuerfreie Positionen.
                   </span>
                 </div>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Gesamtbetrag</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bereich/Projekt</p>
-                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">Aktion</p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Gesamtbetrag
+                </p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Bereich/Projekt
+                </p>
+                <p className="truncate whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Aktion
+                </p>
               </div>
 
               <div className="space-y-2">
                 {positions.map((position) => {
                   const rowQuantity = parseQuantity(position.quantity);
-                  const rowUnitAmount = parseEuroToCents(position.unitAmountEuro);
+                  const rowUnitAmount = parseEuroToCents(
+                    position.unitAmountEuro,
+                  );
                   const rowEnteredTotal =
                     rowQuantity !== null && rowUnitAmount !== null
                       ? Math.round(rowQuantity * rowUnitAmount)
@@ -969,7 +1012,7 @@ export default function NewSimpleInvoicePage() {
                   return (
                     <div
                       key={position.id}
-                      className="grid gap-3 rounded-xl border border-border p-2 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end sm:p-3"
+                      className="grid gap-3 rounded-lg border border-border p-2 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end sm:p-3"
                     >
                       <FormField
                         label="Name"
@@ -981,7 +1024,11 @@ export default function NewSimpleInvoicePage() {
                           aria-label="Name"
                           value={position.description}
                           onChange={(event) =>
-                            updatePosition(position.id, "description", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "description",
+                              event.target.value,
+                            )
                           }
                           onSelect={(suggestion) =>
                             handleProductSelect(position.id, suggestion)
@@ -990,48 +1037,78 @@ export default function NewSimpleInvoicePage() {
                         />
                       </FormField>
 
-                      <FormField label="Einheit" labelClassName="whitespace-nowrap xl:hidden">
+                      <FormField
+                        label="Einheit"
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <Input
                           aria-label="Einheit"
                           value={position.unit}
                           onChange={(event) =>
-                            updatePosition(position.id, "unit", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "unit",
+                              event.target.value,
+                            )
                           }
                           placeholder="Stk"
                         />
                       </FormField>
 
-                      <FormField label="Menge" required labelClassName="whitespace-nowrap xl:hidden">
+                      <FormField
+                        label="Menge"
+                        required
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <Input
                           aria-label="Menge"
                           value={position.quantity}
                           inputMode="decimal"
                           onChange={(event) =>
-                            updatePosition(position.id, "quantity", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "quantity",
+                              event.target.value,
+                            )
                           }
                           placeholder="1"
                         />
                       </FormField>
 
-                      <FormField label="Einzelbetrag €" required labelClassName="whitespace-nowrap xl:hidden">
+                      <FormField
+                        label="Einzelbetrag €"
+                        required
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <Input
                           aria-label="Einzelbetrag in Euro"
                           value={position.unitAmountEuro}
                           inputMode="decimal"
                           title={euroAmountValidationMessage}
                           onChange={(event) =>
-                            updatePosition(position.id, "unitAmountEuro", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "unitAmountEuro",
+                              event.target.value,
+                            )
                           }
                           placeholder="12,50"
                         />
                       </FormField>
 
-                      <FormField label="Steuer" labelClassName="whitespace-nowrap xl:hidden">
+                      <FormField
+                        label="Steuer"
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <Select
                           aria-label="Steuer"
                           value={position.taxCode}
                           onChange={(event) =>
-                            updatePosition(position.id, "taxCode", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "taxCode",
+                              event.target.value,
+                            )
                           }
                         >
                           <option value="0">0%</option>
@@ -1040,9 +1117,14 @@ export default function NewSimpleInvoicePage() {
                         </Select>
                       </FormField>
 
-                      <FormField label="Gesamtbetrag" labelClassName="whitespace-nowrap xl:hidden">
+                      <FormField
+                        label="Gesamtbetrag"
+                        labelClassName="whitespace-nowrap xl:hidden"
+                      >
                         <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm font-medium text-foreground">
-                          {rowEnteredTotal === null ? "-" : `€${(rowEnteredTotal / 100).toFixed(2)}`}
+                          {rowEnteredTotal === null
+                            ? "-"
+                            : `€${(rowEnteredTotal / 100).toFixed(2)}`}
                         </div>
                       </FormField>
 
@@ -1055,12 +1137,20 @@ export default function NewSimpleInvoicePage() {
                           aria-label="Bereich/Projekt"
                           value={position.costCenter2}
                           onChange={(event) =>
-                            updatePosition(position.id, "costCenter2", event.target.value)
+                            updatePosition(
+                              position.id,
+                              "costCenter2",
+                              event.target.value,
+                            )
                           }
-                          disabled={costCentersLoading || costCenters.length === 0}
+                          disabled={
+                            costCentersLoading || costCenters.length === 0
+                          }
                         >
                           {costCenters.length === 0 ? (
-                            <option value="">Keine Kostenstellen verfügbar</option>
+                            <option value="">
+                              Keine Kostenstellen verfügbar
+                            </option>
                           ) : null}
                           {costCenters.map((center) => (
                             <option key={center.value} value={center.value}>
@@ -1082,7 +1172,10 @@ export default function NewSimpleInvoicePage() {
                           onClick={() => removePosition(position.id)}
                           disabled={positions.length === 1}
                         >
-                          <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                          <FontAwesomeIcon
+                            icon={faTrash}
+                            className="h-3.5 w-3.5"
+                          />
                         </button>
                       </div>
                     </div>
@@ -1095,7 +1188,7 @@ export default function NewSimpleInvoicePage() {
               Position hinzufügen
             </Button>
 
-            <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
+            <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm text-foreground/80">
                   <span>{isNet ? "Nettosumme" : "Bruttosumme"}</span>
@@ -1110,7 +1203,9 @@ export default function NewSimpleInvoicePage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-foreground/80">Gesamtbetrag</span>
+                  <span className="text-sm font-medium text-foreground/80">
+                    Gesamtbetrag
+                  </span>
                   <span className="text-lg font-semibold text-foreground">
                     €{(totals.grossTotalCents / 100).toFixed(2)}
                   </span>
@@ -1265,13 +1360,22 @@ export default function NewSimpleInvoicePage() {
               <p className="text-sm text-success">{successMessage}</p>
             ) : null}
             <p className="text-sm text-foreground/80">
-              Gültige Positionen: <span className="font-semibold text-foreground">{validPositions.length}</span>
+              Gültige Positionen:{" "}
+              <span className="font-semibold text-foreground">
+                {validPositions.length}
+              </span>
             </p>
             <p className="text-sm text-foreground/80">
-              MwSt.: <span className="font-semibold text-foreground">€{(totals.taxTotalCents / 100).toFixed(2)}</span>
+              MwSt.:{" "}
+              <span className="font-semibold text-foreground">
+                €{(totals.taxTotalCents / 100).toFixed(2)}
+              </span>
             </p>
             <p className="text-sm text-foreground/80">
-              Gesamtbetrag: <span className="font-semibold text-foreground">€{(totals.grossTotalCents / 100).toFixed(2)}</span>
+              Gesamtbetrag:{" "}
+              <span className="font-semibold text-foreground">
+                €{(totals.grossTotalCents / 100).toFixed(2)}
+              </span>
             </p>
           </div>
 

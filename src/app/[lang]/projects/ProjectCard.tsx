@@ -17,7 +17,7 @@ export default function ProjectCard({
     <article className="group flex h-full flex-col overflow-hidden">
       <div
         aria-hidden="true"
-        className="overflow-hidden rounded-2xl bg-card/50 transition "
+        className="overflow-hidden rounded-lg bg-card/50 transition "
       >
         <ProjectCardMedia
           articleLink={articleLink}

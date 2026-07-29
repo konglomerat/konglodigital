@@ -148,13 +148,13 @@ export default function PrinterEmptyingPage() {
       </header>
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           Loading printers...
         </div>
       ) : null}
@@ -170,7 +170,9 @@ export default function PrinterEmptyingPage() {
                 <h2 className="text-lg font-semibold text-foreground">
                   {printer.name || "Unnamed printer"}
                 </h2>
-                <p className="text-xs text-muted-foreground/80">{printer.model}</p>
+                <p className="text-xs text-muted-foreground/80">
+                  {printer.model}
+                </p>
               </div>
               <span
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
@@ -185,7 +187,9 @@ export default function PrinterEmptyingPage() {
             <div className="mt-4 space-y-2 text-sm text-muted-foreground">
               <p>
                 Job:{" "}
-                <span className="text-foreground/80">{printer.jobName ?? "-"}</span>
+                <span className="text-foreground/80">
+                  {printer.jobName ?? "-"}
+                </span>
               </p>
               <p>
                 Progress:{" "}
@@ -200,7 +204,7 @@ export default function PrinterEmptyingPage() {
             </div>
 
             {printer.needsEmptying ? (
-              <div className="mt-5 flex items-center justify-between rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
+              <div className="mt-5 flex items-center justify-between rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
                 <span>Needs to be emptied</span>
                 <Button
                   type="button"
@@ -213,7 +217,7 @@ export default function PrinterEmptyingPage() {
                 </Button>
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+              <div className="mt-5 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
                 No emptying needed
               </div>
             )}
@@ -222,13 +226,13 @@ export default function PrinterEmptyingPage() {
       </section>
 
       {!loading && printers.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
           No printers found.
         </div>
       ) : null}
 
       {needsEmptying.length > 0 ? (
-        <div className="rounded-2xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
+        <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
           {needsEmptying.length} printer{needsEmptying.length === 1 ? "" : "s"}{" "}
           need to be emptied.
         </div>

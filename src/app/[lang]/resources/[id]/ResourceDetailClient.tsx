@@ -186,7 +186,7 @@ export default function ResourceDetailClient({
         </p>
 
         {errorMessage ? (
-          <section className="rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
             {errorMessage}
           </section>
         ) : null}
@@ -206,17 +206,12 @@ export default function ResourceDetailClient({
                       ? [resource.image]
                       : []
                 }
-                previewMedia={
-                  (resource.images?.length
-                    ? resource.images
-                    : resource.image
-                      ? [resource.image]
-                      : []
-                  ).map(
-                    (mediaUrl) =>
-                      mediaUrl,
-                  )
-                }
+                previewMedia={(resource.images?.length
+                  ? resource.images
+                  : resource.image
+                    ? [resource.image]
+                    : []
+                ).map((mediaUrl) => mediaUrl)}
                 title={resource.name}
                 closeLabel={tx("Close")}
                 previousLabel={tx("Prev")}

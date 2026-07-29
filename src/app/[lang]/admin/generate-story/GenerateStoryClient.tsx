@@ -25,7 +25,7 @@ const FabricStorySlideEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm">
         <div className="flex aspect-[9/16] items-center justify-center bg-card text-sm text-muted-foreground">
           Fabric-Editor wird geladen...
         </div>
@@ -134,7 +134,7 @@ function SelectableGrid({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
         Keine Eintraege gefunden.
       </div>
     );
@@ -152,7 +152,7 @@ function SelectableGrid({
             key={item.id}
             type="button"
             onClick={() => onSelect(item.id)}
-            className={`overflow-hidden rounded-2xl border text-left transition ${
+            className={`overflow-hidden rounded-lg border text-left transition ${
               isSelected
                 ? "border-primary bg-primary-soft shadow-sm"
                 : "border-border bg-card hover:border-input hover:shadow-sm"
@@ -173,7 +173,9 @@ function SelectableGrid({
                     {item.name}
                   </h3>
                   {item.prettyTitle ? (
-                    <p className="text-xs text-muted-foreground">/{item.prettyTitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      /{item.prettyTitle}
+                    </p>
                   ) : null}
                 </div>
                 <span
@@ -222,20 +224,23 @@ export default function GenerateStoryClient({
     "VORNAME hat mal wieder gewerkelt. INFOS ZUM PROJEKT. Schreibe witzig.",
   );
   const [query, setQuery] = useState("");
-  const [kindFilter, setKindFilter] = useState<"all" | "project" | "resource">("all");
+  const [kindFilter, setKindFilter] = useState<"all" | "project" | "resource">(
+    "all",
+  );
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.id ?? "");
   const [slideCount, setSlideCount] = useState<"1" | "2">("2");
   const [customInstructions, setCustomInstructions] = useState("");
   const [layoutInstructions, setLayoutInstructions] = useState(
     DEFAULT_LAYOUT_INSTRUCTIONS,
   );
-  const [renderModel, setRenderModel] = useState<StoryRenderModel>(
-    "gpt-4.1-mini",
-  );
+  const [renderModel, setRenderModel] =
+    useState<StoryRenderModel>("gpt-4.1-mini");
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const [draft, setDraft] = useState<StoryDraftResult | null>(null);
   const [layout, setLayout] = useState<StoryLayoutResult | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<StoryGeneratedImage[] | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<
+    StoryGeneratedImage[] | null
+  >(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitWarning, setSubmitWarning] = useState<string | null>(null);
@@ -283,14 +288,18 @@ export default function GenerateStoryClient({
   }, [kindFilter, query]);
 
   const visibleItems = useMemo(() => {
-    const selected = filteredItems.find((item) => item.id === selectedItemId) ?? null;
+    const selected =
+      filteredItems.find((item) => item.id === selectedItemId) ?? null;
     const initialItems = filteredItems.slice(0, visibleItemCount);
 
     if (!selected || initialItems.some((item) => item.id === selected.id)) {
       return initialItems;
     }
 
-    return [selected, ...initialItems.slice(0, Math.max(visibleItemCount - 1, 0))];
+    return [
+      selected,
+      ...initialItems.slice(0, Math.max(visibleItemCount - 1, 0)),
+    ];
   }, [filteredItems, selectedItemId, visibleItemCount]);
 
   const deferredDraft = useDeferredValue(draft);
@@ -331,7 +340,9 @@ export default function GenerateStoryClient({
         .catch(() => ({}))) as StoryLayoutResponse;
 
       if (!response.ok || !data.layout) {
-        throw new Error(data.error ?? "Story-Layout konnte nicht erstellt werden.");
+        throw new Error(
+          data.error ?? "Story-Layout konnte nicht erstellt werden.",
+        );
       }
 
       setLayout(data.layout);
@@ -374,7 +385,9 @@ export default function GenerateStoryClient({
         .catch(() => ({}))) as StoryGeneratedImagesResponse;
 
       if (!response.ok || !data.images?.length) {
-        throw new Error(data.error ?? "Story-Bilder konnten nicht erstellt werden.");
+        throw new Error(
+          data.error ?? "Story-Bilder konnten nicht erstellt werden.",
+        );
       }
 
       setGeneratedImages(data.images);
@@ -439,7 +452,9 @@ export default function GenerateStoryClient({
         .catch(() => ({}))) as StoryDraftResponse;
 
       if (!response.ok || !data.draft) {
-        throw new Error(data.error ?? "Story-Entwurf konnte nicht erstellt werden.");
+        throw new Error(
+          data.error ?? "Story-Entwurf konnte nicht erstellt werden.",
+        );
       }
 
       setDraft(data.draft);
@@ -488,7 +503,11 @@ export default function GenerateStoryClient({
           <FormField label="Typ">
             <Select
               value={kindFilter}
-              onChange={(event) => setKindFilter(event.target.value as "all" | "project" | "resource")}
+              onChange={(event) =>
+                setKindFilter(
+                  event.target.value as "all" | "project" | "resource",
+                )
+              }
             >
               <option value="all">Alles</option>
               <option value="project">Projekte</option>
@@ -514,7 +533,9 @@ export default function GenerateStoryClient({
                 kind="secondary"
                 size="small"
                 onClick={() =>
-                  setVisibleItemCount((current) => current + DEFAULT_VISIBLE_ITEM_COUNT)
+                  setVisibleItemCount(
+                    (current) => current + DEFAULT_VISIBLE_ITEM_COUNT,
+                  )
                 }
               >
                 Mehr Eintraege anzeigen
@@ -530,10 +551,12 @@ export default function GenerateStoryClient({
       >
         <div className="grid gap-4 lg:grid-cols-2">
           <FormField label="Ausgewaehlter Eintrag">
-            <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
+            <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
               {selectedItem ? (
                 <div className="space-y-1">
-                  <p className="font-semibold text-foreground">{selectedItem.name}</p>
+                  <p className="font-semibold text-foreground">
+                    {selectedItem.name}
+                  </p>
                   <p>
                     {getKindLabel(selectedItem)}
                     {selectedItem.socialMediaConsent
@@ -607,7 +630,9 @@ export default function GenerateStoryClient({
             >
               <option value="gpt-4.1-mini">GPT + Fabric</option>
               <option value="gemini-3-pro-image-preview">Nanobanana Pro</option>
-              <option value="gemini-3.1-flash-image-preview">Nanobanana 2</option>
+              <option value="gemini-3.1-flash-image-preview">
+                Nanobanana 2
+              </option>
             </Select>
           </FormField>
         </div>
@@ -698,7 +723,7 @@ export default function GenerateStoryClient({
               {draft.slides.map((slide, index) => (
                 <div
                   key={`${draft.source.id}-slide-${index}`}
-                  className="grid gap-4 rounded-2xl border border-border p-4"
+                  className="grid gap-4 rounded-lg border border-border p-4"
                 >
                   <h3 className="text-base font-semibold text-foreground">
                     Slide {index + 1}
@@ -742,68 +767,75 @@ export default function GenerateStoryClient({
             }
           >
             {!isGeneratedImageModel(renderModel) ? (
-              <div className="mb-5 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                Textboxen koennen direkt im Canvas verschoben und skaliert werden. Texte lassen sich per Doppelklick im Fabric-Canvas bearbeiten. Fuer ein komplett neues Arrangement einfach "Layout neu anordnen" nutzen.
+              <div className="mb-5 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                Textboxen koennen direkt im Canvas verschoben und skaliert
+                werden. Texte lassen sich per Doppelklick im Fabric-Canvas
+                bearbeiten. Fuer ein komplett neues Arrangement einfach "Layout
+                neu anordnen" nutzen.
               </div>
             ) : (
-              <div className="mb-5 rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                Nanobanana Pro und Nanobanana 2 erzeugen fertige Story-Bilder mit eingebranntem Layout. Zum Aktualisieren nach Textaenderungen einfach "Bild neu erzeugen" nutzen.
+              <div className="mb-5 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                Nanobanana Pro und Nanobanana 2 erzeugen fertige Story-Bilder
+                mit eingebranntem Layout. Zum Aktualisieren nach Textaenderungen
+                einfach "Bild neu erzeugen" nutzen.
               </div>
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
-              {isGeneratedImageModel(renderModel) && generatedImages?.length
-                ? generatedImages.map((image) => (
-                    <div
-                      key={image.fileName}
-                      className="overflow-hidden rounded-[2rem] border border-border bg-muted/50 shadow-sm"
-                    >
-                      <img
-                        src={image.dataUrl}
-                        alt={`Slide ${image.slideNumber}`}
-                        className="block aspect-[9/16] w-full object-cover"
-                      />
-                      <div className="flex items-center justify-between gap-3 p-4">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            Slide {image.slideNumber}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Generiertes Story-Bild
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          kind="secondary"
-                          size="small"
-                          onClick={() =>
-                            downloadDataUrl(image.dataUrl, image.fileName)
-                          }
-                        >
-                          PNG herunterladen
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                : !isGeneratedImageModel(renderModel) && deferredDraft && layout
-                ? deferredDraft.slides.map((slide, index) => (
-                    <FabricStorySlideEditor
-                      key={`${deferredDraft.source.id}-${layoutVersion}-${index}`}
-                      source={deferredDraft.source}
-                      slideIndex={index}
-                      slide={slide}
-                      layout={layout.slides[index]}
-                      layoutVersion={layoutVersion}
-                      showTextOverlay={showTextOverlay}
+              {isGeneratedImageModel(renderModel) && generatedImages?.length ? (
+                generatedImages.map((image) => (
+                  <div
+                    key={image.fileName}
+                    className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm"
+                  >
+                    <img
+                      src={image.dataUrl}
+                      alt={`Slide ${image.slideNumber}`}
+                      className="block aspect-[9/16] w-full object-cover"
                     />
-                  ))
-                : deferredDraft ? (
-                    <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground lg:col-span-2">
-                      {isGeneratedImageModel(renderModel)
-                        ? "Es liegen noch keine generierten Story-Bilder vor. Wenn gleichzeitig eine Warnung erscheint, ist die Bildgenerierung fehlgeschlagen."
-                        : "Es liegt noch kein Layout fuer den Editor vor. Wenn gleichzeitig eine OpenAI-Warnung erscheint, ist der Generator auf den Standardpfad gefallen oder das Layout wurde nicht gesetzt."}
+                    <div className="flex items-center justify-between gap-3 p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Slide {image.slideNumber}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Generiertes Story-Bild
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        kind="secondary"
+                        size="small"
+                        onClick={() =>
+                          downloadDataUrl(image.dataUrl, image.fileName)
+                        }
+                      >
+                        PNG herunterladen
+                      </Button>
                     </div>
-                  ) : null}
+                  </div>
+                ))
+              ) : !isGeneratedImageModel(renderModel) &&
+                deferredDraft &&
+                layout ? (
+                deferredDraft.slides.map((slide, index) => (
+                  <FabricStorySlideEditor
+                    key={`${deferredDraft.source.id}-${layoutVersion}-${index}`}
+                    source={deferredDraft.source}
+                    slideIndex={index}
+                    slide={slide}
+                    layout={layout.slides[index]}
+                    layoutVersion={layoutVersion}
+                    showTextOverlay={showTextOverlay}
+                  />
+                ))
+              ) : deferredDraft ? (
+                <div className="rounded-lg border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground lg:col-span-2">
+                  {isGeneratedImageModel(renderModel)
+                    ? "Es liegen noch keine generierten Story-Bilder vor. Wenn gleichzeitig eine Warnung erscheint, ist die Bildgenerierung fehlgeschlagen."
+                    : "Es liegt noch kein Layout fuer den Editor vor. Wenn gleichzeitig eine OpenAI-Warnung erscheint, ist der Generator auf den Standardpfad gefallen oder das Layout wurde nicht gesetzt."}
+                </div>
+              ) : null}
             </div>
           </FormSection>
         </>

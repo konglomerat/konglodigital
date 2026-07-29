@@ -126,7 +126,7 @@ function SelectableGrid({
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
           {emptyLabel}
         </div>
       ) : (
@@ -141,7 +141,7 @@ function SelectableGrid({
                 key={item.id}
                 type="button"
                 onClick={() => onToggle(item.id)}
-                className={`overflow-hidden rounded-2xl border text-left transition ${
+                className={`overflow-hidden rounded-lg border text-left transition ${
                   isSelected
                     ? "border-primary bg-primary-soft shadow-sm"
                     : "border-border bg-card hover:border-input hover:shadow-sm"

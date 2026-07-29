@@ -109,7 +109,9 @@ export default function CampaiRentalPanel({
       const response = await fetch(`/api/campai/resources/${resourceId}/rent`, {
         cache: "no-store",
       });
-      const data = (await response.json()) as RentalSnapshot & { error?: string };
+      const data = (await response.json()) as RentalSnapshot & {
+        error?: string;
+      };
       if (!response.ok) {
         throw new Error(data.error ?? "Unable to load rental status.");
       }
@@ -117,7 +119,9 @@ export default function CampaiRentalPanel({
     } catch (error) {
       setSnapshot(null);
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to load rental status.",
+        error instanceof Error
+          ? error.message
+          : "Unable to load rental status.",
       );
     } finally {
       setLoading(false);
@@ -167,7 +171,10 @@ export default function CampaiRentalPanel({
           {tx("Rent resource", "en")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {tx("Live Campai availability, current status and previous rents.", "en")}
+          {tx(
+            "Live Campai availability, current status and previous rents.",
+            "en",
+          )}
         </p>
       </div>
 
@@ -176,7 +183,7 @@ export default function CampaiRentalPanel({
       ) : null}
 
       {errorMessage ? (
-        <div className="mt-4 rounded-2xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
           {errorMessage}
         </div>
       ) : null}
@@ -201,7 +208,7 @@ export default function CampaiRentalPanel({
           </div>
 
           {!snapshot.synced ? (
-            <div className="rounded-2xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning">
               {snapshot.syncError
                 ? snapshot.syncError
                 : tx("This resource is not synced to Campai yet.", "en")}
@@ -217,7 +224,7 @@ export default function CampaiRentalPanel({
                 {snapshot.activeReservations.map((reservation) => (
                   <li
                     key={reservation.id}
-                    className="rounded-2xl border border-border bg-background p-4 text-sm"
+                    className="rounded-lg border border-border bg-background p-4 text-sm"
                   >
                     <p className="font-semibold text-foreground">
                       {formatReservationStatus(reservation.status)}
@@ -241,8 +248,11 @@ export default function CampaiRentalPanel({
               </ul>
             </div>
           ) : (
-            <div className="rounded-2xl border border-success/30 bg-success/10 p-4 text-sm text-foreground">
-              {tx("No active reservation right now. The resource appears available.", "en")}
+            <div className="rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-foreground">
+              {tx(
+                "No active reservation right now. The resource appears available.",
+                "en",
+              )}
             </div>
           )}
 
@@ -258,7 +268,10 @@ export default function CampaiRentalPanel({
             {snapshot.viewer.authenticated &&
             !snapshot.viewer.hasConnectedCampaiAccount ? (
               <p className="mt-2 text-sm text-muted-foreground">
-                {tx("Your account needs a connected Campai profile before you can rent resources.", "en")}
+                {tx(
+                  "Your account needs a connected Campai profile before you can rent resources.",
+                  "en",
+                )}
               </p>
             ) : null}
             <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -268,7 +281,7 @@ export default function CampaiRentalPanel({
                   type="datetime-local"
                   value={start}
                   onChange={(event) => setStart(event.target.value)}
-                  className="rounded-xl border border-border bg-background px-3 py-2"
+                  className="rounded-lg border border-border bg-background px-3 py-2"
                   disabled={!canRent || saving}
                 />
               </label>
@@ -278,7 +291,7 @@ export default function CampaiRentalPanel({
                   type="datetime-local"
                   value={end}
                   onChange={(event) => setEnd(event.target.value)}
-                  className="rounded-xl border border-border bg-background px-3 py-2"
+                  className="rounded-lg border border-border bg-background px-3 py-2"
                   disabled={!canRent || saving}
                 />
               </label>
@@ -312,7 +325,7 @@ export default function CampaiRentalPanel({
                 {snapshot.previousRents.map((reservation) => (
                   <li
                     key={reservation.id}
-                    className="rounded-2xl border border-border bg-background p-4 text-sm"
+                    className="rounded-lg border border-border bg-background p-4 text-sm"
                   >
                     <p className="font-semibold text-foreground">
                       {reservation.bookingRecordNumber

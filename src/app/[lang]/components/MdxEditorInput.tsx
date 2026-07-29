@@ -117,7 +117,7 @@ export default function MdxEditorInput({
     : embedButtonLabel;
 
   return (
-    <div className="mdx-editor-input overflow-hidden rounded-2xl border border-border bg-card">
+    <div className="mdx-editor-input overflow-hidden rounded-lg border border-border bg-card">
       <MDXEditor
         ref={editorRef}
         markdown={value}
@@ -196,7 +196,7 @@ export default function MdxEditorInput({
                   key={image.url}
                   type="button"
                   onClick={() => handleInsertImage(image.url, image.label)}
-                  className="overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-primary-border hover:shadow-sm"
+                  className="overflow-hidden rounded-lg border border-border bg-card text-left transition hover:border-primary-border hover:shadow-sm"
                 >
                   <img
                     src={image.thumbnailUrl}

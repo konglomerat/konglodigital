@@ -72,10 +72,16 @@ export default function AdminUsersClient() {
   const [roleError, setRoleError] = useState<string | null>(null);
   const [savingRoleForId, setSavingRoleForId] = useState<string | null>(null);
   const [campaiLinkError, setCampaiLinkError] = useState<string | null>(null);
-  const [campaiContacts, setCampaiContacts] = useState<CampaiContactOption[] | null>(null);
+  const [campaiContacts, setCampaiContacts] = useState<
+    CampaiContactOption[] | null
+  >(null);
   const [isLoadingCampaiContacts, setIsLoadingCampaiContacts] = useState(false);
-  const [editingCampaiForId, setEditingCampaiForId] = useState<string | null>(null);
-  const [savingCampaiForId, setSavingCampaiForId] = useState<string | null>(null);
+  const [editingCampaiForId, setEditingCampaiForId] = useState<string | null>(
+    null,
+  );
+  const [savingCampaiForId, setSavingCampaiForId] = useState<string | null>(
+    null,
+  );
   const [campaiSearchTerm, setCampaiSearchTerm] = useState("");
   const [selectedCampaiContactId, setSelectedCampaiContactId] = useState("");
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
@@ -190,8 +196,9 @@ export default function AdminUsersClient() {
 
   const selectedCampaiContact = useMemo(
     () =>
-      campaiContacts?.find((contact) => contact.id === selectedCampaiContactId) ??
-      null,
+      campaiContacts?.find(
+        (contact) => contact.id === selectedCampaiContactId,
+      ) ?? null,
     [campaiContacts, selectedCampaiContactId],
   );
 
@@ -362,16 +369,16 @@ export default function AdminUsersClient() {
         ]}
       />
 
-        {testEmailError ? (
-          <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
-            {testEmailError}
-          </div>
-        ) : null}
-        {testEmailSuccess ? (
-          <div className="rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
-            {testEmailSuccess}
-          </div>
-        ) : null}
+      {testEmailError ? (
+        <div className="rounded-3xl border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          {testEmailError}
+        </div>
+      ) : null}
+      {testEmailSuccess ? (
+        <div className="rounded-3xl border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
+          {testEmailSuccess}
+        </div>
+      ) : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -454,9 +461,7 @@ export default function AdminUsersClient() {
                         <td className="px-4 py-3 align-middle whitespace-nowrap">
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             {hasCampaiLink ? (
-                              <span
-                                className="inline-flex whitespace-nowrap rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success"
-                              >
+                              <span className="inline-flex whitespace-nowrap rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
                                 Mit Campai verknuepft
                               </span>
                             ) : (
@@ -542,7 +547,10 @@ export default function AdminUsersClient() {
                   </p>
                   <h3 className="text-lg font-semibold text-foreground">
                     {editingCampaiProfile.campaiName ||
-                      [editingCampaiProfile.firstName, editingCampaiProfile.lastName]
+                      [
+                        editingCampaiProfile.firstName,
+                        editingCampaiProfile.lastName,
+                      ]
                         .filter(Boolean)
                         .join(" ") ||
                       editingCampaiProfile.email}
@@ -580,25 +588,25 @@ export default function AdminUsersClient() {
                 onChange={(event) => {
                   setCampaiSearchTerm(event.target.value);
                 }}
-                className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
               />
 
               {campaiLinkError ? (
-                <div className="rounded-xl border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
+                <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
                   {campaiLinkError}
                 </div>
               ) : null}
 
               {isLoadingCampaiContacts ? (
-                <div className="rounded-2xl border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
                   Lade Campai-Konten ...
                 </div>
               ) : visibleCampaiContacts.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
                   Keine passenden Campai-Konten gefunden.
                 </div>
               ) : (
-                <div className="max-h-[28rem] overflow-y-auto rounded-2xl border border-border bg-background shadow-sm">
+                <div className="max-h-[28rem] overflow-y-auto rounded-lg border border-border bg-background shadow-sm">
                   <div className="divide-y divide-border/60">
                     {visibleCampaiContacts.map((contact) => {
                       const isSelected = selectedCampaiContactId === contact.id;
@@ -641,7 +649,8 @@ export default function AdminUsersClient() {
 
               {filteredCampaiContacts.length > MAX_CAMPAI_RESULTS ? (
                 <p className="text-xs text-muted-foreground">
-                  Zeige die ersten {MAX_CAMPAI_RESULTS} Treffer. Suche weiter ein, um genauer zu filtern.
+                  Zeige die ersten {MAX_CAMPAI_RESULTS} Treffer. Suche weiter
+                  ein, um genauer zu filtern.
                 </p>
               ) : null}
 
