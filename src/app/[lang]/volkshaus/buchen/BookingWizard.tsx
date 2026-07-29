@@ -319,6 +319,33 @@ const buildInitialState = (initialDate: string): WizardState => ({
   website: "",
 });
 
+const buildTestState = (initialDate: string): WizardState => ({
+  ...buildInitialState(initialDate),
+  customerName: "Max Mustermann",
+  organization: "Testverein Dresden e. V.",
+  email: `volkshaus-test-${initialDate.replaceAll("-", "")}@example.com`,
+  phone: "+49 351 1234567",
+  billingAddressLine: "Musterstraße 12",
+  billingZip: "01159",
+  eventTitle: "Testveranstaltung im Volkshaus",
+  eventDescription:
+    "Dies ist eine automatisch ausgefüllte Testanfrage für die Prüfung des Buchungsablaufs.",
+  usageType: "neighborhood",
+  expectedAttendees: 20,
+  startTime: "09:00",
+  endTime: "11:00",
+  setupStartTime: "08:30",
+  teardownEndTime: "11:30",
+  equipment: {
+    projector: 1,
+    cable_reel: 1,
+  },
+  specialRequirements:
+    "Testhinweis: Bitte die gewünschte Bestuhlung und den Technikaufbau prüfen.",
+  acceptedPrivacy: true,
+  acceptedHouseRules: true,
+});
+
 export default function BookingWizard({
   initialDate,
 }: {
@@ -522,6 +549,12 @@ export default function BookingWizard({
     setStep((current) => Math.max(0, current - 1));
   };
 
+  const fillTestForm = () => {
+    setForm(buildTestState(initialDate));
+    setStepError(null);
+    setSubmitError(null);
+  };
+
   const submit = async () => {
     for (let currentStep = 0; currentStep < 3; currentStep += 1) {
       const error = validateStep(currentStep);
@@ -645,6 +678,16 @@ export default function BookingWizard({
             direkt, was es ungefähr kostet. Verbindlich wird die Buchung erst,
             wenn alles geprüft und von beiden Seiten unterschrieben ist.
           </p>
+          <div className="mt-5">
+            <Button
+              kind="secondary"
+              size="medium"
+              icon={faClipboardCheck}
+              onClick={fillTestForm}
+            >
+              Testformular ausfüllen
+            </Button>
+          </div>
         </div>
         <Image
           key={step}
