@@ -137,6 +137,8 @@ then the most recently updated entry.
 To allow creating and updating resources (including image uploads), configure:
 
 - SUPABASE_RESOURCES_BUCKET (optional, defaults to `resources`; bucket must be public for images to load in the app)
+- OPENINARY_BASE_URL (Openinary instance used for image uploads and cached transformations)
+- OPENINARY_API_KEY (server-only API key for Openinary uploads)
 - SUPABASE_SERVICE_ROLE_KEY (required for server-side storage uploads)
 - OPENAI_API_KEY (required to generate descriptions from images)
 - OPENAI_BASE_URL (optional, for OpenAI-compatible providers)

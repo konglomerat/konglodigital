@@ -5,7 +5,7 @@ import {
   buildCampaiProfileData,
   getCampaiActiveContactByEmail,
   splitCampaiContactName,
-} from "@/app/api/campai/contacts/route";
+} from "@/lib/campai-contacts";
 import { upsertMemberProfile } from "@/lib/member-profiles";
 import { getInitialUserRole, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";

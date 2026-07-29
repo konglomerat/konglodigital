@@ -95,11 +95,9 @@ const getProjectOgImage = (
 export async function generateMetadata({
   params,
 }: {
-  params:
-    | { id: string; lang?: string }
-    | Promise<{ id: string; lang?: string }>;
+  params: Promise<{ id: string; lang?: string }>;
 }): Promise<Metadata> {
-  const { id, lang } = await Promise.resolve(params);
+  const { id, lang } = await params;
   const locale = normalizeLocale(lang);
   const project = await loadCachedProject(id);
 
@@ -189,11 +187,9 @@ const toMetadataDateValue = (value: string | null | undefined) => {
 export default async function ProjectDetailPage({
   params,
 }: {
-  params:
-    | { id: string; lang?: string }
-    | Promise<{ id: string; lang?: string }>;
+  params: Promise<{ id: string; lang?: string }>;
 }) {
-  const { id, lang } = await Promise.resolve(params);
+  const { id, lang } = await params;
   const locale = normalizeLocale(lang);
   const [{ tx }, supabase, project] = await Promise.all([
     getServerI18n(),

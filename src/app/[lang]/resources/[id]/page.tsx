@@ -341,11 +341,9 @@ const getResourceOgImage = (resource: ResourcePayload) => {
 export async function generateMetadata({
   params,
 }: {
-  params:
-    | { id: string; lang?: string }
-    | Promise<{ id: string; lang?: string }>;
+  params: Promise<{ id: string; lang?: string }>;
 }): Promise<Metadata> {
-  const { id, lang } = await Promise.resolve(params);
+  const { id, lang } = await params;
   const locale = lang === "en" ? "en" : "de";
   const { resource } = await loadResource(id);
 
@@ -461,11 +459,9 @@ export const generateStaticParams = async () => {
 export default async function ResourceDetailPage({
   params,
 }: {
-  params:
-    | { id: string; lang?: string }
-    | Promise<{ id: string; lang?: string }>;
+  params: Promise<{ id: string; lang?: string }>;
 }) {
-  const { id, lang } = await Promise.resolve(params);
+  const { id, lang } = await params;
   const locale = lang === "en" ? "en" : "de";
   const [{ resource, errorMessage }, { resources: mapBasemapResources }] =
     await Promise.all([loadResource(id), loadMapBasemapResources()]);

@@ -11,6 +11,8 @@ type SupabaseRenderImageOptions = {
   resize?: SupabaseRenderResizeMode;
 };
 
+const OPENINARY_HOSTS = new Set(["media.konglomerat.org"]);
+
 const IMAGE_EXTENSIONS = new Set([
   "avif",
   "bmp",
@@ -164,17 +166,73 @@ export const getResourcePosterUrl = (
   return mediaPosters?.[originalUrl] ?? null;
 };
 
-export const getSupabaseRenderedImageUrl = (
+const isOpeninaryTransformationSegment = (value: string) =>
+  value
+    .split(",")
+    .filter(Boolean)
+    .every((part) => /^[a-z]{1,3}_.+$/i.test(part));
+
+const getOpeninaryRenderedImageUrl = (
+  parsed: URL,
+  options: SupabaseRenderImageOptions,
+) => {
+  const pathSegments = parsed.pathname
+    .slice("/t/".length)
+    .split("/")
+    .filter(Boolean);
+
+  if (
+    pathSegments[0] &&
+    isOpeninaryTransformationSegment(pathSegments[0])
+  ) {
+    pathSegments.shift();
+  }
+
+  const transformations: string[] = [];
+  if (options.width) {
+    transformations.push(`w_${options.width}`);
+  }
+  if (options.height) {
+    transformations.push(`h_${options.height}`);
+  }
+  if (options.width && options.height && options.resize) {
+    const cropMode =
+      options.resize === "cover"
+        ? "fill"
+        : options.resize === "contain"
+          ? "fit"
+          : "scale";
+    transformations.push(`c_${cropMode}`);
+  }
+  if (transformations.length > 0) {
+    transformations.push("q_75");
+  }
+
+  parsed.pathname = `/t/${
+    transformations.length > 0 ? `${transformations.join(",")}/` : ""
+  }${pathSegments.join("/")}`;
+  parsed.search = "";
+  return parsed.toString();
+};
+
+export const getRenderedImageUrl = (
   url: string,
   options: SupabaseRenderImageOptions = {},
 ) => {
   try {
+    const parsed = new URL(url);
+    if (
+      OPENINARY_HOSTS.has(parsed.hostname) &&
+      parsed.pathname.startsWith("/t/")
+    ) {
+      return getOpeninaryRenderedImageUrl(parsed, options);
+    }
+
     const marker = "/storage/v1/object/public/";
     if (!url.includes(marker)) {
       return url;
     }
 
-    const parsed = new URL(url);
     const renderPathMarker = "/storage/v1/render/image/";
     const targetUrl = url.includes(renderPathMarker)
       ? parsed
@@ -199,3 +257,5 @@ export const getSupabaseRenderedImageUrl = (
     return url;
   }
 };
+
+export const getSupabaseRenderedImageUrl = getRenderedImageUrl;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { listAllActiveCampaiContacts } from "@/app/api/campai/contacts/route";
+import { listAllActiveCampaiContacts } from "@/lib/campai-contacts";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 

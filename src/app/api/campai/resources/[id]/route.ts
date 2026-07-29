@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
+import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
@@ -818,6 +819,20 @@ const uploadResourceMedia = async (
     file,
     maxImageWidth,
   );
+  if (isImageMimeType(file.type) || isImageMimeType(contentType)) {
+    const uploaded = await uploadOpeninaryMedia({
+      data: resized,
+      contentType,
+      path,
+      transformations: [
+        "w_480,q_75",
+        "w_960,q_75",
+        "w_1600,q_82",
+      ],
+    });
+    return uploaded.url;
+  }
+
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(path, resized, {
@@ -832,7 +847,7 @@ const uploadResourceMedia = async (
     throw new Error("Supabase image upload failed.");
   }
 
-  return data.path;
+  return supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
 };
 
 const buildPreviewVideoPath = (path: string) => {
@@ -1119,16 +1134,13 @@ export const PUT = async (
     for (const file of payload.imageFiles) {
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${params.id}/${crypto.randomUUID()}-${safeName}`;
-      const storedPath = await uploadResourceMedia(
+      const publicUrl = await uploadResourceMedia(
         adminSupabase,
         file,
         storageBucket,
         path,
         maxImageWidth,
       );
-      const publicUrl = supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(storedPath).data.publicUrl;
       uploadedUrls.push(publicUrl);
 
       if (isVideoMimeType(file.type)) {

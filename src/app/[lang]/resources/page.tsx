@@ -324,13 +324,9 @@ const getSearchParam = (
 export default async function ResourcesPage({
   searchParams,
 }: {
-  searchParams?:
-    | Record<string, string | string[] | undefined>
-    | Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const resolvedSearchParams = searchParams
-    ? await Promise.resolve(searchParams)
-    : {};
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const queryText = getSearchParam(resolvedSearchParams, "q").trim();
   const resourceType = getSearchParam(resolvedSearchParams, "type").trim();
 

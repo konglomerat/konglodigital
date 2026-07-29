@@ -23,7 +23,7 @@ import {
 import {
 	buildCampaiProfileData as buildCampaiContactProfileData,
 	getCampaiActiveMemberContactById as getActiveCampaiMemberContactById,
-} from "@/app/api/campai/contacts/route";
+} from "@/lib/campai-contacts";
 
 const getErrorMessage = (error: unknown, fallback: string) => {
 	if (error instanceof Error) {

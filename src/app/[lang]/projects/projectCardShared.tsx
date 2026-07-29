@@ -158,6 +158,9 @@ export function ProjectCardMedia({
               <img
                 src={heroThumbnailUrl ?? heroMediaUrl}
                 alt={project.name}
+                loading={featured ? "eager" : "lazy"}
+                fetchPriority={featured ? "high" : "auto"}
+                decoding="async"
                 className={`${
                   featured
                     ? "h-full min-h-[260px] w-full object-cover"
@@ -169,6 +172,9 @@ export function ProjectCardMedia({
                   src={hoverThumbnailUrl}
                   alt=""
                   aria-hidden="true"
+                  loading="lazy"
+                  fetchPriority="low"
+                  decoding="async"
                   className={`absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 ${
                     featured
                       ? "h-full min-h-[260px] w-full object-cover"

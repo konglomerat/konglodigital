@@ -6,8 +6,8 @@ import { toFile } from "openai/uploads";
 import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createOpenAIClient } from "@/lib/openai";
+import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
   getPointFeatures,
@@ -153,7 +153,6 @@ export const POST = async (
   }
 
   const { supabase } = createSupabaseRouteClient(request);
-  const adminSupabase = createSupabaseAdminClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -356,23 +355,19 @@ export const POST = async (
     );
   }
 
-  const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";
   const path = `resources/${params.id}/cover-${crypto.randomUUID()}.jpg`;
 
   try {
-    const { data: stored, error: uploadError } = await adminSupabase.storage
-      .from(storageBucket)
-      .upload(path, outputJpegBuffer, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
-
-    if (uploadError || !stored?.path) {
-      throw new Error(uploadError?.message || "Supabase image upload failed.");
-    }
-
-    const publicUrl = supabase.storage.from(storageBucket).getPublicUrl(path)
-      .data.publicUrl;
+    const { url: publicUrl } = await uploadOpeninaryMedia({
+      data: outputJpegBuffer,
+      contentType: "image/jpeg",
+      path,
+      transformations: [
+        "w_480,q_75",
+        "w_960,q_75",
+        "w_1600,q_82",
+      ],
+    });
 
     const nextUrls = [publicUrl, ...existingUrls];
 
