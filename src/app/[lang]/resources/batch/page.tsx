@@ -18,7 +18,6 @@ import Button from "../../components/Button";
 import ResourceMapCrosshair from "../ResourceMapCrosshair";
 import { fetchJson, type ImageGps } from "../resource-form-utils";
 import { RESOURCE_TYPES, type ResourceType } from "../resource-types";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
@@ -47,13 +46,6 @@ type UploadJob = {
   resourceId?: string;
   resourcePrettyTitle?: string | null;
   count: number;
-};
-
-type SignedUpload = {
-  path: string;
-  token: string;
-  signedUrl: string;
-  contentType: string;
 };
 
 type ZoomRange = {
@@ -192,7 +184,6 @@ export default function BatchResourcePage() {
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const photosRef = useRef<CapturedPhoto[]>([]);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -572,56 +563,23 @@ export default function BatchResourcePage() {
       if (files.length === 0) {
         return [];
       }
-      const response = await fetchJson<{
-        bucket: string;
-        uploads: SignedUpload[];
-      }>("/api/campai/resources/uploads", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          files: files.map((file) => ({
-            name: file.name,
-            contentType: file.type,
-          })),
-        }),
-      });
-
-      if (response.uploads.length !== files.length) {
-        throw new Error(tx("Upload preparation failed."));
-      }
-
-      const uploadResults = await Promise.all(
-        response.uploads.map((upload, index) =>
-          supabase.storage
-            .from(response.bucket)
-            .uploadToSignedUrl(upload.path, upload.token, files[index], {
-              contentType: files[index].type || upload.contentType,
-              upsert: true,
-            }),
-        ),
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file, file.name));
+      const response = await fetchJson<{ urls: string[] }>(
+        "/api/campai/resources/uploads",
+        {
+          method: "POST",
+          body: formData,
+        },
       );
 
-      uploadResults.forEach((result) => {
-        if (result.error) {
-          throw new Error(result.error.message || tx("Upload failed."));
-        }
-      });
-
-      const publicUrls = response.uploads
-        .map(
-          (upload) =>
-            supabase.storage.from(response.bucket).getPublicUrl(upload.path)
-              .data.publicUrl,
-        )
-        .filter((url): url is string => Boolean(url));
-
-      if (publicUrls.length === 0) {
+      if (response.urls.length !== files.length) {
         throw new Error(tx("Upload failed to return URLs."));
       }
 
-      return publicUrls;
+      return response.urls;
     },
-    [supabase, tx],
+    [tx],
   );
 
   const handleSend = () => {
