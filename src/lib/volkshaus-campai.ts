@@ -259,7 +259,7 @@ export const createCampaiInvoiceForVolkshausBooking = async (
       details1: booking.organization ? booking.customerName : "",
       details2: "",
     },
-    title: `Raumnutzung Volkshaus Cotta · ${booking.referenceCode}`,
+    title: booking.referenceCode.slice(0, 30),
     intro:
       "Vielen Dank für die Nutzung der Räume im Neuen Volkshaus Cotta.",
     account: debtorAccount,
@@ -335,4 +335,3 @@ export const createCampaiInvoiceForVolkshausBooking = async (
     status: finalize ? "created" : "draft_created",
   };
 };
-
