@@ -134,12 +134,11 @@ section, add the tag `resourceofthemonth` to that resource. If multiple
 resources use the tag, the homepage prefers the highest `priority` value and
 then the most recently updated entry.
 
-To allow creating and updating resources (including image uploads), configure:
+To allow creating and updating resources (including media uploads), configure:
 
-- SUPABASE_RESOURCES_BUCKET (optional, defaults to `resources`; bucket must be public for images to load in the app)
-- OPENINARY_BASE_URL (Openinary instance used for image uploads and cached transformations)
-- OPENINARY_API_KEY (server-only API key for Openinary uploads)
-- SUPABASE_SERVICE_ROLE_KEY (required for server-side storage uploads)
+- OPENINARY_BASE_URL (Openinary instance used for resource media uploads and cached image transformations)
+- OPENINARY_API_KEY (server-only API key for Openinary media uploads)
+- SUPABASE_SERVICE_ROLE_KEY (required for server-side resource writes and legacy storage cleanup)
 - OPENAI_API_KEY (required to generate descriptions from images)
 - OPENAI_BASE_URL (optional, for OpenAI-compatible providers)
 - OPENAI_IMAGE_EDIT_MODEL (optional, defaults to `gpt-image-1`)

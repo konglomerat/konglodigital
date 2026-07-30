@@ -47,9 +47,24 @@ export type ImageGps = {
 
 export const fetchJson = async <T>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
-  const data = (await response.json()) as { error?: string } & T;
+  const responseText = await response.text();
+  let data: ({ error?: string } & T) | null = null;
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText) as { error?: string } & T;
+    } catch {
+      if (response.ok) {
+        throw new Error("The server returned an invalid response.");
+      }
+    }
+  }
   if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+    throw new Error(
+      data?.error ?? `Request failed with status ${response.status}.`,
+    );
+  }
+  if (!data) {
+    throw new Error("The server returned an empty response.");
   }
   return data;
 };

@@ -226,7 +226,7 @@ const ResourceCard = ({
               {displayImages.map((image, index) => (
                 <div
                   key={`${resource.id}-slide-${index}`}
-                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-lg bg-accent"
+                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800"
                 >
                   {getResourceMediaKindFromUrl(images[index]) === "document" ? (
                     <div className="flex h-full w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
@@ -1218,7 +1218,7 @@ export default function ResourcesPageClient({
               </p>
             ) : (
               <>
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
                   {visibleResources.map((resource) => (
                     <ResourceCard
                       key={resource.id}

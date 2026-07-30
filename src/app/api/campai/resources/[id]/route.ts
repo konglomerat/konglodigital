@@ -809,9 +809,7 @@ const toResourcePayload = (
 });
 
 const uploadResourceMedia = async (
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
   file: File,
-  bucket: string,
   path: string,
   maxImageWidth: number,
 ) => {
@@ -819,35 +817,22 @@ const uploadResourceMedia = async (
     file,
     maxImageWidth,
   );
-  if (isImageMimeType(file.type) || isImageMimeType(contentType)) {
-    const uploaded = await uploadOpeninaryMedia({
-      data: resized,
-      contentType,
-      path,
-      transformations: [
-        "w_480,q_75",
-        "w_960,q_75",
-        "w_1600,q_82",
-      ],
-    });
-    return uploaded.url;
-  }
+  const isImage =
+    isImageMimeType(file.type) || isImageMimeType(contentType);
+  const uploaded = await uploadOpeninaryMedia({
+    data: resized,
+    contentType,
+    path,
+    transformations: isImage
+      ? [
+          "w_480,q_75",
+          "w_960,q_75",
+          "w_1600,q_82",
+        ]
+      : [],
+  });
 
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(path, resized, {
-      contentType,
-      upsert: true,
-    });
-
-  if (error) {
-    throw new Error(error.message || "Supabase image upload failed.");
-  }
-  if (!data?.path) {
-    throw new Error("Supabase image upload failed.");
-  }
-
-  return supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
+  return uploaded.url;
 };
 
 const buildPreviewVideoPath = (path: string) => {
@@ -884,66 +869,47 @@ const filterMediaPosters = (
     ),
   ) as ResourceMediaPosterMap;
 
-const uploadVideoPreview = async (
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  file: File,
-  bucket: string,
-  originalPath: string,
-) => {
-  const preview = await generateVideoPreviewBuffer(file);
-  if (!preview) {
+const uploadVideoPreview = async (file: File, originalPath: string) => {
+  try {
+    const preview = await generateVideoPreviewBuffer(file);
+    if (!preview) {
+      return null;
+    }
+
+    const previewPath = buildPreviewVideoPath(originalPath);
+    const uploaded = await uploadOpeninaryMedia({
+      data: preview.data,
+      contentType: preview.contentType,
+      path: previewPath,
+    });
+
+    return uploaded.url;
+  } catch (error) {
+    console.error("Unable to generate or upload video preview:", error);
     return null;
   }
-
-  const previewPath = buildPreviewVideoPath(originalPath);
-  const { data, error } = await supabase.storage.from(bucket).upload(
-    previewPath,
-    preview.data,
-    {
-      contentType: preview.contentType,
-      upsert: true,
-    },
-  );
-
-  if (error) {
-    throw new Error(error.message || "Supabase video preview upload failed.");
-  }
-  if (!data?.path) {
-    throw new Error("Supabase video preview upload failed.");
-  }
-
-  return data.path;
 };
 
-const uploadVideoPoster = async (
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  file: File,
-  bucket: string,
-  originalPath: string,
-) => {
-  const poster = await generateVideoPosterBuffer(file);
-  if (!poster) {
+const uploadVideoPoster = async (file: File, originalPath: string) => {
+  try {
+    const poster = await generateVideoPosterBuffer(file);
+    if (!poster) {
+      return null;
+    }
+
+    const posterPath = buildPosterImagePath(originalPath);
+    const uploaded = await uploadOpeninaryMedia({
+      data: poster.data,
+      contentType: poster.contentType,
+      path: posterPath,
+      transformations: ["w_480,q_75", "w_960,q_75"],
+    });
+
+    return uploaded.url;
+  } catch (error) {
+    console.error("Unable to generate or upload video poster:", error);
     return null;
   }
-
-  const posterPath = buildPosterImagePath(originalPath);
-  const { data, error } = await supabase.storage.from(bucket).upload(
-    posterPath,
-    poster.data,
-    {
-      contentType: poster.contentType,
-      upsert: true,
-    },
-  );
-
-  if (error) {
-    throw new Error(error.message || "Supabase video poster upload failed.");
-  }
-  if (!data?.path) {
-    throw new Error("Supabase video poster upload failed.");
-  }
-
-  return data.path;
 };
 
 const extractStoragePath = (url: string, bucket: string) => {
@@ -1033,8 +999,6 @@ export const PUT = async (
   if (!existingResource) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  const storageBucket = process.env.SUPABASE_RESOURCES_BUCKET ?? "resources";
 
   const payload = await readResourcePayload(request);
   if (!payload.name.trim() && payload.imageFiles.length === 0) {
@@ -1135,37 +1099,21 @@ export const PUT = async (
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${params.id}/${crypto.randomUUID()}-${safeName}`;
       const publicUrl = await uploadResourceMedia(
-        adminSupabase,
         file,
-        storageBucket,
         path,
         maxImageWidth,
       );
       uploadedUrls.push(publicUrl);
 
       if (isVideoMimeType(file.type)) {
-        const previewPath = await uploadVideoPreview(
-          adminSupabase,
-          file,
-          storageBucket,
-          path,
-        );
-        if (previewPath) {
-          uploadedMediaPreviews[publicUrl] = supabase.storage
-            .from(storageBucket)
-            .getPublicUrl(previewPath).data.publicUrl;
+        const previewUrl = await uploadVideoPreview(file, path);
+        if (previewUrl) {
+          uploadedMediaPreviews[publicUrl] = previewUrl;
         }
 
-        const posterPath = await uploadVideoPoster(
-          adminSupabase,
-          file,
-          storageBucket,
-          path,
-        );
-        if (posterPath) {
-          uploadedMediaPosters[publicUrl] = supabase.storage
-            .from(storageBucket)
-            .getPublicUrl(posterPath).data.publicUrl;
+        const posterUrl = await uploadVideoPoster(file, path);
+        if (posterUrl) {
+          uploadedMediaPosters[publicUrl] = posterUrl;
         }
       }
     }

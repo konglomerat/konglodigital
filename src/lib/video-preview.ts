@@ -9,8 +9,20 @@ import { isVideoMimeType } from "@/lib/resource-media";
 const PREVIEW_DURATION_SECONDS = 12;
 const PREVIEW_MAX_WIDTH = 960;
 const POSTER_QUALITY = 82;
-const FFMPEG_CANDIDATES = [ffmpegPath, "ffmpeg"].filter(
-  (value): value is string => typeof value === "string" && value.length > 0,
+const FFMPEG_EXECUTABLE = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+const installedFfmpegPath = path.join(
+  process.cwd(),
+  "node_modules",
+  "ffmpeg-static",
+  FFMPEG_EXECUTABLE,
+);
+const FFMPEG_CANDIDATES = Array.from(
+  new Set(
+    [process.env.FFMPEG_BIN, installedFfmpegPath, ffmpegPath, "ffmpeg"].filter(
+      (value): value is string =>
+        typeof value === "string" && value.length > 0,
+    ),
+  ),
 );
 
 const runFfmpeg = async (args: string[]) => {

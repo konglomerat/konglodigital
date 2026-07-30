@@ -203,6 +203,7 @@ export default function ResourcesMapView({
   >({});
   const resourcesRef = useRef(resources);
   const lastStyleRef = useRef<string | null>(null);
+  const hasFittedInitialBoundsRef = useRef(false);
   const mapStyle = isSatellite ? MAPBOX_SATELLITE_STYLE : MAPBOX_STYLE;
   const markerResources = pointResources ?? resources;
   const useCompactMarkers = markerResources.length > 20;
@@ -510,6 +511,17 @@ export default function ResourcesMapView({
         return;
       }
 
+      const fitMapBounds = (
+        bounds: import("mapbox-gl").LngLatBoundsLike,
+        options: import("mapbox-gl").FitBoundsOptions,
+      ) => {
+        map.fitBounds(bounds, {
+          ...options,
+          ...(hasFittedInitialBoundsRef.current ? {} : { duration: 0 }),
+        });
+        hasFittedInitialBoundsRef.current = true;
+      };
+
       applyResourceFeatureLayers(map);
 
       if (lastStyleRef.current !== mapStyle) {
@@ -552,7 +564,7 @@ export default function ResourcesMapView({
             polygonBounds.extend(point as [number, number]);
           });
           if (!polygonBounds.isEmpty()) {
-            map.fitBounds(polygonBounds, {
+            fitMapBounds(polygonBounds, {
               padding: 48,
               maxZoom: 22,
             });
@@ -650,7 +662,7 @@ export default function ResourcesMapView({
       applyMarkerHighlight();
 
       if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
+        fitMapBounds(bounds, {
           padding: 48,
           maxZoom: 23,
         });
@@ -701,6 +713,7 @@ export default function ResourcesMapView({
       markersRef.current = [];
       mapRef.current?.remove();
       mapRef.current = null;
+      hasFittedInitialBoundsRef.current = false;
     };
   }, []);
 
