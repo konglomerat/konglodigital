@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import ProjectEditorClient from "../../ProjectEditorClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
+import { userHasRole } from "@/lib/roles";
 import { buildProjectPath } from "@/lib/project-path";
 import { loadProjectByIdentifier } from "../../project-data";
 
@@ -34,5 +35,17 @@ export default async function EditProjectPage({
     redirect(buildProjectPath(project));
   }
 
-  return <ProjectEditorClient mode="edit" initialProject={project} />;
+  const isProjectOwner = project.ownerId === user.id;
+  const isAdmin = isProjectOwner
+    ? false
+    : await userHasRole(supabase, user, "admin");
+  const canDelete = isProjectOwner || isAdmin;
+
+  return (
+    <ProjectEditorClient
+      mode="edit"
+      initialProject={project}
+      canDelete={canDelete}
+    />
+  );
 }

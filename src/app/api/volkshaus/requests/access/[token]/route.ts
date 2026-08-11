@@ -15,7 +15,11 @@ import {
   getVolkshausBookingByToken,
   updateVolkshausBooking,
 } from "@/lib/volkshaus-booking-store";
-import { notifyVolkshausCustomerSigned } from "@/lib/volkshaus-notifications";
+import { createVolkshausInvoice } from "@/lib/volkshaus-invoice";
+import {
+  notifyVolkshausContractCompleted,
+  notifyVolkshausCustomerSigned,
+} from "@/lib/volkshaus-notifications";
 
 const toCustomerView = (booking: VolkshausBooking) => ({
   id: booking.id,
@@ -178,8 +182,10 @@ export const POST = async (
     userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
   };
 
-  const updated = await updateVolkshausBooking(booking.id, {
-    contractStatus: "customer_signed",
+  let updated = await updateVolkshausBooking(booking.id, {
+    contractStatus: "fully_signed",
+    reservationStatus: "confirmed",
+    holdExpiresAt: null,
     customerSignature: signature,
     customerSignedAt: signedAt,
   });
@@ -190,10 +196,17 @@ export const POST = async (
     payload: { contractHash: booking.contractHash },
   });
 
+  const invoiceResult = await createVolkshausInvoice(updated);
+  updated = invoiceResult.booking;
+
   const adminUrl = `${resolvePublicOrigin(request)}/admin/volkshaus`;
   await notifyVolkshausCustomerSigned({
     booking: updated,
     adminUrl,
+  }).catch(() => undefined);
+  await notifyVolkshausContractCompleted({
+    booking: updated,
+    accessUrl: `${resolvePublicOrigin(request)}/volkshaus/anfrage/${token}`,
   }).catch(() => undefined);
 
   return NextResponse.json({ booking: toCustomerView(updated) });

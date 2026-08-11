@@ -1,23 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Image from "next/image";
+import {
+  faArrowDown,
+  faArrowUp,
+  faBullhorn,
+  faDesktop,
+  faDownload,
+  faGripVertical,
+  faLink,
+  faMobileScreen,
+  faPaperPlane,
+  faPlus,
+  faRotate,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "@/app/[lang]/components/Button";
+import PageTitle from "@/app/[lang]/components/PageTitle";
 import {
+  Checkbox,
   FormField,
   FormSection,
   Input,
   Select,
+  Textarea,
 } from "@/app/[lang]/components/ui/form";
-import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
+import { getSupabaseRenderedImageUrl } from "@/lib/resource-media";
 
-type SelectableItem = {
+type NewsletterProject = {
   id: string;
   name: string;
   prettyTitle: string | null;
   description: string | null;
-  image: string | null;
+  images: string[];
+  publishDate: string | null;
   updatedAt: string | null;
+  href: string;
 };
 
 type RecipientList = {
@@ -27,456 +54,1438 @@ type RecipientList = {
   isDefault: boolean;
 };
 
-type Defaults = {
-  fromName: string;
-  fromEmail: string;
-  subject: string;
-  recipientListId: number | null;
+type AspectRatio =
+  | "original"
+  | "1:1"
+  | "4:3"
+  | "3:2"
+  | "16:9"
+  | "4:5"
+  | "3:4";
+
+type ProjectOptions = {
+  layout: "split" | "stacked";
+  aspect: AspectRatio;
+  imageUrl: string | null;
+  showLink: boolean;
+  linkText: string;
 };
+
+type ProjectItem = {
+  id: string;
+  type: "project";
+  projectId: string;
+  options: ProjectOptions;
+};
+
+type ButtonItem = {
+  id: string;
+  type: "button";
+  title: string;
+  href: string;
+};
+
+type BannerItem = {
+  id: string;
+  type: "banner";
+  title: string;
+  content: string;
+};
+
+type BuilderItem = ProjectItem | ButtonItem | BannerItem;
 
 type GenerateNewsletterClientProps = {
   locale: string;
-  resources: SelectableItem[];
-  projects: SelectableItem[];
+  projects: NewsletterProject[];
   recipientLists: RecipientList[];
-  defaults: Defaults;
+  issueDefaults: {
+    title: string;
+    subject: string;
+    intro: string;
+  };
+  rapidmailDefaults: {
+    fromName: string;
+    fromEmail: string;
+    recipientListId: number | null;
+  };
   rapidmailError: string | null;
 };
 
-type CreateDraftResponse = {
+type DraftResponse = {
   error?: string;
   mailing?: {
     id: number | null;
     status: string | null;
     subject: string | null;
-    url: string | null;
   };
-  counts?: {
-    resources: number;
-    projects: number;
-  };
+  counts?: { projects: number };
+};
+
+type StoredConfig = {
+  version: 1;
+  title: string;
+  subject: string;
+  intro: string;
+  showProjectsHeading: boolean;
+  items: BuilderItem[];
+  previewViewport: "desktop" | "mobile";
+};
+
+const STORAGE_KEY = "konglodigital.newsletter.config.v1";
+const MAX_SELECTED_PROJECTS = 24;
+const ASPECT_RATIOS: AspectRatio[] = [
+  "original",
+  "1:1",
+  "4:3",
+  "3:2",
+  "16:9",
+  "4:5",
+  "3:4",
+];
+
+const cn = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(" ");
+
+const formatDate = (value: string | null) => {
+  if (!value) return "Ohne Datum";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Ohne Datum";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Berlin",
+  }).format(parsed);
 };
 
 const stripText = (value: string | null) =>
-  value?.replace(/\s+/g, " ").trim() ?? "";
+  (value ?? "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[>#*_`~-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-const formatUpdatedAt = (value: string | null) => {
-  if (!value) {
-    return null;
+const previewImage = (value: string | null, width = 320, height = 200) =>
+  value
+    ? getSupabaseRenderedImageUrl(value, {
+        width,
+        height,
+        resize: "cover",
+      })
+    : null;
+
+const createProjectItem = (project: NewsletterProject): ProjectItem => ({
+  id: `project:${project.id}`,
+  type: "project",
+  projectId: project.id,
+  options: {
+    layout: "split",
+    aspect: "original",
+    imageUrl: project.images[0] ?? null,
+    showLink: true,
+    linkText: "Weiterlesen",
+  },
+});
+
+const createCustomId = (type: "button" | "banner") =>
+  `${type}:${window.crypto.randomUUID()}`;
+
+const errorMessageFromResponse = (raw: string, fallback: string) => {
+  try {
+    const parsed = JSON.parse(raw) as { error?: string };
+    return parsed.error ?? fallback;
+  } catch {
+    return raw.trim() || fallback;
   }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed.toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 };
 
-const filterItems = (items: SelectableItem[], query: string) => {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return items;
+const restoreItems = (
+  value: unknown,
+  projectMap: Map<string, NewsletterProject>,
+): BuilderItem[] => {
+  if (!Array.isArray(value)) return [];
+
+  const usedProjectIds = new Set<string>();
+  const usedItemIds = new Set<string>();
+  const restored: BuilderItem[] = [];
+
+  for (const candidate of value.slice(0, 200)) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const raw = candidate as Partial<BuilderItem> & {
+      options?: Partial<ProjectOptions>;
+    };
+
+    if (raw.type === "project" && typeof raw.projectId === "string") {
+      const project = projectMap.get(raw.projectId);
+      if (
+        !project ||
+        usedProjectIds.has(project.id) ||
+        usedProjectIds.size >= MAX_SELECTED_PROJECTS
+      ) {
+        continue;
+      }
+      const requestedImage = raw.options?.imageUrl;
+      const imageUrl =
+        typeof requestedImage === "string" &&
+        project.images.includes(requestedImage)
+          ? requestedImage
+          : (project.images[0] ?? null);
+      const aspect = ASPECT_RATIOS.includes(raw.options?.aspect as AspectRatio)
+        ? (raw.options?.aspect as AspectRatio)
+        : "original";
+
+      restored.push({
+        id: `project:${project.id}`,
+        type: "project",
+        projectId: project.id,
+        options: {
+          layout: raw.options?.layout === "stacked" ? "stacked" : "split",
+          aspect,
+          imageUrl,
+          showLink: raw.options?.showLink !== false,
+          linkText:
+            typeof raw.options?.linkText === "string" &&
+            raw.options.linkText.trim()
+              ? raw.options.linkText.trim().slice(0, 80)
+              : "Weiterlesen",
+        },
+      });
+      usedProjectIds.add(project.id);
+      continue;
+    }
+
+    if (
+      raw.type === "button" &&
+      typeof raw.id === "string" &&
+      raw.id.startsWith("button:") &&
+      !usedItemIds.has(raw.id)
+    ) {
+      restored.push({
+        id: raw.id,
+        type: "button",
+        title:
+          typeof raw.title === "string" ? raw.title.slice(0, 80) : "Mehr erfahren",
+        href: typeof raw.href === "string" ? raw.href.slice(0, 1000) : "",
+      });
+      usedItemIds.add(raw.id);
+      continue;
+    }
+
+    if (
+      raw.type === "banner" &&
+      typeof raw.id === "string" &&
+      raw.id.startsWith("banner:") &&
+      !usedItemIds.has(raw.id)
+    ) {
+      restored.push({
+        id: raw.id,
+        type: "banner",
+        title:
+          typeof raw.title === "string" ? raw.title.slice(0, 100) : "Hinweis",
+        content:
+          typeof raw.content === "string" ? raw.content.slice(0, 1000) : "",
+      });
+      usedItemIds.add(raw.id);
+    }
   }
 
-  return items.filter((item) => {
-    const haystack = [item.name, item.prettyTitle, item.description]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(normalized);
-  });
+  return restored;
 };
 
-const renderPreviewImage = (item: SelectableItem) => {
-  if (!item.image || !isImageUrl(item.image)) {
-    return null;
-  }
-
-  return getSupabaseRenderedImageUrl(item.image, {
-    width: 480,
-    resize: "cover",
-  });
-};
-
-function SelectableGrid({
-  title,
-  emptyLabel,
-  items,
-  selectedIds,
-  onToggle,
+function ItemControls({
+  index,
+  itemCount,
+  onMove,
+  onRemove,
 }: {
-  title: string;
-  emptyLabel: string;
-  items: SelectableItem[];
-  selectedIds: Set<string>;
-  onToggle: (id: string) => void;
+  index: number;
+  itemCount: number;
+  onMove: (direction: -1 | 1) => void;
+  onRemove: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {selectedIds.size} ausgewaehlt
-        </span>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-input bg-muted/50 px-4 py-6 text-sm text-muted-foreground">
-          {emptyLabel}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {items.map((item) => {
-            const imageUrl = renderPreviewImage(item);
-            const isSelected = selectedIds.has(item.id);
-            const updatedAt = formatUpdatedAt(item.updatedAt);
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onToggle(item.id)}
-                className={`overflow-hidden rounded-lg border text-left transition ${
-                  isSelected
-                    ? "border-primary bg-primary-soft shadow-sm"
-                    : "border-border bg-card hover:border-input hover:shadow-sm"
-                }`}
-              >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt=""
-                    className="h-40 w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-40 w-full items-center justify-center bg-[linear-gradient(135deg,#eff6ff_0%,#fef3c7_100%)] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {title}
-                  </div>
-                )}
-
-                <div className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-base font-semibold text-foreground">
-                        {item.name}
-                      </h4>
-                      {item.prettyTitle ? (
-                        <p className="text-xs text-muted-foreground">
-                          /{item.prettyTitle}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span
-                      className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold ${
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-accent text-muted-foreground"
-                      }`}
-                    >
-                      {isSelected ? "Ja" : "Nein"}
-                    </span>
-                  </div>
-
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {stripText(item.description).slice(0, 140) ||
-                      "Noch keine Beschreibung hinterlegt."}
-                  </p>
-
-                  {updatedAt ? (
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Aktualisiert: {updatedAt}
-                    </p>
-                  ) : null}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={() => onMove(-1)}
+        disabled={index === 0}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Nach oben verschieben"
+      >
+        <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(1)}
+        disabled={index === itemCount - 1}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Nach unten verschieben"
+      >
+        <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-destructive-border bg-card text-destructive transition hover:bg-destructive-soft"
+        aria-label="Inhalt entfernen"
+      >
+        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
 
 export default function GenerateNewsletterClient({
   locale,
-  resources,
   projects,
   recipientLists,
-  defaults,
+  issueDefaults,
+  rapidmailDefaults,
   rapidmailError,
 }: GenerateNewsletterClientProps) {
-  const [fromName, setFromName] = useState(defaults.fromName);
-  const [fromEmail, setFromEmail] = useState(defaults.fromEmail);
-  const [subject, setSubject] = useState(defaults.subject);
+  const projectMap = useMemo(
+    () => new Map(projects.map((project) => [project.id, project])),
+    [projects],
+  );
+  const [title, setTitle] = useState(issueDefaults.title);
+  const [subject, setSubject] = useState(issueDefaults.subject);
+  const [intro, setIntro] = useState(issueDefaults.intro);
+  const [showProjectsHeading, setShowProjectsHeading] = useState(true);
+  const [items, setItems] = useState<BuilderItem[]>([]);
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const [fromName, setFromName] = useState(rapidmailDefaults.fromName);
+  const [fromEmail, setFromEmail] = useState(rapidmailDefaults.fromEmail);
   const [recipientListId, setRecipientListId] = useState(
-    defaults.recipientListId ? String(defaults.recipientListId) : "",
+    rapidmailDefaults.recipientListId
+      ? String(rapidmailDefaults.recipientListId)
+      : "",
   );
-  const [resourceQuery, setResourceQuery] = useState("");
-  const [projectQuery, setProjectQuery] = useState("");
-  const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(
-    new Set(),
+  const [previewViewport, setPreviewViewport] = useState<
+    "desktop" | "mobile"
+  >("desktop");
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(
+    null,
   );
-  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [createdDraftUrl, setCreatedDraftUrl] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isConfigReady, setIsConfigReady] = useState(false);
+  const draggedItemId = useRef<string | null>(null);
 
-  const filteredResources = useMemo(
-    () => filterItems(resources, resourceQuery),
-    [resources, resourceQuery],
-  );
-  const filteredProjects = useMemo(
-    () => filterItems(projects, projectQuery),
-    [projects, projectQuery],
-  );
-
-  const selectedCount = selectedResourceIds.size + selectedProjectIds.size;
-  const canSubmit =
-    !isSubmitting &&
-    !rapidmailError &&
-    Boolean(fromName.trim()) &&
-    Boolean(fromEmail.trim()) &&
-    Boolean(subject.trim()) &&
-    Boolean(recipientListId) &&
-    selectedCount > 0;
-
-  const toggleSelection = (
-    current: Set<string>,
-    update: (next: Set<string>) => void,
-    id: string,
-  ) => {
-    const next = new Set(current);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const config = JSON.parse(stored) as Partial<StoredConfig>;
+        if (config.version === 1) {
+          if (typeof config.title === "string") setTitle(config.title);
+          if (typeof config.subject === "string") setSubject(config.subject);
+          if (typeof config.intro === "string") setIntro(config.intro);
+          if (typeof config.showProjectsHeading === "boolean") {
+            setShowProjectsHeading(config.showProjectsHeading);
+          }
+          setItems(restoreItems(config.items, projectMap));
+          setPreviewViewport(
+            config.previewViewport === "mobile" ? "mobile" : "desktop",
+          );
+        }
+      }
+    } catch {
+      // Der Builder bleibt auch ohne localStorage vollständig nutzbar.
+    } finally {
+      setIsConfigReady(true);
     }
-    update(next);
+  }, [projectMap]);
+
+  useEffect(() => {
+    if (!isConfigReady) return;
+    const config: StoredConfig = {
+      version: 1,
+      title,
+      subject,
+      intro,
+      showProjectsHeading,
+      items,
+      previewViewport,
+    };
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    } catch {
+      // Änderungen bleiben im aktuellen Tab erhalten.
+    }
+  }, [
+    intro,
+    isConfigReady,
+    items,
+    previewViewport,
+    showProjectsHeading,
+    subject,
+    title,
+  ]);
+
+  const selectedProjectIds = useMemo(
+    () =>
+      new Set(
+        items
+          .filter((item): item is ProjectItem => item.type === "project")
+          .map((item) => item.projectId),
+      ),
+    [items],
+  );
+  const selectedProjectCount = selectedProjectIds.size;
+
+  const filteredProjects = useMemo(() => {
+    const normalized = deferredQuery.trim().toLocaleLowerCase("de");
+    if (!normalized) return projects;
+
+    return projects.filter((project) =>
+      [project.name, project.prettyTitle, project.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("de")
+        .includes(normalized),
+    );
+  }, [deferredQuery, projects]);
+
+  const requestItems = useMemo(
+    () =>
+      items.map((item) => {
+        if (item.type === "project") {
+          return {
+            type: "project" as const,
+            projectId: item.projectId,
+            ...item.options,
+          };
+        }
+        if (item.type === "button") {
+          return {
+            type: "button" as const,
+            title: item.title,
+            href: item.href,
+          };
+        }
+        return {
+          type: "banner" as const,
+          title: item.title,
+          content: item.content,
+        };
+      }),
+    [items],
+  );
+
+  const newsletterPayload = useMemo(
+    () => ({
+      locale,
+      title,
+      subject,
+      intro,
+      showProjectsHeading,
+      items: requestItems,
+    }),
+    [intro, locale, requestItems, showProjectsHeading, subject, title],
+  );
+  const previewRequestBody = useMemo(
+    () => JSON.stringify({ ...newsletterPayload, action: "preview" }),
+    [newsletterPayload],
+  );
+
+  useEffect(() => {
+    if (!isConfigReady) return;
+    if (
+      selectedProjectCount === 0 ||
+      !title.trim() ||
+      !subject.trim()
+    ) {
+      setPreviewHtml("");
+      setPreviewError(
+        selectedProjectCount > 0 && (!title.trim() || !subject.trim())
+          ? "Titel und Betreffzeile müssen ausgefüllt sein."
+          : null,
+      );
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsPreviewLoading(true);
+      setPreviewError(null);
+      try {
+        const response = await fetch("/api/admin/newsletter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: previewRequestBody,
+          signal: controller.signal,
+        });
+        const raw = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            errorMessageFromResponse(
+              raw,
+              "Newsletter-Vorschau konnte nicht erzeugt werden.",
+            ),
+          );
+        }
+        setPreviewHtml(raw);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setPreviewError(
+          error instanceof Error
+            ? error.message
+            : "Newsletter-Vorschau konnte nicht erzeugt werden.",
+        );
+      } finally {
+        if (!controller.signal.aborted) setIsPreviewLoading(false);
+      }
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    isConfigReady,
+    previewNonce,
+    previewRequestBody,
+    selectedProjectCount,
+    subject,
+    title,
+  ]);
+
+  const toggleProject = (project: NewsletterProject) => {
+    if (
+      !selectedProjectIds.has(project.id) &&
+      selectedProjectCount >= MAX_SELECTED_PROJECTS
+    ) {
+      setStatus({
+        kind: "error",
+        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_PROJECTS} Projekte möglich, damit die E-Mail nicht abgeschnitten wird.`,
+      });
+      return;
+    }
+    setItems((current) => {
+      const existing = current.find(
+        (item) => item.type === "project" && item.projectId === project.id,
+      );
+      return existing
+        ? current.filter((item) => item.id !== existing.id)
+        : [...current, createProjectItem(project)];
+    });
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setSubmitError(null);
-    setSubmitSuccess(null);
-    setCreatedDraftUrl(null);
+  const moveItem = (id: string, direction: -1 | 1) => {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
 
+  const moveItemBefore = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+    setItems((current) => {
+      const source = current.find((item) => item.id === sourceId);
+      if (!source) return current;
+      const withoutSource = current.filter((item) => item.id !== sourceId);
+      const targetIndex = withoutSource.findIndex((item) => item.id === targetId);
+      if (targetIndex < 0) return current;
+      withoutSource.splice(targetIndex, 0, source);
+      return withoutSource;
+    });
+  };
+
+  const updateProjectOptions = (
+    id: string,
+    patch: Partial<ProjectOptions>,
+  ) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id && item.type === "project"
+          ? { ...item, options: { ...item.options, ...patch } }
+          : item,
+      ),
+    );
+  };
+
+  const updateButton = (id: string, patch: Partial<ButtonItem>) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id && item.type === "button"
+          ? { ...item, ...patch }
+          : item,
+      ),
+    );
+  };
+
+  const updateBanner = (id: string, patch: Partial<BannerItem>) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id && item.type === "banner"
+          ? { ...item, ...patch }
+          : item,
+      ),
+    );
+  };
+
+  const addButton = () => {
+    setItems((current) => [
+      ...current,
+      {
+        id: createCustomId("button"),
+        type: "button",
+        title: "Mehr erfahren",
+        href: "",
+      },
+    ]);
+  };
+
+  const addBanner = () => {
+    setItems((current) => [
+      ...current,
+      {
+        id: createCustomId("banner"),
+        type: "banner",
+        title: "Wichtiger Hinweis",
+        content: "",
+      },
+    ]);
+  };
+
+  const addFilteredProjects = () => {
+    const availableSlots = Math.max(
+      MAX_SELECTED_PROJECTS - selectedProjectCount,
+      0,
+    );
+    const additions = filteredProjects
+      .filter((project) => !selectedProjectIds.has(project.id))
+      .slice(0, availableSlots);
+    if (
+      filteredProjects.filter((project) => !selectedProjectIds.has(project.id))
+        .length > additions.length
+    ) {
+      setStatus({
+        kind: "error",
+        text: `Die Auswahl wurde auf ${MAX_SELECTED_PROJECTS} Projekte begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
+      });
+    }
+    setItems((current) => {
+      return [
+        ...current,
+        ...additions.map(createProjectItem),
+      ];
+    });
+  };
+
+  const handleExport = async () => {
+    if (selectedProjectCount === 0) return;
+    setBusyAction("export");
+    setStatus(null);
     try {
       const response = await fetch("/api/admin/newsletter", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          locale,
-          fromName,
-          fromEmail,
-          subject,
-          recipientListId: Number(recipientListId),
-          resourceIds: Array.from(selectedResourceIds),
-          projectIds: Array.from(selectedProjectIds),
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newsletterPayload, action: "export" }),
       });
-
-      const data = (await response
-        .json()
-        .catch(() => ({}))) as CreateDraftResponse;
       if (!response.ok) {
+        const raw = await response.text();
         throw new Error(
-          data.error ?? "Newsletter-Entwurf konnte nicht erstellt werden.",
+          errorMessageFromResponse(raw, "Newsletter konnte nicht exportiert werden."),
         );
       }
 
-      setSubmitSuccess(
-        `Rapidmail-Entwurf erstellt mit ${data.counts?.resources ?? 0} Ressourcen und ${data.counts?.projects ?? 0} Projekten.`,
-      );
-      setCreatedDraftUrl(data.mailing?.url ?? null);
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") ?? "";
+      const filename =
+        disposition.match(/filename="([^"]+)"/)?.[1] ?? "newsletter.zip";
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setStatus({
+        kind: "success",
+        text: "ZIP mit Newsletter-HTML wurde heruntergeladen.",
+      });
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Newsletter-Entwurf konnte nicht erstellt werden.",
-      );
+      setStatus({
+        kind: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Newsletter konnte nicht exportiert werden.",
+      });
     } finally {
-      setIsSubmitting(false);
+      setBusyAction(null);
     }
   };
 
+  const handleCreateDraft = async () => {
+    setBusyAction("draft");
+    setStatus(null);
+    try {
+      const response = await fetch("/api/admin/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...newsletterPayload,
+          action: "draft",
+          fromName,
+          fromEmail,
+          recipientListId: Number(recipientListId),
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as DraftResponse;
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Rapidmail-Entwurf konnte nicht erstellt werden.",
+        );
+      }
+      setStatus({
+        kind: "success",
+        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.projects ?? selectedProjectCount} Projekten wurde erstellt.`,
+      });
+    } catch (error) {
+      setStatus({
+        kind: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Rapidmail-Entwurf konnte nicht erstellt werden.",
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const canExport =
+    selectedProjectCount > 0 &&
+    Boolean(title.trim()) &&
+    Boolean(subject.trim()) &&
+    busyAction === null;
+  const canCreateDraft =
+    canExport &&
+    !rapidmailError &&
+    Boolean(fromName.trim()) &&
+    /^\S+@\S+\.\S+$/.test(fromEmail.trim()) &&
+    Boolean(recipientListId) &&
+    Boolean(title.trim()) &&
+    Boolean(subject.trim());
+
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Admin: Newsletter erzeugen
-        </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Waehle mehrere Ressourcen und Projekte aus und lege daraus einen neuen
-          Rapidmail-Entwurf an. Gesendet wird hier nichts, es wird nur ein Draft
-          in Rapidmail angelegt.
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-[1600px] space-y-8">
+      <PageTitle
+        eyebrow="Admin · Newsletter"
+        title="Newsletter zusammenstellen"
+        subTitle="Wähle Projekte aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
+      />
 
-      <FormSection
-        title="Rapidmail"
-        description="Rapidmail benoetigt Absenderdaten, einen Betreff und eine Empfaengerliste. Die Felder sind mit den zuletzt gefundenen Werten vorbelegt, wenn Rapidmail erreichbar war."
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          <FormField label="Absendername" required>
-            <Input
-              value={fromName}
-              onChange={(event) => setFromName(event.target.value)}
-            />
-          </FormField>
-          <FormField label="Absender-E-Mail" required>
-            <Input
-              type="email"
-              value={fromEmail}
-              onChange={(event) => setFromEmail(event.target.value)}
-            />
-          </FormField>
-          <FormField label="Betreff" required className="md:col-span-2">
-            <Input
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-            />
-          </FormField>
-          <FormField label="Empfaengerliste" required className="md:col-span-2">
-            <Select
-              value={recipientListId}
-              onChange={(event) => setRecipientListId(event.target.value)}
-              disabled={recipientLists.length === 0}
-            >
-              <option value="">Empfaengerliste waehlen</option>
-              {recipientLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+      <section className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Verfügbare Projekte
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {projects.length}
+          </p>
         </div>
-
-        {rapidmailError ? (
-          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
-            {rapidmailError}
-          </div>
-        ) : null}
-      </FormSection>
-
-      <FormSection
-        title="Inhalte"
-        description="Die Auswahl wird als einfache Newsletter-Zusammenstellung mit direkten Links auf die Plattform erzeugt."
-      >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <FormField label="Ressourcen durchsuchen">
-            <Input
-              value={resourceQuery}
-              onChange={(event) => setResourceQuery(event.target.value)}
-              placeholder="Nach Name oder Beschreibung filtern"
-            />
-          </FormField>
-          <FormField label="Projekte durchsuchen">
-            <Input
-              value={projectQuery}
-              onChange={(event) => setProjectQuery(event.target.value)}
-              placeholder="Nach Name oder Beschreibung filtern"
-            />
-          </FormField>
+        <div className="rounded-lg border border-primary-border bg-primary-soft p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
+            Im Newsletter
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {selectedProjectCount}
+          </p>
         </div>
-
-        <div className="mt-6 space-y-8">
-          <SelectableGrid
-            title="Ressourcen"
-            emptyLabel="Keine Ressourcen gefunden."
-            items={filteredResources}
-            selectedIds={selectedResourceIds}
-            onToggle={(id) =>
-              toggleSelection(selectedResourceIds, setSelectedResourceIds, id)
-            }
-          />
-
-          <SelectableGrid
-            title="Projekte"
-            emptyLabel="Keine Projekte gefunden."
-            items={filteredProjects}
-            selectedIds={selectedProjectIds}
-            onToggle={(id) =>
-              toggleSelection(selectedProjectIds, setSelectedProjectIds, id)
-            }
-          />
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Inhaltsblöcke
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {items.length}
+          </p>
         </div>
-      </FormSection>
-
-      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">
-              Entwurf anlegen
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Ausgewaehlt: {selectedResourceIds.size} Ressourcen,{" "}
-              {selectedProjectIds.size} Projekte.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              kind="secondary"
-              className="px-4 py-2 text-sm"
-              onClick={() => {
-                setSelectedResourceIds(new Set());
-                setSelectedProjectIds(new Set());
-              }}
-              disabled={selectedCount === 0 || isSubmitting}
-            >
-              Auswahl leeren
-            </Button>
-            <Button
-              type="button"
-              kind="primary"
-              className="px-4 py-2 text-sm"
-              onClick={() => {
-                void handleSubmit();
-              }}
-              disabled={!canSubmit}
-            >
-              {isSubmitting
-                ? "Erzeuge Entwurf ..."
-                : "Rapidmail-Entwurf anlegen"}
-            </Button>
-          </div>
-        </div>
-
-        {submitError ? (
-          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
-            {submitError}
-          </div>
-        ) : null}
-
-        {submitSuccess ? (
-          <div className="mt-4 rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
-            <p>{submitSuccess}</p>
-            {createdDraftUrl ? (
-              <p className="mt-2">
-                <a
-                  href={createdDraftUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-success underline underline-offset-2"
-                >
-                  Entwurf in Rapidmail oeffnen
-                </a>
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </section>
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.72fr)]">
+        <div className="min-w-0 space-y-6">
+          <FormSection
+            title="Ausgabe"
+            description="Titel und Einstieg erscheinen im Newsletter. Die Betreffzeile wird an Rapidmail übergeben."
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                label="Ausgabe / Titel"
+                required
+                error={!title.trim() ? "Titel fehlt." : undefined}
+              >
+                <Input
+                  value={title}
+                  maxLength={140}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Betreffzeile"
+                required
+                error={!subject.trim() ? "Betreffzeile fehlt." : undefined}
+              >
+                <Input
+                  value={subject}
+                  maxLength={200}
+                  onChange={(event) => setSubject(event.target.value)}
+                />
+              </FormField>
+              <FormField label="Einstieg" className="md:col-span-2">
+                <Textarea
+                  value={intro}
+                  rows={6}
+                  maxLength={4000}
+                  onChange={(event) => setIntro(event.target.value)}
+                />
+              </FormField>
+              <div className="md:col-span-2">
+                <Checkbox
+                  label="Überschrift „Was so abgeht“ anzeigen"
+                  checked={showProjectsHeading}
+                  onChange={(event) =>
+                    setShowProjectsHeading(event.target.checked)
+                  }
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Inhalte und Reihenfolge"
+            description="Ausgewählte Projekte und freie Inhaltsblöcke lassen sich per Pfeilen oder Drag-and-drop sortieren."
+          >
+            <div className="mb-5 flex flex-wrap gap-2">
+              <Button type="button" kind="primary" icon={faPlus} onClick={addButton}>
+                Button
+              </Button>
+              <Button
+                type="button"
+                kind="secondary"
+                icon={faBullhorn}
+                onClick={addBanner}
+              >
+                Banner
+              </Button>
+              {items.length > 0 ? (
+                <Button
+                  type="button"
+                  kind="danger-secondary"
+                  icon={faTrash}
+                  onClick={() => setItems([])}
+                >
+                  Inhalte leeren
+                </Button>
+              ) : null}
+            </div>
+
+            {items.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-input bg-muted/40 px-5 py-10 text-center">
+                <p className="font-semibold text-foreground">
+                  Noch keine Inhalte ausgewählt
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Wähle unten mindestens ein Projekt aus.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {items.map((item, index) => {
+                  const project =
+                    item.type === "project"
+                      ? projectMap.get(item.projectId)
+                      : null;
+                  const imageUrl =
+                    item.type === "project"
+                      ? previewImage(item.options.imageUrl, 180, 120)
+                      : null;
+
+                  return (
+                    <article
+                      key={item.id}
+                      draggable
+                      onDragStart={() => {
+                        draggedItemId.current = item.id;
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (draggedItemId.current) {
+                          moveItemBefore(draggedItemId.current, item.id);
+                        }
+                        draggedItemId.current = null;
+                      }}
+                      onDragEnd={() => {
+                        draggedItemId.current = null;
+                      }}
+                      className={cn(
+                        "rounded-lg border p-4 shadow-sm",
+                        item.type === "banner"
+                          ? "border-primary-border bg-primary-soft"
+                          : "border-border bg-card",
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className="mt-1 inline-flex cursor-grab items-center gap-2 text-muted-foreground active:cursor-grabbing"
+                          title="Zum Sortieren ziehen"
+                        >
+                          <FontAwesomeIcon
+                            icon={faGripVertical}
+                            className="h-4 w-4"
+                          />
+                          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 text-xs font-bold text-muted-foreground">
+                            {index + 1}
+                          </span>
+                        </span>
+
+                        {item.type === "project" ? (
+                          imageUrl ? (
+                            <Image
+                              src={imageUrl}
+                              alt=""
+                              width={180}
+                              height={120}
+                              unoptimized
+                              className="h-16 w-20 shrink-0 rounded-md border border-border object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-16 w-20 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
+                              Projekt
+                            </span>
+                          )
+                        ) : (
+                          <span
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-md",
+                              item.type === "banner"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground",
+                            )}
+                          >
+                            <FontAwesomeIcon
+                              icon={item.type === "banner" ? faBullhorn : faLink}
+                              className="h-4 w-4"
+                            />
+                          </span>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {item.type === "project"
+                              ? "Projekt"
+                              : item.type === "banner"
+                                ? "Banner"
+                                : "Eigener Button"}
+                          </p>
+                          <h3 className="truncate font-semibold text-foreground">
+                            {item.type === "project"
+                              ? (project?.name ?? "Nicht verfügbares Projekt")
+                              : item.title || "Ohne Titel"}
+                          </h3>
+                          {item.type === "project" && project ? (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {formatDate(
+                                project.publishDate ?? project.updatedAt,
+                              )}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <ItemControls
+                          index={index}
+                          itemCount={items.length}
+                          onMove={(direction) => moveItem(item.id, direction)}
+                          onRemove={() =>
+                            setItems((current) =>
+                              current.filter((candidate) => candidate.id !== item.id),
+                            )
+                          }
+                        />
+                      </div>
+
+                      {item.type === "project" && project ? (
+                        <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
+                          <FormField label="Layout">
+                            <Select
+                              value={item.options.layout}
+                              onChange={(event) =>
+                                updateProjectOptions(item.id, {
+                                  layout: event.target.value as
+                                    | "split"
+                                    | "stacked",
+                                })
+                              }
+                            >
+                              <option value="split">Bild und Text</option>
+                              <option value="stacked">Bild über Text</option>
+                            </Select>
+                          </FormField>
+                          <FormField label="Bildformat">
+                            <Select
+                              value={item.options.aspect}
+                              disabled={!item.options.imageUrl}
+                              onChange={(event) =>
+                                updateProjectOptions(item.id, {
+                                  aspect: event.target.value as AspectRatio,
+                                })
+                              }
+                            >
+                              <option value="original">Original</option>
+                              {ASPECT_RATIOS.filter(
+                                (aspect) => aspect !== "original",
+                              ).map((aspect) => (
+                                <option key={aspect} value={aspect}>
+                                  {aspect}
+                                </option>
+                              ))}
+                            </Select>
+                          </FormField>
+                          <FormField label="Projektbild">
+                            <Select
+                              value={item.options.imageUrl ?? ""}
+                              disabled={project.images.length === 0}
+                              onChange={(event) =>
+                                updateProjectOptions(item.id, {
+                                  imageUrl: event.target.value || null,
+                                })
+                              }
+                            >
+                              {project.images.length === 0 ? (
+                                <option value="">Kein Bild vorhanden</option>
+                              ) : null}
+                              {project.images.map((image, imageIndex) => (
+                                <option key={image} value={image}>
+                                  Bild {imageIndex + 1}
+                                </option>
+                              ))}
+                            </Select>
+                          </FormField>
+                          <FormField label="Linktext">
+                            <Input
+                              value={item.options.linkText}
+                              disabled={!item.options.showLink}
+                              maxLength={80}
+                              onChange={(event) =>
+                                updateProjectOptions(item.id, {
+                                  linkText: event.target.value,
+                                })
+                              }
+                            />
+                          </FormField>
+                          <div className="sm:col-span-2 xl:col-span-4">
+                            <Checkbox
+                              label="Link zum Projekt anzeigen"
+                              checked={item.options.showLink}
+                              onChange={(event) =>
+                                updateProjectOptions(item.id, {
+                                  showLink: event.target.checked,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {item.type === "button" ? (
+                        <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+                          <FormField label="Buttontext">
+                            <Input
+                              value={item.title}
+                              maxLength={80}
+                              onChange={(event) =>
+                                updateButton(item.id, {
+                                  title: event.target.value,
+                                })
+                              }
+                            />
+                          </FormField>
+                          <FormField label="Ziel-URL">
+                            <Input
+                              type="url"
+                              value={item.href}
+                              maxLength={1000}
+                              placeholder="https://…"
+                              onChange={(event) =>
+                                updateButton(item.id, { href: event.target.value })
+                              }
+                            />
+                          </FormField>
+                        </div>
+                      ) : null}
+
+                      {item.type === "banner" ? (
+                        <div className="mt-4 grid gap-4 border-t border-primary-border pt-4 sm:grid-cols-2">
+                          <FormField label="Bannertitel">
+                            <Input
+                              value={item.title}
+                              maxLength={100}
+                              onChange={(event) =>
+                                updateBanner(item.id, {
+                                  title: event.target.value,
+                                })
+                              }
+                            />
+                          </FormField>
+                          <FormField label="Bannertext">
+                            <Textarea
+                              value={item.content}
+                              rows={3}
+                              maxLength={1000}
+                              onChange={(event) =>
+                                updateBanner(item.id, {
+                                  content: event.target.value,
+                                })
+                              }
+                            />
+                          </FormField>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection
+            title="Projekte auswählen"
+            description="Die Projekte werden direkt aus KongloDigital geladen. Ein Klick fügt sie am Ende des Newsletters hinzu oder entfernt sie wieder."
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <FormField label="Projekte durchsuchen" className="flex-1">
+                <Input
+                  type="search"
+                  value={query}
+                  placeholder="Name oder Beschreibung"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </FormField>
+              <Button
+                type="button"
+                kind="secondary"
+                onClick={addFilteredProjects}
+                disabled={
+                  selectedProjectCount >= MAX_SELECTED_PROJECTS ||
+                  filteredProjects.length === 0 ||
+                  filteredProjects.every((project) =>
+                    selectedProjectIds.has(project.id),
+                  )
+                }
+              >
+                {query.trim() ? "Alle Treffer wählen" : "Alle wählen"}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Maximal {MAX_SELECTED_PROJECTS} Projekte pro Newsletter, damit
+              Abmeldelink und Footer in E-Mail-Programmen sichtbar bleiben.
+            </p>
+
+            {filteredProjects.length === 0 ? (
+              <div className="mt-5 rounded-lg border border-dashed border-input bg-muted/40 px-5 py-8 text-center text-sm text-muted-foreground">
+                Keine passenden Projekte gefunden.
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredProjects.map((project) => {
+                  const selected = selectedProjectIds.has(project.id);
+                  const limitReached =
+                    !selected &&
+                    selectedProjectCount >= MAX_SELECTED_PROJECTS;
+                  const imageUrl = previewImage(
+                    project.images[0] ?? null,
+                    520,
+                    300,
+                  );
+                  const description = stripText(project.description);
+
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => toggleProject(project)}
+                      disabled={limitReached}
+                      aria-pressed={selected}
+                      className={cn(
+                        "overflow-hidden rounded-lg border text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-ring/30",
+                        selected
+                          ? "border-primary bg-primary-soft"
+                          : "border-border bg-card hover:border-input hover:-translate-y-0.5 hover:shadow-md",
+                        limitReached &&
+                          "cursor-not-allowed opacity-55 hover:translate-y-0 hover:border-border hover:shadow-sm",
+                      )}
+                    >
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          width={520}
+                          height={300}
+                          unoptimized
+                          loading="lazy"
+                          className="h-36 w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-36 w-full items-center justify-center bg-muted text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                          Kein Bild
+                        </span>
+                      )}
+                      <span className="block space-y-2 p-4">
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="font-semibold leading-snug text-foreground">
+                            {project.name}
+                          </span>
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                              selected
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {selected
+                              ? "Ausgewählt"
+                              : limitReached
+                                ? "Limit erreicht"
+                                : "Auswählen"}
+                          </span>
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {formatDate(project.publishDate ?? project.updatedAt)}
+                        </span>
+                        <span className="block text-sm leading-relaxed text-muted-foreground">
+                          {description.slice(0, 130) ||
+                            "Noch keine Beschreibung hinterlegt."}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection
+            title="Rapidmail"
+            description="Diese Angaben werden nur beim Anlegen des Entwurfs benötigt. Versand und Terminierung bleiben in Rapidmail."
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Absendername" required>
+                <Input
+                  value={fromName}
+                  onChange={(event) => setFromName(event.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Absender-E-Mail"
+                required
+                error={
+                  fromEmail.trim() && !/^\S+@\S+\.\S+$/.test(fromEmail.trim())
+                    ? "Bitte eine gültige E-Mail-Adresse eingeben."
+                    : undefined
+                }
+              >
+                <Input
+                  type="email"
+                  value={fromEmail}
+                  onChange={(event) => setFromEmail(event.target.value)}
+                />
+              </FormField>
+              <FormField label="Empfängerliste" required className="md:col-span-2">
+                <Select
+                  value={recipientListId}
+                  disabled={recipientLists.length === 0}
+                  onChange={(event) => setRecipientListId(event.target.value)}
+                >
+                  <option value="">Empfängerliste wählen</option>
+                  {recipientLists.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+
+            {rapidmailError ? (
+              <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
+                {rapidmailError} Der HTML-/ZIP-Export und die Vorschau bleiben
+                verfügbar.
+              </div>
+            ) : null}
+          </FormSection>
+
+          <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-semibold text-foreground">
+                  Newsletter fertigstellen
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selectedProjectCount === 0
+                    ? "Wähle mindestens ein Projekt aus."
+                    : `${selectedProjectCount} ${selectedProjectCount === 1 ? "Projekt" : "Projekte"} im Entwurf.`}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  kind="secondary"
+                  icon={faDownload}
+                  disabled={!canExport}
+                  onClick={handleExport}
+                >
+                  {busyAction === "export" ? "Exportiere …" : "HTML + ZIP"}
+                </Button>
+                <Button
+                  type="button"
+                  kind="primary"
+                  icon={faPaperPlane}
+                  disabled={!canCreateDraft}
+                  onClick={handleCreateDraft}
+                >
+                  {busyAction === "draft"
+                    ? "Lege Entwurf an …"
+                    : "Rapidmail-Entwurf anlegen"}
+                </Button>
+              </div>
+            </div>
+
+            {status ? (
+              <div
+                className={cn(
+                  "mt-4 rounded-lg border p-4 text-sm",
+                  status.kind === "success"
+                    ? "border-success-border bg-success-soft text-foreground"
+                    : "border-destructive-border bg-destructive-soft text-destructive",
+                )}
+              >
+                {status.text}
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <aside className="min-w-0 xl:sticky xl:top-6">
+          <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <div>
+                <h2 className="font-semibold text-foreground">E-Mail-Vorschau</h2>
+                <p className="text-xs text-muted-foreground">
+                  {previewViewport === "mobile" ? "390 px" : "580 px"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setPreviewViewport("desktop")}
+                  aria-pressed={previewViewport === "desktop"}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
+                    previewViewport === "desktop"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <FontAwesomeIcon icon={faDesktop} className="h-3.5 w-3.5" />
+                  Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewViewport("mobile")}
+                  aria-pressed={previewViewport === "mobile"}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
+                    previewViewport === "mobile"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <FontAwesomeIcon
+                    icon={faMobileScreen}
+                    className="h-3.5 w-3.5"
+                  />
+                  Mobil
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewNonce((current) => current + 1)}
+                  disabled={selectedProjectCount === 0 || isPreviewLoading}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Vorschau neu laden"
+                >
+                  <FontAwesomeIcon
+                    icon={faRotate}
+                    className={cn("h-3.5 w-3.5", isPreviewLoading && "animate-spin")}
+                  />
+                </button>
+              </div>
+            </header>
+
+            {previewError ? (
+              <div className="border-b border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+                {previewError}
+              </div>
+            ) : null}
+
+            <div className="min-h-[760px] overflow-x-auto bg-muted/50 p-3 sm:p-5">
+              {previewHtml ? (
+                <div
+                  className="mx-auto overflow-hidden rounded-md bg-white shadow-lg transition-[width] duration-200"
+                  style={{
+                    width: previewViewport === "mobile" ? 390 : 640,
+                    maxWidth: "100%",
+                  }}
+                >
+                  <iframe
+                    title={`Newsletter-Vorschau – ${
+                      previewViewport === "mobile" ? "Mobil" : "Desktop"
+                    }`}
+                    srcDoc={previewHtml}
+                    sandbox="allow-same-origin"
+                    className="h-[740px] w-full border-0 bg-white"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[720px] items-center justify-center rounded-md border border-dashed border-input bg-card px-8 text-center">
+                  <div>
+                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
+                      <FontAwesomeIcon icon={faPaperPlane} className="h-5 w-5" />
+                    </span>
+                    <p className="mt-4 font-semibold text-foreground">
+                      Vorschau wartet auf Inhalte
+                    </p>
+                    <p className="mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                      Sobald du ein Projekt auswählst, wird die echte
+                      E-Mail-Vorschau automatisch erzeugt.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -33,6 +33,21 @@ type WorkshopRow = {
   name: string | null;
 };
 
+type StorySelectableRow = Pick<
+  StoryResourceRow,
+  | "id"
+  | "pretty_title"
+  | "owner_id"
+  | "name"
+  | "description"
+  | "image"
+  | "images"
+  | "type"
+  | "social_media_consent"
+  | "updated_at"
+  | "created_at"
+>;
+
 export type StorySelectableItem = {
   id: string;
   prettyTitle: string | null;
@@ -142,22 +157,76 @@ const getFirstName = (value: string | null) => {
   return firstName;
 };
 
+const STORY_SELECTABLE_COLUMNS =
+  "id, pretty_title, owner_id, name, description, image, images, type, social_media_consent, updated_at, created_at";
+const STORY_PROJECT_PAGE_SIZE = 200;
+
+const loadAllStoryProjectRows = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+) => {
+  const projects: StorySelectableRow[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error, count } = await supabase
+      .from("resources")
+      .select(STORY_SELECTABLE_COLUMNS, { count: "exact" })
+      .ilike("type", "project")
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + STORY_PROJECT_PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    const page = (data ?? []) as StorySelectableRow[];
+    projects.push(...page);
+    offset += page.length;
+
+    if (
+      page.length === 0 ||
+      (count !== null
+        ? offset >= count
+        : page.length < STORY_PROJECT_PAGE_SIZE)
+    ) {
+      return projects;
+    }
+  }
+};
+
 export const loadStorySelectableItems = async (limit = 400) => {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("resources")
-    .select(
-      "id, pretty_title, owner_id, name, description, image, images, type, social_media_consent, updated_at, created_at",
-    )
-    .order("updated_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(0, Math.max(limit, 1) - 1);
+  const recentItemLimit = Math.max(Math.trunc(limit), 1);
+  const [recentResult, projectRows] = await Promise.all([
+    supabase
+      .from("resources")
+      .select(STORY_SELECTABLE_COLUMNS)
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(0, recentItemLimit - 1),
+    loadAllStoryProjectRows(supabase),
+  ]);
 
-  if (error) {
-    throw error;
+  if (recentResult.error) {
+    throw recentResult.error;
   }
 
-  return ((data ?? []) as StoryResourceRow[]).map((row) => ({
+  // Keep the bounded recent-resource list, but always include every project.
+  // The client applies its project/resource filter only after this data loads.
+  const rowsById = new Map<string, StorySelectableRow>();
+  for (const row of [
+    ...((recentResult.data ?? []) as StorySelectableRow[]),
+    ...projectRows,
+  ]) {
+    if (!rowsById.has(row.id)) {
+      rowsById.set(row.id, row);
+    }
+  }
+
+  return Array.from(rowsById.values()).map((row) => ({
     id: row.id,
     prettyTitle: row.pretty_title ?? null,
     name: row.name,

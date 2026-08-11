@@ -4,19 +4,24 @@ import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { toFile } from "openai";
+import sharp from "sharp";
 
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
+import { createOpenAIClient } from "@/lib/openai";
 import { userCanAccessModule } from "@/lib/roles";
+import {
+  DEFAULT_STORY_IMAGE_MODEL,
+  isOpenAIStoryImageModel,
+  isStoryImageModel,
+  type StoryImageModel,
+} from "@/lib/story-image-models";
 import {
   loadStorySource,
   truncateStoryText,
   type StoryDraftSlide,
 } from "@/lib/story-drafts";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-
-type StoryImageModel =
-  | "gemini-3-pro-image-preview"
-  | "gemini-3.1-flash-image-preview";
 
 type StoryGeneratedImagesRequestBody = {
   itemId?: unknown;
@@ -45,15 +50,17 @@ const createUnauthorizedResponse = () =>
 const toNormalizedString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
-const normalizeImageModel = (value: unknown): StoryImageModel =>
-  value === "gemini-3-pro-image-preview"
-    ? "gemini-3-pro-image-preview"
-    : "gemini-3.1-flash-image-preview";
+const normalizeImageModel = (value: unknown): StoryImageModel | null => {
+  if (value === undefined || value === null || value === "") {
+    return DEFAULT_STORY_IMAGE_MODEL;
+  }
+
+  return isStoryImageModel(value) ? value : null;
+};
 
 const getGoogleApiKey = () =>
   process.env.GOOGLE_AI_API_KEY?.trim() ||
   process.env.GOOGLE_API_KEY?.trim() ||
-  process.env.OPENAI_API_KEY?.trim() ||
   "";
 
 const loadSampleCoverInlineImage = async () => {
@@ -101,6 +108,40 @@ const loadInlineImageFromUrl = async (url: string): Promise<InlineImagePart> => 
   };
 };
 
+const OPENAI_IMAGE_EXTENSIONS = new Map([
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+]);
+const MAX_STORY_SLIDES = 2;
+
+const toOpenAIImageFile = async (
+  image: InlineImagePart,
+  baseName: string,
+) => {
+  let buffer: Buffer<ArrayBufferLike> = Buffer.from(
+    image.inlineData.data,
+    "base64",
+  );
+  const [rawMimeType] = image.inlineData.mimeType.split(";");
+  let mimeType = rawMimeType?.trim().toLowerCase() || "application/octet-stream";
+  if (mimeType === "image/jpg") {
+    mimeType = "image/jpeg";
+  }
+  let extension = OPENAI_IMAGE_EXTENSIONS.get(mimeType);
+
+  if (!extension) {
+    buffer = await sharp(buffer, { failOnError: false })
+      .rotate()
+      .png()
+      .toBuffer();
+    mimeType = "image/png";
+    extension = "png";
+  }
+
+  return toFile(buffer, `${baseName}.${extension}`, { type: mimeType });
+};
+
 const normalizeSlides = (value: unknown) => {
   if (!Array.isArray(value)) {
     return [] as StoryDraftSlide[];
@@ -145,7 +186,7 @@ const buildSlidePrompt = ({
 
 Kontext: Projekt des Monats.
 Stil: sehr einfaches Layout, nicht hochtrabend, eher informativ.
-Die erste Bildreferenz ist das Projekt-Cover. Die letzte Bildreferenz ist die Stilvorlage. Orientiere dich visuell an der Stilvorlage.
+Bildreferenz 1 ist das Projekt-Cover. Bildreferenz 2 ist die Stilvorlage. Orientiere dich visuell an Bildreferenz 2 und bewahre das Projekt aus Bildreferenz 1.
 Nutze grosse Bilder.
 Schreibe auf Deutsch.
 Du darfst Text leicht kuerzen und optimieren, aber die Aussage soll gleich bleiben.
@@ -169,7 +210,7 @@ const buildSecondSlidePrompt = ({
 }: {
   slide: StoryDraftSlide;
   imageInstructions: string;
-}) => `Erstelle und layoute eine Instagramstory (als Bild) Kontext: Projekt des Monats), sehr einfaches Layout (nicht hochtrabend, eher informativ). Die Story soll mehrseitig werden. Dies ist die Seite 2 (Making of). Große Bilder! Verwende als Stil die Vorlage im letzten Bild Infos (den Text kannst du kürzen und optimieren)!
+}) => `Erstelle und layoute eine Instagramstory (als Bild) Kontext: Projekt des Monats), sehr einfaches Layout (nicht hochtrabend, eher informativ). Die Story soll mehrseitig werden. Dies ist die Seite 2 (Making of). Große Bilder! Bildreferenz 1 ist das Projektfoto, Bildreferenz 2 ist die Stilvorlage. Bewahre das Projekt aus Bildreferenz 1 und orientiere dich visuell an Bildreferenz 2. Den Text kannst du kürzen und optimieren.
 
 BESCHREIBUNG:
 ${slide.body || slide.headline}
@@ -186,9 +227,19 @@ const extractGeneratedImagePart = (result: Awaited<ReturnType<GoogleGenAI["model
       return false;
     }
 
-    const inlineData = (part as { inlineData?: { data?: unknown } }).inlineData;
-    return typeof inlineData?.data === "string";
-  }) as { inlineData?: { data?: string; mimeType?: string } } | undefined;
+    const candidate = part as {
+      thought?: boolean;
+      inlineData?: { data?: unknown };
+    };
+    return (
+      candidate.thought !== true &&
+      typeof candidate.inlineData?.data === "string"
+    );
+  }) as
+    | {
+        inlineData?: { data?: string; mimeType?: string };
+      }
+    | undefined;
 
   return imagePart?.inlineData ?? null;
 };
@@ -221,6 +272,13 @@ export const POST = async (request: NextRequest) => {
       2000,
     );
 
+    if (!imageModel) {
+      return NextResponse.json(
+        { error: "Das ausgewaehlte Bildmodell wird nicht unterstuetzt." },
+        { status: 400 },
+      );
+    }
+
     if (!itemId) {
       return NextResponse.json({ error: "itemId fehlt." }, { status: 400 });
     }
@@ -228,6 +286,13 @@ export const POST = async (request: NextRequest) => {
     if (slides.length === 0) {
       return NextResponse.json(
         { error: "Es werden Slide-Texte fuer die Bildgenerierung benoetigt." },
+        { status: 400 },
+      );
+    }
+
+    if (slides.length > MAX_STORY_SLIDES) {
+      return NextResponse.json(
+        { error: `Es sind hoechstens ${MAX_STORY_SLIDES} Slides erlaubt.` },
         { status: 400 },
       );
     }
@@ -247,10 +312,17 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    const googleApiKey = getGoogleApiKey();
-    if (!googleApiKey) {
+    const usesOpenAI = isOpenAIStoryImageModel(imageModel);
+    const providerApiKey = usesOpenAI
+      ? process.env.OPENAI_API_KEY?.trim() || ""
+      : getGoogleApiKey();
+    if (!providerApiKey) {
       return NextResponse.json(
-        { error: "Missing Google AI API key for story image generation." },
+        {
+          error: usesOpenAI
+            ? "Missing OpenAI API key for story image generation."
+            : "Missing Google AI API key for story image generation.",
+        },
         { status: 500 },
       );
     }
@@ -266,7 +338,16 @@ export const POST = async (request: NextRequest) => {
       ),
     );
 
-    const google = new GoogleGenAI({ apiKey: googleApiKey });
+    const google = usesOpenAI
+      ? null
+      : new GoogleGenAI({ apiKey: providerApiKey });
+    const openai = usesOpenAI
+      ? createOpenAIClient({
+          apiKey: providerApiKey,
+          baseURL:
+            process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1",
+        })
+      : null;
     const images: Array<{
       slideNumber: number;
       fileName: string;
@@ -290,33 +371,78 @@ export const POST = async (request: NextRequest) => {
               imageInstructions,
             });
 
-      const result = await google.models.generateContent({
-        model: imageModel,
-        config: {
-          imageConfig: {
-            aspectRatio: "9:16",
-          },
-        },
-        contents: [
-          sourceImageParts[index],
-          styleTemplate,
-          {
-            text: `${prompt}\n\nOutput requirements: return exactly one vertical image in 9:16 aspect ratio.` ,
-          },
-        ],
-      });
+      const generationPrompt = `${prompt}\n\nOutput requirements: return exactly one vertical image in 9:16 aspect ratio.`;
+      let generatedImage: { data: string; mimeType: string };
 
-      const inlineData = extractGeneratedImagePart(result);
-      if (!inlineData?.data) {
-        throw new Error(`Google-Bildantwort fuer Slide ${index + 1} enthielt kein Bild.`);
+      if (usesOpenAI) {
+        if (!openai) {
+          throw new Error("OpenAI image client could not be initialized.");
+        }
+
+        const referenceImages = await Promise.all([
+          toOpenAIImageFile(
+            sourceImageParts[index],
+            `story-source-${index + 1}`,
+          ),
+          toOpenAIImageFile(styleTemplate, `story-style-${index + 1}`),
+        ]);
+        const result = await openai.images.edit({
+          model: imageModel,
+          image: referenceImages,
+          prompt: generationPrompt,
+          size: "1152x2048",
+          quality: "high",
+          background: "opaque",
+          output_format: "png",
+        });
+        const outputBase64 = result.data?.[0]?.b64_json;
+        if (!outputBase64) {
+          throw new Error(
+            `OpenAI-Bildantwort fuer Slide ${index + 1} enthielt kein Bild.`,
+          );
+        }
+
+        generatedImage = {
+          data: outputBase64,
+          mimeType: "image/png",
+        };
+      } else {
+        if (!google) {
+          throw new Error("Google image client could not be initialized.");
+        }
+
+        const result = await google.models.generateContent({
+          model: imageModel,
+          config: {
+            imageConfig: {
+              aspectRatio: "9:16",
+            },
+          },
+          contents: [
+            sourceImageParts[index],
+            styleTemplate,
+            { text: generationPrompt },
+          ],
+        });
+
+        const inlineData = extractGeneratedImagePart(result);
+        if (!inlineData?.data) {
+          throw new Error(
+            `Google-Bildantwort fuer Slide ${index + 1} enthielt kein Bild.`,
+          );
+        }
+
+        generatedImage = {
+          data: inlineData.data,
+          mimeType: inlineData.mimeType || "image/png",
+        };
       }
 
-      const mimeType = inlineData.mimeType || "image/png";
       images.push({
         slideNumber: index + 1,
         fileName: `${source.downloadBaseName}-slide-${index + 1}.png`,
-        dataUrl: `data:${mimeType};base64,${inlineData.data}`,
-        mimeType,
+        dataUrl: `data:${generatedImage.mimeType};base64,${generatedImage.data}`,
+        mimeType: generatedImage.mimeType,
       });
     }
 

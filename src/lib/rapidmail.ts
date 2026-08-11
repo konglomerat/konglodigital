@@ -1,4 +1,6 @@
-const RAPIDMAIL_API_BASE_URL = "https://apiv3.emailsys.net";
+const RAPIDMAIL_API_BASE_URL = (
+  process.env.RAPIDMAIL_API_URL?.trim() || "https://apiv3.emailsys.net"
+).replace(/\/+$/, "");
 
 type RapidmailDestination = {
   type: string;
@@ -68,7 +70,8 @@ type CreateRapidmailDraftInput = {
   subject: string;
   title?: string;
   recipientListId: number;
-  html: string;
+  html?: string;
+  zip?: Buffer;
 };
 
 type CreateRapidmailDraftResponse = {
@@ -135,12 +138,18 @@ const rapidmailFetch = async <T>(path: string, init?: RequestInit) => {
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
+    signal: init?.signal ?? AbortSignal.timeout(45_000),
   });
 
   const rawText = await response.text();
-  const parsed = rawText
-    ? ((JSON.parse(rawText) as T | RapidmailProblemDetails) ?? null)
-    : null;
+  let parsed: T | RapidmailProblemDetails | null = null;
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText) as T | RapidmailProblemDetails;
+    } catch {
+      parsed = { detail: rawText } satisfies RapidmailProblemDetails;
+    }
+  }
 
   if (!response.ok) {
     const details = parsed as RapidmailProblemDetails | null;
@@ -188,7 +197,10 @@ const toDosDateTime = (value: Date) => {
   return { dosDate, dosTime };
 };
 
-const createZipBase64 = (fileName: string, content: string) => {
+export const createHtmlZip = (
+  content: string,
+  fileName = "index.html",
+) => {
   const fileNameBuffer = Buffer.from(fileName, "utf8");
   const contentBuffer = Buffer.from(content, "utf8");
   const checksum = crc32(contentBuffer);
@@ -246,7 +258,7 @@ const createZipBase64 = (fileName: string, content: string) => {
     centralHeader,
     fileNameBuffer,
     endOfCentralDirectory,
-  ]).toString("base64");
+  ]);
 };
 
 export const listRapidmailRecipientLists = async () => {
@@ -294,7 +306,9 @@ export const createRapidmailDraft = async ({
   title,
   recipientListId,
   html,
+  zip,
 }: CreateRapidmailDraftInput) => {
+  const archive = zip ?? createHtmlZip(html ?? "");
   const response = await rapidmailFetch<CreateRapidmailDraftResponse>(
     "/mailings",
     {
@@ -303,6 +317,7 @@ export const createRapidmailDraft = async ({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        status: "draft",
         from_name: fromName,
         from_email: fromEmail,
         subject,
@@ -310,7 +325,7 @@ export const createRapidmailDraft = async ({
         file: {
           name: "newsletter.zip",
           type: "application/zip",
-          content: createZipBase64("index.html", html),
+          content: archive.toString("base64"),
         },
         destinations: [
           {
@@ -323,11 +338,17 @@ export const createRapidmailDraft = async ({
     },
   );
 
+  if (response.status && response.status.trim().toLowerCase() !== "draft") {
+    throw new Error(
+      `Rapidmail meldet unerwartet den Status „${response.status}“ statt eines Entwurfs.`,
+    );
+  }
+
   return {
     id: response.id ?? null,
     status: response.status ?? null,
     subject: response.subject ?? subject,
     title: response.title ?? title ?? subject,
-    url: response._links?.self?.href ?? null,
+    url: null,
   };
 };

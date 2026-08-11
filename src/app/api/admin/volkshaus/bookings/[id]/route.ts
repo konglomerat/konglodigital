@@ -19,12 +19,8 @@ import {
   updateVolkshausBooking,
   type VolkshausBookingPatch,
 } from "@/lib/volkshaus-booking-store";
+import { createVolkshausInvoice } from "@/lib/volkshaus-invoice";
 import {
-  createCampaiInvoiceForVolkshausBooking,
-  VolkshausCampaiConfigurationError,
-} from "@/lib/volkshaus-campai";
-import {
-  notifyVolkshausContractCompleted,
   notifyVolkshausContractReady,
 } from "@/lib/volkshaus-notifications";
 import { getUserRoles, userCanAccessModule } from "@/lib/roles";
@@ -40,7 +36,6 @@ type AdminAction =
   | "save_notes"
   | "save_price_adjustment"
   | "send_contract"
-  | "countersign"
   | "retry_invoice"
   | "mark_paid"
   | "mark_overdue"
@@ -72,59 +67,6 @@ const parseAssignedUserId = (value: unknown) => {
   return UUID_PATTERN.test(userId)
     ? { valid: true as const, value: userId }
     : { valid: false as const, value: null };
-};
-
-const createInvoice = async (booking: VolkshausBooking) => {
-  if (booking.campaiInvoiceId) {
-    return { booking, warning: null as string | null };
-  }
-
-  let creating = await updateVolkshausBooking(booking.id, {
-    invoiceStatus: "creating",
-    campaiError: null,
-  });
-
-  try {
-    const result = await createCampaiInvoiceForVolkshausBooking(creating);
-    creating = await updateVolkshausBooking(booking.id, {
-      invoiceStatus: result.status,
-      paymentStatus: "open",
-      campaiDebtorAccount: result.debtorAccount,
-      campaiInvoiceId: result.invoiceId,
-      campaiError: null,
-    });
-    await addVolkshausBookingEvent({
-      bookingId: booking.id,
-      actorType: "system",
-      eventType: "campai_invoice_created",
-      payload: {
-        invoiceId: result.invoiceId,
-        debtorAccount: result.debtorAccount,
-        status: result.status,
-      },
-    });
-    return { booking: creating, warning: null };
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Campai-Rechnung konnte nicht angelegt werden.";
-    const configurationError =
-      error instanceof VolkshausCampaiConfigurationError;
-    creating = await updateVolkshausBooking(booking.id, {
-      invoiceStatus: configurationError
-        ? "configuration_required"
-        : "error",
-      campaiError: message,
-    });
-    await addVolkshausBookingEvent({
-      bookingId: booking.id,
-      actorType: "system",
-      eventType: "campai_invoice_failed",
-      payload: { error: message, configurationError },
-    });
-    return { booking: creating, warning: message };
-  }
 };
 
 const getConflictsForHold = async (
@@ -194,7 +136,6 @@ export const PATCH = async (
     getCampaiBookingDisplayName(data.user) ||
     data.user.email ||
     "Konglomerat e.V.";
-
   try {
     let updated = booking;
     let warning: string | null = null;
@@ -258,7 +199,10 @@ export const PATCH = async (
         }
         if (backupAssignedUser.value && !assignedUser.value) {
           return NextResponse.json(
-            { error: "Bitte zuerst eine verantwortliche Person auswählen." },
+            {
+              error:
+                "Bitte zuerst eine verantwortliche Person auswählen.",
+            },
             { status: 400 },
           );
         }
@@ -379,6 +323,7 @@ export const PATCH = async (
         const contractHash = hashVolkshausValue(
           stableVolkshausJson(snapshot),
         );
+        const signedAt = new Date().toISOString();
         updated = await updateVolkshausBooking(booking.id, {
           contractStatus: "sent",
           contractVersion: booking.contractVersion + 1,
@@ -386,9 +331,15 @@ export const PATCH = async (
           contractHash,
           customerSignature: null,
           customerSignedAt: null,
-          staffSignature: null,
-          staffSignedAt: null,
-          staffSignedBy: null,
+          staffSignature: {
+            name: actorName,
+            signedAt,
+            contractHash,
+            ipHash: null,
+            userAgent: null,
+          },
+          staffSignedAt: signedAt,
+          staffSignedBy: data.user.id,
           notificationStatus: "contract_pending",
           notificationError: null,
         });
@@ -417,43 +368,6 @@ export const PATCH = async (
           : "Der Vertrag wurde freigegeben, aber nicht per E-Mail versendet. Nutze den persönlichen Link.";
         break;
       }
-      case "countersign": {
-        if (
-          booking.contractStatus !== "customer_signed" ||
-          !booking.contractHash
-        ) {
-          return NextResponse.json(
-            {
-              error:
-                "Der Vertrag muss zuerst von der anfragenden Person unterschrieben werden.",
-            },
-            { status: 409 },
-          );
-        }
-        const signedAt = new Date().toISOString();
-        updated = await updateVolkshausBooking(booking.id, {
-          contractStatus: "fully_signed",
-          reservationStatus: "confirmed",
-          holdExpiresAt: null,
-          staffSignature: {
-            name: actorName,
-            signedAt,
-            contractHash: booking.contractHash,
-            ipHash: null,
-            userAgent: null,
-          },
-          staffSignedAt: signedAt,
-          staffSignedBy: data.user.id,
-        });
-        const invoiceResult = await createInvoice(updated);
-        updated = invoiceResult.booking;
-        warning = invoiceResult.warning;
-        await notifyVolkshausContractCompleted({
-          booking: updated,
-          accessUrl,
-        }).catch(() => undefined);
-        break;
-      }
       case "retry_invoice": {
         if (booking.contractStatus !== "fully_signed") {
           return NextResponse.json(
@@ -461,7 +375,7 @@ export const PATCH = async (
             { status: 409 },
           );
         }
-        const invoiceResult = await createInvoice(booking);
+        const invoiceResult = await createVolkshausInvoice(booking);
         updated = invoiceResult.booking;
         warning = invoiceResult.warning;
         break;

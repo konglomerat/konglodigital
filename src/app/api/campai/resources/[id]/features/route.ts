@@ -2,7 +2,10 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { normalizeResourceMapFeatures } from "@/app/[lang]/resources/map-features";
+import {
+  isPlaceholderGpsPointFeature,
+  normalizeResourceMapFeatures,
+} from "@/app/[lang]/resources/map-features";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type ResourceRow = {
@@ -92,6 +95,12 @@ export const PUT = async (
 
   const payload = (await request.json()) as { mapFeatures?: unknown };
   const mapFeatures = normalizeResourceMapFeatures(payload.mapFeatures ?? []);
+  if (mapFeatures.some(isPlaceholderGpsPointFeature)) {
+    return NextResponse.json(
+      { error: "Location coordinates [0, 0] are invalid." },
+      { status: 400 },
+    );
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from("resources")

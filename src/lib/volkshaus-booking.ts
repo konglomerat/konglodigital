@@ -1,7 +1,7 @@
 export const VOLKSHAUS_TIME_ZONE = "Europe/Berlin";
 export const VOLKSHAUS_TAX_RATE = 19;
 export const VOLKSHAUS_TARIFF_VERSION = "vhc-2026-07";
-export const VOLKSHAUS_CONTRACT_TEMPLATE_VERSION = "vhc-nutzung-2026-01";
+export const VOLKSHAUS_CONTRACT_TEMPLATE_VERSION = "vhc-nutzung-2026-02";
 
 export const ROOM_IDS = ["saal", "stube", "garten"] as const;
 export type VolkshausRoomId = (typeof ROOM_IDS)[number];
@@ -97,11 +97,14 @@ export type VolkshausContractSnapshot = {
   provider: {
     name: string;
     address: string;
+    representedBy?: string;
   };
   customer: {
     name: string;
     organization: string | null;
     address: string;
+    email?: string;
+    phone?: string | null;
   };
   event: {
     title: string;
@@ -227,7 +230,7 @@ export const VOLKSHAUS_ROOMS: Array<{
   {
     id: "saal",
     label: "Veranstaltungssaal",
-    contractLabel: "Veranstaltungsraum (Raum 6)",
+    contractLabel: "Veranstaltungsraum",
     number: "6",
     capacity: 50,
     description: "Großer Saal für Veranstaltungen, Workshops und Feiern.",
@@ -235,7 +238,7 @@ export const VOLKSHAUS_ROOMS: Array<{
   {
     id: "stube",
     label: "Stube",
-    contractLabel: "Stube (Raum 5)",
+    contractLabel: "Stube",
     number: "5",
     capacity: 10,
     description: "Kleiner Raum für Besprechungen und ruhige Angebote.",
@@ -416,7 +419,10 @@ const timeToMinutes = (value: string) => {
   return hours * 60 + minutes;
 };
 
-export const calculateDurationMinutes = (startTime: string, endTime: string) => {
+export const calculateDurationMinutes = (
+  startTime: string,
+  endTime: string,
+) => {
   const start = timeToMinutes(startTime);
   const end = timeToMinutes(endTime);
   if (start === null || end === null || end <= start) {
@@ -546,10 +552,7 @@ export const calculateVolkshausPrice = (
     );
   }
 
-  const netCents = lines.reduce(
-    (sum, line) => sum + line.totalNetCents,
-    0,
-  );
+  const netCents = lines.reduce((sum, line) => sum + line.totalNetCents, 0);
   const taxCents = roundTax(netCents);
 
   return {
@@ -680,7 +683,9 @@ export const timeIntervalsOverlap = (
     return false;
   }
 
-  return leftStartMinutes < rightEndMinutes && rightStartMinutes < leftEndMinutes;
+  return (
+    leftStartMinutes < rightEndMinutes && rightStartMinutes < leftEndMinutes
+  );
 };
 
 export const findBusySlotConflicts = ({
@@ -743,11 +748,14 @@ export const buildVolkshausContractSnapshot = (
     provider: {
       name: "Konglomerat e.V.",
       address: "Jagdweg 1-3, 01159 Dresden",
+      representedBy: "Projekt #VHC",
     },
     customer: {
       name: booking.customerName,
       organization: booking.organization,
       address: `${booking.billingAddressLine}, ${booking.billingZip} ${booking.billingCity}`,
+      email: booking.email,
+      phone: booking.phone,
     },
     event: {
       title: booking.eventTitle,
@@ -772,10 +780,11 @@ export const buildVolkshausContractSnapshot = (
         ],
       },
       {
-        heading: "2. Übergabe und Rückgabe",
+        heading: "2. Übergabe",
         paragraphs: [
-          "Die nutzende Partei hat die Möglichkeit, die Räumlichkeiten vor Vertragsabschluss zu besichtigen.",
-          "Räume und ausgeliehene Gegenstände sind nach der Nutzung in ihrem ursprünglichen Zustand und besenrein zurückzugeben. Selbst verursachter Abfall wird eigenständig entsorgt.",
+          "Die nutzende Partei hatte Gelegenheit, die Räumlichkeiten vor Vertragsabschluss zu besichtigen, und erkennt ihren Zustand als vertragsgemäß an.",
+          "Die Schlüsselübergabe und -rückgabe erfolgt unmittelbar vor beziehungsweise nach der Nutzung oder nach individueller Absprache.",
+          "Räume und ausgeliehene bewegliche Gegenstände sind nach jeder Nutzung in den ursprünglichen Zustand zurückzuversetzen und besenrein zu übergeben.",
         ],
       },
       {
@@ -785,15 +794,19 @@ export const buildVolkshausContractSnapshot = (
       {
         heading: "4. Nutzungsentgelt",
         paragraphs: [
-          `Das vereinbarte Nutzungsentgelt beträgt ${formatEuro(price.grossCents)} brutto einschließlich ${VOLKSHAUS_TAX_RATE} % Umsatzsteuer.`,
-          "Das Nutzungsentgelt ist entsprechend der nach Vertragsabschluss ausgestellten Rechnung zu zahlen.",
+          "Für die Nutzung zu dem oben genannten Zweck wird das nachfolgend ausgewiesene Nutzungsentgelt vereinbart.",
+          "Das Nutzungsentgelt ist spätestens drei Tage vor Nutzungsbeginn auf das angegebene Konto zu überweisen, sofern die Rechnung kein abweichendes Zahlungsziel nennt.",
         ],
       },
       {
         heading: "5. Nutzung",
         paragraphs: [
-          "Die Nutzung erfolgt rücksichtsvoll unter Wahrung der Interessen anderer Mitnutzender. Schäden, die fahrlässig, grob fahrlässig oder vorsätzlich verursacht werden, sind durch die nutzende Partei zu regulieren.",
-          "Die nutzende Partei erkennt das Leitbild sowie die Haus- und Raumordnung des Neuen Volkshauses Cotta an.",
+          "Die Nutzung erfolgt rücksichtsvoll unter Wahrung der Interessen anderer Mitnutzender. Im Zweifel ist der Anbieter berechtigt, den Umfang der Nutzung nach billigem Ermessen zu bestimmen.",
+          "Schäden, die nachweislich fahrlässig, grob fahrlässig oder vorsätzlich durch die nutzende Partei verursacht wurden, sind über deren Haftpflichtversicherung zu regulieren.",
+          "Der Transport von Waren und der allgemeine Durchgang von Personen über den Hinterhof durch die Atelierflächen (LOFT) sind nicht gestattet.",
+          "Selbst verursachter Müll und Abfall werden durch die nutzende Partei entsorgt.",
+          "Die nutzende Partei erkennt das Leitbild sowie die Raum- und Hausordnung des Neuen Volkshauses Cotta an.",
+          "Für die Reinigung der genutzten Räume, Flure, Küche und Toiletten ist die nutzende Partei zuständig. Diese Bereiche sind sauber und mehr als besenrein bis zum Folgetag zu überlassen.",
         ],
       },
       {
@@ -801,19 +814,21 @@ export const buildVolkshausContractSnapshot = (
         paragraphs: [
           booking.frequency === "recurring"
             ? "Für regelmäßige Nutzungen gelten die im Vertrag individuell ergänzten Kündigungsbedingungen."
-            : "Die Buchung kann bis eine Woche vor Nutzungsbeginn schriftlich storniert werden.",
+            : "Die Buchung kann bis drei Wochen vor Nutzungsbeginn kostenfrei schriftlich storniert werden. Bei einer späteren Stornierung werden 50 % des vereinbarten Nutzungsentgelts fällig.",
         ],
       },
       {
         heading: "7. Haftungsausschluss",
         paragraphs: [
-          "Der Anbieter haftet nicht für Schäden, die durch schädigende Handlungen Dritter oder durch höhere Gewalt entstehen.",
+          "Der Anbieter haftet nicht für Schäden, die durch schädigende Handlungen Dritter oder durch höhere Gewalt an Sachen oder Rechten der nutzenden Partei entstehen.",
         ],
       },
       {
         heading: "8. Schlussbestimmungen",
         paragraphs: [
-          "Änderungen und Ergänzungen bedürfen der Textform. Sollten einzelne Regelungen unwirksam sein, bleiben die übrigen Bestimmungen unberührt. Gerichtsstand ist Dresden.",
+          "Mündliche oder schriftliche Nebenabreden bestehen nicht. Änderungen und Ergänzungen bedürfen zu ihrer Wirksamkeit der Textform.",
+          "Sollten einzelne Regelungen dieser Vereinbarung unwirksam, undurchführbar oder lückenhaft sein, bleiben die übrigen Bestimmungen unberührt. Die Parteien verpflichten sich, eine Regelung zu vereinbaren, die dem beabsichtigten wirtschaftlichen Zweck möglichst nahekommt.",
+          "Gerichtsstand ist Dresden.",
         ],
       },
     ],

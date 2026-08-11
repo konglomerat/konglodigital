@@ -1,57 +1,33 @@
+import { redirect } from "next/navigation";
+
 import GenerateNewsletterClient from "./GenerateNewsletterClient";
 
-import { getRequestLocale } from "@/i18n/server";
 import { loadProjects } from "@/app/[lang]/projects/project-data";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { localizePathname } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/server";
+import { buildProjectPath } from "@/lib/project-path";
 import {
   listRapidmailMailings,
   listRapidmailRecipientLists,
   type RapidmailMailing,
   type RapidmailRecipientList,
 } from "@/lib/rapidmail";
+import { isImageUrl } from "@/lib/resource-media";
+import { userCanAccessModule } from "@/lib/roles";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type SelectableItem = {
+type NewsletterProject = {
   id: string;
   name: string;
   prettyTitle: string | null;
   description: string | null;
-  image: string | null;
+  images: string[];
+  publishDate: string | null;
   updatedAt: string | null;
+  href: string;
 };
 
-const loadResourceOptions = async () => {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("resources")
-    .select(
-      "id, pretty_title, name, description, image, images, updated_at, created_at, type",
-    )
-    .not("type", "ilike", "project")
-    .order("updated_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(0, 299);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    prettyTitle: entry.pretty_title ?? null,
-    description: entry.description ?? null,
-    image:
-      entry.images?.find(
-        (value: unknown): value is string =>
-          typeof value === "string" && Boolean(value),
-      ) ??
-      entry.image ??
-      null,
-    updatedAt: entry.updated_at ?? null,
-  })) satisfies SelectableItem[];
-};
-
-const deriveDefaults = (
+const deriveRapidmailDefaults = (
   recipientLists: RapidmailRecipientList[],
   mailings: RapidmailMailing[],
 ) => {
@@ -61,17 +37,39 @@ const deriveDefaults = (
   const recentRecipientListId = recentMailing?.destinations.find(
     (entry) => entry.type === "recipientlist" && entry.action === "include",
   )?.id;
-  const defaultRecipientListId =
-    recentRecipientListId ??
-    recipientLists.find((entry) => entry.isDefault)?.id ??
-    recipientLists[0]?.id ??
-    null;
 
   return {
     fromName: recentMailing?.fromName ?? "",
     fromEmail: recentMailing?.fromEmail ?? "",
-    subject: "",
-    recipientListId: defaultRecipientListId,
+    recipientListId:
+      recentRecipientListId ??
+      recipientLists.find((entry) => entry.isDefault)?.id ??
+      recipientLists[0]?.id ??
+      null,
+  };
+};
+
+const createIssueDefaults = () => {
+  const now = new Date();
+  const dateParts = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    dateParts.find((entry) => entry.type === type)?.value ?? "";
+  const year = part("year").slice(-2);
+  const month = part("month");
+  const monthName = new Intl.DateTimeFormat("de-DE", {
+    month: "long",
+    timeZone: "Europe/Berlin",
+  }).format(now);
+
+  return {
+    title: `Neues vom KNGLMRT ${year}${month}`,
+    subject: `Neues vom KNGLMRT im ${monthName}`,
+    intro:
+      "Zwischen Werkstattluft, guten Ideen und gemeinsamem Anpacken ist wieder einiges passiert. Hier kommen die neuesten Projekte aus dem Konglomerat.",
   };
 };
 
@@ -79,30 +77,56 @@ export const dynamic = "force-dynamic";
 
 export default async function GenerateNewsletterPage() {
   const locale = await getRequestLocale();
-  const [resources, projects, rapidmailResult] = await Promise.all([
-    loadResourceOptions(),
-    loadProjects(180).then((entries) =>
-      entries.map((entry) => ({
-        id: entry.id,
-        name: entry.name,
-        prettyTitle: entry.prettyTitle ?? null,
-        description: entry.description ?? null,
-        image: entry.images?.find(Boolean) ?? entry.image ?? null,
-        updatedAt: entry.updatedAt ?? null,
-      })),
-    ),
+  const supabase = await createSupabaseServerClient({ readOnly: true });
+  const { data } = await supabase.auth.getUser();
+
+  if (!data.user) {
+    redirect(
+      `${localizePathname("/login", locale)}?redirectedFrom=${encodeURIComponent(
+        localizePathname("/admin/generate-newsletter", locale),
+      )}`,
+    );
+  }
+
+  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    return null;
+  }
+
+  const [projectRecords, rapidmailResult] = await Promise.all([
+    loadProjects(180),
     Promise.allSettled([
       listRapidmailRecipientLists(),
       listRapidmailMailings(),
     ]),
   ]);
 
+  const projects = projectRecords.map((project) => {
+    const images = Array.from(
+      new Set(
+        [project.image, ...(project.images ?? [])].filter(
+          (value): value is string =>
+            typeof value === "string" && Boolean(value) && isImageUrl(value),
+        ),
+      ),
+    );
+
+    return {
+      id: project.id,
+      name: project.name,
+      prettyTitle: project.prettyTitle ?? null,
+      description: project.description ?? null,
+      images,
+      publishDate: project.publishDate ?? null,
+      updatedAt: project.updatedAt ?? null,
+      href: localizePathname(buildProjectPath(project), locale),
+    } satisfies NewsletterProject;
+  });
+
   let recipientLists: RapidmailRecipientList[] = [];
   let rapidmailError: string | null = null;
-  let defaults = {
+  let rapidmailDefaults = {
     fromName: "",
     fromEmail: "",
-    subject: "",
     recipientListId: null as number | null,
   };
 
@@ -111,27 +135,27 @@ export default async function GenerateNewsletterPage() {
     rapidmailResult[1]?.status === "fulfilled"
   ) {
     recipientLists = rapidmailResult[0].value;
-    defaults = deriveDefaults(recipientLists, rapidmailResult[1].value);
+    rapidmailDefaults = deriveRapidmailDefaults(
+      recipientLists,
+      rapidmailResult[1].value,
+    );
   } else {
+    const rejected = rapidmailResult.find(
+      (entry): entry is PromiseRejectedResult => entry.status === "rejected",
+    );
     rapidmailError =
-      rapidmailResult[0]?.status === "rejected"
-        ? rapidmailResult[0].reason instanceof Error
-          ? rapidmailResult[0].reason.message
-          : "Rapidmail konnte nicht geladen werden."
-        : rapidmailResult[1]?.status === "rejected"
-          ? rapidmailResult[1].reason instanceof Error
-            ? rapidmailResult[1].reason.message
-            : "Rapidmail konnte nicht geladen werden."
-          : "Rapidmail konnte nicht geladen werden.";
+      rejected?.reason instanceof Error
+        ? rejected.reason.message
+        : "Rapidmail konnte nicht geladen werden.";
   }
 
   return (
     <GenerateNewsletterClient
       locale={locale}
-      resources={resources}
       projects={projects}
       recipientLists={recipientLists}
-      defaults={defaults}
+      issueDefaults={createIssueDefaults()}
+      rapidmailDefaults={rapidmailDefaults}
       rapidmailError={rapidmailError}
     />
   );

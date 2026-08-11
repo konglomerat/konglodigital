@@ -112,7 +112,7 @@ const WORKFLOW_STEPS = [
   {
     id: "contract",
     label: "Vertrag",
-    description: "Beide Seiten unterschreiben",
+    description: "Deine Unterschrift",
     icon: faFileSignature,
   },
   {
@@ -668,17 +668,9 @@ function ContractSection({
       ) : null}
       {booking.staffSignature ? (
         <SignatureCard
-          label="Gegenzeichnung Konglomerat e.V."
+          label="Unterschrift Konglomerat e.V."
           signature={booking.staffSignature}
         />
-      ) : booking.contractStatus === "customer_signed" ? (
-        <div className="mt-4 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
-          <FontAwesomeIcon icon={faClock} className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            Deine Unterschrift ist gespeichert. Die Gegenzeichnung durch das
-            Volkshaus-Team steht noch aus.
-          </p>
-        </div>
       ) : null}
     </section>
   );

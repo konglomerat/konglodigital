@@ -121,7 +121,7 @@ export const notifyVolkshausContractReady = async ({
     subject: `Nutzungsvereinbarung ${booking.referenceCode} ist bereit`,
     html: `
       <p>Hallo ${escapeHtml(booking.customerName)},</p>
-      <p>deine Anfrage wurde geprüft. Über den folgenden persönlichen Link kannst du alle Angaben kontrollieren und die Nutzungsvereinbarung unterschreiben.</p>
+      <p>deine Anfrage wurde geprüft. Über den folgenden persönlichen Link kannst du alle Angaben kontrollieren und die bereits von uns unterschriebene Nutzungsvereinbarung unterschreiben.</p>
       ${bookingSummaryHtml(booking)}
       <p><a href="${escapeHtml(accessUrl)}">Nutzungsvereinbarung öffnen</a></p>
       <p>Viele Grüße<br>Team Neues Volkshaus Cotta</p>
@@ -142,10 +142,11 @@ export const notifyVolkshausCustomerSigned = async ({
 
   return sendEmail({
     to: staffAddress,
-    subject: `${booking.referenceCode} wurde kundenseitig unterschrieben`,
+    subject: `${booking.referenceCode} ist vollständig unterschrieben`,
     html: `
       <p>Die Nutzungsvereinbarung wurde von ${escapeHtml(booking.customerName)} unterschrieben.</p>
-      <p><a href="${escapeHtml(adminUrl)}">Anfrage gegenzeichnen und Rechnung anlegen</a></p>
+      <p>Die Buchung ist bestätigt und die Campai-Rechnung wurde automatisch angestoßen.</p>
+      <p><a href="${escapeHtml(adminUrl)}">Buchung und Rechnung prüfen</a></p>
     `,
   });
 };

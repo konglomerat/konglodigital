@@ -46,8 +46,7 @@ export const GET = async (request: NextRequest) => {
       date,
       slots: [...getMockBusySlots(date), ...bookingSlots],
       calendarMode: "mock",
-      notice:
-        "Der Kalender enthält für den MVP simulierte Belegungen. Verbindlich wird ein Termin erst nach interner Freigabe.",
+      notice: "Verbindlich wird ein Termin erst nach interner Freigabe.",
     });
   } catch {
     return NextResponse.json(

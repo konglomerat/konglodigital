@@ -11,6 +11,7 @@ import heroHelloImage from "../../../hero-hello.jpg";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import PageTitle from "../../components/PageTitle";
 import ShareButton from "../../components/ShareButton";
+import ProjectDeleteButton from "../ProjectDeleteButton";
 import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
@@ -18,6 +19,7 @@ import { buildProjectPath } from "@/lib/project-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
+import { userHasRole } from "@/lib/roles";
 import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
@@ -213,6 +215,12 @@ export default async function ProjectDetailPage({
   const canEdit = Boolean(
     user && (project.ownerId === user.id || hasRight(user, "resources:edit")),
   );
+  const isProjectOwner = Boolean(user && project.ownerId === user.id);
+  const isAdmin =
+    user && !isProjectOwner
+      ? await userHasRole(supabase, user, "admin")
+      : false;
+  const canDelete = Boolean(user && (isProjectOwner || isAdmin));
   const heroMedia =
     project.images?.filter(
       (media): media is string => typeof media === "string",
@@ -248,10 +256,15 @@ export default async function ProjectDetailPage({
           title={project.name}
           titleClassName="mt-3 max-w-4xl "
           customActions={
-            <ShareButton
-              title={project.name}
-              text={tx("Schau dir dieses Projekt an.", "de")}
-            />
+            <>
+              <ShareButton
+                title={project.name}
+                text={tx("Schau dir dieses Projekt an.", "de")}
+              />
+              {canDelete ? (
+                <ProjectDeleteButton projectId={project.id} />
+              ) : null}
+            </>
           }
           links={[
             ...(canEdit

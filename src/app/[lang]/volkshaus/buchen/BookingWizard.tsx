@@ -668,8 +668,24 @@ export default function BookingWizard({
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
             Erzähl uns, wann du kommen möchtest und was du vorhast. Du siehst
             direkt, was es ungefähr kostet. Verbindlich wird die Buchung erst,
-            wenn alles geprüft und von beiden Seiten unterschrieben ist.
+            wenn alles geprüft ist und du die bereits von uns unterschriebene
+            Vereinbarung unterschrieben hast.
           </p>
+          <div
+            role="note"
+            aria-label="Wichtiger Zahlungshinweis"
+            className="mt-5 flex max-w-2xl items-center gap-3 rounded-lg border border-warning-border bg-warning-soft px-4 py-3.5 text-warning shadow-sm"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/10">
+              <FontAwesomeIcon
+                icon={faTriangleExclamation}
+                className="h-4 w-4"
+              />
+            </span>
+            <p className="text-base font-black leading-snug md:text-lg">
+              Bitte bezahlen bis 3 Tage vor Buchung.
+            </p>
+          </div>
           <div className="mt-5">
             <Button
               kind="secondary"

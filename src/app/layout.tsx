@@ -205,429 +205,439 @@ export default async function RootLayout({
           <ChatwootWidget locale={locale} />
           <AppShell
             mobileNavigation={
-            <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
-              <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
-                <Link
-                  href="/"
-                  className="text-xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
-                >
-                  Konglo
-                  <br />
-                  digital
-                </Link>
-                <div className="flex items-center gap-3">
-                  <LanguageSwitcher />
-                  <ThemeToggle />
-                  <AutoCloseMenuDetails
-                    className="group"
-                    summary={
-                      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-input bg-background px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
-                        Menü
-                        <span className="text-lg transition group-open:rotate-45">
-                          +
-                        </span>
-                      </summary>
-                    }
-                  >
-                    <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
-                      <nav className="flex flex-col px-2 py-2">
-                        <p className={navSectionTitleClassName}>
-                          Digital Fabrication
-                        </p>
-                        <ProtectedNavItem
-                          href="/printers"
-                          className={navLinkClassName}
-                          icon={faCube}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          3D-Druck
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/printers/emptying"
-                          className={navLinkClassName}
-                          icon={faPrint}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Drucker entleeren
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/printers/access-codes"
-                          className={navLinkClassName}
-                          icon={faKey}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Drucker Zugangscodes
-                        </ProtectedNavItem>
-                        <ProtectedNavItem
-                          href="/checkout"
-                          className={navLinkClassName}
-                          icon={faCartShopping}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Warenkorb
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faChartPie}
-                        >
-                          Laser
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>Self Service</p>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faCalendarCheck}
-                        >
-                          Zugangskarte
-                        </ComingSoonNavItem>
-                        <ProtectedNavItem
-                          href="/account"
-                          className={navLinkClassName}
-                          icon={faUser}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          {currentUserDisplayName
-                            ? `Profil (${currentUserDisplayName})`
-                            : "Profil"}
-                        </ProtectedNavItem>
-
-                        <p className={navSectionTitleClassName}>Verein</p>
-
-                        <ProtectedNavItem
-                          href="/resources"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Inventar
-                        </ProtectedNavItem>
-                        <ActiveNavLink
-                          href="/projects"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faFolderOpen}
-                            className="h-4 w-4"
-                          />
-                          Projekte
-                        </ActiveNavLink>
-                        <ActiveNavLink
-                          href="/calendar"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon
-                            icon={faCalendarDays}
-                            className="h-4 w-4"
-                          />
-                          Kalender
-                        </ActiveNavLink>
-                        <ActiveNavLink
-                          href="/volkshaus/buchen"
-                          className={navLinkClassName}
-                        >
-                          <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
-                          Volkshaus buchen
-                        </ActiveNavLink>
-                        <ProtectedNavItem
-                          href="/products"
-                          className={navLinkClassName}
-                          icon={faBoxOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Produkte
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faUser}
-                        >
-                          Ehrenamtsbonus
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>
-                          Holzwerkstatt
-                        </p>
-                        <ProtectedNavItem
-                          href="/split-invoice"
-                          className={navLinkClassName}
-                          icon={faLayerGroup}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Materialbestellung
-                        </ProtectedNavItem>
-                        <ComingSoonNavItem
-                          className={navLinkClassName}
-                          icon={faLayerGroup}
-                        >
-                          Lagerplatz
-                        </ComingSoonNavItem>
-
-                        <p className={navSectionTitleClassName}>buchhaltung</p>
-                        <ProtectedNavItem
-                          href="/receipts"
-                          className={navLinkClassName}
-                          icon={faFolderOpen}
-                          isAccessible={isAuthenticated}
-                          tooltip={membersOnlyTooltip}
-                        >
-                          Übersicht
-                        </ProtectedNavItem>
-                      </nav>
-                      <div className="border-t border-border px-4 py-4">
-                        {isAuthenticated ? (
-                          <div className="space-y-3">
-                            {canAccessAdmin || canAccessVolkshaus ? (
-                              <Button
-                                href={adminAreaHref}
-                                kind="secondary"
-                                className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                              >
-                                <FontAwesomeIcon
-                                  icon={faLock}
-                                  className="h-4 w-4"
-                                />
-                                Admin
-                              </Button>
-                            ) : null}
-                            <form action={signOut}>
-                              <Button
-                                type="submit"
-                                kind="primary"
-                                className={navButtonClassName}
-                              >
-                                <FontAwesomeIcon
-                                  icon={faRightFromBracket}
-                                  className="h-4 w-4"
-                                />
-                                Abmelden
-                              </Button>
-                            </form>
-                          </div>
-                        ) : (
-                          <Button
-                            href="/login"
-                            kind="primary"
-                            className={navButtonClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faRightToBracket}
-                              className="h-4 w-4"
-                            />
-                            Anmelden
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </AutoCloseMenuDetails>
-                </div>
-              </div>
-            </header>
-            }
-            desktopNavigation={
-            <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
-              <div className="space-y-3">
-                <div>
+              <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
+                <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                   <Link
                     href="/"
-                    className="text-3xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
+                    className="text-xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
                   >
                     Konglo
                     <br />
                     digital
                   </Link>
-                </div>
-                <div className="flex items-center gap-2">
-                  <LanguageSwitcher />
-                  <ThemeToggle />
-                </div>
-              </div>
-              <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Digital Fabrication
-                </p>
-                <ProtectedNavItem
-                  href="/printers"
-                  className={navItemClassName}
-                  icon={faCube}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  3D-Druck
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/printers/emptying"
-                  className={navItemClassName}
-                  icon={faPrint}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Drucker entleeren
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/printers/access-codes"
-                  className={navItemClassName}
-                  icon={faKey}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Drucker Zugangscodes
-                </ProtectedNavItem>
-                <ProtectedNavItem
-                  href="/checkout"
-                  className={navItemClassName}
-                  icon={faCartShopping}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Warenkorb
-                </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faChartPie}
-                >
-                  Laser
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Self Service
-                </p>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faCalendarCheck}
-                >
-                  Zugangskarte
-                </ComingSoonNavItem>
-                <ProtectedNavItem
-                  href="/account"
-                  className={navItemClassName}
-                  icon={faUser}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  {currentUserDisplayName
-                    ? `Profil (${currentUserDisplayName})`
-                    : "Profil"}
-                </ProtectedNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Verein
-                </p>
-                <ActiveNavLink href="/calendar" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                  Kalender
-                </ActiveNavLink>
-                <ActiveNavLink
-                  href="/volkshaus/buchen"
-                  className={navItemClassName}
-                >
-                  <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
-                  Volkshaus buchen
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/resources"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Inventar
-                </ProtectedNavItem>
-                <ActiveNavLink href="/projects" className={navItemClassName}>
-                  <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                  Projekte
-                </ActiveNavLink>
-                <ProtectedNavItem
-                  href="/products"
-                  className={navItemClassName}
-                  icon={faBoxOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Produkte
-                </ProtectedNavItem>
-                <ComingSoonNavItem className={navItemClassName} icon={faUser}>
-                  Ehrenamtsbonus
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Holzwerkstatt
-                </p>
-                <ProtectedNavItem
-                  href="/split-invoice"
-                  className={navItemClassName}
-                  icon={faLayerGroup}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Materialbestellung
-                </ProtectedNavItem>
-                <ComingSoonNavItem
-                  className={navItemClassName}
-                  icon={faLayerGroup}
-                >
-                  Lagerplatz
-                </ComingSoonNavItem>
-
-                <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  buchhaltung
-                </p>
-                <ProtectedNavItem
-                  href="/receipts"
-                  className={navItemClassName}
-                  icon={faFolderOpen}
-                  isAccessible={isAuthenticated}
-                  tooltip={membersOnlyTooltip}
-                >
-                  Übersicht
-                </ProtectedNavItem>
-              </nav>
-              {isAuthenticated ? (
-                <div className="mt-auto space-y-3">
-                  {canAccessAdmin || canAccessVolkshaus ? (
-                    <Button
-                      href={adminAreaHref}
-                      kind="secondary"
-                      className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                  <div className="flex items-center gap-3">
+                    <LanguageSwitcher />
+                    <ThemeToggle />
+                    <AutoCloseMenuDetails
+                      className="group"
+                      summary={
+                        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-input bg-background px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                          Menü
+                          <span className="text-lg transition group-open:rotate-45">
+                            +
+                          </span>
+                        </summary>
+                      }
                     >
-                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                      Admin
-                    </Button>
-                  ) : null}
-                  <form action={signOut}>
-                    <Button
-                      type="submit"
-                      kind="primary"
-                      className={navButtonClassName}
-                    >
-                      <FontAwesomeIcon
-                        icon={faRightFromBracket}
-                        className="h-4 w-4"
-                      />
-                      Abmelden
-                    </Button>
-                  </form>
+                      <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+                        <nav className="flex flex-col px-2 py-2">
+                          <p className={navSectionTitleClassName}>
+                            Digital Fabrication
+                          </p>
+                          <ProtectedNavItem
+                            href="/printers"
+                            className={navLinkClassName}
+                            icon={faCube}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            3D-Druck
+                          </ProtectedNavItem>
+                          <ProtectedNavItem
+                            href="/printers/emptying"
+                            className={navLinkClassName}
+                            icon={faPrint}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Drucker entleeren
+                          </ProtectedNavItem>
+                          <ProtectedNavItem
+                            href="/printers/access-codes"
+                            className={navLinkClassName}
+                            icon={faKey}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Drucker Zugang
+                          </ProtectedNavItem>
+                          <ProtectedNavItem
+                            href="/checkout"
+                            className={navLinkClassName}
+                            icon={faCartShopping}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Warenkorb
+                          </ProtectedNavItem>
+                          <ComingSoonNavItem
+                            className={navLinkClassName}
+                            icon={faChartPie}
+                          >
+                            Laser
+                          </ComingSoonNavItem>
+
+                          <p className={navSectionTitleClassName}>
+                            Self Service
+                          </p>
+                          <ComingSoonNavItem
+                            className={navLinkClassName}
+                            icon={faCalendarCheck}
+                          >
+                            Zugangskarte
+                          </ComingSoonNavItem>
+                          <ProtectedNavItem
+                            href="/account"
+                            className={navLinkClassName}
+                            icon={faUser}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            {currentUserDisplayName
+                              ? `Profil (${currentUserDisplayName})`
+                              : "Profil"}
+                          </ProtectedNavItem>
+
+                          <p className={navSectionTitleClassName}>Verein</p>
+
+                          <ProtectedNavItem
+                            href="/resources"
+                            className={navLinkClassName}
+                            icon={faFolderOpen}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Inventar
+                          </ProtectedNavItem>
+                          <ActiveNavLink
+                            href="/projects"
+                            className={navLinkClassName}
+                          >
+                            <FontAwesomeIcon
+                              icon={faFolderOpen}
+                              className="h-4 w-4"
+                            />
+                            Projekte
+                          </ActiveNavLink>
+                          <ActiveNavLink
+                            href="/calendar"
+                            className={navLinkClassName}
+                          >
+                            <FontAwesomeIcon
+                              icon={faCalendarDays}
+                              className="h-4 w-4"
+                            />
+                            Kalender
+                          </ActiveNavLink>
+                          <ActiveNavLink
+                            href="/volkshaus/buchen"
+                            className={navLinkClassName}
+                          >
+                            <FontAwesomeIcon
+                              icon={faHouse}
+                              className="h-4 w-4"
+                            />
+                            Volkshaus buchen
+                          </ActiveNavLink>
+                          <ProtectedNavItem
+                            href="/products"
+                            className={navLinkClassName}
+                            icon={faBoxOpen}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Produkte
+                          </ProtectedNavItem>
+                          <ComingSoonNavItem
+                            className={navLinkClassName}
+                            icon={faUser}
+                          >
+                            Ehrenamtsbonus
+                          </ComingSoonNavItem>
+
+                          <p className={navSectionTitleClassName}>
+                            Holzwerkstatt
+                          </p>
+                          <ProtectedNavItem
+                            href="/split-invoice"
+                            className={navLinkClassName}
+                            icon={faLayerGroup}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Materialbestellung
+                          </ProtectedNavItem>
+                          <ComingSoonNavItem
+                            className={navLinkClassName}
+                            icon={faLayerGroup}
+                          >
+                            Lagerplatz
+                          </ComingSoonNavItem>
+
+                          <p className={navSectionTitleClassName}>
+                            buchhaltung
+                          </p>
+                          <ProtectedNavItem
+                            href="/receipts"
+                            className={navLinkClassName}
+                            icon={faFolderOpen}
+                            isAccessible={isAuthenticated}
+                            tooltip={membersOnlyTooltip}
+                          >
+                            Übersicht
+                          </ProtectedNavItem>
+                        </nav>
+                        <div className="border-t border-border px-4 py-4">
+                          {isAuthenticated ? (
+                            <div className="space-y-3">
+                              {canAccessAdmin || canAccessVolkshaus ? (
+                                <Button
+                                  href={adminAreaHref}
+                                  kind="secondary"
+                                  className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                                >
+                                  <FontAwesomeIcon
+                                    icon={faLock}
+                                    className="h-4 w-4"
+                                  />
+                                  Admin
+                                </Button>
+                              ) : null}
+                              <form action={signOut}>
+                                <Button
+                                  type="submit"
+                                  kind="primary"
+                                  className={navButtonClassName}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={faRightFromBracket}
+                                    className="h-4 w-4"
+                                  />
+                                  Abmelden
+                                </Button>
+                              </form>
+                            </div>
+                          ) : (
+                            <Button
+                              href="/login"
+                              kind="primary"
+                              className={navButtonClassName}
+                            >
+                              <FontAwesomeIcon
+                                icon={faRightToBracket}
+                                className="h-4 w-4"
+                              />
+                              Anmelden
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </AutoCloseMenuDetails>
+                  </div>
                 </div>
-              ) : (
-                <Button
-                  href="/login"
-                  kind="primary"
-                  className={navButtonClassName}
-                >
-                  <FontAwesomeIcon
-                    icon={faRightToBracket}
-                    className="h-4 w-4"
-                  />
-                  Anmelden
-                </Button>
-              )}
-            </aside>
+              </header>
+            }
+            desktopNavigation={
+              <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
+                <div className="space-y-3">
+                  <div>
+                    <Link
+                      href="/"
+                      className="text-3xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
+                    >
+                      Konglo
+                      <br />
+                      digital
+                    </Link>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <LanguageSwitcher />
+                    <ThemeToggle />
+                  </div>
+                </div>
+                <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
+                  <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Digital Fabrication
+                  </p>
+                  <ProtectedNavItem
+                    href="/printers"
+                    className={navItemClassName}
+                    icon={faCube}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    3D-Druck
+                  </ProtectedNavItem>
+                  <ProtectedNavItem
+                    href="/printers/emptying"
+                    className={navItemClassName}
+                    icon={faPrint}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Drucker entleeren
+                  </ProtectedNavItem>
+                  <ProtectedNavItem
+                    href="/printers/access-codes"
+                    className={navItemClassName}
+                    icon={faKey}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Drucker Zugang
+                  </ProtectedNavItem>
+                  <ProtectedNavItem
+                    href="/checkout"
+                    className={navItemClassName}
+                    icon={faCartShopping}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Warenkorb
+                  </ProtectedNavItem>
+                  <ComingSoonNavItem
+                    className={navItemClassName}
+                    icon={faChartPie}
+                  >
+                    Laser
+                  </ComingSoonNavItem>
+
+                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Self Service
+                  </p>
+                  <ComingSoonNavItem
+                    className={navItemClassName}
+                    icon={faCalendarCheck}
+                  >
+                    Zugangskarte
+                  </ComingSoonNavItem>
+                  <ProtectedNavItem
+                    href="/account"
+                    className={navItemClassName}
+                    icon={faUser}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    {currentUserDisplayName
+                      ? `Profil (${currentUserDisplayName})`
+                      : "Profil"}
+                  </ProtectedNavItem>
+
+                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Verein
+                  </p>
+                  <ActiveNavLink href="/calendar" className={navItemClassName}>
+                    <FontAwesomeIcon
+                      icon={faCalendarDays}
+                      className="h-4 w-4"
+                    />
+                    Kalender
+                  </ActiveNavLink>
+                  <ActiveNavLink
+                    href="/volkshaus/buchen"
+                    className={navItemClassName}
+                  >
+                    <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
+                    Volkshaus buchen
+                  </ActiveNavLink>
+                  <ProtectedNavItem
+                    href="/resources"
+                    className={navItemClassName}
+                    icon={faFolderOpen}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Inventar
+                  </ProtectedNavItem>
+                  <ActiveNavLink href="/projects" className={navItemClassName}>
+                    <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
+                    Projekte
+                  </ActiveNavLink>
+                  <ProtectedNavItem
+                    href="/products"
+                    className={navItemClassName}
+                    icon={faBoxOpen}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Produkte
+                  </ProtectedNavItem>
+                  <ComingSoonNavItem className={navItemClassName} icon={faUser}>
+                    Ehrenamtsbonus
+                  </ComingSoonNavItem>
+
+                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Holzwerkstatt
+                  </p>
+                  <ProtectedNavItem
+                    href="/split-invoice"
+                    className={navItemClassName}
+                    icon={faLayerGroup}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Materialbestellung
+                  </ProtectedNavItem>
+                  <ComingSoonNavItem
+                    className={navItemClassName}
+                    icon={faLayerGroup}
+                  >
+                    Lagerplatz
+                  </ComingSoonNavItem>
+
+                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    buchhaltung
+                  </p>
+                  <ProtectedNavItem
+                    href="/receipts"
+                    className={navItemClassName}
+                    icon={faFolderOpen}
+                    isAccessible={isAuthenticated}
+                    tooltip={membersOnlyTooltip}
+                  >
+                    Übersicht
+                  </ProtectedNavItem>
+                </nav>
+                {isAuthenticated ? (
+                  <div className="mt-auto space-y-3">
+                    {canAccessAdmin || canAccessVolkshaus ? (
+                      <Button
+                        href={adminAreaHref}
+                        kind="secondary"
+                        className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                      >
+                        <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                        Admin
+                      </Button>
+                    ) : null}
+                    <form action={signOut}>
+                      <Button
+                        type="submit"
+                        kind="primary"
+                        className={navButtonClassName}
+                      >
+                        <FontAwesomeIcon
+                          icon={faRightFromBracket}
+                          className="h-4 w-4"
+                        />
+                        Abmelden
+                      </Button>
+                    </form>
+                  </div>
+                ) : (
+                  <Button
+                    href="/login"
+                    kind="primary"
+                    className={navButtonClassName}
+                  >
+                    <FontAwesomeIcon
+                      icon={faRightToBracket}
+                      className="h-4 w-4"
+                    />
+                    Anmelden
+                  </Button>
+                )}
+              </aside>
             }
           >
             {children}

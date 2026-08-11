@@ -24,6 +24,12 @@ const MAX_FEATURES = 200;
 const MAX_POINTS_PER_FEATURE = 400;
 
 const toFiniteNumber = (value: unknown) => {
+  if (typeof value !== "number" && typeof value !== "string") {
+    return null;
+  }
+  if (typeof value === "string" && value.trim().length === 0) {
+    return null;
+  }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
@@ -169,6 +175,14 @@ export const getPointFeatures = (features: ResourceMapFeature[]) =>
       feature.geometryType === "Point",
   );
 
+export const isPlaceholderGpsPointFeature = (
+  feature: ResourceMapFeature,
+): feature is ResourceMapPointFeature =>
+  feature.geometryType === "Point" &&
+  feature.point[0] === 0 &&
+  feature.point[1] === 0 &&
+  (feature.id === "gps-point" || feature.layer === "location");
+
 export const upsertGpsPointFeature = ({
   features,
   latitude,
@@ -178,11 +192,11 @@ export const upsertGpsPointFeature = ({
   latitude?: number | null;
   longitude?: number | null;
 }) => {
-  const lat = Number(latitude);
-  const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  const point = normalizePoint([longitude, latitude]);
+  if (!point || (point[0] === 0 && point[1] === 0)) {
     return features;
   }
+  const [lng, lat] = point;
   const normalized = [...features];
   const index = normalized.findIndex((feature) => feature.id === "gps-point");
   const pointFeature: ResourceMapPointFeature = {

@@ -214,7 +214,7 @@ export default function MediaLightboxGallery({
 
       {activeLightboxMedia ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setLightboxIndex(null)}
@@ -226,7 +226,7 @@ export default function MediaLightboxGallery({
               event.stopPropagation();
               setLightboxIndex(null);
             }}
-            className="absolute right-1 top-3 rounded-full !bg-transparent !border-none px-3 py-3 !text-xl font-semibold !text-background"
+            className="absolute right-1 top-3 rounded-full !bg-transparent !border-none px-3 py-3 !text-xl font-semibold !text-white"
             icon={faXmark}
           >
             {closeLabel}
@@ -245,7 +245,7 @@ export default function MediaLightboxGallery({
                         normalizedMedia.length,
                   );
                 }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-background/90"
+                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
                 icon={faChevronLeft}
               >
                 {previousLabel}
@@ -261,7 +261,7 @@ export default function MediaLightboxGallery({
                       : (current + 1) % normalizedMedia.length,
                   );
                 }}
-                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-background/90"
+                className="pointer-events-auto rounded-full !bg-transparent !border-none px-3 py-2 text-xs font-semibold !text-white/90"
                 icon={faChevronRight}
                 iconReverse
               >

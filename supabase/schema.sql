@@ -1022,7 +1022,22 @@ with check (owner_id = auth.uid() or public.has_right('resources:edit'));
 create policy "Owners can delete resources"
 on public.resources
 for delete
-using (owner_id = auth.uid() or public.has_right('resources:delete'));
+using (
+  owner_id = auth.uid()
+  or (
+    lower(btrim(coalesce(type, ''))) = 'project'
+    and exists (
+      select 1
+      from public.user_access
+      where user_access.user_id = auth.uid()
+        and 'admin' = any(user_access.roles)
+    )
+  )
+  or (
+    lower(btrim(coalesce(type, ''))) <> 'project'
+    and public.has_right('resources:delete')
+  )
+);
 
 create table if not exists public.resource_links (
   resource_a uuid not null references public.resources (id) on delete cascade,

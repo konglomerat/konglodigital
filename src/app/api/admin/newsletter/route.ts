@@ -1,438 +1,515 @@
+import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import {
+  TIME_ZONE,
+  getUpcomingEvents,
+} from "@/app/[lang]/calendar/calendar-data";
+import {
   DEFAULT_LOCALE,
-  normalizeLocale,
   localizePathname,
+  normalizeLocale,
 } from "@/i18n/config";
-import { createRapidmailDraft } from "@/lib/rapidmail";
+import {
+  NEWSLETTER_ASPECTS,
+  normalizeNewsletterAspect,
+  normalizeNewsletterLayout,
+  renderNewsletter,
+  type NewsletterAspect,
+  type NewsletterCalendar,
+  type NewsletterItem,
+  type NewsletterProject,
+} from "@/lib/newsletter-builder";
 import { buildProjectPath } from "@/lib/project-path";
-import { buildResourcePath } from "@/lib/resource-pretty-title";
-import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
+import { createHtmlZip, createRapidmailDraft } from "@/lib/rapidmail";
+import {
+  getSupabaseRenderedImageUrl,
+  isImageUrl,
+} from "@/lib/resource-media";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-type ContentRow = {
+export const runtime = "nodejs";
+
+type ProjectRow = {
   id: string;
   pretty_title?: string | null;
   name: string;
   description?: string | null;
   image?: string | null;
   images?: string[] | null;
+  publish_date?: string | null;
   updated_at?: string | null;
+  created_at?: string | null;
 };
 
-type DraftRequestBody = {
+type RawProjectItem = {
+  type: "project";
+  projectId: string;
+  layout?: unknown;
+  aspect?: unknown;
+  imageUrl?: unknown;
+  showLink?: unknown;
+  linkText?: unknown;
+};
+
+type RawButtonItem = {
+  type: "button";
+  title?: unknown;
+  href?: unknown;
+};
+
+type RawBannerItem = {
+  type: "banner";
+  title?: unknown;
+  content?: unknown;
+};
+
+type RawNewsletterItem = RawProjectItem | RawButtonItem | RawBannerItem;
+
+type NewsletterRequestBody = {
+  action?: unknown;
+  locale?: unknown;
+  title?: unknown;
+  subject?: unknown;
+  intro?: unknown;
+  showProjectsHeading?: unknown;
+  items?: unknown;
+  projectIds?: unknown;
   fromName?: unknown;
   fromEmail?: unknown;
-  subject?: unknown;
   recipientListId?: unknown;
-  resourceIds?: unknown;
-  projectIds?: unknown;
-  locale?: unknown;
+  sendAt?: unknown;
+  send_at?: unknown;
+  status?: unknown;
 };
 
-const createForbiddenResponse = () =>
-  NextResponse.json({ error: "Forbidden" }, { status: 403 });
+const ASPECT_DIMENSIONS: Record<
+  NewsletterAspect,
+  { width: number; height: number } | null
+> = {
+  original: null,
+  "1:1": { width: 1, height: 1 },
+  "4:3": { width: 4, height: 3 },
+  "3:2": { width: 3, height: 2 },
+  "16:9": { width: 16, height: 9 },
+  "4:5": { width: 4, height: 5 },
+  "3:4": { width: 3, height: 4 },
+};
 
-const createUnauthorizedResponse = () =>
+const MAX_ITEMS = 80;
+const MAX_PROJECTS = 24;
+const MAX_HTML_BYTES = 90_000;
+const CALENDAR_TIMEOUT_MS = 15_000;
+const NEWSLETTER_ACTIONS = ["preview", "export", "draft"] as const;
+type NewsletterAction = (typeof NEWSLETTER_ACTIONS)[number];
+
+const unauthorized = () =>
   NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-const stripMarkdown = (value: string) =>
-  value
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/[>#*_~-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+const forbidden = () =>
+  NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
-};
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+const textValue = (value: unknown, maxLength: number) =>
+  typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 
 const normalizeIdList = (value: unknown) => {
-  if (!Array.isArray(value)) {
-    return [] as string[];
-  }
-
+  if (!Array.isArray(value)) return [] as string[];
   return Array.from(
     new Set(
       value
-        .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-        .filter(Boolean),
+        .map((entry) => textValue(entry, 200))
+        .filter(Boolean)
+        .slice(0, MAX_PROJECTS),
     ),
   );
 };
 
-const resolveImageUrl = (row: ContentRow) => {
-  const firstImage = row.images?.find(
-    (entry): entry is string => typeof entry === "string" && Boolean(entry),
-  );
-  const candidate = firstImage ?? row.image ?? null;
+const normalizeRawItems = (body: NewsletterRequestBody) => {
+  const source = Array.isArray(body.items)
+    ? body.items
+    : normalizeIdList(body.projectIds).map((projectId) => ({
+        type: "project",
+        projectId,
+      }));
+  const items: RawNewsletterItem[] = [];
+  const usedProjectIds = new Set<string>();
 
-  if (!candidate || !isImageUrl(candidate)) {
-    return null;
+  for (const candidate of source.slice(0, MAX_ITEMS)) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const raw = candidate as Record<string, unknown>;
+
+    if (raw.type === "project") {
+      const projectId = textValue(raw.projectId, 200);
+      if (!projectId || usedProjectIds.has(projectId)) continue;
+      items.push({
+        type: "project",
+        projectId,
+        layout: raw.layout,
+        aspect: raw.aspect,
+        imageUrl: raw.imageUrl,
+        showLink: raw.showLink,
+        linkText: raw.linkText,
+      });
+      usedProjectIds.add(projectId);
+      continue;
+    }
+
+    if (raw.type === "button") {
+      items.push({ type: "button", title: raw.title, href: raw.href });
+      continue;
+    }
+
+    if (raw.type === "banner") {
+      items.push({
+        type: "banner",
+        title: raw.title,
+        content: raw.content,
+      });
+    }
   }
 
-  return getSupabaseRenderedImageUrl(candidate, {
-    width: 1200,
-    resize: "cover",
-  });
+  return items;
 };
 
-const createCardMarkup = ({
-  href,
-  imageUrl,
-  kicker,
-  title,
-  description,
-  cta,
-}: {
-  href: string;
-  imageUrl: string | null;
-  kicker: string;
-  title: string;
-  description: string;
-  cta: string;
-}) => `
-  <tr>
-    <td style="padding:0 0 24px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e4e4e7;border-radius:20px;overflow:hidden;background:#ffffff;">
-        ${
-          imageUrl
-            ? `<tr>
-          <td style="padding:0;">
-            <a href="${escapeHtml(href)}" style="display:block;">
-              <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" style="display:block;width:100%;height:auto;border:0;aspect-ratio:16/9;object-fit:cover;background:#f4f4f5;" />
-            </a>
-          </td>
-        </tr>`
-            : ""
-        }
-        <tr>
-          <td style="padding:24px;">
-            <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#71717a;margin-bottom:10px;">${escapeHtml(
-              kicker,
-            )}</div>
-            <h2 style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:24px;line-height:1.2;color:#18181b;">
-              <a href="${escapeHtml(href)}" style="color:#18181b;text-decoration:none;">${escapeHtml(
-                title,
-              )}</a>
-            </h2>
-            <p style="margin:0 0 18px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#52525b;">${escapeHtml(
-              description,
-            )}</p>
-            <a href="${escapeHtml(href)}" style="display:inline-block;padding:11px 18px;border-radius:999px;background:#2563eb;color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:700;text-decoration:none;">${escapeHtml(
-              cta,
-            )}</a>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>`;
+const getPublicSiteUrl = (request: NextRequest) => {
+  const fallback = new URL(request.url).origin;
+  const configured =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!configured) return fallback;
 
-const createNewsletterHtml = ({
-  siteUrl,
-  locale,
-  subject,
-  resources,
-  projects,
-}: {
-  siteUrl: string;
-  locale: string;
-  subject: string;
-  resources: ContentRow[];
-  projects: ContentRow[];
-}) => {
-  const resourceCards = resources
-    .map((resource) => {
-      const href = new URL(
-        localizePathname(
-          buildResourcePath({
-            id: resource.id,
-            prettyTitle: resource.pretty_title ?? null,
-          }),
-          locale === DEFAULT_LOCALE ? DEFAULT_LOCALE : normalizeLocale(locale),
-        ),
-        siteUrl,
-      ).toString();
-      const description = truncate(
-        stripMarkdown(
-          resource.description ?? "Noch keine Beschreibung hinterlegt.",
-        ),
-        220,
-      );
-
-      return createCardMarkup({
-        href,
-        imageUrl: resolveImageUrl(resource),
-        kicker: "Ressource",
-        title: resource.name,
-        description,
-        cta: "Zur Ressource",
-      });
-    })
-    .join("");
-
-  const projectCards = projects
-    .map((project) => {
-      const href = new URL(
-        localizePathname(
-          buildProjectPath({
-            id: project.id,
-            prettyTitle: project.pretty_title ?? null,
-          }),
-          locale === DEFAULT_LOCALE ? DEFAULT_LOCALE : normalizeLocale(locale),
-        ),
-        siteUrl,
-      ).toString();
-      const description = truncate(
-        stripMarkdown(
-          project.description ?? "Noch keine Beschreibung hinterlegt.",
-        ),
-        220,
-      );
-
-      return createCardMarkup({
-        href,
-        imageUrl: resolveImageUrl(project),
-        kicker: "Projekt",
-        title: project.name,
-        description,
-        cta: "Zum Projekt",
-      });
-    })
-    .join("");
-
-  return `<!doctype html>
-<html lang="${escapeHtml(normalizeLocale(locale))}">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0;padding:0;background:#f5f7fb;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f5f7fb;">
-      <tr>
-        <td style="padding:32px 16px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:720px;margin:0 auto;background:#ffffff;border-radius:28px;overflow:hidden;">
-            <tr>
-              <td style="padding:40px 32px 24px;background:linear-gradient(135deg,#eff6ff 0%,#fef3c7 100%);">
-                <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#334155;margin-bottom:12px;">Konglomerat Digitale Werkstaetten</div>
-                <h1 style="margin:0;font-family:Arial,sans-serif;font-size:34px;line-height:1.1;color:#111827;">${escapeHtml(
-                  subject,
-                )}</h1>
-                <p style="margin:16px 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:1.7;color:#334155;">Eine neue Auswahl aus Ressourcen und Projekten aus den Werkstaetten.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:32px;">
-                ${
-                  resourceCards
-                    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td style="padding:0 0 18px;font-family:Arial,sans-serif;font-size:22px;font-weight:700;color:#18181b;">Ressourcen</td>
-                  </tr>
-                  ${resourceCards}
-                </table>`
-                    : ""
-                }
-                ${
-                  projectCards
-                    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;${resourceCards ? "margin-top:8px;" : ""}">
-                  <tr>
-                    <td style="padding:0 0 18px;font-family:Arial,sans-serif;font-size:22px;font-weight:700;color:#18181b;">Projekte</td>
-                  </tr>
-                  ${projectCards}
-                </table>`
-                    : ""
-                }
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 32px 36px;border-top:1px solid #e4e4e7;font-family:Arial,sans-serif;font-size:13px;line-height:1.6;color:#71717a;">
-                Mehr aus dem Konglomerat findest du auf <a href="${escapeHtml(
-                  siteUrl,
-                )}" style="color:#2563eb;text-decoration:none;">${escapeHtml(
-                  siteUrl,
-                )}</a>.
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+  try {
+    const parsed = new URL(configured);
+    return ["http:", "https:"].includes(parsed.protocol)
+      ? parsed.origin
+      : fallback;
+  } catch {
+    return fallback;
+  }
 };
+
+const projectImages = (row: ProjectRow) =>
+  Array.from(
+    new Set(
+      [row.image, ...(row.images ?? [])].filter(
+        (value): value is string =>
+          typeof value === "string" && Boolean(value) && isImageUrl(value),
+      ),
+    ),
+  );
+
+const resolveProjectImage = (
+  row: ProjectRow,
+  requested: unknown,
+  aspect: NewsletterAspect,
+) => {
+  const images = projectImages(row);
+  const requestedImage = textValue(requested, 2_000);
+  const source = images.includes(requestedImage)
+    ? requestedImage
+    : (images[0] ?? null);
+  if (!source) return null;
+
+  const ratio = ASPECT_DIMENSIONS[aspect];
+  return ratio
+    ? getSupabaseRenderedImageUrl(source, {
+        width: 1_080,
+        height: Math.round((1_080 * ratio.height) / ratio.width),
+        resize: "cover",
+      })
+    : getSupabaseRenderedImageUrl(source, { width: 1_080 });
+};
+
+const createExcerpt = (value: string | null | undefined) => {
+  const text = String(value ?? "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}(?:[-*+] |\d+\. )/gm, "")
+    .replace(/^\s{0,3}>\s?/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "Noch keine Beschreibung hinterlegt.";
+  return text.length <= 520 ? text : `${text.slice(0, 519).trimEnd()}…`;
+};
+
+const createFilename = (title: string) => {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return `${new Date().toISOString().slice(0, 10)}-${slug || "newsletter"}.zip`;
+};
+
+const loadNewsletterCalendar = unstable_cache(
+  async () => {
+    const events = await new Promise<
+      Awaited<ReturnType<typeof getUpcomingEvents>>
+    >((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error("Kalender konnte nicht rechtzeitig geladen werden.")),
+        CALENDAR_TIMEOUT_MS,
+      );
+      getUpcomingEvents().then(resolve, reject).finally(() => clearTimeout(timeout));
+    });
+    return events.map((event) => ({
+      id: event.id,
+      title: event.summary,
+      start: event.start.toISOString(),
+      end: event.end?.toISOString(),
+      allDay: event.allDay,
+      location: event.location ?? null,
+      url: null,
+    }));
+  },
+  ["admin-newsletter-calendar-v1"],
+  { revalidate: 300 },
+);
+
+const getCalendar = async (calendarUrl: string): Promise<NewsletterCalendar> => ({
+  events: await loadNewsletterCalendar(),
+  daysAhead: 7,
+  timeZone: TIME_ZONE,
+  calendarUrl,
+});
 
 export const POST = async (request: NextRequest) => {
   try {
     const { supabase } = createSupabaseRouteClient(request);
     const { data } = await supabase.auth.getUser();
-
-    if (!data.user) {
-      return createUnauthorizedResponse();
-    }
-
+    if (!data.user) return unauthorized();
     if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
-      return createForbiddenResponse();
+      return forbidden();
     }
 
-    const body = (await request.json().catch(() => ({}))) as DraftRequestBody;
-    const fromName =
-      typeof body.fromName === "string" ? body.fromName.trim() : "";
-    const fromEmail =
-      typeof body.fromEmail === "string" ? body.fromEmail.trim() : "";
-    const subject = typeof body.subject === "string" ? body.subject.trim() : "";
-    const recipientListId = Number(body.recipientListId);
-    const locale =
-      typeof body.locale === "string"
-        ? normalizeLocale(body.locale)
-        : DEFAULT_LOCALE;
-    const resourceIds = normalizeIdList(body.resourceIds);
-    const projectIds = normalizeIdList(body.projectIds);
-
-    if (!fromName) {
+    const body = (await request.json().catch(() => ({}))) as NewsletterRequestBody;
+    const requestedAction = textValue(body.action, 20);
+    if (!NEWSLETTER_ACTIONS.includes(requestedAction as NewsletterAction)) {
       return NextResponse.json(
-        { error: "Absendername fehlt." },
+        { error: "Unbekannte Newsletter-Aktion." },
+        { status: 400 },
+      );
+    }
+    const action = requestedAction as NewsletterAction;
+
+    if (
+      body.sendAt ||
+      body.send_at ||
+      body.status === "scheduled" ||
+      body.status === "sent"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Versand und Terminierung sind deaktiviert. Hier kann nur ein Entwurf angelegt werden.",
+        },
         { status: 400 },
       );
     }
 
-    if (!fromEmail || !fromEmail.includes("@")) {
-      return NextResponse.json(
-        { error: "Absender-E-Mail ist ungueltig." },
-        { status: 400 },
-      );
+    const title = textValue(body.title, 240);
+    const subject = textValue(body.subject, 240) || title;
+    const intro = textValue(body.intro, 5_000);
+    if (!title) {
+      return NextResponse.json({ error: "Der Newsletter-Titel fehlt." }, { status: 400 });
     }
-
     if (!subject) {
-      return NextResponse.json({ error: "Betreff fehlt." }, { status: 400 });
+      return NextResponse.json({ error: "Die Betreffzeile fehlt." }, { status: 400 });
     }
 
-    if (!Number.isInteger(recipientListId) || recipientListId <= 0) {
+    const rawItems = normalizeRawItems(body);
+    const projectItems = rawItems.filter(
+      (item): item is RawProjectItem => item.type === "project",
+    );
+    if (projectItems.length === 0) {
       return NextResponse.json(
-        { error: "Empfaengerliste fehlt." },
+        { error: "Wähle mindestens ein Projekt aus." },
         { status: 400 },
       );
     }
-
-    if (resourceIds.length === 0 && projectIds.length === 0) {
+    if (projectItems.length > MAX_PROJECTS) {
       return NextResponse.json(
-        { error: "Waehle mindestens eine Ressource oder ein Projekt aus." },
+        { error: `Es können höchstens ${MAX_PROJECTS} Projekte verwendet werden.` },
         { status: 400 },
       );
     }
 
     const adminSupabase = createSupabaseAdminClient();
-    const [resourceResult, projectResult] = await Promise.all([
-      resourceIds.length > 0
-        ? adminSupabase
-            .from("resources")
-            .select(
-              "id, pretty_title, name, description, image, images, updated_at, type",
-            )
-            .in("id", resourceIds)
-            .not("type", "ilike", "project")
-        : Promise.resolve({ data: [] as ContentRow[], error: null }),
-      projectIds.length > 0
-        ? adminSupabase
-            .from("resources")
-            .select(
-              "id, pretty_title, name, description, image, images, updated_at, type",
-            )
-            .in("id", projectIds)
-            .ilike("type", "project")
-        : Promise.resolve({ data: [] as ContentRow[], error: null }),
-    ]);
+    const { data: projectRows, error: projectError } = await adminSupabase
+      .from("resources")
+      .select(
+        "id, pretty_title, name, description, image, images, publish_date, updated_at, created_at, type",
+      )
+      .in(
+        "id",
+        projectItems.map((item) => item.projectId),
+      )
+      .ilike("type", "project");
 
-    if (resourceResult.error) {
-      throw resourceResult.error;
-    }
-
-    if (projectResult.error) {
-      throw projectResult.error;
-    }
-
-    const resourceMap = new Map(
-      (resourceResult.data ?? []).map((entry) => [
-        entry.id,
-        entry as ContentRow,
-      ]),
+    if (projectError) throw projectError;
+    const rowById = new Map(
+      ((projectRows ?? []) as ProjectRow[]).map((row) => [row.id, row]),
     );
-    const projectMap = new Map(
-      (projectResult.data ?? []).map((entry) => [
-        entry.id,
-        entry as ContentRow,
-      ]),
-    );
-
-    const selectedResources = resourceIds
-      .map((id) => resourceMap.get(id))
-      .filter((entry): entry is ContentRow => Boolean(entry));
-    const selectedProjects = projectIds
-      .map((id) => projectMap.get(id))
-      .filter((entry): entry is ContentRow => Boolean(entry));
-
-    if (selectedResources.length === 0 && selectedProjects.length === 0) {
+    if (rowById.size !== projectItems.length) {
       return NextResponse.json(
-        { error: "Die ausgewaehlten Inhalte konnten nicht geladen werden." },
+        { error: "Mindestens ein ausgewähltes Projekt ist nicht mehr verfügbar." },
         { status: 400 },
       );
     }
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      new URL(request.url).origin;
+    const locale =
+      typeof body.locale === "string"
+        ? normalizeLocale(body.locale)
+        : DEFAULT_LOCALE;
+    const baseUrl = getPublicSiteUrl(request);
+    const projects: NewsletterProject[] = projectItems.map((item) => {
+      const row = rowById.get(item.projectId)!;
+      const aspect = NEWSLETTER_ASPECTS.includes(
+        String(item.aspect) as NewsletterAspect,
+      )
+        ? normalizeNewsletterAspect(item.aspect)
+        : "original";
+      const href = new URL(
+        localizePathname(
+          buildProjectPath({
+            id: row.id,
+            prettyTitle: row.pretty_title ?? null,
+          }),
+          locale,
+        ),
+        baseUrl,
+      ).toString();
 
-    const html = createNewsletterHtml({
-      siteUrl,
-      locale,
-      subject,
-      resources: selectedResources,
-      projects: selectedProjects,
+      return {
+        id: row.id,
+        title: row.name,
+        description: createExcerpt(row.description),
+        date:
+          row.publish_date ?? row.updated_at ?? row.created_at ?? "",
+        url: href,
+        imageUrl: resolveProjectImage(row, item.imageUrl, aspect),
+        layout: normalizeNewsletterLayout(item.layout),
+        aspect,
+        showLink: item.showLink !== false,
+        linkText: textValue(item.linkText, 80) || "Weiterlesen",
+      };
     });
+
+    const items: NewsletterItem[] = rawItems.map((item) => {
+      if (item.type === "project") {
+        return { type: "project", projectId: item.projectId };
+      }
+      if (item.type === "button") {
+        return {
+          type: "button",
+          title: textValue(item.title, 80),
+          href: textValue(item.href, 2_000),
+        };
+      }
+      return {
+        type: "banner",
+        title: textValue(item.title, 100),
+        content: textValue(item.content, 1_000),
+      };
+    });
+
+    const html = renderNewsletter({
+      projects,
+      items,
+      title,
+      subject,
+      intro,
+      baseUrl,
+      calendar: await getCalendar(
+        new URL(localizePathname("/calendar", locale), baseUrl).toString(),
+      ),
+      showProjectsHeading: body.showProjectsHeading !== false,
+      membershipUrl:
+        process.env.NEWSLETTER_MEMBERSHIP_URL ??
+        "https://konglomerat.org/der-verein/mitglied-werden",
+      webviewHref:
+        process.env.NEWSLETTER_WEBVIEW_PLACEHOLDER ?? "{WEBVIEW_LINK}",
+      unsubscribeHref:
+        process.env.NEWSLETTER_UNSUBSCRIBE_PLACEHOLDER ??
+        "{UNSUBSCRIBE_LINK}",
+    });
+
+    if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
+      return NextResponse.json(
+        {
+          error:
+            "Der Newsletter ist zu groß für eine zuverlässige E-Mail-Zustellung. Kürze die Auswahl oder die freien Textblöcke.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (action === "preview") {
+      return new NextResponse(html, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    const zip = createHtmlZip(html);
+    if (action === "export") {
+      return new NextResponse(new Uint8Array(zip), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="${createFilename(title)}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    const fromName = textValue(body.fromName, 160);
+    const fromEmail = textValue(body.fromEmail, 320);
+    const recipientListId = Number(body.recipientListId);
+    if (!fromName) {
+      return NextResponse.json({ error: "Der Absendername fehlt." }, { status: 400 });
+    }
+    if (!fromEmail || !/^\S+@\S+\.\S+$/.test(fromEmail)) {
+      return NextResponse.json(
+        { error: "Die Absender-E-Mail ist ungültig." },
+        { status: 400 },
+      );
+    }
+    if (!Number.isInteger(recipientListId) || recipientListId <= 0) {
+      return NextResponse.json(
+        { error: "Die Empfängerliste fehlt." },
+        { status: 400 },
+      );
+    }
 
     const mailing = await createRapidmailDraft({
       fromName,
       fromEmail,
       subject,
-      title: subject,
+      title,
       recipientListId,
-      html,
+      zip,
     });
 
     return NextResponse.json({
       ok: true,
       mailing,
-      counts: {
-        resources: selectedResources.length,
-        projects: selectedProjects.length,
-      },
+      counts: { projects: projects.length },
     });
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
-        : "Newsletter-Entwurf konnte nicht erstellt werden.";
+        : "Newsletter konnte nicht erzeugt werden.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 };

@@ -13,6 +13,10 @@ import {
   Textarea,
 } from "@/app/[lang]/components/ui/form";
 import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
+import {
+  isStoryImageModel,
+  type StoryImageModel,
+} from "@/lib/story-image-models";
 import type {
   StoryDraftResult,
   StoryDraftSlide,
@@ -53,10 +57,7 @@ type StoryLayoutResponse = {
   usedFallback?: boolean;
 };
 
-type StoryRenderModel =
-  | "gpt-4.1-mini"
-  | "gemini-3-pro-image-preview"
-  | "gemini-3.1-flash-image-preview";
+type StoryRenderModel = "gpt-4.1-mini" | StoryImageModel;
 
 type StoryGeneratedImage = {
   slideNumber: number;
@@ -113,8 +114,7 @@ const DEFAULT_LAYOUT_INSTRUCTIONS =
   "Erstelle und layoute eine Instagramstory, Kontext: Projekt des Monats. Sehr einfaches Layout, nicht hochtrabend, eher informativ. Die Story darf mehrseitig werden. Starte mit Seite 1. Die erste Seite soll vor allem das Ergebnis zeigen. Grosse Bilder. Verwende als Stil die Vorlage im letzten Bild. Den Text darfst du kuerzen und optimieren.";
 
 const isGeneratedImageModel = (model: StoryRenderModel) =>
-  model === "gemini-3-pro-image-preview" ||
-  model === "gemini-3.1-flash-image-preview";
+  isStoryImageModel(model);
 
 const downloadDataUrl = (dataUrl: string, fileName: string) => {
   const anchor = document.createElement("a");
@@ -611,7 +611,7 @@ export default function GenerateStoryClient({
           <FormField
             label="Bild- und Layout-Anweisungen"
             className="lg:col-span-2"
-            hint="Fuer GPT steuert das die Layout-Generierung. Fuer die Gemini-Bildmodelle wird daraus der Prompt fuer das fertige Story-Bild gebaut. Seite 1 nutzt samplecover.png als Stilvorlage, Seite 2 nutzt makingof.png als Stilvorlage."
+            hint="Fuer GPT + Fabric steuert das die Layout-Generierung. Fuer Nano Banana und OpenAI ImageGen wird daraus der Prompt fuer das fertige Story-Bild gebaut. Seite 1 nutzt samplecover.png als Stilvorlage, Seite 2 nutzt makingof.png als Stilvorlage."
           >
             <Textarea
               value={layoutInstructions}
@@ -629,10 +629,11 @@ export default function GenerateStoryClient({
               }}
             >
               <option value="gpt-4.1-mini">GPT + Fabric</option>
-              <option value="gemini-3-pro-image-preview">Nanobanana Pro</option>
-              <option value="gemini-3.1-flash-image-preview">
-                Nanobanana 2
+              <option value="gemini-3.1-flash-image">Nano Banana 2</option>
+              <option value="gemini-3.1-flash-lite-image">
+                Nano Banana 2 Lite (schnell)
               </option>
+              <option value="gpt-image-2">OpenAI GPT Image 2</option>
             </Select>
           </FormField>
         </div>
@@ -762,7 +763,7 @@ export default function GenerateStoryClient({
             title="Vorschau und Download"
             description={
               isGeneratedImageModel(renderModel)
-                ? "Die Gemini-Bildmodelle erzeugen fertige Story-Slides als Bilder. Diese Vorschau ist nicht in Fabric editierbar und kann direkt heruntergeladen werden."
+                ? "Das ausgewaehlte Bildmodell erzeugt fertige Story-Slides als Bilder. Diese Vorschau ist nicht in Fabric editierbar und kann direkt heruntergeladen werden."
                 : "Das Layout wird per GPT vorgeschlagen, in Fabric.js als editierbare Canvas aufgebaut und direkt aus dem Browser als PNG exportiert."
             }
           >
@@ -770,14 +771,14 @@ export default function GenerateStoryClient({
               <div className="mb-5 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
                 Textboxen koennen direkt im Canvas verschoben und skaliert
                 werden. Texte lassen sich per Doppelklick im Fabric-Canvas
-                bearbeiten. Fuer ein komplett neues Arrangement einfach "Layout
-                neu anordnen" nutzen.
+                bearbeiten. Fuer ein komplett neues Arrangement einfach „Layout
+                neu anordnen“ nutzen.
               </div>
             ) : (
               <div className="mb-5 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                Nanobanana Pro und Nanobanana 2 erzeugen fertige Story-Bilder
+                Nano Banana und OpenAI ImageGen erzeugen fertige Story-Bilder
                 mit eingebranntem Layout. Zum Aktualisieren nach Textaenderungen
-                einfach "Bild neu erzeugen" nutzen.
+                einfach „Bild neu erzeugen“ nutzen.
               </div>
             )}
 

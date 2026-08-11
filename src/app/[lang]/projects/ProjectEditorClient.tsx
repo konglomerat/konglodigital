@@ -23,6 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
+import ProjectDeleteButton from "./ProjectDeleteButton";
 import ReactSelect from "../components/ui/react-select";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
@@ -66,6 +67,7 @@ type ProjectFormValues = {
 type ProjectEditorClientProps = {
   mode: "create" | "edit";
   initialProject?: InitialProject | null;
+  canDelete?: boolean;
 };
 
 type ExistingProjectImageItem = {
@@ -197,6 +199,7 @@ const isNewProjectImageItem = (
 export default function ProjectEditorClient({
   mode,
   initialProject,
+  canDelete = false,
 }: ProjectEditorClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
   const router = useRouter();
@@ -636,6 +639,11 @@ export default function ProjectEditorClient({
           ),
           label: tx("Zurück", "de"),
         }}
+        customActions={
+          mode === "edit" && initialProject && canDelete ? (
+            <ProjectDeleteButton projectId={initialProject.id} />
+          ) : null
+        }
       />
 
       {formError ? (

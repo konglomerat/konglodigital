@@ -61,7 +61,6 @@ type AdminAction =
   | "save_notes"
   | "save_price_adjustment"
   | "send_contract"
-  | "countersign"
   | "retry_invoice"
   | "mark_paid"
   | "mark_overdue"
@@ -203,19 +202,8 @@ const ACTION_CONFIRMATIONS: Partial<Record<AdminAction, ActionConfirmation>> = {
     icon: faFileSignature,
     consequences: [
       "Preisänderungen sind danach erst wieder nach einem Neuaufsetzen möglich.",
+      "Die Vereinbarung wird dabei bereits durch Konglomerat e.V. unterschrieben.",
       "Bei konfiguriertem E-Mail-Versand wird die Kund:in sofort benachrichtigt.",
-    ],
-  },
-  countersign: {
-    title: "Vertrag gegenzeichnen?",
-    description:
-      "Mit der Gegenzeichnung wird die Buchung verbindlich bestätigt.",
-    confirmLabel: "Gegenzeichnen & Rechnung anlegen",
-    tone: "warning",
-    icon: faFileCircleCheck,
-    consequences: [
-      "Die Reservierung wird endgültig bestätigt.",
-      "Direkt danach wird automatisch eine Campai-Rechnung beziehungsweise ein Rechnungsentwurf angelegt.",
     ],
   },
   retry_invoice: {
@@ -432,7 +420,7 @@ export default function VolkshausAdminClient() {
         <PageTitle
           eyebrow="Neues Volkshaus Cotta"
           title="Raumbuchungen"
-          subTitle="Anfragen prüfen, Termine reservieren, Verträge gegenzeichnen und Campai-Rechnungen anlegen."
+          subTitle="Anfragen prüfen, Termine reservieren und unterschriebene Verträge versenden."
           links={[
             {
               href: "/volkshaus/buchen",
@@ -1286,7 +1274,7 @@ function BookingDetail({
             }
           />
           <WorkflowTile
-            label="Gegenzeichnung"
+            label="VHC-Unterschrift"
             icon={faFileCircleCheck}
             value={
               booking.staffSignature
@@ -1388,19 +1376,6 @@ function WorkflowActions({
             onClick={() => void performAction("send_contract")}
           >
             {actionLabel("send_contract", "Vertrag freigeben & senden")}
-          </Button>
-        ) : null}
-        {booking.contractStatus === "customer_signed" ? (
-          <Button
-            kind="primary"
-            icon={faFileCircleCheck}
-            disabled={isBusy}
-            onClick={() => void performAction("countersign")}
-          >
-            {actionLabel(
-              "countersign",
-              "Gegenzeichnen & Campai-Rechnung anlegen",
-            )}
           </Button>
         ) : null}
         {booking.contractStatus === "fully_signed" &&

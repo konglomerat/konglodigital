@@ -28,6 +28,7 @@ import {
 } from "@/lib/resource-media";
 import {
   getPointFeatures,
+  isPlaceholderGpsPointFeature,
   normalizeResourceMapFeatures,
 } from "@/app/[lang]/resources/map-features";
 import {
@@ -923,6 +924,12 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await readResourcePayload(request);
+  if (payload.mapFeatures?.some(isPlaceholderGpsPointFeature)) {
+    return NextResponse.json(
+      { error: "Location coordinates [0, 0] are invalid." },
+      { status: 400 },
+    );
+  }
   const isProject = payload.type.trim().toLowerCase() === "project";
   const canCreateByRight = hasRight(data.user, "resources:create");
   if (!canCreateByRight && !isProject) {

@@ -6,6 +6,7 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { userHasRole } from "@/lib/roles";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
@@ -1296,7 +1297,29 @@ export const DELETE = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { error: deleteLinksError } = await supabase
+  const isProject =
+    typeof row.type === "string" &&
+    row.type.trim().toLowerCase() === PROJECT_RESOURCE_TYPE;
+
+  if (isProject) {
+    const isOwner = row.owner_id === data.user.id;
+    const isAdmin = isOwner
+      ? false
+      : await userHasRole(supabase, data.user, "admin");
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "You can only delete your own projects." },
+        { status: 403 },
+      );
+    }
+  }
+
+  // Project deletion has been authorized above, so the admin client lets an
+  // administrator delete any project even when they do not have a broad
+  // resources:delete right. Non-project resources retain their existing RLS.
+  const deleteClient = isProject ? adminSupabase : supabase;
+
+  const { error: deleteLinksError } = await deleteClient
     .from("resource_links")
     .delete()
     .or(`resource_a.eq.${params.id},resource_b.eq.${params.id}`);
@@ -1308,7 +1331,7 @@ export const DELETE = async (
     );
   }
 
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await deleteClient
     .from("resources")
     .delete()
     .eq("id", params.id);
@@ -1345,7 +1368,7 @@ export const DELETE = async (
   }
 
   revalidateTag("resources", { expire: 0 });
-  if (typeof row.type === "string" && row.type.toLowerCase() === PROJECT_RESOURCE_TYPE) {
+  if (isProject) {
     revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
   }
   return NextResponse.json({ success: true });
