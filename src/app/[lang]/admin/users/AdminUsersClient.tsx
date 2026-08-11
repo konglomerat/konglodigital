@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
 import PageTitle from "@/app/[lang]/components/PageTitle";
+import type { UserRole } from "@/lib/roles";
 
 type ActiveProfile = {
   id: string;
@@ -17,7 +18,7 @@ type ActiveProfile = {
   campaiMemberNumber: string | null;
   campaiDebtorAccount: number | null;
   campaiName: string | null;
-  role: "admin" | "accounting" | "member";
+  roles: UserRole[];
 };
 
 type CampaiContactOption = {
@@ -34,9 +35,10 @@ const MAX_CAMPAI_RESULTS = 8;
 
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
-  { value: "accounting", label: "Accounting" },
-  { value: "member", label: "Member" },
-] as const;
+  { value: "vhc", label: "VHC" },
+  { value: "buchhaltung", label: "Buchhaltung" },
+  { value: "member", label: "Mitglied" },
+] as const satisfies ReadonlyArray<{ value: UserRole; label: string }>;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -233,9 +235,9 @@ export default function AdminUsersClient() {
     setCampaiLinkError(null);
   }, []);
 
-  const handleRoleChange = async (
+  const handleRolesChange = async (
     profileId: string,
-    nextRole: ActiveProfile["role"],
+    nextRoles: UserRole[],
   ) => {
     setSavingRoleForId(profileId);
     setRoleError(null);
@@ -244,18 +246,18 @@ export default function AdminUsersClient() {
       const data = await fetchJson<{
         profile: {
           id: string;
-          role: ActiveProfile["role"];
+          roles: UserRole[];
         };
       }>("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: profileId, role: nextRole }),
+        body: JSON.stringify({ userId: profileId, roles: nextRoles }),
       });
 
       setProfiles((currentProfiles) =>
         currentProfiles.map((profile) =>
           profile.id === data.profile.id
-            ? { ...profile, role: data.profile.role }
+            ? { ...profile, roles: data.profile.roles }
             : profile,
         ),
       );
@@ -263,7 +265,7 @@ export default function AdminUsersClient() {
       setRoleError(
         error instanceof Error
           ? error.message
-          : "Rolle konnte nicht gespeichert werden.",
+          : "Rollen konnten nicht gespeichert werden.",
       );
     } finally {
       setSavingRoleForId(null);
@@ -434,7 +436,7 @@ export default function AdminUsersClient() {
                     <th className="px-4 py-3">Profil</th>
                     <th className="px-4 py-3">E-Mail</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Rolle</th>
+                    <th className="px-4 py-3">Rollen</th>
                     <th className="px-4 py-3">Erstellt</th>
                     <th className="px-4 py-3">Letzte Anmeldung</th>
                     <th className="px-4 py-3">Mail bestaetigt</th>
@@ -449,6 +451,7 @@ export default function AdminUsersClient() {
                       profile.campaiName || fallbackName || profile.email;
                     const hasCampaiLink = Boolean(profile.campaiContactId);
                     const isEditingCampai = editingCampaiForId === profile.id;
+                    const isSavingRoles = savingRoleForId === profile.id;
 
                     return (
                       <tr key={profile.id}>
@@ -485,32 +488,61 @@ export default function AdminUsersClient() {
                           </div>
                         </td>
                         <td className="px-4 py-3 align-middle text-foreground/80">
-                          <label
-                            className="sr-only"
-                            htmlFor={`role-${profile.id}`}
+                          <fieldset
+                            className="flex min-w-72 flex-wrap gap-1.5"
+                            disabled={isSavingRoles}
                           >
-                            Rolle fuer {displayName}
-                          </label>
-                          <select
-                            id={`role-${profile.id}`}
-                            value={profile.role}
-                            disabled={savingRoleForId === profile.id}
-                            onChange={(event) => {
-                              const nextRole = event.target
-                                .value as ActiveProfile["role"];
-                              void handleRoleChange(profile.id, nextRole);
-                            }}
-                            className="min-w-28 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border disabled:cursor-not-allowed disabled:bg-accent"
-                          >
-                            {ROLE_OPTIONS.map((roleOption) => (
-                              <option
-                                key={roleOption.value}
-                                value={roleOption.value}
-                              >
-                                {roleOption.label}
-                              </option>
-                            ))}
-                          </select>
+                            <legend className="sr-only">
+                              Rollen fuer {displayName}
+                            </legend>
+                            {ROLE_OPTIONS.map((roleOption) => {
+                              const isChecked = profile.roles.includes(
+                                roleOption.value,
+                              );
+                              const isOnlyRole =
+                                isChecked && profile.roles.length === 1;
+                              return (
+                                <label
+                                  key={roleOption.value}
+                                  title={
+                                    isOnlyRole
+                                      ? "Mindestens eine Rolle muss ausgewählt bleiben."
+                                      : undefined
+                                  }
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                                    isChecked
+                                      ? "border-primary bg-primary-soft text-primary"
+                                      : "border-border bg-card text-muted-foreground hover:text-foreground"
+                                  } ${
+                                    isSavingRoles
+                                      ? "cursor-wait opacity-60"
+                                      : isOnlyRole
+                                        ? "cursor-not-allowed opacity-60"
+                                        : "cursor-pointer"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 accent-primary"
+                                    checked={isChecked}
+                                    disabled={isOnlyRole}
+                                    onChange={(event) => {
+                                      const nextRoles = event.target.checked
+                                        ? [...profile.roles, roleOption.value]
+                                        : profile.roles.filter(
+                                            (role) => role !== roleOption.value,
+                                          );
+                                      void handleRolesChange(
+                                        profile.id,
+                                        nextRoles,
+                                      );
+                                    }}
+                                  />
+                                  {roleOption.label}
+                                </label>
+                              );
+                            })}
+                          </fieldset>
                         </td>
                         <td className="px-4 py-3 align-middle text-foreground/80">
                           {formatDateTime(profile.createdAt) ?? "—"}

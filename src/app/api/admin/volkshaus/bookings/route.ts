@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getUserRole } from "@/lib/roles";
+import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
+import { normalizeUserRoles, userCanAccessModule } from "@/lib/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { listUserAccessByUserIds } from "@/lib/user-access";
 import { listVolkshausBookings } from "@/lib/volkshaus-booking-store";
 
 const resolvePublicOrigin = (request: NextRequest) => {
@@ -22,7 +25,7 @@ export const GET = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if ((await getUserRole(supabase, data.user)) !== "admin") {
+  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -32,7 +35,45 @@ export const GET = async (request: NextRequest) => {
       ...booking,
       accessUrl: `${origin}/volkshaus/anfrage/${booking.accessToken}`,
     }));
-    return NextResponse.json({ bookings });
+    const adminClient = createSupabaseAdminClient();
+    const { data: usersPage, error: usersError } =
+      await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (usersError) throw usersError;
+    const activeUsers = (usersPage.users ?? []).filter((user) =>
+      Boolean(user.email_confirmed_at || user.last_sign_in_at),
+    );
+    const userIds = activeUsers.map((user) => user.id);
+    const [memberProfiles, accessByUserId] = await Promise.all([
+      listMemberProfilesByUserIds(adminClient, userIds),
+      listUserAccessByUserIds(adminClient, userIds),
+    ]);
+    const assignees = activeUsers
+      .map((user) => {
+        const memberProfile = memberProfiles.get(user.id);
+        const roles =
+          accessByUserId.get(user.id)?.roles ??
+          normalizeUserRoles(
+            user.app_metadata?.roles ?? user.app_metadata?.role,
+          );
+        return {
+          id: user.id,
+          email: user.email ?? "",
+          firstName:
+            typeof user.user_metadata?.first_name === "string"
+              ? user.user_metadata.first_name
+              : null,
+          lastName:
+            typeof user.user_metadata?.last_name === "string"
+              ? user.user_metadata.last_name
+              : null,
+          campaiName: memberProfile?.campaiName ?? null,
+          roles,
+        };
+      })
+      .filter(
+        (user) => user.roles.includes("admin") || user.roles.includes("vhc"),
+      );
+    return NextResponse.json({ bookings, assignees });
   } catch (error) {
     return NextResponse.json(
       {
@@ -45,4 +86,3 @@ export const GET = async (request: NextRequest) => {
     );
   }
 };
-

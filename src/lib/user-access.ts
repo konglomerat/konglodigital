@@ -1,17 +1,28 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
-import { normalizeUserRole, type UserRole } from "@/lib/roles";
+import {
+  getLegacyUserRole,
+  normalizeUserRoles,
+  type UserRole,
+} from "@/lib/roles";
 import { isMissingRelationError } from "@/lib/supabase-errors";
 
 export type UserAccess = {
   userId: string;
-  role: UserRole;
+  roles: UserRole[];
   rights: string[];
   createdAt: string | null;
   updatedAt: string | null;
 };
 
-const SELECT_FIELDS = ["user_id", "role", "rights", "created_at", "updated_at"].join(", ");
+const SELECT_FIELDS = [
+  "user_id",
+  "roles",
+  "role",
+  "rights",
+  "created_at",
+  "updated_at",
+].join(", ");
 
 const normalizeText = (value: unknown) => {
   if (typeof value !== "string") {
@@ -56,7 +67,7 @@ const mapUserAccessRow = (row: Record<string, unknown>): UserAccess | null => {
 
   return {
     userId,
-    role: normalizeUserRole(row.role),
+    roles: normalizeUserRoles(row.roles ?? row.role),
     rights: parseRights(row.rights),
     createdAt: normalizeText(row.created_at),
     updatedAt: normalizeText(row.updated_at),
@@ -125,16 +136,18 @@ export const upsertUserAccess = async (
   client: SupabaseClient,
   params: {
     userId: string;
-    role: UserRole;
+    roles: UserRole[];
     rights: string[];
   },
 ) : Promise<UserAccess> => {
+  const roles = normalizeUserRoles(params.roles);
   const { data, error } = await client
     .from("user_access")
     .upsert(
       {
         user_id: params.userId,
-        role: params.role,
+        roles,
+        role: getLegacyUserRole(roles),
         rights: parseRights(params.rights),
         updated_at: new Date().toISOString(),
       },
@@ -148,7 +161,7 @@ export const upsertUserAccess = async (
       const now = new Date().toISOString();
       return {
         userId: params.userId,
-        role: normalizeUserRole(params.role),
+        roles,
         rights: parseRights(params.rights),
         createdAt: now,
         updatedAt: now,
@@ -169,11 +182,14 @@ export const upsertUserAccess = async (
 export const syncUserAccessToAuthMetadata = async (
   adminClient: SupabaseClient,
   user: Pick<User, "id" | "app_metadata">,
-  access: Pick<UserAccess, "rights">,
+  access: Pick<UserAccess, "roles" | "rights">,
 ) => {
+  const roles = normalizeUserRoles(access.roles);
   const { error } = await adminClient.auth.admin.updateUserById(user.id, {
     app_metadata: {
       ...(user.app_metadata ?? {}),
+      roles,
+      role: getLegacyUserRole(roles),
       rights: parseRights(access.rights),
     },
   });

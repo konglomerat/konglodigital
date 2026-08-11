@@ -41,13 +41,23 @@ import {
   getRoomLabel,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
+import type { UserRole } from "@/lib/roles";
 
 type AdminBooking = VolkshausBooking & { accessUrl: string };
+type AssignablePerson = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  campaiName: string | null;
+  roles: UserRole[];
+};
 type AdminAction =
   | "start_review"
   | "needs_info"
   | "hold"
   | "reject"
+  | "save_assignees"
   | "save_notes"
   | "save_price_adjustment"
   | "send_contract"
@@ -89,6 +99,20 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
 
 const inputClassName =
   "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
+const getPersonName = (person: AssignablePerson) => {
+  if (person.campaiName?.trim()) return person.campaiName.trim();
+  const fullName = [person.firstName, person.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || person.email;
+};
+
+const getPersonOptionLabel = (person: AssignablePerson) => {
+  const name = getPersonName(person);
+  return name === person.email ? name : `${name} · ${person.email}`;
+};
 
 const FILTERS: Array<{
   value: string;
@@ -220,6 +244,9 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
 
 export default function VolkshausAdminClient() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [assignablePeople, setAssignablePeople] = useState<AssignablePerson[]>(
+    [],
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("active");
   const [search, setSearch] = useState("");
@@ -231,6 +258,8 @@ export default function VolkshausAdminClient() {
   const [internalNotes, setInternalNotes] = useState("");
   const [adjustmentEuro, setAdjustmentEuro] = useState("0");
   const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [assignedUserId, setAssignedUserId] = useState("");
+  const [backupAssignedUserId, setBackupAssignedUserId] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
@@ -239,18 +268,24 @@ export default function VolkshausAdminClient() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const data = await fetchJson<{ bookings: AdminBooking[] }>(
-        "/api/admin/volkshaus/bookings",
+      const bookingData = await fetchJson<{
+        bookings: AdminBooking[];
+        assignees: AssignablePerson[];
+      }>("/api/admin/volkshaus/bookings");
+      setBookings(bookingData.bookings ?? []);
+      setAssignablePeople(
+        [...(bookingData.assignees ?? [])].sort((left, right) =>
+          getPersonName(left).localeCompare(getPersonName(right), "de"),
+        ),
       );
-      setBookings(data.bookings ?? []);
       setSelectedId((current) => {
         if (
           current &&
-          data.bookings.some((booking) => booking.id === current)
+          bookingData.bookings.some((booking) => booking.id === current)
         ) {
           return current;
         }
-        return data.bookings[0]?.id ?? null;
+        return bookingData.bookings[0]?.id ?? null;
       });
     } catch (error) {
       setLoadError(
@@ -277,6 +312,8 @@ export default function VolkshausAdminClient() {
     setInternalNotes(selected.internalNotes ?? "");
     setAdjustmentEuro((selected.priceAdjustmentCents / 100).toFixed(2));
     setAdjustmentReason(selected.priceAdjustmentReason ?? "");
+    setAssignedUserId(selected.assignedUserId ?? "");
+    setBackupAssignedUserId(selected.backupAssignedUserId ?? "");
     setActionError(null);
     setActionWarning(null);
     setCopySuccess(false);
@@ -525,6 +562,9 @@ export default function VolkshausAdminClient() {
           {selected ? (
             <BookingDetail
               booking={selected}
+              assignablePeople={assignablePeople}
+              assignedUserId={assignedUserId}
+              backupAssignedUserId={backupAssignedUserId}
               internalNotes={internalNotes}
               adjustmentEuro={adjustmentEuro}
               adjustmentReason={adjustmentReason}
@@ -533,6 +573,8 @@ export default function VolkshausAdminClient() {
               actionWarning={actionWarning}
               copySuccess={copySuccess}
               setInternalNotes={setInternalNotes}
+              setAssignedUserId={setAssignedUserId}
+              setBackupAssignedUserId={setBackupAssignedUserId}
               setAdjustmentEuro={setAdjustmentEuro}
               setAdjustmentReason={setAdjustmentReason}
               performAction={performAction}
@@ -766,6 +808,9 @@ function ActionConfirmationModal({
 
 function BookingDetail({
   booking,
+  assignablePeople,
+  assignedUserId,
+  backupAssignedUserId,
   internalNotes,
   adjustmentEuro,
   adjustmentReason,
@@ -773,6 +818,8 @@ function BookingDetail({
   actionError,
   actionWarning,
   copySuccess,
+  setAssignedUserId,
+  setBackupAssignedUserId,
   setInternalNotes,
   setAdjustmentEuro,
   setAdjustmentReason,
@@ -780,6 +827,9 @@ function BookingDetail({
   copyLink,
 }: {
   booking: AdminBooking;
+  assignablePeople: AssignablePerson[];
+  assignedUserId: string;
+  backupAssignedUserId: string;
   internalNotes: string;
   adjustmentEuro: string;
   adjustmentReason: string;
@@ -787,6 +837,8 @@ function BookingDetail({
   actionError: string | null;
   actionWarning: string | null;
   copySuccess: boolean;
+  setAssignedUserId: (value: string) => void;
+  setBackupAssignedUserId: (value: string) => void;
   setInternalNotes: (value: string) => void;
   setAdjustmentEuro: (value: string) => void;
   setAdjustmentReason: (value: string) => void;
@@ -805,6 +857,17 @@ function BookingDetail({
     (item) => Number(booking.equipment[item.id] ?? 0) > 0,
   );
   const isBusy = activeAction !== null;
+  const hasAssignmentChanges =
+    assignedUserId !== (booking.assignedUserId ?? "") ||
+    backupAssignedUserId !== (booking.backupAssignedUserId ?? "");
+  const hasDuplicateAssignees =
+    Boolean(assignedUserId) && assignedUserId === backupAssignedUserId;
+  const missingAssignedPersonIds = [assignedUserId, backupAssignedUserId].filter(
+    (userId, index, userIds) =>
+      Boolean(userId) &&
+      userIds.indexOf(userId) === index &&
+      !assignablePeople.some((person) => person.id === userId),
+  );
 
   return (
     <main className="space-y-5">
@@ -965,6 +1028,100 @@ function BookingDetail({
               </p>
             ) : null}
           </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+          <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-primary" />
+          Zuständigkeit
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Verantwortliche Person und Vertretung für diese Buchung festlegen.
+        </p>
+        <div className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]">
+          <label>
+            <span className="mb-1.5 block text-sm font-semibold">
+              Verantwortliche Person
+            </span>
+            <select
+              className={inputClassName}
+              value={assignedUserId}
+              disabled={isBusy}
+              onChange={(event) => {
+                const userId = event.target.value;
+                setAssignedUserId(userId);
+                if (!userId) setBackupAssignedUserId("");
+              }}
+            >
+              <option value="">Nicht zugewiesen</option>
+              {missingAssignedPersonIds.includes(assignedUserId) ? (
+                <option value={assignedUserId}>
+                  Nicht mehr verfügbares Konto
+                </option>
+              ) : null}
+              {assignablePeople.map((person) => (
+                <option
+                  key={person.id}
+                  value={person.id}
+                  disabled={person.id === backupAssignedUserId}
+                >
+                  {getPersonOptionLabel(person)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="mb-1.5 block text-sm font-semibold">
+              Ersatz / Vertretung
+            </span>
+            <select
+              className={inputClassName}
+              value={backupAssignedUserId}
+              disabled={isBusy || !assignedUserId}
+              onChange={(event) =>
+                setBackupAssignedUserId(event.target.value)
+              }
+            >
+              <option value="">Kein Ersatz</option>
+              {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
+                <option value={backupAssignedUserId}>
+                  Nicht mehr verfügbares Konto
+                </option>
+              ) : null}
+              {assignablePeople.map((person) => (
+                <option
+                  key={person.id}
+                  value={person.id}
+                  disabled={person.id === assignedUserId}
+                >
+                  {getPersonOptionLabel(person)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            kind="secondary"
+            icon={faSave}
+            disabled={
+              isBusy || !hasAssignmentChanges || hasDuplicateAssignees
+            }
+            onClick={() =>
+              void performAction("save_assignees", {
+                assignedUserId: assignedUserId || null,
+                backupAssignedUserId: backupAssignedUserId || null,
+              })
+            }
+          >
+            {activeAction === "save_assignees"
+              ? "Wird gespeichert …"
+              : "Zuständigkeit speichern"}
+          </Button>
+        </div>
+        {hasDuplicateAssignees ? (
+          <p className="mt-2 text-xs text-destructive">
+            Verantwortliche Person und Ersatz müssen verschieden sein.
+          </p>
         ) : null}
       </section>
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/member-profiles";
 import {
 	normalizeUserRole,
+	normalizeUserRoles,
 	USER_ROLES,
 	userCanAccessModule,
 } from "@/lib/roles";
@@ -103,7 +104,9 @@ export const GET = async (request: NextRequest) => {
 					campaiMemberNumber: memberProfile?.campaiMemberNumber ?? null,
 					campaiDebtorAccount: memberProfile?.campaiDebtorAccount ?? null,
 					campaiName: memberProfile?.campaiName ?? null,
-					role: access?.role ?? "member",
+					roles: access?.roles ?? normalizeUserRoles(
+						user.app_metadata?.roles ?? user.app_metadata?.role,
+					),
 				};
 			})
 			.sort((left, right) => {
@@ -139,8 +142,11 @@ export const PATCH = async (request: NextRequest) => {
 
 		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 		const userId = typeof body.userId === "string" ? body.userId.trim() : "";
-		const requestedRole =
-			typeof body.role === "string" ? body.role.trim().toLowerCase() : "";
+		const requestedRoleValues = Array.isArray(body.roles)
+			? body.roles
+			: typeof body.role === "string"
+				? [body.role]
+				: null;
 		const requestedCampaiContactId =
 			typeof body.campaiContactId === "string"
 				? body.campaiContactId.trim()
@@ -188,23 +194,31 @@ export const PATCH = async (request: NextRequest) => {
 			});
 		}
 
-		if (!requestedRole) {
+		if (!requestedRoleValues) {
 			return NextResponse.json(
 				{ error: "Keine Aenderung angegeben." },
 				{ status: 400 },
 			);
 		}
 
-		if (!USER_ROLES.includes(requestedRole as (typeof USER_ROLES)[number])) {
+		const hasInvalidRole = requestedRoleValues.some((role) => {
+			if (typeof role !== "string") return true;
+			const normalized = role.trim().toLowerCase();
+			return normalized !== "accounting" &&
+				!USER_ROLES.includes(normalized as (typeof USER_ROLES)[number]);
+		});
+		if (hasInvalidRole) {
 			return NextResponse.json({ error: "Ungueltige Rolle." }, { status: 400 });
 		}
 
-		const role = normalizeUserRole(requestedRole);
+		const roles = requestedRoleValues.length > 0
+			? Array.from(new Set(requestedRoleValues.map(normalizeUserRole)))
+			: normalizeUserRoles([]);
 
 		const currentAccess = await getUserAccessByUserId(adminClient, userId);
 		const updatedAccess = await upsertUserAccess(adminClient, {
 			userId,
-			role,
+			roles,
 			rights: currentAccess?.rights ?? getUserRightsFromAppMetadata(userLookup.user),
 		});
 		await syncUserAccessToAuthMetadata(adminClient, userLookup.user, updatedAccess);
@@ -212,7 +226,7 @@ export const PATCH = async (request: NextRequest) => {
 		return NextResponse.json({
 			profile: {
 				id: userLookup.user.id,
-				role: updatedAccess.role,
+				roles: updatedAccess.roles,
 			},
 		});
 	} catch (error) {

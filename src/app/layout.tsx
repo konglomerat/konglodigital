@@ -29,7 +29,7 @@ import "@mdxeditor/editor/style.css";
 import "./globals.css";
 import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
-import { getUserRole } from "@/lib/roles";
+import { getUserRoles, rolesCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
@@ -171,8 +171,14 @@ export default async function RootLayout({
   const currentUserDisplayName = userData.user
     ? getCampaiBookingDisplayName(userData.user)
     : null;
-  const userRole = await getUserRole(supabase, userData.user);
-  const canAccessAdmin = isAuthenticated && userRole === "admin";
+  const userRoles = await getUserRoles(supabase, userData.user);
+  const canAccessAdmin =
+    isAuthenticated && rolesCanAccessModule(userRoles, "admin");
+  const canAccessVolkshaus =
+    isAuthenticated && rolesCanAccessModule(userRoles, "volkshaus");
+  const adminAreaHref = canAccessAdmin
+    ? "/admin/users"
+    : "/admin/volkshaus";
   const navItemClassName =
     "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
@@ -377,9 +383,9 @@ export default async function RootLayout({
                       <div className="border-t border-border px-4 py-4">
                         {isAuthenticated ? (
                           <div className="space-y-3">
-                            {canAccessAdmin ? (
+                            {canAccessAdmin || canAccessVolkshaus ? (
                               <Button
-                                href="/admin/users"
+                                href={adminAreaHref}
                                 kind="secondary"
                                 className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
                               >
@@ -584,9 +590,9 @@ export default async function RootLayout({
               </nav>
               {isAuthenticated ? (
                 <div className="mt-auto space-y-3">
-                  {canAccessAdmin ? (
+                  {canAccessAdmin || canAccessVolkshaus ? (
                     <Button
-                      href="/admin/users"
+                      href={adminAreaHref}
                       kind="secondary"
                       className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
                     >

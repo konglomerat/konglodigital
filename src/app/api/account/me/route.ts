@@ -7,7 +7,7 @@ import {
   mergeUserMetadataWithMemberProfile,
 } from "@/lib/member-profiles";
 import { getUserRightsFromAppMetadata } from "@/lib/user-access";
-import { getUserRole } from "@/lib/roles";
+import { getLegacyUserRole, getUserRoles } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const GET = async (request: NextRequest) => {
@@ -20,7 +20,7 @@ export const GET = async (request: NextRequest) => {
 
   const user = data.user;
   const memberProfile = await getMemberProfileByUserId(supabase, user.id);
-  const role = await getUserRole(supabase, user);
+  const roles = await getUserRoles(supabase, user);
   let liveCampaiName: string | null = null;
 
   if (memberProfile?.campaiContactId) {
@@ -45,7 +45,8 @@ export const GET = async (request: NextRequest) => {
       metadata: {
         ...metadata,
         ...(liveCampaiName ? { campai_name: liveCampaiName } : {}),
-        role,
+        roles,
+        role: getLegacyUserRole(roles),
         rights: getUserRightsFromAppMetadata(user),
       },
     },

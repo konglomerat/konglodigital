@@ -27,7 +27,8 @@ import {
   notifyVolkshausContractCompleted,
   notifyVolkshausContractReady,
 } from "@/lib/volkshaus-notifications";
-import { getUserRole } from "@/lib/roles";
+import { getUserRoles, userCanAccessModule } from "@/lib/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AdminAction =
@@ -35,6 +36,7 @@ type AdminAction =
   | "needs_info"
   | "hold"
   | "reject"
+  | "save_assignees"
   | "save_notes"
   | "save_price_adjustment"
   | "send_contract"
@@ -54,6 +56,22 @@ const resolvePublicOrigin = (request: NextRequest) => {
     return configured.replace(/\/+$/, "");
   }
   return request.nextUrl.origin;
+};
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const parseAssignedUserId = (value: unknown) => {
+  if (value === null || value === "") {
+    return { valid: true as const, value: null };
+  }
+  if (typeof value !== "string") {
+    return { valid: false as const, value: null };
+  }
+  const userId = value.trim();
+  return UUID_PATTERN.test(userId)
+    ? { valid: true as const, value: userId }
+    : { valid: false as const, value: null };
 };
 
 const createInvoice = async (booking: VolkshausBooking) => {
@@ -152,7 +170,7 @@ export const PATCH = async (
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if ((await getUserRole(supabase, data.user)) !== "admin") {
+  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -181,13 +199,20 @@ export const PATCH = async (
     let updated = booking;
     let warning: string | null = null;
     let patch: VolkshausBookingPatch | null = null;
+    let eventPayload: Record<string, unknown> = {};
 
     switch (action) {
       case "start_review":
-        patch = { requestStatus: "in_review", assignedUserId: data.user.id };
+        patch = {
+          requestStatus: "in_review",
+          assignedUserId: booking.assignedUserId ?? data.user.id,
+        };
         break;
       case "needs_info":
-        patch = { requestStatus: "needs_info", assignedUserId: data.user.id };
+        patch = {
+          requestStatus: "needs_info",
+          assignedUserId: booking.assignedUserId ?? data.user.id,
+        };
         break;
       case "hold": {
         const conflicts = await getConflictsForHold(booking);
@@ -207,7 +232,7 @@ export const PATCH = async (
           requestStatus: "approved",
           reservationStatus: "held",
           holdExpiresAt: holdExpiresAt.toISOString(),
-          assignedUserId: data.user.id,
+          assignedUserId: booking.assignedUserId ?? data.user.id,
         };
         break;
       }
@@ -217,9 +242,85 @@ export const PATCH = async (
           reservationStatus: "cancelled",
           contractStatus: "cancelled",
           holdExpiresAt: null,
-          assignedUserId: data.user.id,
+          assignedUserId: booking.assignedUserId ?? data.user.id,
         };
         break;
+      case "save_assignees": {
+        const assignedUser = parseAssignedUserId(body.assignedUserId);
+        const backupAssignedUser = parseAssignedUserId(
+          body.backupAssignedUserId,
+        );
+        if (!assignedUser.valid || !backupAssignedUser.valid) {
+          return NextResponse.json(
+            { error: "Ungültige Personenauswahl." },
+            { status: 400 },
+          );
+        }
+        if (backupAssignedUser.value && !assignedUser.value) {
+          return NextResponse.json(
+            { error: "Bitte zuerst eine verantwortliche Person auswählen." },
+            { status: 400 },
+          );
+        }
+        if (
+          assignedUser.value &&
+          assignedUser.value === backupAssignedUser.value
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Verantwortliche Person und Ersatz müssen verschieden sein.",
+            },
+            { status: 400 },
+          );
+        }
+
+        const selectedUserIds = [
+          assignedUser.value,
+          backupAssignedUser.value,
+        ].filter((userId): userId is string => Boolean(userId));
+        const adminClient = createSupabaseAdminClient();
+        const userLookups = await Promise.all(
+          selectedUserIds.map((userId) =>
+            adminClient.auth.admin.getUserById(userId),
+          ),
+        );
+        if (
+          userLookups.some(
+            ({ data: userData, error }) => error || !userData.user,
+          )
+        ) {
+          return NextResponse.json(
+            { error: "Eine ausgewählte Person wurde nicht gefunden." },
+            { status: 400 },
+          );
+        }
+        const selectedUserRoles = await Promise.all(
+          userLookups.map(({ data: userData }) =>
+            getUserRoles(adminClient, userData.user),
+          ),
+        );
+        if (
+          selectedUserRoles.some(
+            (roles) => !roles.includes("admin") && !roles.includes("vhc"),
+          )
+        ) {
+          return NextResponse.json(
+            { error: "Ausgewählte Personen benötigen die Rolle VHC." },
+            { status: 400 },
+          );
+        }
+
+        patch = {
+          assignedUserId: assignedUser.value,
+          backupAssignedUserId: backupAssignedUser.value,
+        };
+        eventPayload = {
+          assignedUserId: assignedUser.value,
+          backupAssignedUserId: backupAssignedUser.value,
+        };
+        break;
+      }
       case "save_notes":
         patch = {
           internalNotes:
@@ -458,7 +559,7 @@ export const PATCH = async (
       actorType: "staff",
       actorUserId: data.user.id,
       eventType: `admin_${action}`,
-      payload: warning ? { warning } : {},
+      payload: warning ? { ...eventPayload, warning } : eventPayload,
     });
 
     return NextResponse.json({

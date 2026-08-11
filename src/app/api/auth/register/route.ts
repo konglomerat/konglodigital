@@ -12,7 +12,7 @@ import {
   splitCampaiContactName,
 } from "@/lib/campai-contacts";
 import { upsertMemberProfile } from "@/lib/member-profiles";
-import { getInitialUserRole } from "@/lib/roles";
+import { getInitialUserRoles } from "@/lib/roles";
 import {
   getUserAccessByUserId,
   getUserRightsFromAppMetadata,
@@ -81,7 +81,7 @@ export const POST = async (request: NextRequest) => {
 
   const adminClient = createSupabaseAdminClient();
   const splitName = splitCampaiContactName(linkedContact.name);
-  const initialRole = getInitialUserRole(linkedContact.tags);
+  const initialRoles = getInitialUserRoles(linkedContact.tags);
   const userMetadata = {
     first_name: splitName.firstName,
     last_name: splitName.lastName,
@@ -122,7 +122,7 @@ export const POST = async (request: NextRequest) => {
       existingAccess ??
       (await upsertUserAccess(adminClient, {
         userId: existingUser.id,
-        role: initialRole,
+        roles: initialRoles,
         rights: getUserRightsFromAppMetadata(existingUser),
       }));
     await syncUserAccessToAuthMetadata(adminClient, existingUser, nextAccess);
@@ -163,7 +163,7 @@ export const POST = async (request: NextRequest) => {
   await upsertMemberProfile(adminClient, invitedUser.id, memberProfile);
   const createdAccess = await upsertUserAccess(adminClient, {
     userId: invitedUser.id,
-    role: initialRole,
+    roles: initialRoles,
     rights: getUserRightsFromAppMetadata(invitedUser),
   });
   await syncUserAccessToAuthMetadata(adminClient, invitedUser, createdAccess);

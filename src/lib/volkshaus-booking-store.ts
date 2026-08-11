@@ -36,6 +36,7 @@ type CreateBookingParams = Omit<
   | "internalNotes"
   | "holdExpiresAt"
   | "assignedUserId"
+  | "backupAssignedUserId"
   | "contractVersion"
   | "contractSnapshot"
   | "contractHash"
@@ -66,6 +67,7 @@ export type VolkshausBookingPatch = Partial<
     | "internalNotes"
     | "holdExpiresAt"
     | "assignedUserId"
+    | "backupAssignedUserId"
     | "contractVersion"
     | "contractSnapshot"
     | "contractHash"
@@ -212,6 +214,7 @@ const mapBookingRow = (row: BookingRow): VolkshausBooking => ({
   internalNotes: normalizeNullableString(row.internal_notes),
   holdExpiresAt: normalizeNullableString(row.hold_expires_at),
   assignedUserId: normalizeNullableString(row.assigned_user_id),
+  backupAssignedUserId: normalizeNullableString(row.backup_assigned_user_id),
   contractVersion: normalizeNumber(row.contract_version, 0),
   contractSnapshot: normalizeObject<VolkshausContractSnapshot | null>(
     row.contract_snapshot,
@@ -278,6 +281,7 @@ const toBookingRow = (booking: VolkshausBooking): BookingRow => ({
   internal_notes: booking.internalNotes,
   hold_expires_at: booking.holdExpiresAt,
   assigned_user_id: booking.assignedUserId,
+  backup_assigned_user_id: booking.backupAssignedUserId,
   contract_version: booking.contractVersion,
   contract_snapshot: booking.contractSnapshot,
   contract_hash: booking.contractHash,
@@ -307,6 +311,7 @@ const toPatchRow = (patch: VolkshausBookingPatch): BookingRow => {
     internalNotes: "internal_notes",
     holdExpiresAt: "hold_expires_at",
     assignedUserId: "assigned_user_id",
+    backupAssignedUserId: "backup_assigned_user_id",
     contractVersion: "contract_version",
     contractSnapshot: "contract_snapshot",
     contractHash: "contract_hash",
@@ -409,6 +414,7 @@ const createInitialBooking = (params: CreateBookingParams): VolkshausBooking => 
     internalNotes: null,
     holdExpiresAt: null,
     assignedUserId: null,
+    backupAssignedUserId: null,
     contractVersion: 0,
     contractSnapshot: null,
     contractHash: null,

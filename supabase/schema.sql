@@ -269,6 +269,7 @@ create table if not exists public.volkshaus_booking_requests (
   internal_notes text,
   hold_expires_at timestamptz,
   assigned_user_id uuid references auth.users (id) on delete set null,
+  backup_assigned_user_id uuid references auth.users (id) on delete set null,
   contract_version integer not null default 0,
   contract_snapshot jsonb,
   contract_hash text,
@@ -289,6 +290,9 @@ create table if not exists public.volkshaus_booking_requests (
   constraint volkshaus_booking_rooms_present
     check (cardinality(requested_rooms) > 0)
 );
+
+alter table public.volkshaus_booking_requests
+  add column if not exists backup_assigned_user_id uuid references auth.users (id) on delete set null;
 
 create index if not exists volkshaus_booking_requests_date_idx
   on public.volkshaus_booking_requests (booking_date, start_at, end_at);
@@ -410,6 +414,7 @@ with check (auth.uid() = user_id);
 create table if not exists public.user_access (
   user_id uuid primary key references auth.users (id) on delete cascade,
   role text not null default 'member',
+  roles text[] not null default '{member}'::text[],
   rights text[] not null default '{}'::text[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -417,8 +422,25 @@ create table if not exists public.user_access (
 );
 
 alter table public.user_access add column if not exists role text not null default 'member';
+alter table public.user_access add column if not exists roles text[] not null default '{member}'::text[];
 alter table public.user_access add column if not exists rights text[] not null default '{}'::text[];
 alter table public.user_access add column if not exists updated_at timestamptz not null default now();
+
+update public.user_access
+set roles = case role
+  when 'admin' then array['admin']::text[]
+  when 'accounting' then array['buchhaltung']::text[]
+  else array['member']::text[]
+end
+where roles = array['member']::text[] and role <> 'member';
+
+alter table public.user_access drop constraint if exists user_access_roles_check;
+alter table public.user_access
+  add constraint user_access_roles_check
+  check (
+    cardinality(roles) > 0
+    and roles <@ array['admin', 'vhc', 'buchhaltung', 'member']::text[]
+  );
 
 alter table public.user_access enable row level security;
 
@@ -432,8 +454,11 @@ using (auth.uid() = user_id);
 drop policy if exists "Admins can read VHC bookings" on public.volkshaus_booking_requests;
 drop policy if exists "Admins can update VHC bookings" on public.volkshaus_booking_requests;
 drop policy if exists "Admins can read VHC booking events" on public.volkshaus_booking_events;
+drop policy if exists "VHC team can read bookings" on public.volkshaus_booking_requests;
+drop policy if exists "VHC team can update bookings" on public.volkshaus_booking_requests;
+drop policy if exists "VHC team can read booking events" on public.volkshaus_booking_events;
 
-create policy "Admins can read VHC bookings"
+create policy "VHC team can read bookings"
 on public.volkshaus_booking_requests
 for select
 using (
@@ -441,11 +466,11 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and user_access.role = 'admin'
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
-create policy "Admins can update VHC bookings"
+create policy "VHC team can update bookings"
 on public.volkshaus_booking_requests
 for update
 using (
@@ -453,7 +478,7 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and user_access.role = 'admin'
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 )
 with check (
@@ -461,11 +486,11 @@ with check (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and user_access.role = 'admin'
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
-create policy "Admins can read VHC booking events"
+create policy "VHC team can read booking events"
 on public.volkshaus_booking_events
 for select
 using (
@@ -473,7 +498,7 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and user_access.role = 'admin'
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
@@ -575,6 +600,45 @@ with normalized_user_access as (
         then lower(btrim(coalesce(users.raw_app_meta_data ->> 'role', users.raw_user_meta_data ->> 'role', 'member')))
       else 'member'
     end as role,
+    array(
+      select distinct
+        case
+          when lower(btrim(role_value)) = 'accounting' then 'buchhaltung'
+          else lower(btrim(role_value))
+        end
+      from (
+        select jsonb_array_elements_text(
+          case
+            when jsonb_typeof(users.raw_app_meta_data -> 'roles') = 'array'
+              then users.raw_app_meta_data -> 'roles'
+            when jsonb_typeof(users.raw_user_meta_data -> 'roles') = 'array'
+              then users.raw_user_meta_data -> 'roles'
+            else '[]'::jsonb
+          end
+        ) as role_value
+        union all
+        select case
+          when lower(btrim(coalesce(
+            users.raw_app_meta_data ->> 'role',
+            users.raw_user_meta_data ->> 'role',
+            'member'
+          ))) in ('admin', 'accounting', 'buchhaltung', 'vhc', 'member')
+            then coalesce(
+              users.raw_app_meta_data ->> 'role',
+              users.raw_user_meta_data ->> 'role',
+              'member'
+            )
+          else 'member'
+        end as role_value
+      ) as normalized_roles
+      where lower(btrim(role_value)) in (
+        'admin',
+        'accounting',
+        'buchhaltung',
+        'vhc',
+        'member'
+      )
+    ) as roles,
     coalesce(
       array(
         select distinct right_value
@@ -605,12 +669,11 @@ with normalized_user_access as (
     ) as rights
   from auth.users as users
 )
-insert into public.user_access (user_id, role, rights)
-select user_id, role, rights
+insert into public.user_access (user_id, role, roles, rights)
+select user_id, role, roles, rights
 from normalized_user_access
 on conflict (user_id)
 do update set
-  role = excluded.role,
   rights = excluded.rights,
   updated_at = now();
 
@@ -618,6 +681,8 @@ update auth.users as users
 set raw_app_meta_data =
   coalesce(users.raw_app_meta_data, '{}'::jsonb)
   || jsonb_build_object(
+    'roles', to_jsonb(access.roles),
+    'role', access.role,
     'rights', to_jsonb(access.rights)
   )
 from public.user_access as access

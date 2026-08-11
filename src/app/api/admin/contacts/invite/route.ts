@@ -7,7 +7,7 @@ import {
   splitCampaiContactName,
 } from "@/lib/campai-contacts";
 import { upsertMemberProfile } from "@/lib/member-profiles";
-import { getInitialUserRole, userCanAccessModule } from "@/lib/roles";
+import { getInitialUserRoles, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import {
@@ -87,7 +87,7 @@ export const POST = async (request: NextRequest) => {
       last_name: splitName.lastName,
     };
     const memberProfile = buildCampaiProfileData(linkedContact);
-    const initialRole = getInitialUserRole(linkedContact.tags);
+    const initialRoles = getInitialUserRoles(linkedContact.tags);
 
     const publicBaseUrl =
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
@@ -125,7 +125,7 @@ export const POST = async (request: NextRequest) => {
         existingAccess ??
         (await upsertUserAccess(adminClient, {
           userId: existingUser.id,
-          role: initialRole,
+          roles: initialRoles,
           rights: getUserRightsFromAppMetadata(existingUser),
         }));
       await syncUserAccessToAuthMetadata(
@@ -171,7 +171,7 @@ export const POST = async (request: NextRequest) => {
     await upsertMemberProfile(adminClient, invitedUser.id, memberProfile);
     const createdAccess = await upsertUserAccess(adminClient, {
       userId: invitedUser.id,
-      role: initialRole,
+      roles: initialRoles,
       rights: getUserRightsFromAppMetadata(invitedUser),
     });
     await syncUserAccessToAuthMetadata(adminClient, invitedUser, createdAccess);

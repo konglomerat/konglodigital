@@ -162,6 +162,7 @@ export type VolkshausBooking = {
   internalNotes: string | null;
   holdExpiresAt: string | null;
   assignedUserId: string | null;
+  backupAssignedUserId: string | null;
   contractVersion: number;
   contractSnapshot: VolkshausContractSnapshot | null;
   contractHash: string | null;
