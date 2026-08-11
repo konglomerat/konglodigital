@@ -535,6 +535,11 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
                 </dd>
               </div>
             </dl>
+            {!isCancelled && booking.contractStatus === "fully_signed" ? (
+              <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+                Bitte bezahlen bis 3 Tage vor Buchung.
+              </p>
+            ) : null}
           </section>
         </aside>
       </div>

@@ -53,7 +53,6 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({
       date,
       slots: [...teamupSlots, ...bookingSlots],
-      calendarMode: "teamup",
       notice: "Verbindlich wird ein Termin erst nach interner Freigabe.",
     });
   } catch {

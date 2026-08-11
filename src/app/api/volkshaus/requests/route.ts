@@ -195,7 +195,6 @@ export const POST = async (request: NextRequest) => {
       eventType: "request_submitted",
       payload: {
         tariffVersion: priceSnapshot.tariffVersion,
-        calendarMode: "teamup",
       },
     });
 

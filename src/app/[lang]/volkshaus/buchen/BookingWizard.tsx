@@ -91,7 +91,7 @@ type AvailabilityResponse = {
 };
 
 const STEPS = [
-  { label: "Termin & Räume", icon: faCalendarDays },
+  { label: "Räume & Termin", icon: faCalendarDays },
   { label: "Nutzung", icon: faHouse },
   { label: "Kontakt", icon: faEnvelope },
   { label: "Prüfen", icon: faReceipt },
@@ -671,21 +671,6 @@ export default function BookingWizard({
             wenn alles geprüft ist und du die bereits von uns unterschriebene
             Vereinbarung unterschrieben hast.
           </p>
-          <div
-            role="note"
-            aria-label="Wichtiger Zahlungshinweis"
-            className="mt-5 flex max-w-2xl items-center gap-3 rounded-lg border border-warning-border bg-warning-soft px-4 py-3.5 text-warning shadow-sm"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/10">
-              <FontAwesomeIcon
-                icon={faTriangleExclamation}
-                className="h-4 w-4"
-              />
-            </span>
-            <p className="text-base font-black leading-snug md:text-lg">
-              Bitte bezahlen bis 3 Tage vor Buchung.
-            </p>
-          </div>
           <div className="mt-5">
             <Button
               kind="secondary"
@@ -965,6 +950,74 @@ function BookingTimeStep({
   return (
     <>
       <section className={cardClassName}>
+        <div>
+          <p className={sectionLabelClassName}>
+            <FontAwesomeIcon icon={faDoorOpen} className="h-3 w-3" />
+            Deine Räume
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-foreground">
+            Was passt zu deinem Vorhaben?
+          </h2>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {VOLKSHAUS_ROOMS.map((room) => {
+            const selected = form.requestedRooms.includes(room.id);
+            return (
+              <button
+                key={room.id}
+                type="button"
+                onClick={() => toggleRoom(room.id)}
+                className={`relative rounded-md p-4 text-left ring-1 ring-inset transition ${
+                  selected
+                    ? "bg-primary-soft/70 ring-primary/30"
+                    : "bg-muted/25 ring-foreground/5 hover:bg-primary-soft/40"
+                }`}
+              >
+                <span
+                  className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border ${
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input text-transparent"
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+                </span>
+                <span className="flex items-center gap-2 pr-8 font-bold text-foreground">
+                  <FontAwesomeIcon
+                    icon={faDoorOpen}
+                    className="h-3.5 w-3.5 text-primary"
+                  />
+                  <span>{room.label}</span>
+                </span>
+                <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
+                  {room.description}
+                </span>
+                {room.capacity ? (
+                  <span className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <FontAwesomeIcon icon={faUsers} className="h-3 w-3" />
+                    maximal {room.capacity} Personen
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {capacityWarning ? (
+          <div className="mt-4 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
+            <FontAwesomeIcon
+              icon={faTriangleExclamation}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <p>
+              Die gewählten Innenräume sind regulär für insgesamt {capacity}{" "}
+              Personen ausgelegt. Das Team prüft deine Anfrage individuell.
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className={cardClassName}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className={sectionLabelClassName}>
@@ -1243,74 +1296,6 @@ function BookingTimeStep({
             </label>
           </div>
         </details>
-      </section>
-
-      <section className={cardClassName}>
-        <div>
-          <p className={sectionLabelClassName}>
-            <FontAwesomeIcon icon={faDoorOpen} className="h-3 w-3" />
-            Deine Räume
-          </p>
-          <h2 className="mt-1 text-2xl font-black text-foreground">
-            Was passt zu deinem Vorhaben?
-          </h2>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {VOLKSHAUS_ROOMS.map((room) => {
-            const selected = form.requestedRooms.includes(room.id);
-            return (
-              <button
-                key={room.id}
-                type="button"
-                onClick={() => toggleRoom(room.id)}
-                className={`relative rounded-md p-4 text-left ring-1 ring-inset transition ${
-                  selected
-                    ? "bg-primary-soft/70 ring-primary/30"
-                    : "bg-muted/25 ring-foreground/5 hover:bg-primary-soft/40"
-                }`}
-              >
-                <span
-                  className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border ${
-                    selected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input text-transparent"
-                  }`}
-                >
-                  <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                </span>
-                <span className="flex items-center gap-2 pr-8 font-bold text-foreground">
-                  <FontAwesomeIcon
-                    icon={faDoorOpen}
-                    className="h-3.5 w-3.5 text-primary"
-                  />
-                  <span>{room.label}</span>
-                </span>
-                <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
-                  {room.description}
-                </span>
-                {room.capacity ? (
-                  <span className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                    <FontAwesomeIcon icon={faUsers} className="h-3 w-3" />
-                    maximal {room.capacity} Personen
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {capacityWarning ? (
-          <div className="mt-4 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
-            <FontAwesomeIcon
-              icon={faTriangleExclamation}
-              className="mt-0.5 h-4 w-4 shrink-0"
-            />
-            <p>
-              Die gewählten Innenräume sind regulär für insgesamt {capacity}{" "}
-              Personen ausgelegt. Das Team prüft deine Anfrage individuell.
-            </p>
-          </div>
-        ) : null}
       </section>
 
       <section className={cardClassName}>
