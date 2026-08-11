@@ -16,6 +16,7 @@ import {
   updateVolkshausBooking,
 } from "@/lib/volkshaus-booking-store";
 import { createVolkshausInvoice } from "@/lib/volkshaus-invoice";
+import { syncVolkshausBookingToTeamup } from "@/lib/volkshaus-teamup";
 import {
   notifyVolkshausContractCompleted,
   notifyVolkshausCustomerSigned,
@@ -195,6 +196,36 @@ export const POST = async (
     eventType: "contract_customer_signed",
     payload: { contractHash: booking.contractHash },
   });
+
+  try {
+    const teamupResult = await syncVolkshausBookingToTeamup(
+      updated,
+      "confirmed",
+    );
+    await addVolkshausBookingEvent({
+      bookingId: booking.id,
+      actorType: "system",
+      eventType: "teamup_synced",
+      payload: {
+        action: teamupResult.action,
+        eventId: teamupResult.eventId,
+        reservationStatus: "confirmed",
+      },
+    });
+  } catch (error) {
+    await addVolkshausBookingEvent({
+      bookingId: booking.id,
+      actorType: "system",
+      eventType: "teamup_sync_failed",
+      payload: {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unbekannter Fehler bei der Teamup-Synchronisierung.",
+        reservationStatus: "confirmed",
+      },
+    }).catch(() => undefined);
+  }
 
   const invoiceResult = await createVolkshausInvoice(updated);
   updated = invoiceResult.booking;

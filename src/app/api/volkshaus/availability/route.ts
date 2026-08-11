@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  getMockBusySlots,
-  type BusySlot,
-} from "@/lib/volkshaus-booking";
+import { type BusySlot } from "@/lib/volkshaus-booking";
 import { listVolkshausBookings } from "@/lib/volkshaus-booking-store";
+import {
+  getInactiveVolkshausTeamupRemoteIds,
+  getTeamupBusySlots,
+} from "@/lib/volkshaus-teamup";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -22,6 +23,13 @@ export const GET = async (request: NextRequest) => {
   try {
     const now = Date.now();
     const bookings = await listVolkshausBookings();
+    const teamupSlots = await getTeamupBusySlots(date, {
+      excludeRemoteIds: getInactiveVolkshausTeamupRemoteIds(
+        bookings,
+        date,
+        now,
+      ),
+    });
     const bookingSlots: BusySlot[] = bookings
       .filter(
         (booking) =>
@@ -44,8 +52,8 @@ export const GET = async (request: NextRequest) => {
 
     return NextResponse.json({
       date,
-      slots: [...getMockBusySlots(date), ...bookingSlots],
-      calendarMode: "mock",
+      slots: [...teamupSlots, ...bookingSlots],
+      calendarMode: "teamup",
       notice: "Verbindlich wird ein Termin erst nach interner Freigabe.",
     });
   } catch {

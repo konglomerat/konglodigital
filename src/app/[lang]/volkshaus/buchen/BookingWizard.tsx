@@ -61,7 +61,6 @@ import {
   calculateVolkshausPrice,
   findBusySlotConflicts,
   formatEuro,
-  getMockBusySlots,
   getRoomLabel,
   type BusySlot,
   type VolkshausBookingFrequency,
@@ -407,6 +406,7 @@ export default function BookingWizard({
     const controller = new AbortController();
     setIsLoadingAvailability(true);
     setAvailabilityError(null);
+    setAvailabilitySlots([]);
 
     void fetch(
       `/api/volkshaus/availability?date=${encodeURIComponent(form.bookingDate)}`,
@@ -431,7 +431,7 @@ export default function BookingWizard({
             ? error.message
             : "Kalender konnte nicht geladen werden.",
         );
-        setAvailabilitySlots(getMockBusySlots(form.bookingDate));
+        setAvailabilitySlots([]);
       })
       .finally(() => setIsLoadingAvailability(false));
 
@@ -960,6 +960,7 @@ function BookingTimeStep({
     parseIsoDate(`${visibleMonth}-01`) ??
     new Date(`${minimumMonth}-01T12:00:00Z`);
   const hasValidBookingDate = Boolean(parseIsoDate(form.bookingDate));
+  const is2027BookingDate = form.bookingDate.startsWith("2027-");
 
   return (
     <>
@@ -976,7 +977,7 @@ function BookingTimeStep({
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-md bg-warning-soft/70 px-3 py-1.5 text-xs font-bold text-warning">
             <FontAwesomeIcon icon={faCalendarCheck} className="h-3 w-3" />
-            Beispielkalender
+            Teamup-Kalender
           </span>
         </div>
 
@@ -1049,14 +1050,20 @@ function BookingTimeStep({
                 return null;
               }
 
-              const busyCount = getMockBusySlots(date).filter((slot) =>
-                form.requestedRooms.includes(slot.roomId),
-              ).length;
               const isSelected = form.bookingDate === date;
               const isCurrentMonth = date.startsWith(visibleMonth);
               const isBeforeMinimum = date < minimumDate;
+              const availabilityKnown =
+                isSelected && !isLoading && error === null;
+              const busyCount = availabilityKnown
+                ? slots.filter((slot) =>
+                    form.requestedRooms.includes(slot.roomId),
+                  ).length
+                : 0;
               const availabilityLabel =
-                busyCount > 0
+                !availabilityKnown
+                  ? "Verfügbarkeit prüfen"
+                  : busyCount > 0
                   ? `${busyCount} Belegung${busyCount > 1 ? "en" : ""}`
                   : "frei";
 
@@ -1091,6 +1098,8 @@ function BookingTimeStep({
                       className={`mt-1.5 flex items-center gap-1 text-[0.6rem] font-semibold ${
                         isSelected
                           ? "text-primary-foreground/85"
+                          : !availabilityKnown
+                            ? "text-muted-foreground"
                           : busyCount > 0
                             ? "text-warning"
                             : "text-success"
@@ -1101,13 +1110,19 @@ function BookingTimeStep({
                         className={`h-1.5 w-1.5 rounded-full ${
                           isSelected
                             ? "bg-primary-foreground"
+                            : !availabilityKnown
+                              ? "bg-muted-foreground/50"
                             : busyCount > 0
                               ? "bg-warning"
                               : "bg-success"
                         }`}
                       />
                       <span className="hidden sm:inline">
-                        {busyCount > 0 ? `${busyCount} belegt` : "frei"}
+                        {!availabilityKnown
+                          ? "prüfen"
+                          : busyCount > 0
+                            ? `${busyCount} belegt`
+                            : "frei"}
                       </span>
                     </span>
                   ) : null}
@@ -1169,6 +1184,31 @@ function BookingTimeStep({
             </div>
           </div>
         </div>
+
+        {is2027BookingDate ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-5 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning"
+          >
+            <FontAwesomeIcon
+              icon={faCircleInfo}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <div>
+              <p className="font-black">Terminanfragen für 2027</p>
+              <p className="mt-1 leading-relaxed">
+                Es tut uns leid, euch mitteilen zu müssen, dass wir aktuell noch
+                keine verbindlichen Terminanfragen für 2027 annehmen können,
+                weil sich die Trägerschaft des Neuen Volkshauses Cotta derzeit
+                in einer Übergangsphase befindet. Wir freuen uns, wenn ihr euch
+                im kommenden Jahr erneut bei uns meldet. Wenn es für euch in
+                Ordnung ist, könnt ihr diese Anfrage trotzdem absenden – wir
+                setzen euch damit gern auf unsere Warteliste für 2027.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <details className="mt-4 rounded-md bg-muted/35 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-foreground">

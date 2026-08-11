@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   calculateVolkshausPrice,
   findBusySlotConflicts,
-  getMockBusySlots,
   type BusySlot,
 } from "@/lib/volkshaus-booking";
 import {
@@ -20,6 +19,10 @@ import {
   updateVolkshausBooking,
 } from "@/lib/volkshaus-booking-store";
 import { notifyVolkshausRequestSubmitted } from "@/lib/volkshaus-notifications";
+import {
+  getInactiveVolkshausTeamupRemoteIds,
+  getTeamupBusySlots,
+} from "@/lib/volkshaus-teamup";
 
 const WINDOW_MS = 10 * 60 * 1_000;
 const MAX_REQUESTS_PER_WINDOW = 5;
@@ -65,9 +68,11 @@ const resolvePublicOrigin = (request: NextRequest) => {
   return request.nextUrl.origin;
 };
 
-const getStoredBusySlots = async (date: string): Promise<BusySlot[]> => {
+const getStoredBusySlots = (
+  bookings: Awaited<ReturnType<typeof listVolkshausBookings>>,
+  date: string,
+): BusySlot[] => {
   const now = Date.now();
-  const bookings = await listVolkshausBookings();
   return bookings
     .filter(
       (booking) =>
@@ -118,10 +123,17 @@ export const POST = async (request: NextRequest) => {
 
     const requestedStart = input.setupStartTime ?? input.startTime;
     const requestedEnd = input.teardownEndTime ?? input.endTime;
-    const busySlots = [
-      ...getMockBusySlots(input.bookingDate),
-      ...(await getStoredBusySlots(input.bookingDate)),
-    ];
+    const bookings = await listVolkshausBookings();
+    const now = Date.now();
+    const teamupSlots = await getTeamupBusySlots(input.bookingDate, {
+      excludeRemoteIds: getInactiveVolkshausTeamupRemoteIds(
+        bookings,
+        input.bookingDate,
+        now,
+      ),
+    });
+    const storedSlots = getStoredBusySlots(bookings, input.bookingDate);
+    const busySlots = [...teamupSlots, ...storedSlots];
     const conflicts = findBusySlotConflicts({
       slots: busySlots,
       requestedRooms: input.requestedRooms,
@@ -183,7 +195,7 @@ export const POST = async (request: NextRequest) => {
       eventType: "request_submitted",
       payload: {
         tariffVersion: priceSnapshot.tariffVersion,
-        calendarMode: "mock",
+        calendarMode: "teamup",
       },
     });
 

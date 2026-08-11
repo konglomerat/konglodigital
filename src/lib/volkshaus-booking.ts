@@ -216,7 +216,7 @@ export type BusySlot = {
   roomId: VolkshausRoomId;
   startTime: string;
   endTime: string;
-  source: "mock" | "booking";
+  source: "teamup" | "booking";
 };
 
 export const VOLKSHAUS_ROOMS: Array<{
@@ -613,55 +613,6 @@ export const getRoomLabel = (roomId: VolkshausRoomId) =>
 export const getEquipmentLabel = (equipmentId: VolkshausEquipmentId) =>
   VOLKSHAUS_EQUIPMENT.find((item) => item.id === equipmentId)?.label ??
   equipmentId;
-
-export const getMockBusySlots = (date: string): BusySlot[] => {
-  const dateValue = new Date(`${date}T12:00:00Z`);
-  if (Number.isNaN(dateValue.getTime())) {
-    return [];
-  }
-
-  const day = dateValue.getUTCDay();
-  const dayOfMonth = dateValue.getUTCDate();
-  const slots: Array<Omit<BusySlot, "id" | "date" | "source">> = [];
-
-  if (day === 1) {
-    slots.push({ roomId: "stube", startTime: "10:00", endTime: "12:30" });
-  }
-  if (day === 2) {
-    slots.push({ roomId: "saal", startTime: "18:00", endTime: "21:00" });
-  }
-  if (day === 3) {
-    slots.push(
-      { roomId: "saal", startTime: "16:00", endTime: "19:00" },
-      { roomId: "stube", startTime: "14:00", endTime: "16:00" },
-    );
-  }
-  if (day === 4) {
-    slots.push({ roomId: "stube", startTime: "18:00", endTime: "20:00" });
-  }
-  if (day === 5) {
-    slots.push(
-      { roomId: "saal", startTime: "17:00", endTime: "22:00" },
-      { roomId: "garten", startTime: "16:00", endTime: "20:00" },
-    );
-  }
-  if (day === 6 && dayOfMonth % 2 === 0) {
-    slots.push(
-      { roomId: "saal", startTime: "12:00", endTime: "19:00" },
-      { roomId: "garten", startTime: "12:00", endTime: "19:00" },
-    );
-  }
-  if (day === 0 && dayOfMonth % 3 === 0) {
-    slots.push({ roomId: "stube", startTime: "11:00", endTime: "14:00" });
-  }
-
-  return slots.map((slot, index) => ({
-    ...slot,
-    id: `mock-${date}-${slot.roomId}-${index}`,
-    date,
-    source: "mock",
-  }));
-};
 
 export const timeIntervalsOverlap = (
   leftStart: string,

@@ -98,14 +98,31 @@ application. It creates `volkshaus_booking_requests` and
   value)
 - `VOLKSHAUS_BOOKING_STORAGE=memory` (development only; uses volatile in-memory
 storage instead of Supabase)
+- `TEAMUP_API_KEY` (required; server-side API key for Teamup Calendar)
+- `TEAMUP_READ_CALENDAR_KEY` (required; active read-only Teamup calendar-link
+  key; keep it server-side and limit it to the VHC room calendars)
+- `TEAMUP_WRITE_CALENDAR_KEY` (required for booking synchronization; active
+  Teamup calendar-link key with modify permission, restricted to the three VHC
+  room calendars)
 
 At least one staff account needs `role = 'admin'` in `public.user_access` to
 process requests in `/admin/volkshaus`.
 
-The public MVP deliberately uses a mock availability calendar. Existing
-confirmed and unexpired held requests are merged into its free/busy response.
-Replace the mock slots in `src/lib/volkshaus-booking.ts` when the production
-calendar source is connected.
+Availability is read from Teamup Calendar and merged with existing confirmed
+and unexpired held requests. The Teamup sub-calendars are mapped as follows:
+
+- Veranstaltungssaal (`11786455`) -> `saal`
+- Stube (`11786456`) -> `stube`
+- Garten (`11786506`) -> `garten`
+
+The public booking UI fails closed if Teamup cannot be reached; it does not
+fall back to synthetic availability data.
+
+When staff places a request on hold, the concrete requested appointment is
+created or updated in Teamup using a stable remote id. Signing the contract and
+completing the booking update its status; rejecting or cancelling it removes
+the Teamup event. Regular offers currently synchronize only the concrete date
+entered in the request because additional occurrence dates are not collected.
 
 ### Campai Expense Receipts (Eigenbeleg)
 

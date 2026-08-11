@@ -4,7 +4,6 @@ import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import {
   buildVolkshausContractSnapshot,
   findBusySlotConflicts,
-  getMockBusySlots,
   type BusySlot,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
@@ -20,6 +19,13 @@ import {
   type VolkshausBookingPatch,
 } from "@/lib/volkshaus-booking-store";
 import { createVolkshausInvoice } from "@/lib/volkshaus-invoice";
+import {
+  deleteVolkshausBookingFromTeamup,
+  getInactiveVolkshausTeamupRemoteIds,
+  getTeamupBusySlots,
+  getVolkshausTeamupRemoteId,
+  syncVolkshausBookingToTeamup,
+} from "@/lib/volkshaus-teamup";
 import {
   notifyVolkshausContractReady,
 } from "@/lib/volkshaus-notifications";
@@ -74,6 +80,16 @@ const getConflictsForHold = async (
 ): Promise<BusySlot[]> => {
   const bookings = await listVolkshausBookings();
   const now = Date.now();
+  const teamupSlots = await getTeamupBusySlots(booking.bookingDate, {
+    excludeRemoteIds: [
+      getVolkshausTeamupRemoteId(booking.id),
+      ...getInactiveVolkshausTeamupRemoteIds(
+        bookings,
+        booking.bookingDate,
+        now,
+      ),
+    ],
+  });
   const storedSlots: BusySlot[] = bookings
     .filter(
       (entry) =>
@@ -96,7 +112,7 @@ const getConflictsForHold = async (
     );
 
   return findBusySlotConflicts({
-    slots: [...getMockBusySlots(booking.bookingDate), ...storedSlots],
+    slots: [...teamupSlots, ...storedSlots],
     requestedRooms: booking.requestedRooms,
     startTime: booking.setupStartTime ?? booking.startTime,
     endTime: booking.teardownEndTime ?? booking.endTime,
@@ -169,12 +185,21 @@ export const PATCH = async (
         }
         const holdExpiresAt = new Date();
         holdExpiresAt.setDate(holdExpiresAt.getDate() + 7);
-        patch = {
+        const holdPatch: VolkshausBookingPatch = {
           requestStatus: "approved",
           reservationStatus: "held",
           holdExpiresAt: holdExpiresAt.toISOString(),
           assignedUserId: booking.assignedUserId ?? data.user.id,
         };
+        const teamupResult = await syncVolkshausBookingToTeamup(
+          { ...booking, ...holdPatch },
+          "held",
+        );
+        eventPayload = {
+          teamupSync: teamupResult.action,
+          teamupEventId: teamupResult.eventId,
+        };
+        patch = holdPatch;
         break;
       }
       case "reject":
@@ -466,6 +491,55 @@ export const PATCH = async (
 
     if (patch) {
       updated = await updateVolkshausBooking(booking.id, patch);
+    }
+
+    const appendTeamupWarning = (error: unknown) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unbekannter Fehler bei der Teamup-Synchronisierung.";
+      warning = [
+        warning,
+        `Die Buchung wurde gespeichert, aber Teamup konnte nicht synchronisiert werden: ${message}`,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      eventPayload = {
+        ...eventPayload,
+        teamupSync: "error",
+        teamupError: message,
+      };
+    };
+
+    if (action === "reject" || action === "cancel") {
+      try {
+        const teamupResult = await deleteVolkshausBookingFromTeamup(updated);
+        eventPayload = {
+          ...eventPayload,
+          teamupSync: teamupResult.action,
+          teamupEventId: teamupResult.eventId,
+        };
+      } catch (error) {
+        appendTeamupWarning(error);
+      }
+    } else if (
+      action === "send_contract" ||
+      action === "reopen_contract" ||
+      action === "complete"
+    ) {
+      try {
+        const teamupResult = await syncVolkshausBookingToTeamup(
+          updated,
+          action === "complete" ? "completed" : "held",
+        );
+        eventPayload = {
+          ...eventPayload,
+          teamupSync: teamupResult.action,
+          teamupEventId: teamupResult.eventId,
+        };
+      } catch (error) {
+        appendTeamupWarning(error);
+      }
     }
 
     await addVolkshausBookingEvent({
