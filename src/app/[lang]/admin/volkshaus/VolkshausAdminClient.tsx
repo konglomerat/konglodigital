@@ -113,6 +113,13 @@ const getPersonOptionLabel = (person: AssignablePerson) => {
   return name === person.email ? name : `${name} · ${person.email}`;
 };
 
+const getBookedEquipment = (
+  booking: Pick<VolkshausBooking, "equipment">,
+) =>
+  VOLKSHAUS_EQUIPMENT.filter(
+    (item) => Number(booking.equipment[item.id] ?? 0) > 0,
+  );
+
 const FILTERS: Array<{
   value: string;
   label: string;
@@ -500,7 +507,9 @@ export default function VolkshausAdminClient() {
               </p>
             ) : (
               <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
-                {filtered.map((booking) => (
+                {filtered.map((booking) => {
+                  const bookedEquipment = getBookedEquipment(booking);
+                  return (
                   <li key={booking.id}>
                     <button
                       type="button"
@@ -540,9 +549,51 @@ export default function VolkshausAdminClient() {
                           {booking.referenceCode}
                         </span>
                       </div>
+                      {bookedEquipment.length > 0 ||
+                      booking.internalNotes ||
+                      booking.specialRequirements ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {bookedEquipment.length > 0 ? (
+                            <span
+                              title={bookedEquipment
+                                .map(
+                                  (item) =>
+                                    `${Number(booking.equipment[item.id] ?? 0)} × ${item.label}`,
+                                )
+                                .join(", ")}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-[0.7rem] font-bold text-warning"
+                            >
+                              <FontAwesomeIcon
+                                icon={faScrewdriverWrench}
+                                className="h-2.5 w-2.5"
+                              />
+                              Technik: {bookedEquipment.length}
+                            </span>
+                          ) : null}
+                          {booking.internalNotes ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-soft px-2 py-1 text-[0.7rem] font-bold text-primary">
+                              <FontAwesomeIcon
+                                icon={faNoteSticky}
+                                className="h-2.5 w-2.5"
+                              />
+                              Interne Absprache
+                            </span>
+                          ) : null}
+                          {booking.specialRequirements ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-card px-2 py-1 text-[0.7rem] font-bold text-primary">
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
+                                className="h-2.5 w-2.5"
+                              />
+                              Hinweis
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </aside>
@@ -841,10 +892,10 @@ function BookingDetail({
     booking.priceAdjustmentCents,
     booking.priceAdjustmentReason,
   );
-  const equipment = VOLKSHAUS_EQUIPMENT.filter(
-    (item) => Number(booking.equipment[item.id] ?? 0) > 0,
-  );
+  const equipment = getBookedEquipment(booking);
   const isBusy = activeAction !== null;
+  const hasInternalNotesChanges =
+    internalNotes !== (booking.internalNotes ?? "");
   const hasAssignmentChanges =
     assignedUserId !== (booking.assignedUserId ?? "") ||
     backupAssignedUserId !== (booking.backupAssignedUserId ?? "");
@@ -911,6 +962,141 @@ function BookingDetail({
             >
               {copySuccess ? "Kopiert" : "Link kopieren"}
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-foreground">
+            <FontAwesomeIcon
+              icon={faTriangleExclamation}
+              className="h-3.5 w-3.5 text-warning"
+            />
+            Wichtig für Übergabe und Nutzung
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <section
+              className={`rounded-lg border-2 p-4 ${
+                equipment.length > 0
+                  ? "border-warning-border bg-warning-soft/65"
+                  : "border-border bg-background"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-base font-black text-foreground">
+                    <FontAwesomeIcon
+                      icon={faScrewdriverWrench}
+                      className={`h-4 w-4 ${
+                        equipment.length > 0
+                          ? "text-warning"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                    Gemietete Technik
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Für die Einmietenden bereitlegen und aushändigen.
+                  </p>
+                </div>
+                {equipment.length > 0 ? (
+                  <span className="shrink-0 rounded-md border border-warning-border bg-card/80 px-2.5 py-1 text-xs font-black text-warning">
+                    {equipment.length} Position
+                    {equipment.length === 1 ? "" : "en"}
+                  </span>
+                ) : null}
+              </div>
+
+              {equipment.length > 0 ? (
+                <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
+                  {equipment.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground shadow-sm"
+                    >
+                      <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-warning-soft px-2 font-mono text-sm font-black text-warning">
+                        {Number(booking.equipment[item.id] ?? 0)} ×
+                      </span>
+                      <span className="text-sm font-bold leading-tight">
+                        {item.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 flex items-center gap-2 rounded-md border border-success-border bg-success-soft px-3 py-2.5 text-sm font-semibold text-success">
+                  <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
+                  Keine zusätzliche Technik gemietet
+                </p>
+              )}
+            </section>
+
+            <section
+              className={`rounded-lg border-2 p-4 ${
+                internalNotes.trim() || booking.specialRequirements
+                  ? "border-primary-border bg-primary-soft/60"
+                  : "border-border bg-background"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-base font-black text-foreground">
+                    <FontAwesomeIcon
+                      icon={faNoteSticky}
+                      className="h-4 w-4 text-primary"
+                    />
+                    Sonstige Absprachen
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Alles, was das NVC-Team vor Ort wissen muss.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-md border border-primary-border bg-card/80 px-2.5 py-1 text-xs font-black text-primary">
+                  Intern
+                </span>
+              </div>
+
+              {booking.specialRequirements ? (
+                <div className="mt-4 rounded-md border border-primary-border bg-card/85 p-3">
+                  <p className="text-[0.7rem] font-black uppercase tracking-widest text-primary">
+                    Hinweis der Einmietenden
+                  </p>
+                  <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                    {booking.specialRequirements}
+                  </p>
+                </div>
+              ) : null}
+
+              <label className="mt-4 block">
+                <span className="mb-1.5 block text-sm font-bold text-foreground">
+                  Interne Absprachen ergänzen
+                </span>
+                <textarea
+                  className={`${inputClassName} min-h-28 resize-y bg-card/90`}
+                  value={internalNotes}
+                  maxLength={10_000}
+                  disabled={isBusy}
+                  onChange={(event) => setInternalNotes(event.target.value)}
+                  placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
+                />
+              </label>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Nur im internen Bereich sichtbar.
+                </p>
+                <Button
+                  kind="primary"
+                  icon={faSave}
+                  disabled={isBusy || !hasInternalNotesChanges}
+                  onClick={() =>
+                    void performAction("save_notes", { internalNotes })
+                  }
+                >
+                  {activeAction === "save_notes"
+                    ? "Wird gespeichert …"
+                    : "Absprachen speichern"}
+                </Button>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -992,31 +1178,6 @@ function BookingDetail({
           </div>
         </div>
 
-        {equipment.length > 0 || booking.specialRequirements ? (
-          <div className="mt-5 rounded-lg border border-border bg-background p-4">
-            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon
-                icon={faScrewdriverWrench}
-                className="h-3 w-3 text-primary"
-              />
-              Ausstattung und Anforderungen
-            </h3>
-            {equipment.length > 0 ? (
-              <p className="mt-2 text-sm text-foreground">
-                {equipment
-                  .map(
-                    (item) => `${booking.equipment[item.id]} × ${item.label}`,
-                  )
-                  .join(", ")}
-              </p>
-            ) : null}
-            {booking.specialRequirements ? (
-              <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
-                {booking.specialRequirements}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -1139,8 +1300,7 @@ function BookingDetail({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
             <FontAwesomeIcon
               icon={faEuroSign}
@@ -1221,36 +1381,7 @@ function BookingDetail({
               Preis speichern
             </Button>
           </div>
-        </section>
-
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <FontAwesomeIcon
-              icon={faNoteSticky}
-              className="h-4 w-4 text-primary"
-            />
-            Interne Notizen
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Nur im internen Bereich sichtbar.
-          </p>
-          <textarea
-            className={`${inputClassName} mt-4 min-h-44 resize-y`}
-            value={internalNotes}
-            onChange={(event) => setInternalNotes(event.target.value)}
-            placeholder="Besichtigung, Schlüsselübergabe, Bestuhlung, Reinigung …"
-          />
-          <Button
-            className="mt-3"
-            kind="secondary"
-            icon={faSave}
-            disabled={isBusy}
-            onClick={() => void performAction("save_notes", { internalNotes })}
-          >
-            Notiz speichern
-          </Button>
-        </section>
-      </div>
+      </section>
 
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">

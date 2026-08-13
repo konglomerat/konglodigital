@@ -1028,10 +1028,6 @@ function BookingTimeStep({
               Wann passt es für dich?
             </h2>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-warning-soft/70 px-3 py-1.5 text-xs font-bold text-warning">
-            <FontAwesomeIcon icon={faCalendarCheck} className="h-3 w-3" />
-            Teamup-Kalender
-          </span>
         </div>
 
         <div className="mt-6 overflow-hidden rounded-lg bg-muted/25 p-3 md:p-4">
@@ -1113,10 +1109,9 @@ function BookingTimeStep({
                     form.requestedRooms.includes(slot.roomId),
                   ).length
                 : 0;
-              const availabilityLabel =
-                !availabilityKnown
-                  ? "Verfügbarkeit prüfen"
-                  : busyCount > 0
+              const availabilityLabel = !availabilityKnown
+                ? "Verfügbarkeit prüfen"
+                : busyCount > 0
                   ? `${busyCount} Belegung${busyCount > 1 ? "en" : ""}`
                   : "frei";
 
@@ -1153,9 +1148,9 @@ function BookingTimeStep({
                           ? "text-primary-foreground/85"
                           : !availabilityKnown
                             ? "text-muted-foreground"
-                          : busyCount > 0
-                            ? "text-warning"
-                            : "text-success"
+                            : busyCount > 0
+                              ? "text-warning"
+                              : "text-success"
                       }`}
                     >
                       <span
@@ -1165,9 +1160,9 @@ function BookingTimeStep({
                             ? "bg-primary-foreground"
                             : !availabilityKnown
                               ? "bg-muted-foreground/50"
-                            : busyCount > 0
-                              ? "bg-warning"
-                              : "bg-success"
+                              : busyCount > 0
+                                ? "bg-warning"
+                                : "bg-success"
                         }`}
                       />
                       <span className="hidden sm:inline">
