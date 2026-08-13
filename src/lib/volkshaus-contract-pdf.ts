@@ -18,6 +18,8 @@ const MARGIN_TOP = 52;
 const MARGIN_BOTTOM = 54;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const BODY_SIZE = 9.2;
+const SURFACE_MARGIN_TOP = 6;
+const SURFACE_MARGIN_BOTTOM = 14;
 
 const COLOR_BLUE = rgb(0, 98 / 255, 174 / 255);
 const COLOR_ORANGE = rgb(243 / 255, 146 / 255, 0);
@@ -145,15 +147,20 @@ export const createVolkshausContractPdf = async (
 
   const drawSectionHeading = (heading: string) => {
     ensureSpace(28);
-    page.drawRectangle({
-      x: MARGIN_X,
-      y: y - 2,
-      width: 3,
-      height: 13,
-      color: COLOR_ORANGE,
-    });
+    const hasAccent =
+      heading !== "1. Vertragsgegenstand und Nutzungszweck" &&
+      heading !== "2. Übergabe";
+    if (hasAccent) {
+      page.drawRectangle({
+        x: MARGIN_X,
+        y: y - 2,
+        width: 3,
+        height: 13,
+        color: COLOR_ORANGE,
+      });
+    }
     page.drawText(pdfSafeText(heading), {
-      x: MARGIN_X + 10,
+      x: MARGIN_X + (hasAccent ? 10 : 0),
       y,
       size: 11,
       font: bold,
@@ -194,7 +201,8 @@ export const createVolkshausContractPdf = async (
     const leftLayout = measure(left);
     const rightLayout = measure(right);
     const height = Math.max(leftLayout.height, rightLayout.height, 78);
-    ensureSpace(height + 14);
+    ensureSpace(height + SURFACE_MARGIN_TOP + SURFACE_MARGIN_BOTTOM);
+    y -= SURFACE_MARGIN_TOP;
     const top = y;
 
     const drawCard = (
@@ -208,8 +216,6 @@ export const createVolkshausContractPdf = async (
         width,
         height,
         color: COLOR_SURFACE,
-        borderColor: COLOR_BORDER,
-        borderWidth: 0.7,
       });
       page.drawRectangle({
         x,
@@ -253,7 +259,7 @@ export const createVolkshausContractPdf = async (
 
     drawCard(MARGIN_X, left, leftLayout);
     drawCard(MARGIN_X + width + gap, right, rightLayout);
-    y = top - height - 14;
+    y = top - height - SURFACE_MARGIN_BOTTOM;
   };
 
   const drawInfoBlock = (
@@ -275,7 +281,8 @@ export const createVolkshausContractPdf = async (
         0,
       ) +
       6;
-    ensureSpace(height + 10);
+    ensureSpace(height + SURFACE_MARGIN_TOP + SURFACE_MARGIN_BOTTOM);
+    y -= SURFACE_MARGIN_TOP;
     const top = y;
     page.drawRectangle({
       x: MARGIN_X,
@@ -283,8 +290,6 @@ export const createVolkshausContractPdf = async (
       width: CONTENT_WIDTH,
       height,
       color: COLOR_SURFACE,
-      borderColor: COLOR_BORDER,
-      borderWidth: 0.7,
     });
     page.drawRectangle({
       x: MARGIN_X,
@@ -322,7 +327,7 @@ export const createVolkshausContractPdf = async (
       }
       rowY -= 4;
     }
-    y = top - height - 10;
+    y = top - height - SURFACE_MARGIN_BOTTOM;
   };
 
   const drawPriceBlock = () => {
@@ -339,12 +344,16 @@ export const createVolkshausContractPdf = async (
       0,
     );
     const height = 38 + lineRowsHeight + 55;
-    if (y - height - 10 < MARGIN_BOTTOM) {
+    if (
+      y - height - SURFACE_MARGIN_TOP - SURFACE_MARGIN_BOTTOM <
+      MARGIN_BOTTOM
+    ) {
       page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       y = PAGE_HEIGHT - MARGIN_TOP;
       drawSectionHeading("4. Nutzungsentgelt (Fortsetzung)");
     }
-    ensureSpace(height + 10);
+    ensureSpace(height + SURFACE_MARGIN_TOP + SURFACE_MARGIN_BOTTOM);
+    y -= SURFACE_MARGIN_TOP;
     const top = y;
     const right = MARGIN_X + CONTENT_WIDTH - padding;
 
@@ -354,8 +363,6 @@ export const createVolkshausContractPdf = async (
       width: CONTENT_WIDTH,
       height,
       color: COLOR_SURFACE,
-      borderColor: COLOR_BORDER,
-      borderWidth: 0.7,
     });
     page.drawRectangle({
       x: MARGIN_X,
@@ -432,7 +439,7 @@ export const createVolkshausContractPdf = async (
       });
       rowY -= isTotal ? 12 : 10.5;
     }
-    y = top - height - 10;
+    y = top - height - SURFACE_MARGIN_BOTTOM;
   };
 
   const drawListItem = (
@@ -493,12 +500,6 @@ export const createVolkshausContractPdf = async (
     size: 9.7,
     font: bold,
     color: COLOR_TEXT,
-  });
-  page.drawLine({
-    start: { x: MARGIN_X, y: y - 42 },
-    end: { x: PAGE_WIDTH - MARGIN_X, y: y - 42 },
-    thickness: 1,
-    color: COLOR_ORANGE,
   });
   y -= 66;
 
@@ -608,6 +609,7 @@ export const createVolkshausContractPdf = async (
   y -= 13;
   const customerSignature = booking.customerSignature;
   const staffSignature = booking.staffSignature;
+  y -= SURFACE_MARGIN_TOP;
   const signatureTop = y;
   const signatureHeight = 40;
   const signatureColumnWidth = CONTENT_WIDTH / 2;
@@ -617,8 +619,6 @@ export const createVolkshausContractPdf = async (
     width: CONTENT_WIDTH,
     height: signatureHeight,
     color: COLOR_SURFACE,
-    borderColor: COLOR_BORDER,
-    borderWidth: 0.7,
   });
   page.drawLine({
     start: { x: MARGIN_X + signatureColumnWidth, y: signatureTop },
@@ -669,7 +669,7 @@ export const createVolkshausContractPdf = async (
     "Anbieter",
     staffSignature,
   );
-  y = signatureTop - signatureHeight;
+  y = signatureTop - signatureHeight - SURFACE_MARGIN_BOTTOM;
 
   for (const [index, currentPage] of document.getPages().entries()) {
     currentPage.drawLine({
