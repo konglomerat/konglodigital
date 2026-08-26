@@ -18,6 +18,8 @@ import {
   faCalendarCheck,
   faCalendarDays,
   faChartPie,
+  faCircleInfo,
+  faEuroSign,
   faFolderOpen,
   faLayerGroup,
   faPrint,
@@ -28,6 +30,7 @@ import {
   faRightFromBracket,
   faRightToBracket,
   faHouse,
+  faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mdxeditor/editor/style.css";
@@ -46,6 +49,8 @@ import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
 import AppShell from "./AppShell";
+import SiteFooter from "./SiteFooter";
+import TopNav from "./TopNav";
 
 config.autoAddCss = false;
 
@@ -114,47 +119,6 @@ export const metadata: Metadata = {
   },
 };
 
-type ProtectedNavItemProps = {
-  href: string;
-  icon: IconProp;
-  children: React.ReactNode;
-  className: string;
-  isAccessible: boolean;
-  tooltip: string;
-};
-
-function ProtectedNavItem({
-  href,
-  icon,
-  children,
-  className,
-  isAccessible,
-  tooltip,
-}: ProtectedNavItemProps) {
-  if (isAccessible) {
-    return (
-      <ActiveNavLink href={href} className={className}>
-        <FontAwesomeIcon icon={icon} className="h-4 w-4" />
-        {children}
-      </ActiveNavLink>
-    );
-  }
-
-  return (
-    <div
-      className={`${className} cursor-not-allowed select-none text-muted-foreground/80 hover:text-muted-foreground/80`}
-      aria-disabled="true"
-      title={tooltip}
-    >
-      <FontAwesomeIcon icon={icon} className="h-4 w-4" />
-      <span>{children}</span>
-      <span className="ml-auto inline-flex items-center" title={tooltip}>
-        <FontAwesomeIcon icon={faLock} className="h-3 w-3" />
-      </span>
-    </div>
-  );
-}
-
 type ComingSoonNavItemProps = {
   icon: IconProp;
   children: React.ReactNode;
@@ -198,18 +162,25 @@ export default async function RootLayout({
     isAuthenticated && rolesCanAccessModule(userRoles, "admin");
   const canAccessVolkshaus =
     isAuthenticated && rolesCanAccessModule(userRoles, "volkshaus");
-  const adminAreaHref = canAccessAdmin ? "/admin/users" : "/admin/volkshaus";
-  const navItemClassName =
-    "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
+  const canAccessBackOffice = canAccessAdmin || canAccessVolkshaus;
+  // Belege und Guthaben stehen nur im Back-Office, nicht im Profil.
+  const canAccessFinanzen =
+    isAuthenticated && rolesCanAccessModule(userRoles, "invoices");
+  const adminAreaHref = canAccessAdmin
+    ? "/admin/users"
+    : "/admin/volkshaus";
   const navLinkClassName =
-    "group flex items-center gap-3 border-b border-border/60 bg-transparent px-2 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground";
+    "group flex items-center gap-3 border-b border-border bg-transparent px-2 py-2.5 text-sm font-medium text-foreground transition hover:text-primary";
   const navSectionTitleClassName =
-    "px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:pt-0";
-  const navButtonClassName =
-    "flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90";
-  const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
+    "px-2 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-muted-foreground first:pt-0";
+  // Die Optik kommt aus der Button-Komponente; hier nur die Breite.
+  const navButtonClassName = "w-full";
 
   return (
+    // Die next/font-Variablen gehören auf <html>: knglmrt-theme.css definiert
+    // --font-core/-display/-wide/-narrow auf :root. Lagen die Variablen auf
+    // <body>, war var(--font-geist-sans) dort unauflösbar — die Rollen-Tokens
+    // wurden ungültig und Body wie Überschriften fielen auf system-ui zurück.
     <html
       lang={locale}
       suppressHydrationWarning
@@ -227,7 +198,7 @@ export default async function RootLayout({
           <ChatwootWidget locale={locale} />
           <AppShell
             mobileNavigation={
-              <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm md:hidden">
+              <header className="sticky top-0 z-40 border-b border-foreground bg-card md:hidden">
                 <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                   <Link
                     href="/"
@@ -238,12 +209,11 @@ export default async function RootLayout({
                     digital
                   </Link>
                   <div className="flex items-center gap-3">
-                    <LanguageSwitcher />
-                    <ThemeToggle />
+                    <LanguageSwitcher variant="topnav" />
                     <AutoCloseMenuDetails
                       className="group"
                       summary={
-                        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-input bg-background px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                        <summary className="flex cursor-pointer list-none items-center gap-2 border border-foreground bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft">
                           Menü
                           <span className="text-lg transition group-open:rotate-45">
                             +
@@ -251,95 +221,18 @@ export default async function RootLayout({
                         </summary>
                       }
                     >
-                      <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+                      <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto border border-foreground bg-popover text-popover-foreground">
                         <nav className="flex flex-col px-2 py-2">
-                          <p className={navSectionTitleClassName}>
-                            Digital Fabrication
-                          </p>
-                          <ProtectedNavItem
-                            href="/printers"
-                            className={navLinkClassName}
-                            icon={faCube}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            3D-Druck
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/printers/emptying"
-                            className={navLinkClassName}
-                            icon={faPrint}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Drucker entleeren
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/printers/access-codes"
-                            className={navLinkClassName}
-                            icon={faKey}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Drucker Zugang
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/checkout"
-                            className={navLinkClassName}
-                            icon={faCartShopping}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Warenkorb
-                          </ProtectedNavItem>
-                          <ComingSoonNavItem
-                            className={navLinkClassName}
-                            icon={faChartPie}
-                          >
-                            Laser
-                          </ComingSoonNavItem>
-
-                          <p className={navSectionTitleClassName}>
-                            Self Service
-                          </p>
-                          <ComingSoonNavItem
-                            className={navLinkClassName}
-                            icon={faCalendarCheck}
-                          >
-                            Zugangskarte
-                          </ComingSoonNavItem>
-                          <ProtectedNavItem
-                            href="/account"
-                            className={navLinkClassName}
-                            icon={faUser}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            {currentUserDisplayName
-                              ? `Profil (${currentUserDisplayName})`
-                              : "Profil"}
-                          </ProtectedNavItem>
-
                           <p className={navSectionTitleClassName}>Verein</p>
-
-                          <ProtectedNavItem
-                            href="/resources"
-                            className={navLinkClassName}
-                            icon={faFolderOpen}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Inventar
-                          </ProtectedNavItem>
                           <ActiveNavLink
-                            href="/projects"
+                            href="/verein"
                             className={navLinkClassName}
                           >
                             <FontAwesomeIcon
-                              icon={faFolderOpen}
+                              icon={faCircleInfo}
                               className="h-4 w-4"
                             />
-                            Projekte
+                            Über uns
                           </ActiveNavLink>
                           <ActiveNavLink
                             href="/calendar"
@@ -361,34 +254,80 @@ export default async function RootLayout({
                             />
                             Volkshaus buchen
                           </ActiveNavLink>
-                          <ProtectedNavItem
-                            href="/products"
+                          <ActiveNavLink
+                            href="/monatsbeitrag"
                             className={navLinkClassName}
-                            icon={faBoxOpen}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
                           >
-                            Produkte
-                          </ProtectedNavItem>
-                          <ComingSoonNavItem
-                            className={navLinkClassName}
-                            icon={faUser}
-                          >
-                            Ehrenamtsbonus
-                          </ComingSoonNavItem>
+                            <FontAwesomeIcon
+                              icon={faEuroSign}
+                              className="h-4 w-4"
+                            />
+                            Mitgliedschaft & Beitrag
+                          </ActiveNavLink>
 
                           <p className={navSectionTitleClassName}>
-                            Holzwerkstatt
+                            Werkbereiche
                           </p>
-                          <ProtectedNavItem
-                            href="/split-invoice"
+                          <ActiveNavLink
+                            href="/werkbereiche"
                             className={navLinkClassName}
-                            icon={faLayerGroup}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
                           >
-                            Materialbestellung
-                          </ProtectedNavItem>
+                            <FontAwesomeIcon
+                              icon={faLayerGroup}
+                              className="h-4 w-4"
+                            />
+                            Alle Werkbereiche
+                          </ActiveNavLink>
+                          {isAuthenticated ? (
+                            <>
+                              <ActiveNavLink
+                                href="/printers"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faCube}
+                                  className="h-4 w-4"
+                                />
+                                3D-Druck
+                              </ActiveNavLink>
+                              <ActiveNavLink
+                                href="/printers/emptying"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faPrint}
+                                  className="h-4 w-4"
+                                />
+                                Drucker entleeren
+                              </ActiveNavLink>
+                              <ActiveNavLink
+                                href="/printers/access-codes"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faKey}
+                                  className="h-4 w-4"
+                                />
+                                Drucker Zugang
+                              </ActiveNavLink>
+                              <ActiveNavLink
+                                href="/split-invoice"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faLayerGroup}
+                                  className="h-4 w-4"
+                                />
+                                Materialbestellung
+                              </ActiveNavLink>
+                            </>
+                          ) : null}
+                          <ComingSoonNavItem
+                            className={navLinkClassName}
+                            icon={faChartPie}
+                          >
+                            Laser
+                          </ComingSoonNavItem>
                           <ComingSoonNavItem
                             className={navLinkClassName}
                             icon={faLayerGroup}
@@ -396,33 +335,121 @@ export default async function RootLayout({
                             Lagerplatz
                           </ComingSoonNavItem>
 
-                          <p className={navSectionTitleClassName}>
-                            buchhaltung
-                          </p>
-                          <ProtectedNavItem
-                            href="/receipts"
+                          <p className={navSectionTitleClassName}>Projekte</p>
+                          <ActiveNavLink
+                            href="/projects"
                             className={navLinkClassName}
-                            icon={faFolderOpen}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
                           >
-                            Übersicht
-                          </ProtectedNavItem>
+                            <FontAwesomeIcon
+                              icon={faFolderOpen}
+                              className="h-4 w-4"
+                            />
+                            Projekte
+                          </ActiveNavLink>
+
+                          {isAuthenticated ? (
+                            <>
+                              <p className={navSectionTitleClassName}>
+                                Inventar
+                              </p>
+                              <ActiveNavLink
+                                href="/resources"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faFolderOpen}
+                                  className="h-4 w-4"
+                                />
+                                Inventar
+                              </ActiveNavLink>
+
+                              <p className={navSectionTitleClassName}>Profil</p>
+                              <ActiveNavLink
+                                href="/account"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faUser}
+                                  className="h-4 w-4"
+                                />
+                                {currentUserDisplayName
+                                  ? `Profil (${currentUserDisplayName})`
+                                  : "Profil"}
+                              </ActiveNavLink>
+                              <ActiveNavLink
+                                href="/checkout"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faCartShopping}
+                                  className="h-4 w-4"
+                                />
+                                Warenkorb
+                              </ActiveNavLink>
+                              {canAccessFinanzen ? (
+                                <>
+                                  <ActiveNavLink
+                                    href="/receipts"
+                                    className={navLinkClassName}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={faFolderOpen}
+                                      className="h-4 w-4"
+                                    />
+                                    Belege
+                                  </ActiveNavLink>
+                                  <ActiveNavLink
+                                    href="/balance"
+                                    className={navLinkClassName}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={faWallet}
+                                      className="h-4 w-4"
+                                    />
+                                    Guthaben
+                                  </ActiveNavLink>
+                                </>
+                              ) : null}
+                              <ActiveNavLink
+                                href="/products"
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon
+                                  icon={faBoxOpen}
+                                  className="h-4 w-4"
+                                />
+                                Produkte
+                              </ActiveNavLink>
+                              <ComingSoonNavItem
+                                className={navLinkClassName}
+                                icon={faCalendarCheck}
+                              >
+                                Zugangskarte
+                              </ComingSoonNavItem>
+                              <ComingSoonNavItem
+                                className={navLinkClassName}
+                                icon={faUser}
+                              >
+                                Ehrenamtsbonus
+                              </ComingSoonNavItem>
+                            </>
+                          ) : null}
                         </nav>
-                        <div className="border-t border-border px-4 py-4">
+                        <div className="border-t border-foreground px-4 py-4">
                           {isAuthenticated ? (
                             <div className="space-y-3">
-                              {canAccessAdmin || canAccessVolkshaus ? (
+                              <ThemeToggle />
+                              {canAccessBackOffice ? (
                                 <Button
                                   href={adminAreaHref}
                                   kind="secondary"
-                                  className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
+                                  className="w-full"
                                 >
                                   <FontAwesomeIcon
                                     icon={faLock}
                                     className="h-4 w-4"
                                   />
-                                  Admin
+                                  Back-Office
                                 </Button>
                               ) : null}
                               <form action={signOut}>
@@ -440,17 +467,27 @@ export default async function RootLayout({
                               </form>
                             </div>
                           ) : (
-                            <Button
-                              href="/login"
-                              kind="primary"
-                              className={navButtonClassName}
-                            >
-                              <FontAwesomeIcon
-                                icon={faRightToBracket}
-                                className="h-4 w-4"
-                              />
-                              Anmelden
-                            </Button>
+                            <div className="space-y-3">
+                              <ThemeToggle />
+                              <Button
+                                href="/login"
+                                kind="secondary"
+                                className="w-full"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faRightToBracket}
+                                  className="h-4 w-4"
+                                />
+                                Anmelden
+                              </Button>
+                              <Button
+                                href="/register"
+                                kind="primary"
+                                className={navButtonClassName}
+                              >
+                                Mitglied werden
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -460,207 +497,12 @@ export default async function RootLayout({
               </header>
             }
             desktopNavigation={
-              <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-6 py-8 text-sidebar-foreground shadow-sm md:flex">
-                <div className="space-y-3">
-                  <div>
-                    <Link
-                      href="/"
-                      className="text-3xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
-                    >
-                      Konglo
-                      <br />
-                      digital
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <LanguageSwitcher />
-                    <ThemeToggle />
-                  </div>
-                </div>
-                <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                  <p className="px-6 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Digital Fabrication
-                  </p>
-                  <ProtectedNavItem
-                    href="/printers"
-                    className={navItemClassName}
-                    icon={faCube}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    3D-Druck
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/printers/emptying"
-                    className={navItemClassName}
-                    icon={faPrint}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Drucker entleeren
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/printers/access-codes"
-                    className={navItemClassName}
-                    icon={faKey}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Drucker Zugang
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/checkout"
-                    className={navItemClassName}
-                    icon={faCartShopping}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Warenkorb
-                  </ProtectedNavItem>
-                  <ComingSoonNavItem
-                    className={navItemClassName}
-                    icon={faChartPie}
-                  >
-                    Laser
-                  </ComingSoonNavItem>
-
-                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Self Service
-                  </p>
-                  <ComingSoonNavItem
-                    className={navItemClassName}
-                    icon={faCalendarCheck}
-                  >
-                    Zugangskarte
-                  </ComingSoonNavItem>
-                  <ProtectedNavItem
-                    href="/account"
-                    className={navItemClassName}
-                    icon={faUser}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    {currentUserDisplayName
-                      ? `Profil (${currentUserDisplayName})`
-                      : "Profil"}
-                  </ProtectedNavItem>
-
-                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Verein
-                  </p>
-                  <ActiveNavLink href="/calendar" className={navItemClassName}>
-                    <FontAwesomeIcon
-                      icon={faCalendarDays}
-                      className="h-4 w-4"
-                    />
-                    Kalender
-                  </ActiveNavLink>
-                  <ActiveNavLink
-                    href="/volkshaus/buchen"
-                    className={navItemClassName}
-                  >
-                    <FontAwesomeIcon icon={faHouse} className="h-4 w-4" />
-                    Volkshaus buchen
-                  </ActiveNavLink>
-                  <ProtectedNavItem
-                    href="/resources"
-                    className={navItemClassName}
-                    icon={faFolderOpen}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Inventar
-                  </ProtectedNavItem>
-                  <ActiveNavLink href="/projects" className={navItemClassName}>
-                    <FontAwesomeIcon icon={faFolderOpen} className="h-4 w-4" />
-                    Projekte
-                  </ActiveNavLink>
-                  <ProtectedNavItem
-                    href="/products"
-                    className={navItemClassName}
-                    icon={faBoxOpen}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Produkte
-                  </ProtectedNavItem>
-                  <ComingSoonNavItem className={navItemClassName} icon={faUser}>
-                    Ehrenamtsbonus
-                  </ComingSoonNavItem>
-
-                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Holzwerkstatt
-                  </p>
-                  <ProtectedNavItem
-                    href="/split-invoice"
-                    className={navItemClassName}
-                    icon={faLayerGroup}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Materialbestellung
-                  </ProtectedNavItem>
-                  <ComingSoonNavItem
-                    className={navItemClassName}
-                    icon={faLayerGroup}
-                  >
-                    Lagerplatz
-                  </ComingSoonNavItem>
-
-                  <p className="px-6 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    buchhaltung
-                  </p>
-                  <ProtectedNavItem
-                    href="/receipts"
-                    className={navItemClassName}
-                    icon={faFolderOpen}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Übersicht
-                  </ProtectedNavItem>
-                </nav>
-                {isAuthenticated ? (
-                  <div className="mt-auto space-y-3">
-                    {canAccessAdmin || canAccessVolkshaus ? (
-                      <Button
-                        href={adminAreaHref}
-                        kind="secondary"
-                        className="flex w-full items-center justify-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
-                      >
-                        <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                        Admin
-                      </Button>
-                    ) : null}
-                    <form action={signOut}>
-                      <Button
-                        type="submit"
-                        kind="primary"
-                        className={navButtonClassName}
-                      >
-                        <FontAwesomeIcon
-                          icon={faRightFromBracket}
-                          className="h-4 w-4"
-                        />
-                        Abmelden
-                      </Button>
-                    </form>
-                  </div>
-                ) : (
-                  <Button
-                    href="/login"
-                    kind="primary"
-                    className={navButtonClassName}
-                  >
-                    <FontAwesomeIcon
-                      icon={faRightToBracket}
-                      className="h-4 w-4"
-                    />
-                    Anmelden
-                  </Button>
-                )}
-              </aside>
+              <TopNav
+                isAuthenticated={isAuthenticated}
+                currentUserDisplayName={currentUserDisplayName}
+              />
             }
+            footer={<SiteFooter isAuthenticated={isAuthenticated} />}
           >
             {children}
           </AppShell>

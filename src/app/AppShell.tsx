@@ -9,6 +9,7 @@ type AppShellProps = {
   children: ReactNode;
   desktopNavigation: ReactNode;
   mobileNavigation: ReactNode;
+  footer: ReactNode;
 };
 
 const FULLSCREEN_PATHNAMES = new Set(["/resources/batch"]);
@@ -17,6 +18,7 @@ export default function AppShell({
   children,
   desktopNavigation,
   mobileNavigation,
+  footer,
 }: AppShellProps) {
   const pathname = usePathname() ?? "/";
   const normalizedPathname =
@@ -27,14 +29,15 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // Spalte mit mt-auto am Footer: kurze Seiten schieben ihn trotzdem
+    // an den unteren Rand.
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       {mobileNavigation}
       {desktopNavigation}
-      <div className="ml-0 md:ml-64">
-        <main className="mx-auto w-full px-3 py-4 md:px-10 md:py-10">
-          {children}
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-[1240px] flex-1 px-3 py-4 md:px-7 md:py-10">
+        {children}
+      </main>
+      {footer}
     </div>
   );
 }

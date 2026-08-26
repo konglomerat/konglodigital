@@ -58,57 +58,57 @@ export default async function Home() {
   ];
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
+    <div className="flex w-full flex-col gap-8 md:gap-10">
       {/* Terrazzo-Band mit weißem Panel darüber — die Kachel liegt nie unter
           dem Satz, sondern immer hinter einer Fläche (Regel des DS).
           Die negativen Ränder heben das Polster der AppShell auf, damit das
           Band bündig unter der TopNav sitzt. */}
-      <section className="knglmrt-terrazzo-fein-rosa -mx-6 -mt-10 border-b border-foreground px-6 py-8 md:-mt-14 md:py-11">
+      <section className="knglmrt-terrazzo-fein-rosa -mx-3 -mt-4 border-b border-foreground px-3 py-8 md:-mx-7 md:-mt-10 md:px-7 md:py-11">
         <div className="knglmrt-panel grid gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
-          <div className="order-2 md:order-1">
-            <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
-            <h1 className="mt-3 text-[40px] leading-[38px] md:text-[56px] md:leading-[52px]">
-              Konglo
-              <br />
-              digital
-            </h1>
-            <p className="knglmrt-lead mt-4 max-w-[420px]">
-              {tx(
-                "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
-                "de",
-              )}
-            </p>
+        <div className="order-2 md:order-1">
+          <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
+          <h1 className="mt-3 text-[40px] leading-[38px] md:text-[56px] md:leading-[52px]">
+            Konglo
+            <br />
+            digital
+          </h1>
+          <p className="knglmrt-lead mt-4 max-w-[420px]">
+            {tx(
+              "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
+              "de",
+            )}
+          </p>
 
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <Button href="/resources" kind="primary">
-                {tx("Zum Inventar", "de")}
-              </Button>
-              <Button href="/calendar" kind="secondary">
-                {tx("Termine ansehen", "de")}
-              </Button>
-            </div>
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <Button href="/resources" kind="primary">
+              {tx("Zum Inventar", "de")}
+            </Button>
+            <Button href="/calendar" kind="secondary">
+              {tx("Termine ansehen", "de")}
+            </Button>
           </div>
+        </div>
 
-          <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
-            <Image
-              src={heroHelloImage}
-              alt="Willkommensgrafik"
-              priority
-              className="h-auto w-full object-cover multiply negative-multiply md:hidden"
-            />
-            <div className="relative hidden md:-my-6 md:block lg:-my-10">
-              <video
-                autoPlay
-                muted
-                playsInline
-                loop
-                className="h-auto w-full object-cover invert-in-dark"
-              >
-                <source src="/heroanimation.mp4" type="video/mp4" />
-              </video>
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_30px_10px_#fff,inset_0_30px_52px_#fff] dark:shadow-[inset_0_0_20px_10px_#09090b,inset_0_20px_72px_#09090b]" />
-            </div>
+        <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
+          <Image
+            src={heroHelloImage}
+            alt="Willkommensgrafik"
+            priority
+            className="h-auto w-full object-cover multiply negative-multiply md:hidden"
+          />
+          <div className="relative hidden md:-my-6 md:block lg:-my-10">
+            <video
+              autoPlay
+              muted
+              playsInline
+              loop
+              className="h-auto w-full object-cover invert-in-dark"
+            >
+              <source src="/heroanimation.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_30px_10px_#fff,inset_0_30px_52px_#fff] dark:shadow-[inset_0_0_20px_10px_#09090b,inset_0_20px_72px_#09090b]" />
           </div>
+        </div>
         </div>
       </section>
 
@@ -258,7 +258,7 @@ export default async function Home() {
       <ResourceOfTheMonthSection />
 
       {/* Zweite, leise Kachel als Abbinder — hellgelb ist der ruhigste Schnitt. */}
-      <section className="knglmrt-terrazzo-hellgelb -mx-6 -mb-10 border-t border-foreground px-6 py-9 text-center md:-mb-14">
+      <section className="knglmrt-terrazzo-hellgelb -mx-3 -mb-4 border-t border-foreground px-3 py-9 text-center md:-mx-7 md:-mb-10 md:px-7">
         <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
           {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>
@@ -271,6 +271,6 @@ export default async function Home() {
           konglomerat.org
         </a>
       </section>
-    </main>
+    </div>
   );
 }
