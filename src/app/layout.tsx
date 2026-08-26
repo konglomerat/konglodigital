@@ -500,6 +500,7 @@ export default async function RootLayout({
               <TopNav
                 isAuthenticated={isAuthenticated}
                 currentUserDisplayName={currentUserDisplayName}
+                adminAreaHref={adminAreaHref}
               />
             }
             footer={<SiteFooter isAuthenticated={isAuthenticated} />}

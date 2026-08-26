@@ -8,6 +8,7 @@ import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 type TopNavProps = {
   isAuthenticated: boolean;
   currentUserDisplayName: string | null;
+  adminAreaHref: string;
 };
 
 const getInitials = (name: string | null) => {
@@ -23,6 +24,7 @@ const getInitials = (name: string | null) => {
 export default function TopNav({
   isAuthenticated,
   currentUserDisplayName,
+  adminAreaHref,
 }: TopNavProps) {
   // Login-pflichtige Bereiche erscheinen ausgeloggt gar nicht.
   const sections = [
@@ -68,22 +70,31 @@ export default function TopNav({
 
           <div className="flex items-center border-l border-foreground pl-6">
             {isAuthenticated ? (
-              // Kein Hover-Menü mehr: das Profil ist eine Seite mit eigener
-              // Bereichsnavigation (/account), nicht ein Dropdown.
-              <Link
-                href="/account"
-                className="flex items-center gap-2.5 py-1 pr-1 transition hover:text-primary"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 flex-none items-center justify-center border border-foreground bg-primary-soft text-xs font-bold text-foreground"
+              <div className="flex items-center gap-4">
+                {/* Kein Hover-Menü mehr: das Profil ist eine Seite mit eigener
+                Bereichsnavigation (/account), nicht ein Dropdown. */}
+                <Link
+                  href="/account"
+                  className="flex items-center gap-2.5 py-1 transition hover:text-primary"
                 >
-                  {getInitials(currentUserDisplayName)}
-                </span>
-                <span className="max-w-[9rem] truncate text-[length:var(--ui-size-body)] font-bold">
-                  {currentUserDisplayName ?? "Profil"}
-                </span>
-              </Link>
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 flex-none items-center justify-center border border-foreground bg-primary-soft text-xs font-bold text-foreground"
+                  >
+                    {getInitials(currentUserDisplayName)}
+                  </span>
+                  <span className="max-w-[9rem] truncate text-[length:var(--ui-size-body)] font-bold">
+                    {currentUserDisplayName ?? "Profil"}
+                  </span>
+                </Link>
+                <Button
+                  href={adminAreaHref}
+                  kind="secondary"
+                  className="!bg-foreground !text-background hover:!bg-[var(--knglmrt-brown-100)] hover:!text-white"
+                >
+                  Verwaltung
+                </Button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Button href="/login" kind="secondary">
