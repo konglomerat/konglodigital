@@ -1,11 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCircleCheck,
-  faEnvelope,
-  faUserPlus,
-} from "@fortawesome/free-solid-svg-icons";
+import Divider from "@/components/knglmrt/Divider";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ProjectOfTheMonthSection from "./ProjectOfTheMonthSection";
@@ -64,67 +59,76 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 md:gap-10 md:py-14">
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_680px]">
-        <div className="order-2 md:order-1">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
-            {tx("Willkommen", "de")}
-          </p>
-          <h1 className="mt-3 text-3xl font-black uppercase tracking-widest leading-none text-foreground md:text-5xl">
-            Konglo
-            <br />
-            digital
-          </h1>
-          <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-base">
-            {tx(
-              "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
-              "de",
-            )}
-          </p>
+      {/* Terrazzo-Band mit weißem Panel darüber — die Kachel liegt nie unter
+          dem Satz, sondern immer hinter einer Fläche (Regel des DS).
+          Die negativen Ränder heben das Polster der AppShell auf, damit das
+          Band bündig unter der TopNav sitzt. */}
+      <section className="knglmrt-terrazzo-fein-rosa -mx-6 -mt-10 border-b border-foreground px-6 py-8 md:-mt-14 md:py-11">
+        <div className="knglmrt-panel grid gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
+          <div className="order-2 md:order-1">
+            <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
+            <h1 className="mt-3 text-[40px] leading-[38px] md:text-[56px] md:leading-[52px]">
+              Konglo
+              <br />
+              digital
+            </h1>
+            <p className="knglmrt-lead mt-4 max-w-[420px]">
+              {tx(
+                "Hier findest du alles zur Werkstatt, Self-Service und Verwaltung.",
+                "de",
+              )}
+            </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button href="/resources" kind="primary" size="medium">
-              {tx("Zum Inventar", "de")}
-            </Button>
-            <Button href="/calendar" kind="secondary" size="medium">
-              {tx("Termine ansehen", "de")}
-            </Button>
+            <div className="mt-6 flex flex-wrap gap-2.5">
+              <Button href="/resources" kind="primary">
+                {tx("Zum Inventar", "de")}
+              </Button>
+              <Button href="/calendar" kind="secondary">
+                {tx("Termine ansehen", "de")}
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
-          <Image
-            src={heroHelloImage}
-            alt="Willkommensgrafik"
-            priority
-            className="h-auto w-full object-cover multiply negative-multiply md:hidden"
-          />
-          <div className="relative hidden md:-my-6 md:block lg:-my-10">
-            <video
-              autoPlay
-              muted
-              playsInline
-              loop
-              className="h-auto w-full object-cover invert-in-dark"
-            >
-              <source src="/heroanimation.mp4" type="video/mp4" />
-            </video>
-            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_30px_10px_#fafafa,inset_0_30px_52px_#fafafa] dark:shadow-[inset_0_0_20px_10px_#09090b,inset_0_20px_72px_#09090b]" />
+          <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
+            <Image
+              src={heroHelloImage}
+              alt="Willkommensgrafik"
+              priority
+              className="h-auto w-full object-cover multiply negative-multiply md:hidden"
+            />
+            <div className="relative hidden md:-my-6 md:block lg:-my-10">
+              <video
+                autoPlay
+                muted
+                playsInline
+                loop
+                className="h-auto w-full object-cover invert-in-dark"
+              >
+                <source src="/heroanimation.mp4" type="video/mp4" />
+              </video>
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_30px_10px_#fff,inset_0_30px_52px_#fff] dark:shadow-[inset_0_0_20px_10px_#09090b,inset_0_20px_72px_#09090b]" />
+            </div>
           </div>
         </div>
       </section>
 
       {!isAuthenticated ? (
-        <section className="rounded-lg bg-primary p-5 text-primary-foreground shadow-sm ring-1 ring-primary md:p-6">
-          <h2 className="text-xl font-semibold tracking-tight text-primary-foreground md:text-2xl">
+        // Muster des Prototyps: paper-pink Tint-Block, pinke Überschrift,
+        // gezeichnete Linie darunter, drei getrackte Kurzlabels. Pink ist im
+        // DS Akzent, nie Fläche — deshalb der Tint statt der vollen Fläche.
+        <section className="bg-primary-soft px-6 py-7 md:px-8">
+          <h2 className="mb-1.5 text-primary">
             {tx("Neu hier? So funktioniert die Registrierung", "de")}
           </h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
-                <FontAwesomeIcon icon={faUserPlus} className="h-4 w-4" />
-                <span>{tx("Wer kann sich registrieren?", "de")}</span>
+          <div className="mb-5 max-w-[520px]">
+            <Divider number={4} height={9} color="var(--foreground)" />
+          </div>
+          <div className="grid gap-6 md:grid-cols-3 md:gap-7">
+            <article className="flex flex-col gap-1.5">
+              <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
+                {tx("Wer kann sich registrieren?", "de")}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+              <p>
                 {tx(
                   "Jedes Konglomeratmitglied kann sich registrieren, auf Nachfrage auch andere Personen.",
                   "de",
@@ -132,28 +136,27 @@ export default async function Home() {
               </p>
             </article>
 
-            <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
-                <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
-                <span>{tx("Automatische Freischaltung", "de")}</span>
+            <article className="flex flex-col gap-1.5">
+              <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
+                {tx("Automatische Freischaltung", "de")}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+              <p>
                 {tx(
                   "Nutze bei der Registrierung die E-Mail-Adresse, mit der du dich beim Konglomerat angemeldet hast.",
                   "de",
                 )}
               </p>
             </article>
-            <article>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground md:text-base">
-                <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
-                <span>{tx("Wenn es nicht klappt", "de")}</span>
+
+            <article className="flex flex-col gap-1.5">
+              <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
+                {tx("Wenn es nicht klappt", "de")}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/85 md:text-base">
+              <p>
                 {tx("Schreib uns an", "de")}{" "}
                 <a
                   href="mailto:vorstand@konglomerat.org"
-                  className="font-medium text-primary-soft underline underline-offset-2 hover:text-primary-foreground"
+                  className="font-bold text-primary hover:text-[var(--knglmrt-brown-100)]"
                 >
                   vorstand@konglomerat.org
                 </a>{" "}
@@ -165,13 +168,8 @@ export default async function Home() {
             </article>
           </div>
 
-          <div className="mt-5">
-            <Button
-              href="/register"
-              kind="secondary"
-              size="large"
-              className="w-full border-transparent bg-background px-8 py-3 text-base font-bold text-primary shadow-lg shadow-black/10 hover:bg-background/90 hover:text-primary"
-            >
+          <div className="mt-6">
+            <Button href="/register" kind="primary">
               {tx("Jetzt registrieren", "de")}
             </Button>
           </div>
@@ -179,13 +177,7 @@ export default async function Home() {
       ) : null}
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-              {tx("Schnellzugriff", "de")}
-            </h2>
-          </div>
-        </div>
+        <h2 className="mb-3.5">{tx("Schnellzugriff", "de")}</h2>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
@@ -193,10 +185,10 @@ export default async function Home() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group overflow-hidden rounded-lg border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-input hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="group flex flex-col border border-foreground bg-card transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {action.href === "/checkout" ? (
-                  <div className="relative">
+                  <div className="relative border-b border-foreground">
                     <Image
                       src={print3dBwImage}
                       alt="3D-Druck"
@@ -209,7 +201,7 @@ export default async function Home() {
                     />
                   </div>
                 ) : action.href === "/resources" ? (
-                  <div className="relative">
+                  <div className="relative border-b border-foreground">
                     <Image
                       src={inventoryBwImage}
                       alt="Inventar"
@@ -222,7 +214,7 @@ export default async function Home() {
                     />
                   </div>
                 ) : action.href === "/calendar" ? (
-                  <div className="relative">
+                  <div className="relative border-b border-foreground">
                     <Image
                       src={calendarBwImage}
                       alt="Kalender"
@@ -235,7 +227,7 @@ export default async function Home() {
                     />
                   </div>
                 ) : action.href === "/projects" ? (
-                  <div className="relative">
+                  <div className="relative border-b border-foreground">
                     <Image
                       src={projectsBwImage}
                       alt="Projekte"
@@ -249,13 +241,11 @@ export default async function Home() {
                   </div>
                 ) : null}
 
-                <div className="px-5 pb-4">
-                  <h3 className="text-base font-semibold text-primary group-hover:text-primary/80">
+                <div className="flex flex-col gap-1.5 px-[18px] py-4">
+                  <h3 className="knglmrt-card-title text-primary">
                     {action.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {action.description}
-                  </p>
+                  <p className="text-muted-foreground">{action.description}</p>
                 </div>
               </Link>
             );
@@ -267,15 +257,16 @@ export default async function Home() {
 
       <ResourceOfTheMonthSection />
 
-      <section className="pt-2">
-        <p className="mb-1 text-center text-sm font-medium text-muted-foreground">
+      {/* Zweite, leise Kachel als Abbinder — hellgelb ist der ruhigste Schnitt. */}
+      <section className="knglmrt-terrazzo-hellgelb -mx-6 -mb-10 border-t border-foreground px-6 py-9 text-center md:-mb-14">
+        <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
           {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>
         <a
           href="https://konglomerat.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center px-2 py-2 text-center text-lg font-bold text-primary underline underline-offset-4 transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="font-display text-[23px] leading-[26px] text-primary transition hover:text-[var(--knglmrt-brown-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           konglomerat.org
         </a>

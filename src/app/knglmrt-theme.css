@@ -1,0 +1,237 @@
+/* ============================================================
+   Konglomerat e.V. Design System — Theme-Override
+   Eingebunden in src/app/layout.tsx DIREKT NACH globals.css.
+   Überschreibt nur Token-Werte — kein Funktionscode betroffen.
+   Quelle: Konglo Library_v2.fig
+   Hinweis: Die Tailwind-Theme-Keys (--radius-full, --font-display)
+   liegen im @theme-inline-Block von globals.css, weil @theme nur in
+   der von Tailwind verarbeiteten Stylesheet-Kette wirkt.
+   ============================================================ */
+
+/* Display-Schrift (lizenziert, self-hosted → public/fonts/) */
+@font-face {
+  font-family: "Fengardo Neue";
+  src: url("/fonts/FengardoNeue_Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Light Theme = das Konglomerat-System.
+   Dark Mode bleibt unangetastet (das DS kennt keinen). */
+:root {
+  --background: #ffffff;            /* Papier */
+  --foreground: #000000;            /* Tinte — Body ist pures Schwarz */
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+
+  --primary: #c83669;               /* knglmrt-pink-100 — nur Akzent, nie Fläche */
+  --primary-foreground: #ffffff;
+  --primary-soft: #faecf1;          /* paper-pink Tint-Block */
+  --primary-border: #de86a5;        /* pink-60 */
+
+  --secondary: #f3f3f3;             /* paper-grey */
+  --secondary-foreground: #000000;
+  --muted: #f3f3f3;
+  --muted-foreground: #828891;      /* dark-60 */
+  --accent: #ffd93d;                /* yellow-100 */
+  --accent-foreground: #000000;
+
+  /* Die Palette kennt kein Grün/Rot: Status läuft über pink/gelb/blau. */
+  --destructive: #c83669;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #eec2d2;      /* pink-30 */
+  --destructive-border: #c83669;
+  --success: #72a7c6;               /* blue-100 */
+  --success-foreground: #000000;
+  --success-soft: #d5e4ee;          /* blue-30 */
+  --success-border: #72a7c6;
+  --warning: #ffd93d;
+  --warning-foreground: #000000;
+  --warning-soft: #fff4c5;          /* yellow-30 */
+  --warning-border: #ffe88b;
+  --info: #2e3846;                  /* dark-100 */
+  --info-foreground: #ffffff;
+  --info-soft: #d5e4ee;
+  --info-border: #2e3846;
+  --highlight: #ffd93d;
+  --highlight-foreground: #000000;
+
+  --border: #c1c3c9;                /* dark-30 — Hairlines */
+  --input: #000000;                 /* Kontur: 1px Schwarz um Formulare */
+  --ring: #000000;                  /* Fokus: schwarze Outline */
+
+  --chart-1: #c83669;
+  --chart-2: #ffd93d;
+  --chart-3: #72a7c6;
+  --chart-4: #764951;
+  --chart-5: #2e3846;
+
+  --radius: 0rem;                   /* das System kennt keine Rundungen */
+
+  /* Zusätzliche knglmrt-Tokens für direkte Verwendung */
+  --knglmrt-brown-100: #764951;     /* Hover-Ziel für Pink */
+  --knglmrt-dark-100: #2e3846;
+  --knglmrt-pink-60: #de86a5;
+  --knglmrt-dark-30: #c1c3c9;
+  --ui-quiet-hover: #e4e4e4;        /* die leise Taste, gehovert */
+
+  /* Schriftfamilien — Rollen aus knglmrt/tokens/typography.css.
+     Alle vier Schnitte werden in layout.tsx geladen; ohne die beiden
+     Fira-Varianten fiel „wide“ und „narrow“ bisher auf system-ui zurück. */
+  --font-display: "Fengardo Neue", var(--font-geist-sans), sans-serif;
+  --font-core: var(--font-geist-sans), "Fira Sans Condensed", system-ui, sans-serif;
+  --font-wide: var(--font-knglmrt-wide), "Fira Sans", system-ui, sans-serif;
+  --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
+    var(--font-geist-sans), system-ui, sans-serif;
+  --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
+
+  /* Schriftgrößen der Screen-Ebene — Literale aus knglmrt/tokens/ui.css.
+     Das gedruckte System läuft mit 11/16, der Bildschirm mit 13/18. */
+  --ui-size-body: 13px;
+  --ui-line-body: 18px;
+  --ui-size-label: 11px;   /* uppercase, tracked .04em — Feldbeschriftungen */
+  --ui-size-caption: 10px; /* uppercase, tracked .13em — Karten- und Tile-Label */
+  --ui-size-num: 12px;     /* Fira Mono — Daten, Zeiten, Beträge, IDs */
+  --ui-size-value: 25px;   /* Fira Mono Bold — die Zahl auf einer StatTile */
+  --ui-size-nav: 14px;
+
+  /* Überschriften-Stufen — Literale aus dem Prototyp, nicht neu abgeleitet.
+     Das gedruckte System nennt nur 32/23; der Bildschirm ergänzt 17 für
+     Karten-Titel und 21 für die Lead-Zeile. */
+  --ui-size-title: 32px;   /* Fengardo Neue Black — Seitentitel */
+  --ui-line-title: 34px;
+  --ui-size-section: 23px; /* Fengardo Neue Black — Sektionsüberschrift */
+  --ui-line-section: 26px;
+  --ui-size-card: 17px;    /* Fira Sans Condensed Bold — Karten-Titel */
+  --ui-line-card: 22px;
+  --ui-size-lead: 21px;    /* Fira Sans Extra Condensed SemiBold */
+  --ui-line-lead: 28px;
+  --ui-size-eyebrow: 22px; /* Fira Sans, uppercase, .13em — die Augenbraue */
+}
+
+@layer base {
+  body {
+    font-family: var(--font-core);
+    font-size: var(--ui-size-body);
+    line-height: var(--ui-line-body);
+  }
+  /* Überschriften sprechen Fengardo Neue Black — bis auf h3 und tiefer,
+     die im DS als fetter Fira-Sans-Condensed-Karten-Titel laufen. */
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 900;
+  }
+  h1 {
+    font-size: var(--ui-size-title);
+    line-height: var(--ui-line-title);
+  }
+  h2 {
+    font-size: var(--ui-size-section);
+    line-height: var(--ui-line-section);
+  }
+  h3, h4 {
+    font-family: var(--font-core);
+    font-weight: 700;
+    font-size: var(--ui-size-card);
+    line-height: var(--ui-line-card);
+  }
+  /* Links: pink, Hover braun — Muster aus den Print-Vorlagen */
+  a { text-underline-offset: 2px; }
+}
+
+/* ── Textrollen des Systems ───────────────────────────────────────────
+   Jede Rolle ist genau eine Zeile aus dem Prototyp. Wer eine Rolle
+   braucht, nimmt die Klasse — nicht eine neu gemischte Größe. */
+.knglmrt-eyebrow {
+  font-family: var(--font-wide);
+  font-weight: 400;
+  font-size: var(--ui-size-eyebrow);
+  line-height: 16px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.knglmrt-lead {
+  font-family: var(--font-narrow);
+  font-weight: 600;
+  font-size: var(--ui-size-lead);
+  line-height: var(--ui-line-lead);
+  text-wrap: pretty;
+}
+.knglmrt-card-title {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-card);
+  line-height: var(--ui-line-card);
+}
+/* Karten- und Tile-Label: 10px, uppercase, .13em */
+.knglmrt-caption {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-caption);
+  line-height: 14px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+/* Statusmarke: 10px Fira Sans (wide), .08em — enger getrackt als das Label */
+.knglmrt-tag {
+  font-family: var(--font-wide);
+  font-weight: 700;
+  font-size: var(--ui-size-caption);
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Daten, Zeiten, Beträge, IDs */
+.knglmrt-num {
+  font-family: var(--font-num);
+  font-weight: 400;
+  font-size: var(--ui-size-num);
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+/* Die Zahl auf einer StatTile */
+.knglmrt-value {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: var(--ui-size-value);
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Terrazzo ─────────────────────────────────────────────────────────
+   Die Hintergrund-Kacheln der Bibliothek, 400x400, kachelnd. Nur die
+   monochromen Schnitte sind hier eingespielt — die sind leise genug, um
+   unter kleinem Satz zu liegen. Die drei bunten "Kontrast"-Kacheln gehören
+   laut DS nur hinter ein weißes Panel und fehlen deshalb.
+   Im Dark Mode aus: die Kacheln sind auf Papierweiß gezeichnet. */
+.knglmrt-terrazzo-fein-rosa,
+.knglmrt-terrazzo-hellgelb {
+  background-repeat: repeat;
+  background-size: 400px 400px;
+}
+.knglmrt-terrazzo-fein-rosa {
+  background-image: url("/branding/backgrounds/terrazzo-fein-rosa.svg");
+  background-color: #f7e1e9;
+}
+.knglmrt-terrazzo-hellgelb {
+  background-image: url("/branding/backgrounds/terrazzo-hellgelb.svg");
+  background-color: #fffcee;
+}
+.dark .knglmrt-terrazzo-fein-rosa,
+.dark .knglmrt-terrazzo-hellgelb {
+  background-image: none;
+  background-color: var(--card);
+}
+
+/* Einzige erlaubte "Tiefe" im System: der 3px-Offset-Schatten,
+   max. 1× pro View (Emphasis-Button ODER Dialog). Als Utility: */
+.knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 #000; }
+
+/* Weißes Panel mit 3px paper-pink Keyline (die eine Karte des Systems) */
+.knglmrt-panel { background: #fff; box-shadow: inset 0 0 0 3px #faecf1; }
+/* Im Dark Mode kein Papierweiß — das DS kennt keinen, die App schon. */
+.dark .knglmrt-panel { background: var(--card); box-shadow: inset 0 0 0 3px var(--border); }

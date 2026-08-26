@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ActiveNavLink from "./ActiveNavLink";
 import heroHelloImage from "./hero-hello.jpg";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Fira_Sans,
+  Fira_Sans_Condensed,
+  Fira_Sans_Extra_Condensed,
+  Fira_Mono,
+} from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
@@ -27,6 +32,7 @@ import {
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mdxeditor/editor/style.css";
 import "./globals.css";
+import "./knglmrt-theme.css";
 import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getUserRoles, rolesCanAccessModule } from "@/lib/roles";
@@ -43,14 +49,30 @@ import AppShell from "./AppShell";
 
 config.autoAddCss = false;
 
-const geistSans = Geist({
+const geistSans = Fira_Sans_Condensed({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
+const geistMono = Fira_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
+
+// Die beiden übrigen Rollen des DS: "wide" trägt die getrackten Versalien
+// (Badges, DE/EN, Augenbraue), "narrow" die Lead-Zeile unter jedem Seitentitel.
+const knglmrtWide = Fira_Sans({
+  variable: "--font-knglmrt-wide",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+});
+
+const knglmrtNarrow = Fira_Sans_Extra_Condensed({
+  variable: "--font-knglmrt-narrow",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
 });
 
 const siteTitle = "Konglomerat Digitale Werkstätten";
@@ -176,9 +198,7 @@ export default async function RootLayout({
     isAuthenticated && rolesCanAccessModule(userRoles, "admin");
   const canAccessVolkshaus =
     isAuthenticated && rolesCanAccessModule(userRoles, "volkshaus");
-  const adminAreaHref = canAccessAdmin
-    ? "/admin/users"
-    : "/admin/volkshaus";
+  const adminAreaHref = canAccessAdmin ? "/admin/users" : "/admin/volkshaus";
   const navItemClassName =
     "group flex w-full items-center gap-3 border-b border-border/60 bg-transparent px-6 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground last:border-b-0";
   const navLinkClassName =
@@ -190,7 +210,11 @@ export default async function RootLayout({
   const membersOnlyTooltip = "Nur für angemeldete Mitglieder verfügbar";
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${knglmrtWide.variable} ${knglmrtNarrow.variable} ${storyOpenSans.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -198,9 +222,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${storyOpenSans.variable} antialiased`}
-      >
+      <body className="antialiased">
         <I18nProvider locale={locale}>
           <ChatwootWidget locale={locale} />
           <AppShell

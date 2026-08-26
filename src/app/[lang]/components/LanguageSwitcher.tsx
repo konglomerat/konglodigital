@@ -12,12 +12,21 @@ import { useI18n } from "@/i18n/client";
 
 type LanguageSwitcherProps = {
   className?: string;
+  variant?: "default" | "topnav";
 };
 
 const buttonClassName =
   "rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition";
 
-export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
+// DE/EN als eckiges Segment: 11px Fira Sans (wide), .08em getrackt,
+// aktive Sprache schwarz auf weiß invertiert — Muster aus dem Prototyp.
+const topNavButtonClassName =
+  "border border-foreground px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
+
+export default function LanguageSwitcher({
+  className,
+  variant = "default",
+}: LanguageSwitcherProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const searchParams = useSearchParams();
@@ -41,16 +50,37 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
     router.refresh();
   };
 
+  const localeButtonClassName = (targetLocale: "de" | "en") => {
+    const isCurrent = currentLocale === targetLocale;
+
+    if (variant === "topnav") {
+      return `${topNavButtonClassName} ${
+        isCurrent
+          ? "bg-foreground font-bold text-background"
+          : "bg-card font-normal text-foreground hover:bg-primary-soft"
+      }`;
+    }
+
+    return `${buttonClassName} ${
+      isCurrent
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
+    }`;
+  };
+
   return (
-    <div className={className ?? "inline-flex items-center gap-1"}>
+    <div
+      className={
+        className ??
+        (variant === "topnav"
+          ? "inline-flex items-center"
+          : "inline-flex items-center gap-1")
+      }
+    >
       <button
         type="button"
         onClick={() => switchToLocale(DEFAULT_LOCALE)}
-        className={`${buttonClassName} ${
-          currentLocale === DEFAULT_LOCALE
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
-        }`}
+        className={localeButtonClassName(DEFAULT_LOCALE)}
         aria-current={currentLocale === DEFAULT_LOCALE ? "page" : undefined}
       >
         DE
@@ -58,10 +88,8 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
       <button
         type="button"
         onClick={() => switchToLocale(ENGLISH_LOCALE)}
-        className={`${buttonClassName} ${
-          currentLocale === ENGLISH_LOCALE
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
+        className={`${localeButtonClassName(ENGLISH_LOCALE)} ${
+          variant === "topnav" ? "-ml-px" : ""
         }`}
         aria-current={currentLocale === ENGLISH_LOCALE ? "page" : undefined}
       >

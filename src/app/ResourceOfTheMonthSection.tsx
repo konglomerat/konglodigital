@@ -109,7 +109,7 @@ export default async function ResourceOfTheMonthSection() {
   }
 
   return (
-    <section className="relative overflow-hidden rounded-lg bg-[#559f62]">
+    <section className="relative overflow-hidden border border-foreground bg-[#559f62]">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,460px)] lg:items-stretch">
         <div className="relative z-10 flex flex-col justify-center px-6 py-7 md:px-8 md:py-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#102a1a]">
@@ -141,7 +141,7 @@ export default async function ResourceOfTheMonthSection() {
               {resourceOfTheMonth.tags.slice(0, 4).map((tag) => (
                 <span
                   key={`${resourceOfTheMonth.id}-${tag}`}
-                  className="rounded-full border border-[#102a1a]/20 bg-[#d4ead1]/80 px-3 py-1 text-xs font-semibold text-[#102a1a] backdrop-blur"
+                  className="knglmrt-tag bg-[#d4ead1] px-[7px] py-[3px] text-[#102a1a]"
                 >
                   {tag}
                 </span>

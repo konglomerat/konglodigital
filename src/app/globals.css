@@ -169,8 +169,17 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* rounded-full → eckig (Avatare/Pills sind im DS quadratisch). */
+  --radius-full: 0;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Schrift-Rollen des DS als Tailwind-Utilities: font-display, font-wide,
+     font-narrow, font-num. Die Werte spiegeln knglmrt-theme.css. */
+  --font-display: "Fengardo Neue", var(--font-geist-sans), sans-serif;
+  --font-wide: var(--font-knglmrt-wide), "Fira Sans", system-ui, sans-serif;
+  --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
+    var(--font-geist-sans), system-ui, sans-serif;
+  --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
 }
 
 [data-page="batch-upload"] .mapboxgl-map,

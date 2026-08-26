@@ -71,15 +71,20 @@ export default function PageTitle({
   const wrapperClassName = className
     ? `flex flex-col gap-4 ${className}`
     : "flex flex-col gap-4";
+  // Typografie nach Konglomerat-DS: Augenbraue = knglmrt-caption,
+  // Titel = Fengardo Neue Black 32/34, Untertitel = die Lead-Zeile.
+  const baseEyebrowClassName = "knglmrt-caption mb-1.5 text-primary";
+  const baseTitleClassName = "text-foreground";
+  const baseSubTitleClassName = "knglmrt-lead mt-2 max-w-[620px] text-foreground";
   const resolvedEyebrowClassName = eyebrowClassName
-    ? `text-sm font-semibold uppercase tracking-widest text-primary ${eyebrowClassName}`
-    : "text-sm font-semibold uppercase tracking-widest text-primary";
+    ? `${baseEyebrowClassName} ${eyebrowClassName}`
+    : baseEyebrowClassName;
   const resolvedTitleClassName = titleClassName
-    ? `text-4xl font-extrabold tracking-tight text-foreground md:text-5xl ${titleClassName}`
-    : "text-4xl font-extrabold tracking-tight text-foreground md:text-5xl";
+    ? `${baseTitleClassName} ${titleClassName}`
+    : baseTitleClassName;
   const resolvedSubTitleClassName = subTitleClassName
-    ? `mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground ${subTitleClassName}`
-    : "mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground";
+    ? `${baseSubTitleClassName} ${subTitleClassName}`
+    : baseSubTitleClassName;
 
   return (
     <header className={wrapperClassName}>

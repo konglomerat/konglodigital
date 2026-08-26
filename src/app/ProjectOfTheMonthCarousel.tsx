@@ -49,7 +49,7 @@ export default function ProjectOfTheMonthCarousel({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+    <section className="overflow-hidden border border-foreground bg-card">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,520px)]">
         <div className="flex flex-col justify-center px-6 py-6 md:px-8 md:py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
@@ -76,7 +76,7 @@ export default function ProjectOfTheMonthCarousel({
               {activeProject.tags.slice(0, 4).map((tag) => (
                 <span
                   key={`${activeProject.id}-${tag}`}
-                  className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-foreground/85"
+                  className="knglmrt-tag bg-muted px-[7px] py-[3px] text-muted-foreground"
                 >
                   #{tag}
                 </span>
