@@ -25,7 +25,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "@/app/[lang]/components/Button";
-import PageTitle from "@/app/[lang]/components/PageTitle";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
   Checkbox,
   FormField,
@@ -804,9 +804,9 @@ export default function GenerateNewsletterClient({
     Boolean(subject.trim());
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-8">
-      <PageTitle
-        eyebrow="Admin · Newsletter"
+    <div className="w-full space-y-6">
+      <SubPageTitle
+        ressort="oeffentlichkeitsarbeit"
         title="Newsletter zusammenstellen"
         subTitle="Wähle Beiträge aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
       />

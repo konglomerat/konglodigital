@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useMemo, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
-import PageTitle from "@/app/[lang]/components/PageTitle";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 
 type InviteStatus = "idle" | "loading" | "sent" | "error";
 
@@ -419,8 +419,9 @@ const isNonMember = (contact: CampaiContactRow) => !isMember(contact);
 export default function AdminContactsPage() {
   return (
     <div className="space-y-8">
-      <PageTitle
-        title="Admin: Campai-Kontakte"
+      <SubPageTitle
+        ressort="admin"
+        title="Mitglieder"
         subTitle="Aktive Mitglieder und Kontakte aus Campai. Tabellen werden bei Bedarf live geladen."
       />
 

@@ -425,8 +425,8 @@ export default function VolkshausAdminClient() {
     <>
       <div className="space-y-6">
         <PageTitle
-          eyebrow="Neues Volkshaus Cotta"
           title="Raumbuchungen"
+          headingLevel={2}
           subTitle="Anfragen prüfen, Termine reservieren und unterschriebene Verträge versenden."
           links={[
             {

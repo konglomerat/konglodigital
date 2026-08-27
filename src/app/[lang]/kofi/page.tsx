@@ -25,7 +25,7 @@ import type {
   KoFiMonthlySummary,
   KoFiResponse,
 } from "@/lib/campai-kofi";
-import PageTitle from "../components/PageTitle";
+import SubPageTitle from "../admin/SubPageTitle";
 
 type ViewMode = "month" | "quarter" | "year";
 
@@ -1020,15 +1020,11 @@ export default function KoFiPage() {
   };
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1680px] px-4 py-8 md:px-6 xl:px-8">
-      <PageTitle
-        eyebrow="Campai / SKR 42"
+    <div className="w-full min-w-0">
+      <SubPageTitle
+        ressort="vorstand"
         title="KoFi Kosten- und Finanzierungsplan"
         subTitle="Liquiditätsansicht mit Monats-, Quartals- und Jahresperspektive direkt aus dem Campai-Buchungsjournal und den tatsächlichen Geldkontobewegungen."
-        className="border-b border-border pb-6"
-        eyebrowClassName="text-xs tracking-[0.26em] text-muted-foreground"
-        titleClassName="mt-2 text-foreground md:text-4xl"
-        subTitleClassName="mt-3 max-w-3xl leading-6"
       />
 
       <section className="mt-6 min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5">

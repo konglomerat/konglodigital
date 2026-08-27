@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
-import PageTitle from "@/app/[lang]/components/PageTitle";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import type { UserRole } from "@/lib/roles";
 
 type ActiveProfile = {
@@ -354,8 +354,9 @@ export default function AdminUsersClient() {
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        title="Admin: Benutzer"
+      <SubPageTitle
+        ressort="admin"
+        title="Benutzer"
         subTitle="Verwalte registrierte Benutzerprofile und ihre Rollen. Die Registrierung selbst läuft wieder direkt über Supabase-Mail links mit Mitgliedsabgleich."
         links={[
           {

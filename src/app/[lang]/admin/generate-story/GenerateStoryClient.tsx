@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import Button from "@/app/[lang]/components/Button";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
   Checkbox,
   FormField,
@@ -477,16 +478,11 @@ export default function GenerateStoryClient({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Admin: Storys erzeugen
-        </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Waehle eine Ressource oder einen Beitrag, lasse kurze Story-Texte per
-          OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als
-          PNG herunter.
-        </p>
-      </header>
+      <SubPageTitle
+        ressort="oeffentlichkeitsarbeit"
+        title="Storys erzeugen"
+        subTitle="Waehle eine Ressource oder einen Beitrag, lasse kurze Story-Texte per OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als PNG herunter."
+      />
 
       <FormSection
         title="Auswahl"
