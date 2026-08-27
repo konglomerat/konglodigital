@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import Face from "@/components/knglmrt/Face";
+
 import TopNavLink from "./TopNavLink";
 import Button from "./[lang]/components/Button";
 
@@ -35,14 +37,14 @@ export default function TopNav({
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-foreground bg-card md:block">
-      <div className="flex h-[93px] w-full items-stretch justify-between px-7">
+      <div className="flex h-[70px] w-full items-stretch justify-between px-7">
         <div className="flex min-w-0 items-stretch">
           <Link
             href="/"
             className="flex flex-none items-center border-r border-foreground pr-[22px]"
           >
             <Image
-              src="/konglodigital-logo.svg"
+              src="/branding/logo/konglodigital-logo.svg"
               alt="Konglo Digital — Startseite"
               width={137}
               height={45}
@@ -83,8 +85,11 @@ export default function TopNav({
               <Button
                 href={adminAreaHref}
                 kind="secondary"
-                className="!bg-foreground !text-background hover:!bg-[var(--knglmrt-brown-100)] hover:!text-white"
+                className="h-9 !bg-[var(--knglmrt-brown-100)] !text-white hover:!bg-foreground hover:!text-background"
               >
+                <span aria-hidden="true" className="flex-none">
+                  <Face number={6} size={40} />
+                </span>
                 Verwaltung
               </Button>
             </div>

@@ -249,7 +249,7 @@ function buildReceiverLine(values: ReceiptValues) {
 
 async function loadLogoAsDataUrl(): Promise<string | null> {
   try {
-    const response = await fetch("/konglodigital-logo.svg");
+    const response = await fetch("/branding/logo/konglodigital-logo.svg");
     const svgText = await response.text();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
