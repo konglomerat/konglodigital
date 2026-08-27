@@ -13,6 +13,11 @@ export type Werkbereich = {
   markExt?: "svg" | "png";
 };
 
+export type Vereinsprojekt = {
+  slug: string;
+  name: string;
+};
+
 export const WERKBEREICHE: Werkbereich[] = [
   {
     slug: "darkroom",
@@ -142,3 +147,13 @@ export const WERKBEREICHE: Werkbereich[] = [
 
 export const findWerkbereich = (slug: string) =>
   WERKBEREICHE.find((entry) => entry.slug === slug);
+
+export const VEREINSPROJEKTE: Vereinsprojekt[] = [
+  { slug: "forum", name: "FOR:UM" },
+  { slug: "tools2go", name: "Tools2Go" },
+  { slug: "aenderei", name: "Änderei" },
+  { slug: "vhc", name: "VHC" },
+];
+
+export const findVereinsprojekt = (slug: string) =>
+  VEREINSPROJEKTE.find((entry) => entry.slug === slug);

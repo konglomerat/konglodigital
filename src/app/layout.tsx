@@ -43,7 +43,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
-import ChatwootWidget from "./[lang]/components/ChatwootWidget";
 import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
@@ -203,7 +202,6 @@ export default async function RootLayout({
       </head>
       <body className="antialiased">
         <I18nProvider locale={locale}>
-          <ChatwootWidget locale={locale} />
           <AppShell
             mobileNavigation={
               <header className="sticky top-0 z-40 border-b border-foreground bg-card md:hidden">
