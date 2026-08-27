@@ -13,7 +13,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
-import Button from "@/app/[lang]/components/Button";
+import RessortPage from "@/app/[lang]/admin/RessortPage";
 import type {
   CampaiBalanceReceipt,
   CampaiReceiptPosition,
@@ -447,6 +447,40 @@ const getHeaderButtonAlignmentClassName = (
 
   return "justify-start";
 };
+
+// Unterfunktionen des Ressorts Buchhaltung — Routen wie in receipts/create.
+const BOOKING_LINKS = [
+  {
+    href: "/receipts/income",
+    label: "Einnahme erfassen",
+    description: "Beleg für eine Einnahme hinzufügen.",
+  },
+  {
+    href: "/receipts/expense",
+    label: "Ausgabe erfassen",
+    description: "Beleg für eine Ausgabe hinzufügen.",
+  },
+  {
+    href: "/receipts/invoice",
+    label: "Rechnung erstellen",
+    description: "Neue Rechnung direkt anlegen.",
+  },
+  {
+    href: "/receipts/eigenbeleg",
+    label: "Eigenbeleg",
+    description: "Eigenbeleg-Formular öffnen.",
+  },
+  {
+    href: "/receipts/reimbursement",
+    label: "Rückerstattung",
+    description: "Auslagen zur Erstattung einreichen.",
+  },
+  {
+    href: "/receipts/pretix-import",
+    label: "pretix-Import",
+    description: "Rechnungen aus Pretix-Bestellungen erzeugen.",
+  },
+];
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
@@ -1589,21 +1623,13 @@ export default function ReceiptsPage() {
   );
 
   return (
-    <div className="mx-auto w-full px-4 py-4 md:px-0 md:py-0">
-      <div className="flex items-start justify-between gap-3 pb-4 sm:gap-4 sm:pb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            Übersicht
-          </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Wähle einen oder mehrere Werkbereiche/Projekte, um alle zugehörigen
-            Belege zu sehen.
-          </p>
-        </div>
-
-        <Button href="/receipts/expense" kind="primary" size="small">
-          Neue Buchung
-        </Button>
+    <div className="w-full">
+      <div className="pb-6">
+        <RessortPage
+          title="Buchhaltung"
+          subTitle="Wähle einen oder mehrere Werkbereiche/Projekte, um alle zugehörigen Belege zu sehen."
+          links={BOOKING_LINKS}
+        />
       </div>
 
       <div className="mb-3 flex flex-wrap items-end gap-2 sm:mb-4 sm:gap-3">

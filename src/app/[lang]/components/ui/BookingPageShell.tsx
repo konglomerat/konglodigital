@@ -5,5 +5,5 @@ type BookingPageShellProps = {
 };
 
 export default function BookingPageShell({ children }: BookingPageShellProps) {
-  return <div className="mx-auto w-full max-w-5xl space-y-6">{children}</div>;
+  return <div className="w-full space-y-6">{children}</div>;
 }

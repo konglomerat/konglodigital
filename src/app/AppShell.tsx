@@ -14,6 +14,10 @@ type AppShellProps = {
 
 const FULLSCREEN_PATHNAMES = new Set(["/resources/batch"]);
 
+// Der Verwaltungsbereich bringt seine eigene Randbreite mit, damit die dunkle
+// Ressort-Leiste bis an den Bildschirmrand reicht.
+const FULL_BLEED_PREFIXES = ["/admin", "/receipts", "/kofi"];
+
 export default function AppShell({
   children,
   desktopNavigation,
@@ -26,6 +30,25 @@ export default function AppShell({
 
   if (FULLSCREEN_PATHNAMES.has(normalizedPathname)) {
     return children;
+  }
+
+  const isFullBleed = FULL_BLEED_PREFIXES.some(
+    (prefix) =>
+      normalizedPathname === prefix ||
+      normalizedPathname.startsWith(`${prefix}/`),
+  );
+
+  // Verwaltung: kein Footer, und gescrollt wird nur im Inhaltsbereich.
+  if (isFullBleed) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+        {mobileNavigation}
+        {desktopNavigation}
+        <main className="w-full min-h-0 flex-1 overflow-y-auto md:overflow-hidden">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (
