@@ -1,8 +1,75 @@
-// Aus knglmrt/components/illustration/doodle-data.js extrahiert.
-// Nur die tatsächlich genutzten Linien — die volle Bibliothek hat 93 Einträge (540 KB).
+// Die gezeichneten Linien des DS ("Lines_01" … "Lines_06").
+//
+// Die Pfaddaten liegen NICHT im Bundle: zusammen sind das ~110 KB (47 KB gzip),
+// und der Divider steckt in der Top-Nav, also auf jeder Seite. Stattdessen
+// liegen die SVGs unter public/branding/lines/ und werden per CSS-Maske
+// eingefärbt — dadurch bleibt currentColor/var(--…) als Farbe möglich,
+// die Datei wird vom Browser gecacht und kostet 0 KB JS.
+//
+// Quelle der SVGs: knglmrt Design System, Illustration/Lines.
 
 export type Doodle = { viewBox: string; body: string };
 
-export const DOODLE_LINES: Record<string, Doodle> = {
-  "Lines04": {"viewBox":"0 0 1000 20","body":"<path d=\"M 48.03 2.077 C 69.15 1.727 89.03 1.947 110.17 1.737 C 129.5 1.547 148.84 1.657 168.17 1.597 C 183.23 1.597 198.3 1.407 213.36 1.387 C 241.05 1.387 268.75 1.387 296.45 1.387 C 326.79 1.347 357.123 1.263 387.45 1.137 C 436.13 0.887 484.8 0.397 533.45 0.277 C 616.437 0.063 699.397 -0.027 782.33 0.007 C 835.303 0.007 888.277 0.06 941.25 0.167 C 958.53 0.227 975.8 0.867 993.05 1.357 C 994.55 1.357 997.24 2.537 997.05 2.647 C 995.441 3.632 993.635 4.25 991.76 4.457 C 986.57 4.657 981.22 4.387 975.94 4.347 C 949.12 4.153 922.3 3.977 895.48 3.817 C 850.86 3.617 806.24 3.457 761.62 3.337 C 736.407 3.263 711.2 3.263 686 3.337 C 663.42 3.337 640.83 3.627 618.25 3.647 C 593.61 3.647 568.96 3.497 544.32 3.467 C 516.05 3.467 487.77 3.367 459.5 3.517 C 442.83 3.597 426.18 4.237 409.5 4.357 C 389.34 4.507 369.17 4.357 349 4.357 C 317.88 4.297 286.76 4.137 255.64 4.137 C 242.08 4.137 228.53 4.517 214.97 4.537 C 194.91 4.537 174.84 4.237 154.8 4.387 C 130.6 4.577 106.44 5.277 82.25 5.447 C 66.41 5.547 50.54 5.037 34.68 4.947 C 25.36 4.887 16.02 5.197 6.68 5.187 C 4.45 5.187 0 5.487 0 4.187 C 0 2.887 4.29 2.937 6.58 2.867 C 19.9 2.437 33.27 2.187 46.63 1.867\" fill=\"currentColor\" fill-rule=\"nonzero\" transform=\"matrix(1 0 0 1 0.970 6.543)\"/>"},
+export type DoodleLineNumber = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type DoodleLine = {
+  /** Pfad zur SVG-Datei in public/ */
+  src: string;
+  /** Intrinsische Größe des Strichs — bestimmt die Default-Höhe. */
+  width: number;
+  height: number;
+  /** Kurzbeschreibung für den Styleguide. */
+  description: string;
 };
+
+export const DOODLE_LINES: Record<DoodleLineNumber, DoodleLine> = {
+  1: {
+    src: "/branding/lines/Lines_01.svg",
+    width: 1000,
+    height: 20,
+    description: "Spiralen/Schlaufen, dicht gewickelt — der lauteste Strich.",
+  },
+  2: {
+    src: "/branding/lines/Lines_02.svg",
+    width: 1000,
+    height: 20,
+    description: "Gleichmäßige, weiche Wellenlinie.",
+  },
+  3: {
+    src: "/branding/lines/Lines_03.svg",
+    width: 1000,
+    height: 20,
+    description: "Enges, unruhiges Zickzack.",
+  },
+  4: {
+    src: "/branding/lines/Lines_04.svg",
+    width: 1000,
+    height: 20,
+    description: "Einzelner, leicht schwankender Strich — der ruhigste (Default).",
+  },
+  5: {
+    src: "/branding/lines/Lines_05.svg",
+    width: 1000,
+    height: 20,
+    description: "Feine Punktreihe — gepunktet.",
+  },
+  6: {
+    src: "/branding/lines/Lines_06.svg",
+    width: 1000,
+    height: 20,
+    description: "Reihe kurzer, breiter Striche — gestrichelt.",
+  },
+};
+
+export const DOODLE_LINE_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
+
+export function isDoodleLineNumber(value: number): value is DoodleLineNumber {
+  return value >= 1 && value <= 6 && Number.isInteger(value);
+}
+
+/** CSS-Custom-Properties für die .knglmrt-line-Utility (siehe knglmrt-theme.css). */
+export function doodleLineVars(
+  number: DoodleLineNumber,
+): Record<string, string> {
+  return { "--knglmrt-line": `url("${DOODLE_LINES[number].src}")` };
+}
