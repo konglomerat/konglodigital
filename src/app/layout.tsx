@@ -39,6 +39,7 @@ import "./knglmrt-theme.css";
 import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getUserRoles, rolesCanAccessModule } from "@/lib/roles";
+import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
@@ -164,9 +165,7 @@ export default async function RootLayout({
   // Belege und Guthaben stehen nur im Back-Office, nicht im Profil.
   const canAccessFinanzen =
     isAuthenticated && rolesCanAccessModule(userRoles, "invoices");
-  const adminAreaHref = canAccessAdmin
-    ? "/admin/users"
-    : "/admin/volkshaus";
+  const adminAreaHref = getVerwaltungEntryHref(userRoles);
   const navLinkClassName =
     "group flex items-center gap-3 border-b border-border bg-transparent px-2 py-2.5 text-sm font-medium text-foreground transition hover:text-primary";
   const navSectionTitleClassName =

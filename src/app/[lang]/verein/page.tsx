@@ -4,6 +4,7 @@
 // Der Kalender hängt in einer eigenen Suspense-Grenze; alles andere steht
 // sofort, ohne auf den Google-Feed zu warten.
 import { Suspense } from "react";
+import { faFileLines } from "@fortawesome/free-solid-svg-icons";
 
 import PageTitle from "../components/PageTitle";
 import Divider from "@/components/knglmrt/Divider";
@@ -132,12 +133,13 @@ export default function VereinPage() {
 
           <div>
             <h3 className={captionClassName}>Wichtige Links</h3>
-            <div className="flex flex-wrap gap-x-7 gap-y-3">
+            <div className="flex flex-wrap gap-3">
               {WICHTIGE_LINKS.map((link) => (
                 <Button
                   key={link.label}
                   href={link.href}
-                  kind="tertiary"
+                  kind="secondary"
+                  icon={faFileLines}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -162,54 +164,59 @@ export default function VereinPage() {
         <div className="mx-auto w-full max-w-[1240px] px-3 md:px-7">
           <div className="grid items-start gap-[26px] sm:grid-cols-[110px_1fr]">
             <Face number={19} size={110} color="var(--primary)" />
-            <div>
-              <h2 className="mb-2.5 text-[length:var(--ui-size-title)] leading-[var(--ui-line-title)] text-primary">
-                Freunde &amp; Förderer
-              </h2>
-              <p className="knglmrt-lead mb-3 max-w-[620px]">
-                Was wären wir nur ohne unsere großartigen Förder:innen, Freunde
-                und das beste Netzwerk?
-              </p>
-              <p className="mb-4 max-w-[620px]">
-                Als Fördermitglied nutzt du die Werkstätten und Maschinen zu
-                Mitgliedstarifen und bestimmst mit, mit welchen Themen wir uns
-                beschäftigen und welche Workshops wir dringend zusammen machen
-                sollten.
-              </p>
-              <div className="mb-[22px] flex flex-wrap gap-2.5">
-                <Button href="/register" kind="primary">
-                  Fördermitglied werden
-                </Button>
-                <Button
-                  href="https://konglomerat.org"
-                  kind="secondary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Anmeldebogen (PDF)
-                </Button>
-              </div>
-              <h3 className={captionClassName}>Netzwerk und Förderer</h3>
-              <div className="grid max-w-[620px] grid-cols-2 gap-2 sm:grid-cols-3">
-                {FOERDERER.map((foerderer) => (
-                  <a
-                    key={foerderer.href}
-                    href={foerderer.href}
+            {/* Text links, die Logowand als zweite Spalte rechts daneben. */}
+            <div className="grid items-start gap-[26px] lg:grid-cols-[1fr_minmax(0,340px)]">
+              <div>
+                <h2 className="mb-2.5 text-[length:var(--ui-size-title)] leading-[var(--ui-line-title)] text-primary">
+                  Freunde &amp; Förderer
+                </h2>
+                <p className="knglmrt-lead mb-3 max-w-[620px]">
+                  Was wären wir nur ohne unsere großartigen Förder:innen,
+                  Freunde und das beste Netzwerk?
+                </p>
+                <p className="mb-4 max-w-[620px]">
+                  Als Fördermitglied nutzt du die Werkstätten und Maschinen zu
+                  Mitgliedstarifen und bestimmst mit, mit welchen Themen wir uns
+                  beschäftigen und welche Workshops wir dringend zusammen machen
+                  sollten.
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <Button href="/register" kind="primary">
+                    Fördermitglied werden
+                  </Button>
+                  <Button
+                    href="https://konglomerat.org"
+                    kind="secondary"
                     target="_blank"
                     rel="noreferrer"
-                    title={foerderer.name}
-                    className="flex h-[76px] items-center justify-center px-3 py-2.5 transition hover:opacity-75"
                   >
-                    {/* Kein next/image: die Logos sind fremde Marken in
-                      unterschiedlichen Formaten, object-contain hält sie heil. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={foerderer.logo}
-                      alt={foerderer.name}
-                      className="max-h-full w-full object-contain"
-                    />
-                  </a>
-                ))}
+                    Anmeldebogen (PDF)
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <h3 className={captionClassName}>Netzwerk und Förderer</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {FOERDERER.map((foerderer) => (
+                    <a
+                      key={foerderer.href}
+                      href={foerderer.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={foerderer.name}
+                      className="flex h-[76px] items-center justify-center px-3 py-2.5 transition hover:opacity-75"
+                    >
+                      {/* Kein next/image: die Logos sind fremde Marken in
+                        unterschiedlichen Formaten, object-contain hält sie heil. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={foerderer.logo}
+                        alt={foerderer.name}
+                        className="max-h-full w-full object-contain"
+                      />
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -244,8 +244,8 @@ export default async function ShowcaseDetailPage({
   const updatedDateLabel = formatDate(showcase.updatedAt ?? showcase.createdAt);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <header className="space-y-4 px-6 py-2 md:px-8">
+    <div className="flex flex-col gap-8">
+      <header className="space-y-4">
         <PageTitle
           backLink={{
             href: localizePathname("/showcase", locale),
@@ -492,6 +492,6 @@ export default async function ShowcaseDetailPage({
           ) : null}
         </aside>
       </div>
-    </main>
+    </div>
   );
 }

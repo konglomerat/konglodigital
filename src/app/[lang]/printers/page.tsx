@@ -444,8 +444,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <div>
+      <div className="flex flex-col gap-8">
         <PageTitle
           title="3D Printer Dashboard"
           links={[
@@ -822,7 +822,7 @@ export default function Home() {
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

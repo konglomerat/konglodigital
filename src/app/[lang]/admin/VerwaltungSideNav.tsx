@@ -16,10 +16,13 @@ export type RessortNavItem = {
 
 type VerwaltungSideNavProps = {
   items: RessortNavItem[];
+  /** Hauptseite des ersten zugaenglichen Ressorts. */
+  homeHref: string;
 };
 
 export default function VerwaltungSideNav({
   items,
+  homeHref,
 }: VerwaltungSideNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname() ?? "/";
@@ -93,9 +96,12 @@ export default function VerwaltungSideNav({
       <aside className="hidden bg-[var(--knglmrt-dark-100)] md:block md:h-full md:overflow-y-auto">
         <div>
           <div className="px-5 pb-4 pt-5">
-            <div className="font-[family-name:var(--font-display)] text-[length:var(--ui-size-title)] leading-tight text-white">
+            <Link
+              href={homeHref}
+              className="font-[family-name:var(--font-display)] text-[20px] leading-tight text-white transition hover:text-[var(--knglmrt-dark-30)]"
+            >
               Verwaltung
-            </div>
+            </Link>
           </div>
           {navigation}
         </div>

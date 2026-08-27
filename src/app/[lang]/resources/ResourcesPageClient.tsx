@@ -999,7 +999,7 @@ export default function ResourcesPageClient({
   }, [tx]);
 
   return (
-    <div className="flex w-full flex-1 flex-col gap-8">
+    <div className="flex flex-col gap-8">
       <PageTitle
         title={tx("Inventar", "de")}
         subTitle={tx(
@@ -1075,7 +1075,7 @@ export default function ResourcesPageClient({
         </section>
       ) : null}
 
-      <section className="grid w-full flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
         <div className={`${viewMode === "list" ? "block" : "hidden"} lg:block`}>
           <section className="space-y-4">
             <div className="relative">
@@ -1257,13 +1257,13 @@ export default function ResourcesPageClient({
         <aside
           className={`${viewMode === "map" ? "block" : "hidden"} lg:block`}
         >
-          <div className="rounded-lg lg:sticky lg:top-[30px] lg:h-[calc(100vh-60px)]">
+          <div className="flex flex-col lg:sticky lg:top-[86px] lg:h-[calc(100vh-102px)]">
             <ResourcesMapView
               resources={mapOverlayResources}
               pointResources={searchAndTypeFilteredResources}
               highlightedResourceId={hoveredResourceId}
               onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
-              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-full"
+              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-auto lg:min-h-0 lg:flex-1"
             />
             <p className="mt-2 text-xs text-muted-foreground">
               {tx("Showing resources with saved locations.")}

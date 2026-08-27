@@ -2229,13 +2229,7 @@ export default function ResourceFeaturesEditorClient({
   ]);
 
   return (
-    <main
-      className={
-        embedded
-          ? "flex w-full flex-col gap-6"
-          : "mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10"
-      }
-    >
+    <div className="flex w-full flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {!hasFixedResource ? (
@@ -2873,6 +2867,6 @@ export default function ResourceFeaturesEditorClient({
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

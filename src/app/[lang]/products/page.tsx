@@ -233,8 +233,8 @@ export default function CampaiProductsPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <div>
+      <div className="flex flex-col gap-6">
         <PageTitle
           title="Produkte"
           subTitle="Durchsuche Produkte und lege sie in den Warenkorb."
@@ -347,7 +347,7 @@ export default function CampaiProductsPage() {
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }
