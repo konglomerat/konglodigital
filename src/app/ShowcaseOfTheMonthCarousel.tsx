@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import Button from "./[lang]/components/Button";
 import { isVideoUrl } from "@/lib/resource-media";
 
-type ProjectSlide = {
+type ShowcaseSlide = {
   id: string;
   prettyTitle?: string | null;
   name: string;
@@ -21,8 +21,8 @@ type ProjectSlide = {
   href: string;
 };
 
-type ProjectOfTheMonthCarouselProps = {
-  projects: ProjectSlide[];
+type ShowcaseOfTheMonthCarouselProps = {
+  showcases: ShowcaseSlide[];
 };
 
 const truncate = (value: string, maxLength: number) => {
@@ -33,18 +33,18 @@ const truncate = (value: string, maxLength: number) => {
   return `${value.slice(0, maxLength - 1).trimEnd()}…`;
 };
 
-export default function ProjectOfTheMonthCarousel({
-  projects,
-}: ProjectOfTheMonthCarouselProps) {
+export default function ShowcaseOfTheMonthCarousel({
+  showcases,
+}: ShowcaseOfTheMonthCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const activeProject = projects[activeIndex] ?? null;
+  const activeShowcase = showcases[activeIndex] ?? null;
   const dots = useMemo(
-    () => projects.map((project) => ({ id: project.id })),
-    [projects],
+    () => showcases.map((showcase) => ({ id: showcase.id })),
+    [showcases],
   );
 
-  if (!activeProject) {
+  if (!activeShowcase) {
     return null;
   }
 
@@ -53,29 +53,29 @@ export default function ProjectOfTheMonthCarousel({
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,520px)]">
         <div className="flex flex-col justify-center px-6 py-6 md:px-8 md:py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-            Projekt des Monats
+            Beitrag des Monats
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {activeProject.name}
+            {activeShowcase.name}
           </h2>
-          {activeProject.workshopName ? (
+          {activeShowcase.workshopName ? (
             <p className="mt-3 text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              {activeProject.workshopName}
+              {activeShowcase.workshopName}
             </p>
           ) : null}
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
             {truncate(
-              activeProject.description?.trim() ||
-                "Ein ausgewähltes Projekt aus den Werkstätten des Konglomerat e.V.",
+              activeShowcase.description?.trim() ||
+                "Ein ausgewählter Beitrag aus den Werkstätten des Konglomerat e.V.",
               220,
             )}
           </p>
 
-          {activeProject.tags && activeProject.tags.length > 0 ? (
+          {activeShowcase.tags && activeShowcase.tags.length > 0 ? (
             <div className="mt-5 flex flex-wrap gap-2">
-              {activeProject.tags.slice(0, 4).map((tag) => (
+              {activeShowcase.tags.slice(0, 4).map((tag) => (
                 <span
-                  key={`${activeProject.id}-${tag}`}
+                  key={`${activeShowcase.id}-${tag}`}
                   className="knglmrt-tag bg-muted px-[7px] py-[3px] text-muted-foreground"
                 >
                   #{tag}
@@ -85,10 +85,10 @@ export default function ProjectOfTheMonthCarousel({
           ) : null}
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Button href={activeProject.href} kind="primary" size="medium">
-              {activeProject.ctaLabel}
+            <Button href={activeShowcase.href} kind="primary" size="medium">
+              {activeShowcase.ctaLabel}
             </Button>
-            {projects.length > 1 ? (
+            {showcases.length > 1 ? (
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -96,7 +96,7 @@ export default function ProjectOfTheMonthCarousel({
                   size="small"
                   onClick={() =>
                     setActiveIndex((previous) =>
-                      previous === 0 ? projects.length - 1 : previous - 1,
+                      previous === 0 ? showcases.length - 1 : previous - 1,
                     )
                   }
                 >
@@ -108,7 +108,7 @@ export default function ProjectOfTheMonthCarousel({
                   size="small"
                   onClick={() =>
                     setActiveIndex(
-                      (previous) => (previous + 1) % projects.length,
+                      (previous) => (previous + 1) % showcases.length,
                     )
                   }
                 >
@@ -118,7 +118,7 @@ export default function ProjectOfTheMonthCarousel({
             ) : null}
           </div>
 
-          {projects.length > 1 ? (
+          {showcases.length > 1 ? (
             <div className="mt-5 flex items-center gap-2">
               {dots.map((dot, index) => (
                 <button
@@ -136,11 +136,11 @@ export default function ProjectOfTheMonthCarousel({
         </div>
 
         <div className="relative min-h-[360px] bg-[linear-gradient(135deg,#dbeafe_0%,#fef3c7_100%)]">
-          {activeProject.mediaUrl ? (
-            isVideoUrl(activeProject.mediaUrl) ? (
+          {activeShowcase.mediaUrl ? (
+            isVideoUrl(activeShowcase.mediaUrl) ? (
               <video
-                src={activeProject.previewMediaUrl ?? activeProject.mediaUrl}
-                poster={activeProject.posterUrl ?? undefined}
+                src={activeShowcase.previewMediaUrl ?? activeShowcase.mediaUrl}
+                poster={activeShowcase.posterUrl ?? undefined}
                 controls
                 autoPlay
                 muted
@@ -150,8 +150,8 @@ export default function ProjectOfTheMonthCarousel({
               />
             ) : (
               <img
-                src={activeProject.previewMediaUrl ?? activeProject.mediaUrl}
-                alt={activeProject.name}
+                src={activeShowcase.previewMediaUrl ?? activeShowcase.mediaUrl}
+                alt={activeShowcase.name}
                 className="absolute inset-0 h-full w-full object-cover"
               />
             )

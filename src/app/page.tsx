@@ -3,7 +3,7 @@ import Image from "next/image";
 import Divider from "@/components/knglmrt/Divider";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Button from "./[lang]/components/Button";
-import ProjectOfTheMonthSection from "./ProjectOfTheMonthSection";
+import ShowcaseOfTheMonthSection from "./ShowcaseOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import heroHelloImage from "./hero-hello.jpg";
 import inventoryImage from "./inventory.jpg";
@@ -12,8 +12,8 @@ import calendarImage from "./calendar.jpg";
 import calendarBwImage from "./calendar-bw.jpg";
 import print3dImage from "./3dprint.jpg";
 import print3dBwImage from "./3dprint-bw.jpg";
-import projectsImage from "./projects.jpg";
-import projectsBwImage from "./projects-bw.jpg";
+import showcasesImage from "./showcase.jpg";
+import showcasesBwImage from "./showcase-bw.jpg";
 import { getServerI18n } from "@/i18n/server";
 
 type QuickAction = {
@@ -48,8 +48,8 @@ export default async function Home() {
       description: tx("Termine, Workshops und Belegungen prüfen.", "de"),
     },
     {
-      href: "/projects",
-      title: tx("Projekte entdecken", "de"),
+      href: "/showcase",
+      title: tx("Hier entstanden", "de"),
       description: tx(
         "Umbauten, Prototypen und Werkstattprojekte ansehen.",
         "de",
@@ -222,16 +222,16 @@ export default async function Home() {
                       className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
                     />
                   </div>
-                ) : action.href === "/projects" ? (
+                ) : action.href === "/showcase" ? (
                   <div className="relative border-b border-foreground">
                     <Image
-                      src={projectsBwImage}
-                      alt="Projekte"
+                      src={showcasesBwImage}
+                      alt="Hier entstanden"
                       className="h-auto w-full multiply negative-multiply"
                     />
                     <Image
-                      src={projectsImage}
-                      alt="Projekte"
+                      src={showcasesImage}
+                      alt="Hier entstanden"
                       className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
                     />
                   </div>
@@ -249,7 +249,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <ProjectOfTheMonthSection />
+      <ShowcaseOfTheMonthSection />
 
       <ResourceOfTheMonthSection />
 

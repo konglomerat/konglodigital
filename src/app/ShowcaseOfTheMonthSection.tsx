@@ -1,16 +1,17 @@
-import ProjectOfTheMonthCarousel from "./ProjectOfTheMonthCarousel";
+import ShowcaseOfTheMonthCarousel from "./ShowcaseOfTheMonthCarousel";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import {
   getResourcePosterUrl,
   getResourcePreviewUrl,
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
-type ProjectOfTheMonthRow = {
+type ShowcaseOfTheMonthRow = {
   id: string;
   pretty_title: string | null;
   name: string;
@@ -23,9 +24,9 @@ type ProjectOfTheMonthRow = {
   workshop_resource_id: string | null;
 };
 
-const PROJECT_OF_THE_MONTH_TAG = "projectofthemonth";
+const SHOWCASE_OF_THE_MONTH_TAG = "showcaseofthemonth";
 
-const loadProjectsOfTheMonth = async () => {
+const loadShowcasesOfTheMonth = async () => {
   try {
     const supabase = createSupabaseAdminClient();
     const { data } = await supabase
@@ -33,14 +34,14 @@ const loadProjectsOfTheMonth = async () => {
       .select(
         "id, pretty_title, name, description, image, images, media_previews, media_posters, tags, workshop_resource_id",
       )
-      .ilike("type", "project")
-      .contains("tags", [PROJECT_OF_THE_MONTH_TAG])
+      .ilike("type", SHOWCASE_RESOURCE_TYPE)
+      .contains("tags", [SHOWCASE_OF_THE_MONTH_TAG])
       .order("publish_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .order("updated_at", { ascending: false })
       .limit(8);
 
-    const rows = (data ?? []) as ProjectOfTheMonthRow[];
+    const rows = (data ?? []) as ShowcaseOfTheMonthRow[];
     const workshopIds = Array.from(
       new Set(
         rows
@@ -87,7 +88,7 @@ const loadProjectsOfTheMonth = async () => {
           : null,
       tags:
         row.tags?.filter(
-          (tag) => tag.trim().toLowerCase() !== PROJECT_OF_THE_MONTH_TAG,
+          (tag) => tag.trim().toLowerCase() !== SHOWCASE_OF_THE_MONTH_TAG,
         ) ?? [],
       };
     });
@@ -106,20 +107,20 @@ const loadProjectsOfTheMonth = async () => {
   }
 };
 
-export default async function ProjectOfTheMonthSection() {
+export default async function ShowcaseOfTheMonthSection() {
   const { tx, locale } = await getServerI18n();
-  const projects = await loadProjectsOfTheMonth();
+  const showcases = await loadShowcasesOfTheMonth();
 
-  if (projects.length === 0) {
+  if (showcases.length === 0) {
     return null;
   }
 
   return (
-    <ProjectOfTheMonthCarousel
-      projects={projects.map((project) => ({
-        ...project,
-        href: localizePathname(buildProjectPath(project), locale),
-        ctaLabel: tx("Zum Projekt", "de"),
+    <ShowcaseOfTheMonthCarousel
+      showcases={showcases.map((showcase) => ({
+        ...showcase,
+        href: localizePathname(buildShowcasePath(showcase), locale),
+        ctaLabel: tx("Zum Beitrag", "de"),
       }))}
     />
   );

@@ -8,13 +8,13 @@ import { useI18n } from "@/i18n/client";
 import { localizePathname } from "@/i18n/config";
 import Button from "../components/Button";
 
-type ProjectDeleteButtonProps = {
-  projectId: string;
+type ShowcaseDeleteButtonProps = {
+  showcaseId: string;
 };
 
-export default function ProjectDeleteButton({
-  projectId,
-}: ProjectDeleteButtonProps) {
+export default function ShowcaseDeleteButton({
+  showcaseId,
+}: ShowcaseDeleteButtonProps) {
   const router = useRouter();
   const { tx, locale } = useI18n();
   const [deleting, setDeleting] = useState(false);
@@ -27,7 +27,7 @@ export default function ProjectDeleteButton({
 
     const confirmed = window.confirm(
       tx(
-        "Dieses Projekt wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+        "Diesen Beitrag wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
         "de",
       ),
     );
@@ -39,21 +39,21 @@ export default function ProjectDeleteButton({
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`/api/campai/resources/${projectId}`, {
+      const response = await fetch(`/api/campai/resources/${showcaseId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error(tx("Projekt konnte nicht gelöscht werden.", "de"));
+        throw new Error(tx("Beitrag konnte nicht gelöscht werden.", "de"));
       }
 
-      router.push(localizePathname("/projects", locale));
+      router.push(localizePathname("/showcase", locale));
       router.refresh();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : tx("Projekt konnte nicht gelöscht werden.", "de"),
+          : tx("Beitrag konnte nicht gelöscht werden.", "de"),
       );
       setDeleting(false);
     }
@@ -69,8 +69,8 @@ export default function ProjectDeleteButton({
         onClick={handleDelete}
       >
         {deleting
-          ? tx("Projekt wird gelöscht…", "de")
-          : tx("Projekt löschen", "de")}
+          ? tx("Beitrag wird gelöscht…", "de")
+          : tx("Beitrag löschen", "de")}
       </Button>
       {errorMessage ? (
         <p className="max-w-xs text-right text-xs text-destructive" role="alert">

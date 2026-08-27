@@ -5,9 +5,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 
-export default async function ProjectUploadPromptCard() {
+export default async function ShowcaseUploadPromptCard() {
   const { locale, tx } = await getServerI18n();
-  const articleLink = localizePathname("/projects/new", locale);
+  const articleLink = localizePathname("/showcase/new", locale);
 
   return (
     <aside className="relative isolate h-full overflow-hidden rounded-lg border border-red-500 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0)_38%),linear-gradient(135deg,#b91c1c_0%,#dc2626_52%,#ef4444_100%)] shadow-sm md:col-span-2 xl:col-span-2">
@@ -23,7 +23,7 @@ export default async function ProjectUploadPromptCard() {
       <div className="relative flex h-full flex-col gap-5 p-9 md:p-8 md:px-10">
         <div className="space-y-4">
           <span className="inline-flex max-w-xl py-1 text-[80px] font-black leading-[1.1] text-white">
-            {tx("Dein Projekt fehlt noch!", "de")}
+            {tx("Dein Beitrag fehlt noch!", "de")}
           </span>
           <div className="space-y-3">
             <h2 className="max-w-xl text-2xl font-semibold tracking-tight text-white md:text-2xl">
@@ -34,7 +34,7 @@ export default async function ProjectUploadPromptCard() {
             </h2>
             {/* <p className="max-w-lg text-sm leading-relaxed text-white md:text-base">
               {tx(
-                "Dein Projekt muss noch nicht perfekt sein. Wenn schon etwas Spannendes entstanden ist, dann zeig es uns hier - genau solche Ideen bringen andere auf neue Gedanken.",
+                "Dein Beitrag muss noch nicht perfekt sein. Wenn schon etwas Spannendes entstanden ist, dann zeig es uns hier - genau solche Ideen bringen andere auf neue Gedanken.",
                 "de",
               )}
             </p> */}
@@ -46,7 +46,7 @@ export default async function ProjectUploadPromptCard() {
             href={articleLink}
             className="inline-flex items-center gap-2 font-semibold text-white transition hover:text-red-100 md:text-xl"
           >
-            <span>{tx("Projekt hochladen", "de")}</span>
+            <span>{tx("Beitrag hochladen", "de")}</span>
             <FontAwesomeIcon icon={faArrowRight} className="h-3.5 w-3.5" />
           </Link>
         </div>

@@ -11,11 +11,11 @@ import heroHelloImage from "../../../hero-hello.jpg";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import PageTitle from "../../components/PageTitle";
 import ShareButton from "../../components/ShareButton";
-import ProjectDeleteButton from "../ProjectDeleteButton";
+import ShowcaseDeleteButton from "../ShowcaseDeleteButton";
 import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
@@ -25,13 +25,13 @@ import {
   getSupabaseRenderedImageUrl,
   isImageMediaUrl,
 } from "@/lib/resource-media";
-import { loadProjectByIdentifier } from "../project-data";
+import { loadShowcaseByIdentifier } from "../showcase-data";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 
 const siteTitle = "Konglomerat Digitale Werkstätten";
 
-const loadCachedProject = cache(async (id: string) =>
-  loadProjectByIdentifier(id),
+const loadCachedShowcase = cache(async (id: string) =>
+  loadShowcaseByIdentifier(id),
 );
 
 const normalizeLocale = (lang?: string): Locale =>
@@ -60,12 +60,12 @@ const truncateText = (value: string, maxLength: number) => {
   return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 };
 
-const getProjectDescription = (
-  project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
+const getShowcaseDescription = (
+  showcase: Awaited<ReturnType<typeof loadShowcaseByIdentifier>>,
   locale: Locale,
 ) => {
   const plainDescription = truncateText(
-    stripMarkdown(project?.description),
+    stripMarkdown(showcase?.description),
     180,
   );
   if (plainDescription) {
@@ -73,22 +73,22 @@ const getProjectDescription = (
   }
 
   return locale === "en"
-    ? `${project?.name ?? siteTitle}. Take a look at this project.`
-    : `${project?.name ?? siteTitle}. Schau dir dieses Projekt an.`;
+    ? `${showcase?.name ?? siteTitle}. Take a look at this showcase.`
+    : `${showcase?.name ?? siteTitle}. Schau dir diesen Beitrag an.`;
 };
 
-const getProjectOgImage = (
-  project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
+const getShowcaseOgImage = (
+  showcase: Awaited<ReturnType<typeof loadShowcaseByIdentifier>>,
 ) => {
-  const projectImage =
-    project?.images?.find(
+  const showcaseImage =
+    showcase?.images?.find(
       (media): media is string =>
         typeof media === "string" && isImageMediaUrl(media),
     ) ??
-    (project?.image && isImageMediaUrl(project.image) ? project.image : null);
+    (showcase?.image && isImageMediaUrl(showcase.image) ? showcase.image : null);
 
-  if (projectImage) {
-    return getSupabaseRenderedImageUrl(projectImage, { width: 1600 });
+  if (showcaseImage) {
+    return getSupabaseRenderedImageUrl(showcaseImage, { width: 1600 });
   }
 
   return heroHelloImage.src;
@@ -101,26 +101,26 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id, lang } = await params;
   const locale = normalizeLocale(lang);
-  const project = await loadCachedProject(id);
+  const showcase = await loadCachedShowcase(id);
 
-  if (!project) {
+  if (!showcase) {
     return {};
   }
 
-  const canonicalPath = localizePathname(buildProjectPath(project), locale);
+  const canonicalPath = localizePathname(buildShowcasePath(showcase), locale);
   const alternateLanguagePaths = {
-    de: localizePathname(buildProjectPath(project), "de"),
-    en: localizePathname(buildProjectPath(project), "en"),
+    de: localizePathname(buildShowcasePath(showcase), "de"),
+    en: localizePathname(buildShowcasePath(showcase), "en"),
   };
-  const description = getProjectDescription(project, locale);
-  const ogImage = getProjectOgImage(project);
-  const title = `${project.name} | ${siteTitle}`;
+  const description = getShowcaseDescription(showcase, locale);
+  const ogImage = getShowcaseOgImage(showcase);
+  const title = `${showcase.name} | ${siteTitle}`;
 
   return {
     title,
     description,
-    keywords: project.tags ?? undefined,
-    authors: project.author?.name ? [{ name: project.author.name }] : undefined,
+    keywords: showcase.tags ?? undefined,
+    authors: showcase.author?.name ? [{ name: showcase.author.name }] : undefined,
     alternates: {
       canonical: canonicalPath,
       languages: alternateLanguagePaths,
@@ -133,15 +133,15 @@ export async function generateMetadata({
       siteName: siteTitle,
       locale: locale === "en" ? "en_US" : "de_DE",
       publishedTime: toMetadataDateValue(
-        project.publishDate ?? project.createdAt,
+        showcase.publishDate ?? showcase.createdAt,
       ),
-      modifiedTime: project.updatedAt ?? undefined,
-      authors: project.author?.name ? [project.author.name] : undefined,
-      tags: project.tags ?? undefined,
+      modifiedTime: showcase.updatedAt ?? undefined,
+      authors: showcase.author?.name ? [showcase.author.name] : undefined,
+      tags: showcase.tags ?? undefined,
       images: [
         {
           url: ogImage,
-          alt: project.name,
+          alt: showcase.name,
         },
       ],
     },
@@ -186,25 +186,25 @@ const toMetadataDateValue = (value: string | null | undefined) => {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 };
 
-export default async function ProjectDetailPage({
+export default async function ShowcaseDetailPage({
   params,
 }: {
   params: Promise<{ id: string; lang?: string }>;
 }) {
   const { id, lang } = await params;
   const locale = normalizeLocale(lang);
-  const [{ tx }, supabase, project] = await Promise.all([
+  const [{ tx }, supabase, showcase] = await Promise.all([
     getServerI18n(),
     createSupabaseServerClient({ readOnly: true }),
-    loadCachedProject(id),
+    loadCachedShowcase(id),
   ]);
 
-  if (!project) {
+  if (!showcase) {
     notFound();
   }
 
-  const canonicalPath = localizePathname(buildProjectPath(project), locale);
-  const currentPath = localizePathname(`/projects/${id}`, locale);
+  const canonicalPath = localizePathname(buildShowcasePath(showcase), locale);
+  const currentPath = localizePathname(`/showcase/${id}`, locale);
   if (canonicalPath !== currentPath) {
     redirect(canonicalPath);
   }
@@ -213,56 +213,56 @@ export default async function ProjectDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
   const canEdit = Boolean(
-    user && (project.ownerId === user.id || hasRight(user, "resources:edit")),
+    user && (showcase.ownerId === user.id || hasRight(user, "resources:edit")),
   );
-  const isProjectOwner = Boolean(user && project.ownerId === user.id);
+  const isShowcaseOwner = Boolean(user && showcase.ownerId === user.id);
   const isAdmin =
-    user && !isProjectOwner
+    user && !isShowcaseOwner
       ? await userHasRole(supabase, user, "admin")
       : false;
-  const canDelete = Boolean(user && (isProjectOwner || isAdmin));
+  const canDelete = Boolean(user && (isShowcaseOwner || isAdmin));
   const heroMedia =
-    project.images?.filter(
+    showcase.images?.filter(
       (media): media is string => typeof media === "string",
-    ) ?? (project.image ? [project.image] : []);
+    ) ?? (showcase.image ? [showcase.image] : []);
   const heroPreviewMedia = heroMedia.map((mediaUrl) =>
     getResourceMediaKindFromUrl(mediaUrl) === "image"
       ? getSupabaseRenderedImageUrl(mediaUrl, { width: 1600 })
       : mediaUrl,
   );
-  const renderedMarkdown = renderSimpleMarkdown(project.description ?? "");
-  const hasTags = Boolean(project.tags && project.tags.length > 0);
-  const hasProjectLinks = Boolean(
-    project.projectLinks && project.projectLinks.length > 0,
+  const renderedMarkdown = renderSimpleMarkdown(showcase.description ?? "");
+  const hasTags = Boolean(showcase.tags && showcase.tags.length > 0);
+  const hasShowcaseLinks = Boolean(
+    showcase.showcaseLinks && showcase.showcaseLinks.length > 0,
   );
   const hasRelatedResources = Boolean(
-    project.relatedResources && project.relatedResources.length > 0,
+    showcase.relatedResources && showcase.relatedResources.length > 0,
   );
   const publishedDateLabel = formatDate(
-    project.publishDate ?? project.createdAt,
+    showcase.publishDate ?? showcase.createdAt,
   );
-  const updatedDateLabel = formatDate(project.updatedAt ?? project.createdAt);
+  const updatedDateLabel = formatDate(showcase.updatedAt ?? showcase.createdAt);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <header className="space-y-4 px-6 py-2 md:px-8">
         <PageTitle
           backLink={{
-            href: localizePathname("/projects", locale),
-            label: tx("Zur Projektübersicht", "de"),
+            href: localizePathname("/showcase", locale),
+            label: tx("Zur Übersicht", "de"),
           }}
-          eyebrow={project.workshopResource?.name ?? tx("Projekt", "de")}
+          eyebrow={showcase.workshopResource?.name ?? tx("Beitrag", "de")}
           eyebrowClassName="text-xs tracking-[0.2em] text-muted-foreground"
-          title={project.name}
+          title={showcase.name}
           titleClassName="mt-3 max-w-4xl "
           customActions={
             <>
               <ShareButton
-                title={project.name}
-                text={tx("Schau dir dieses Projekt an.", "de")}
+                title={showcase.name}
+                text={tx("Schau dir diesen Beitrag an.", "de")}
               />
               {canDelete ? (
-                <ProjectDeleteButton projectId={project.id} />
+                <ShowcaseDeleteButton showcaseId={showcase.id} />
               ) : null}
             </>
           }
@@ -271,7 +271,7 @@ export default async function ProjectDetailPage({
               ? [
                   {
                     href: localizePathname(
-                      `/projects/edit/${project.id}`,
+                      `/showcase/edit/${showcase.id}`,
                       locale,
                     ),
                     label: tx("Bearbeiten", "de"),
@@ -296,13 +296,13 @@ export default async function ProjectDetailPage({
           <MediaLightboxGallery
             media={heroMedia}
             previewMedia={heroPreviewMedia}
-            title={project.name}
+            title={showcase.name}
             closeLabel={tx("Schließen", "de")}
             previousLabel={tx("Zurück", "de")}
             nextLabel={tx("Weiter", "de")}
             documentLabel={tx("PDF", "de")}
             openDocumentLabel={tx("PDF öffnen", "de")}
-            variant="project"
+            variant="showcase"
           />
 
           <section className="px-6 py-2 md:px-8">
@@ -311,7 +311,7 @@ export default async function ProjectDetailPage({
               dangerouslySetInnerHTML={{
                 __html:
                   renderedMarkdown ||
-                  `<p>${tx("Für dieses Projekt wurde noch keine Beschreibung hinterlegt.", "de")}</p>`,
+                  `<p>${tx("Für diesen Beitrag wurde noch keine Beschreibung hinterlegt.", "de")}</p>`,
               }}
             />
           </section>
@@ -319,9 +319,9 @@ export default async function ProjectDetailPage({
           {hasTags ? (
             <section className="px-6 py-2 md:px-8">
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                {project.tags?.map((tag) => (
+                {showcase.tags?.map((tag) => (
                   <span
-                    key={`${project.id}-${tag}`}
+                    key={`${showcase.id}-${tag}`}
                     className="rounded-full border border-border bg-muted/50 px-3 py-1"
                   >
                     #{tag}
@@ -337,29 +337,29 @@ export default async function ProjectDetailPage({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {tx("Autor", "de")}
             </p>
-            {project.author ? (
+            {showcase.author ? (
               <div className="mt-4 space-y-4">
                 <div className="flex items-center gap-4">
-                  {project.author.avatarUrl ? (
+                  {showcase.author.avatarUrl ? (
                     <img
-                      src={project.author.avatarUrl}
-                      alt={project.author.name}
+                      src={showcase.author.avatarUrl}
+                      alt={showcase.author.name}
                       className="h-16 w-16 rounded-full object-cover"
                     />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-lg font-semibold text-primary">
-                      {project.author.initials}
+                      {showcase.author.initials}
                     </div>
                   )}
                   <div>
                     <p className="text-lg font-semibold text-foreground">
-                      {project.author.name}
+                      {showcase.author.name}
                     </p>
                   </div>
                 </div>
 
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  {project.author?.bio}
+                  {showcase.author?.bio}
                 </p>
               </div>
             ) : (
@@ -371,26 +371,26 @@ export default async function ProjectDetailPage({
 
           <section className="px-5 py-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {tx("Projektinfos", "de")}
+              {tx("Infos zum Beitrag", "de")}
             </p>
             <div className="mt-4 space-y-4 text-sm text-foreground/80">
               <div>
                 <p className="font-semibold text-foreground">
                   {tx("Werkstatt", "de")}
                 </p>
-                {project.workshopResource ? (
+                {showcase.workshopResource ? (
                   <Link
                     href={localizePathname(
                       buildResourcePath({
-                        id: project.workshopResource.id,
-                        prettyTitle: project.workshopResource.prettyTitle,
+                        id: showcase.workshopResource.id,
+                        prettyTitle: showcase.workshopResource.prettyTitle,
                       }),
                       locale,
                     )}
                     className="mt-1 inline-flex text-primary hover:text-primary"
                   >
-                    {project.workshopResource.name ??
-                      project.workshopResource.id}
+                    {showcase.workshopResource.name ??
+                      showcase.workshopResource.id}
                   </Link>
                 ) : (
                   <p className="mt-1 text-muted-foreground">
@@ -419,13 +419,13 @@ export default async function ProjectDetailPage({
             </div>
           </section>
 
-          {hasProjectLinks ? (
+          {hasShowcaseLinks ? (
             <section className="px-5 py-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Links", "de")}
               </p>
               <div className="mt-4 grid gap-3">
-                {project.projectLinks?.map((link) => (
+                {showcase.showcaseLinks?.map((link) => (
                   <a
                     key={`${link.label}-${link.url}`}
                     href={link.url}
@@ -449,7 +449,7 @@ export default async function ProjectDetailPage({
                 {tx("Verwendete Ressourcen", "de")}
               </p>
               <div className="mt-4 grid gap-3">
-                {project.relatedResources?.map((resource) => (
+                {showcase.relatedResources?.map((resource) => (
                   <Link
                     key={resource.id}
                     href={localizePathname(

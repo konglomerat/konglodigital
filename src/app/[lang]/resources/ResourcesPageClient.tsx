@@ -44,6 +44,7 @@ import {
   getResourceMediaKindFromUrl,
   getResourcePreviewUrl,
 } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 type Resource = ResourcePayload;
 
@@ -72,7 +73,6 @@ type ResourcesListResponse = {
 };
 
 const RESOURCES_PAGE_SIZE = 100;
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 const highlightText = (text: string, term: string): ReactNode => {
   const normalizedTerm = term.trim();
@@ -408,7 +408,7 @@ export default function ResourcesPageClient({
             .filter(
               (resourceType): resourceType is string =>
                 typeof resourceType === "string" &&
-                resourceType.toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
+                resourceType.toLowerCase() !== SHOWCASE_RESOURCE_TYPE,
             ),
         ),
       ).sort((left, right) => left.localeCompare(right)),
@@ -418,7 +418,7 @@ export default function ResourcesPageClient({
     const optionsByValue = new Map<string, string>();
 
     Object.entries(RESOURCE_TYPES).forEach(([value, config]) => {
-      if (value === INVENTORY_HIDDEN_RESOURCE_TYPE) {
+      if (value === SHOWCASE_RESOURCE_TYPE) {
         return;
       }
       optionsByValue.set(value, config.label);
@@ -724,7 +724,7 @@ export default function ResourcesPageClient({
     }
     if (
       selectedResourceType.trim().toLowerCase() ===
-      INVENTORY_HIDDEN_RESOURCE_TYPE
+      SHOWCASE_RESOURCE_TYPE
     ) {
       setSelectedResourceType("");
       replaceFilterParamsInUrl(

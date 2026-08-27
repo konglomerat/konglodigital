@@ -68,7 +68,7 @@ const buildPrompt = ({
   layoutInstructions,
 }: {
   name: string;
-  contentKind: "project" | "resource";
+  contentKind: "showcase" | "resource";
   workshopName: string | null;
   slides: StoryDraftSlide[];
   layoutInstructions: string;
@@ -95,7 +95,7 @@ VISUELLE REGELN:
 
 KONTEXT:
 - Titel: ${name}
-- Typ: ${contentKind === "project" ? "Projekt" : "Ressource"}
+- Typ: ${contentKind === "showcase" ? "Beitrag" : "Ressource"}
 - Werkstatt: ${workshopName || "keine Angabe"}
 
 SLIDES:

@@ -335,16 +335,16 @@ export default async function RootLayout({
                             Lagerplatz
                           </ComingSoonNavItem>
 
-                          <p className={navSectionTitleClassName}>Projekte</p>
+                          <p className={navSectionTitleClassName}>Hier entstanden</p>
                           <ActiveNavLink
-                            href="/projects"
+                            href="/showcase"
                             className={navLinkClassName}
                           >
                             <FontAwesomeIcon
                               icon={faFolderOpen}
                               className="h-4 w-4"
                             />
-                            Projekte
+                            Hier entstanden
                           </ActiveNavLink>
 
                           {isAuthenticated ? (

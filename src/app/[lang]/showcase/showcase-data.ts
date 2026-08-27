@@ -6,13 +6,13 @@ import {
   mergeUserMetadataWithMemberProfile,
 } from "@/lib/member-profiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { normalizeProjectLinks } from "@/lib/project-links";
+import { normalizeShowcaseLinks } from "@/lib/showcase-links";
 import {
-  getProjectAuthorAvatarUrl,
-  getProjectAuthorBio,
-  getProjectAuthorInitials,
-  getProjectAuthorName,
-} from "@/lib/project-authors";
+  getShowcaseAuthorAvatarUrl,
+  getShowcaseAuthorBio,
+  getShowcaseAuthorInitials,
+  getShowcaseAuthorName,
+} from "@/lib/showcase-authors";
 import { resolveResourceIdByPrettyTitle } from "@/lib/resource-pretty-title";
 import {
   normalizeResourceMediaPosters,
@@ -22,13 +22,14 @@ import {
   getPointFeatures,
   normalizeResourceMapFeatures,
 } from "@/app/[lang]/resources/map-features";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
-type StoredProjectLink = {
+type StoredShowcaseLink = {
   label?: string;
   url?: string;
 };
 
-type ProjectRow = {
+type ShowcaseRow = {
   id: string;
   pretty_title?: string | null;
   owner_id?: string | null;
@@ -39,7 +40,7 @@ type ProjectRow = {
   images?: string[] | null;
   media_previews?: unknown;
   media_posters?: unknown;
-  project_links?: StoredProjectLink[] | null;
+  project_links?: StoredShowcaseLink[] | null;
   social_media_consent?: boolean | null;
   workshop_resource_id?: string | null;
   tags: string[] | null;
@@ -49,7 +50,7 @@ type ProjectRow = {
   map_features?: unknown;
 };
 
-export type ProjectAuthor = {
+export type ShowcaseAuthor = {
   id: string;
   name: string;
   avatarUrl: string | null;
@@ -58,16 +59,16 @@ export type ProjectAuthor = {
   initials: string;
 };
 
-export type ProjectRecord = ResourcePayload & {
+export type ShowcaseRecord = ResourcePayload & {
   createdAt: string | null;
   updatedAt: string | null;
-  author: ProjectAuthor | null;
+  author: ShowcaseAuthor | null;
 };
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const PROJECTS_CACHE_TAG = "projects";
+export const SHOWCASES_CACHE_TAG = "showcases";
 
 const getRelatedResourcesMap = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
@@ -229,7 +230,7 @@ const getWorkshopResourcesMap = async (
   );
 };
 
-const loadProjectAuthor = async (ownerId: string | null | undefined) => {
+const loadShowcaseAuthor = async (ownerId: string | null | undefined) => {
   if (!ownerId) {
     return null;
   }
@@ -248,22 +249,22 @@ const loadProjectAuthor = async (ownerId: string | null | undefined) => {
       data.user.user_metadata ?? {},
       memberProfile,
     );
-    const name = getProjectAuthorName(metadata, data.user.email ?? null);
+    const name = getShowcaseAuthorName(metadata, data.user.email ?? null);
     return {
       id: data.user.id,
       name,
-      avatarUrl: getProjectAuthorAvatarUrl(metadata),
-      bio: getProjectAuthorBio(metadata),
+      avatarUrl: getShowcaseAuthorAvatarUrl(metadata),
+      bio: getShowcaseAuthorBio(metadata),
       email: data.user.email ?? null,
-      initials: getProjectAuthorInitials(name),
-    } satisfies ProjectAuthor;
+      initials: getShowcaseAuthorInitials(name),
+    } satisfies ShowcaseAuthor;
   } catch {
     return null;
   }
 };
 
-const toProjectRecord = (
-  row: ProjectRow,
+const toShowcaseRecord = (
+  row: ShowcaseRow,
   relatedResources: Array<{
     id: string;
     name?: string;
@@ -274,8 +275,8 @@ const toProjectRecord = (
     string,
     { id: string; name?: string; prettyTitle?: string | null }
   >,
-  author: ProjectAuthor | null,
-): ProjectRecord => {
+  author: ShowcaseAuthor | null,
+): ShowcaseRecord => {
   const mapFeatures = normalizeResourceMapFeatures(row.map_features ?? null);
   const pointFeature = getPointFeatures(mapFeatures).find(
     (feature) => feature.id === "gps-point",
@@ -288,7 +289,7 @@ const toProjectRecord = (
         avatarUrl: null,
         bio: null,
         email: null,
-        initials: getProjectAuthorInitials(authorName),
+        initials: getShowcaseAuthorInitials(authorName),
       }
     : author;
 
@@ -306,7 +307,7 @@ const toProjectRecord = (
     publishDate: row.publish_date ?? null,
     gpsLatitude: pointFeature?.point[1] ?? null,
     gpsLongitude: pointFeature?.point[0] ?? null,
-    type: "project",
+    type: SHOWCASE_RESOURCE_TYPE,
     tags: row.tags ?? undefined,
     relatedResources,
     workshopResource:
@@ -315,7 +316,7 @@ const toProjectRecord = (
             id: row.workshop_resource_id,
           })
         : null,
-    projectLinks: normalizeProjectLinks(row.project_links ?? []),
+    showcaseLinks: normalizeShowcaseLinks(row.project_links ?? []),
     socialMediaConsent: row.social_media_consent ?? false,
     mapFeatures,
     createdAt: row.created_at ?? null,
@@ -324,7 +325,7 @@ const toProjectRecord = (
   };
 };
 
-const resolveProjectId = async (
+const resolveShowcaseId = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   value: string,
 ) => {
@@ -336,39 +337,39 @@ const resolveProjectId = async (
   return resolved?.resourceId ?? null;
 };
 
-const loadProjectsFromDb = async (limit = 60) => {
+const loadShowcasesFromDb = async (limit = 60) => {
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase
     .from("resources")
     .select(
       "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
     )
-    .ilike("type", "project")
+    .ilike("type", SHOWCASE_RESOURCE_TYPE)
     .order("publish_date", { ascending: false, nullsFirst: false })
     .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false })
     .range(0, Math.max(limit, 1) - 1);
 
-  const rows = (data ?? []) as ProjectRow[];
+  const rows = (data ?? []) as ShowcaseRow[];
   const workshopById = await getWorkshopResourcesMap(
     supabase,
     rows.map((row) => row.workshop_resource_id ?? null),
   );
 
-  return rows.map((row) => toProjectRecord(row, [], workshopById, null));
+  return rows.map((row) => toShowcaseRecord(row, [], workshopById, null));
 };
 
-const getCachedProjects = unstable_cache(loadProjectsFromDb, ["projects-list-v1"], {
+const getCachedShowcases = unstable_cache(loadShowcasesFromDb, ["showcases-list-v1"], {
   revalidate: 60 * 60 * 24 * 7,
-  tags: [PROJECTS_CACHE_TAG],
+  tags: [SHOWCASES_CACHE_TAG],
 });
 
-export const loadProjects = async (limit = 60) => getCachedProjects(limit);
+export const loadShowcases = async (limit = 60) => getCachedShowcases(limit);
 
-const loadProjectByIdentifierFromDb = async (identifier: string) => {
+const loadShowcaseByIdentifierFromDb = async (identifier: string) => {
   const supabase = createSupabaseAdminClient();
-  const projectId = await resolveProjectId(supabase, identifier);
-  if (!projectId) {
+  const showcaseId = await resolveShowcaseId(supabase, identifier);
+  if (!showcaseId) {
     return null;
   }
 
@@ -377,22 +378,22 @@ const loadProjectByIdentifierFromDb = async (identifier: string) => {
     .select(
       "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features, type",
     )
-    .eq("id", projectId)
-    .ilike("type", "project")
+    .eq("id", showcaseId)
+    .ilike("type", SHOWCASE_RESOURCE_TYPE)
     .maybeSingle();
 
   if (!data) {
     return null;
   }
 
-  const row = data as ProjectRow;
+  const row = data as ShowcaseRow;
   const [relatedMap, workshopById, author] = await Promise.all([
     getRelatedResourcesMap(supabase, [row.id]),
     getWorkshopResourcesMap(supabase, [row.workshop_resource_id ?? null]),
-    loadProjectAuthor(row.owner_id ?? null),
+    loadShowcaseAuthor(row.owner_id ?? null),
   ]);
 
-  return toProjectRecord(
+  return toShowcaseRecord(
     row,
     relatedMap.get(row.id) ?? [],
     workshopById,
@@ -400,14 +401,14 @@ const loadProjectByIdentifierFromDb = async (identifier: string) => {
   );
 };
 
-const getCachedProjectByIdentifier = unstable_cache(
-  loadProjectByIdentifierFromDb,
-  ["projects-by-identifier-v1"],
+const getCachedShowcaseByIdentifier = unstable_cache(
+  loadShowcaseByIdentifierFromDb,
+  ["showcases-by-identifier-v1"],
   {
     revalidate: 60 * 60 * 24 * 7,
-    tags: [PROJECTS_CACHE_TAG],
+    tags: [SHOWCASES_CACHE_TAG],
   },
 );
 
-export const loadProjectByIdentifier = async (identifier: string) =>
-  getCachedProjectByIdentifier(identifier);
+export const loadShowcaseByIdentifier = async (identifier: string) =>
+  getCachedShowcaseByIdentifier(identifier);

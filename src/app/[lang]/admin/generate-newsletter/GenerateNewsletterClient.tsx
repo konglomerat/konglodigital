@@ -36,7 +36,7 @@ import {
 } from "@/app/[lang]/components/ui/form";
 import { getSupabaseRenderedImageUrl } from "@/lib/resource-media";
 
-type NewsletterProject = {
+type NewsletterShowcase = {
   id: string;
   name: string;
   prettyTitle: string | null;
@@ -63,7 +63,7 @@ type AspectRatio =
   | "4:5"
   | "3:4";
 
-type ProjectOptions = {
+type ShowcaseOptions = {
   layout: "split" | "stacked";
   aspect: AspectRatio;
   imageUrl: string | null;
@@ -71,11 +71,11 @@ type ProjectOptions = {
   linkText: string;
 };
 
-type ProjectItem = {
+type ShowcaseItem = {
   id: string;
-  type: "project";
-  projectId: string;
-  options: ProjectOptions;
+  type: "showcase";
+  showcaseId: string;
+  options: ShowcaseOptions;
 };
 
 type ButtonItem = {
@@ -92,11 +92,11 @@ type BannerItem = {
   content: string;
 };
 
-type BuilderItem = ProjectItem | ButtonItem | BannerItem;
+type BuilderItem = ShowcaseItem | ButtonItem | BannerItem;
 
 type GenerateNewsletterClientProps = {
   locale: string;
-  projects: NewsletterProject[];
+  showcases: NewsletterShowcase[];
   recipientLists: RecipientList[];
   issueDefaults: {
     title: string;
@@ -118,7 +118,7 @@ type DraftResponse = {
     status: string | null;
     subject: string | null;
   };
-  counts?: { projects: number };
+  counts?: { showcases: number };
 };
 
 type StoredConfig = {
@@ -126,13 +126,13 @@ type StoredConfig = {
   title: string;
   subject: string;
   intro: string;
-  showProjectsHeading: boolean;
+  showShowcasesHeading: boolean;
   items: BuilderItem[];
   previewViewport: "desktop" | "mobile";
 };
 
 const STORAGE_KEY = "konglodigital.newsletter.config.v1";
-const MAX_SELECTED_PROJECTS = 24;
+const MAX_SELECTED_SHOWCASES = 24;
 const ASPECT_RATIOS: AspectRatio[] = [
   "original",
   "1:1",
@@ -177,14 +177,14 @@ const previewImage = (value: string | null, width = 320, height = 200) =>
       })
     : null;
 
-const createProjectItem = (project: NewsletterProject): ProjectItem => ({
-  id: `project:${project.id}`,
-  type: "project",
-  projectId: project.id,
+const createShowcaseItem = (showcase: NewsletterShowcase): ShowcaseItem => ({
+  id: `showcase:${showcase.id}`,
+  type: "showcase",
+  showcaseId: showcase.id,
   options: {
     layout: "split",
     aspect: "original",
-    imageUrl: project.images[0] ?? null,
+    imageUrl: showcase.images[0] ?? null,
     showLink: true,
     linkText: "Weiterlesen",
   },
@@ -204,43 +204,59 @@ const errorMessageFromResponse = (raw: string, fallback: string) => {
 
 const restoreItems = (
   value: unknown,
-  projectMap: Map<string, NewsletterProject>,
+  showcaseMap: Map<string, NewsletterShowcase>,
 ): BuilderItem[] => {
   if (!Array.isArray(value)) return [];
 
-  const usedProjectIds = new Set<string>();
+  const usedShowcaseIds = new Set<string>();
   const usedItemIds = new Set<string>();
   const restored: BuilderItem[] = [];
 
   for (const candidate of value.slice(0, 200)) {
     if (!candidate || typeof candidate !== "object") continue;
     const raw = candidate as Partial<BuilderItem> & {
-      options?: Partial<ProjectOptions>;
+      options?: Partial<ShowcaseOptions>;
     };
 
-    if (raw.type === "project" && typeof raw.projectId === "string") {
-      const project = projectMap.get(raw.projectId);
+    // Ältere Entwürfe aus dem localStorage nutzen noch "project"/"projectId".
+    const legacy = candidate as {
+      type?: unknown;
+      showcaseId?: unknown;
+      projectId?: unknown;
+    };
+    const rawShowcaseId =
+      typeof legacy.showcaseId === "string"
+        ? legacy.showcaseId
+        : typeof legacy.projectId === "string"
+          ? legacy.projectId
+          : null;
+
+    if (
+      (raw.type === "showcase" || legacy.type === "project") &&
+      rawShowcaseId
+    ) {
+      const showcase = showcaseMap.get(rawShowcaseId);
       if (
-        !project ||
-        usedProjectIds.has(project.id) ||
-        usedProjectIds.size >= MAX_SELECTED_PROJECTS
+        !showcase ||
+        usedShowcaseIds.has(showcase.id) ||
+        usedShowcaseIds.size >= MAX_SELECTED_SHOWCASES
       ) {
         continue;
       }
       const requestedImage = raw.options?.imageUrl;
       const imageUrl =
         typeof requestedImage === "string" &&
-        project.images.includes(requestedImage)
+        showcase.images.includes(requestedImage)
           ? requestedImage
-          : (project.images[0] ?? null);
+          : (showcase.images[0] ?? null);
       const aspect = ASPECT_RATIOS.includes(raw.options?.aspect as AspectRatio)
         ? (raw.options?.aspect as AspectRatio)
         : "original";
 
       restored.push({
-        id: `project:${project.id}`,
-        type: "project",
-        projectId: project.id,
+        id: `showcase:${showcase.id}`,
+        type: "showcase",
+        showcaseId: showcase.id,
         options: {
           layout: raw.options?.layout === "stacked" ? "stacked" : "split",
           aspect,
@@ -253,7 +269,7 @@ const restoreItems = (
               : "Weiterlesen",
         },
       });
-      usedProjectIds.add(project.id);
+      usedShowcaseIds.add(showcase.id);
       continue;
     }
 
@@ -340,20 +356,20 @@ function ItemControls({
 
 export default function GenerateNewsletterClient({
   locale,
-  projects,
+  showcases,
   recipientLists,
   issueDefaults,
   rapidmailDefaults,
   rapidmailError,
 }: GenerateNewsletterClientProps) {
-  const projectMap = useMemo(
-    () => new Map(projects.map((project) => [project.id, project])),
-    [projects],
+  const showcaseMap = useMemo(
+    () => new Map(showcases.map((showcase) => [showcase.id, showcase])),
+    [showcases],
   );
   const [title, setTitle] = useState(issueDefaults.title);
   const [subject, setSubject] = useState(issueDefaults.subject);
   const [intro, setIntro] = useState(issueDefaults.intro);
-  const [showProjectsHeading, setShowProjectsHeading] = useState(true);
+  const [showShowcasesHeading, setShowShowcasesHeading] = useState(true);
   const [items, setItems] = useState<BuilderItem[]>([]);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -390,10 +406,10 @@ export default function GenerateNewsletterClient({
           if (typeof config.title === "string") setTitle(config.title);
           if (typeof config.subject === "string") setSubject(config.subject);
           if (typeof config.intro === "string") setIntro(config.intro);
-          if (typeof config.showProjectsHeading === "boolean") {
-            setShowProjectsHeading(config.showProjectsHeading);
+          if (typeof config.showShowcasesHeading === "boolean") {
+            setShowShowcasesHeading(config.showShowcasesHeading);
           }
-          setItems(restoreItems(config.items, projectMap));
+          setItems(restoreItems(config.items, showcaseMap));
           setPreviewViewport(
             config.previewViewport === "mobile" ? "mobile" : "desktop",
           );
@@ -404,7 +420,7 @@ export default function GenerateNewsletterClient({
     } finally {
       setIsConfigReady(true);
     }
-  }, [projectMap]);
+  }, [showcaseMap]);
 
   useEffect(() => {
     if (!isConfigReady) return;
@@ -413,7 +429,7 @@ export default function GenerateNewsletterClient({
       title,
       subject,
       intro,
-      showProjectsHeading,
+      showShowcasesHeading,
       items,
       previewViewport,
     };
@@ -428,42 +444,42 @@ export default function GenerateNewsletterClient({
     isConfigReady,
     items,
     previewViewport,
-    showProjectsHeading,
+    showShowcasesHeading,
     subject,
     title,
   ]);
 
-  const selectedProjectIds = useMemo(
+  const selectedShowcaseIds = useMemo(
     () =>
       new Set(
         items
-          .filter((item): item is ProjectItem => item.type === "project")
-          .map((item) => item.projectId),
+          .filter((item): item is ShowcaseItem => item.type === "showcase")
+          .map((item) => item.showcaseId),
       ),
     [items],
   );
-  const selectedProjectCount = selectedProjectIds.size;
+  const selectedShowcaseCount = selectedShowcaseIds.size;
 
-  const filteredProjects = useMemo(() => {
+  const filteredShowcases = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase("de");
-    if (!normalized) return projects;
+    if (!normalized) return showcases;
 
-    return projects.filter((project) =>
-      [project.name, project.prettyTitle, project.description]
+    return showcases.filter((showcase) =>
+      [showcase.name, showcase.prettyTitle, showcase.description]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("de")
         .includes(normalized),
     );
-  }, [deferredQuery, projects]);
+  }, [deferredQuery, showcases]);
 
   const requestItems = useMemo(
     () =>
       items.map((item) => {
-        if (item.type === "project") {
+        if (item.type === "showcase") {
           return {
-            type: "project" as const,
-            projectId: item.projectId,
+            type: "showcase" as const,
+            showcaseId: item.showcaseId,
             ...item.options,
           };
         }
@@ -489,10 +505,10 @@ export default function GenerateNewsletterClient({
       title,
       subject,
       intro,
-      showProjectsHeading,
+      showShowcasesHeading,
       items: requestItems,
     }),
-    [intro, locale, requestItems, showProjectsHeading, subject, title],
+    [intro, locale, requestItems, showShowcasesHeading, subject, title],
   );
   const previewRequestBody = useMemo(
     () => JSON.stringify({ ...newsletterPayload, action: "preview" }),
@@ -502,13 +518,13 @@ export default function GenerateNewsletterClient({
   useEffect(() => {
     if (!isConfigReady) return;
     if (
-      selectedProjectCount === 0 ||
+      selectedShowcaseCount === 0 ||
       !title.trim() ||
       !subject.trim()
     ) {
       setPreviewHtml("");
       setPreviewError(
-        selectedProjectCount > 0 && (!title.trim() || !subject.trim())
+        selectedShowcaseCount > 0 && (!title.trim() || !subject.trim())
           ? "Titel und Betreffzeile müssen ausgefüllt sein."
           : null,
       );
@@ -557,29 +573,29 @@ export default function GenerateNewsletterClient({
     isConfigReady,
     previewNonce,
     previewRequestBody,
-    selectedProjectCount,
+    selectedShowcaseCount,
     subject,
     title,
   ]);
 
-  const toggleProject = (project: NewsletterProject) => {
+  const toggleShowcase = (showcase: NewsletterShowcase) => {
     if (
-      !selectedProjectIds.has(project.id) &&
-      selectedProjectCount >= MAX_SELECTED_PROJECTS
+      !selectedShowcaseIds.has(showcase.id) &&
+      selectedShowcaseCount >= MAX_SELECTED_SHOWCASES
     ) {
       setStatus({
         kind: "error",
-        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_PROJECTS} Projekte möglich, damit die E-Mail nicht abgeschnitten wird.`,
+        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_SHOWCASES} Beiträge möglich, damit die E-Mail nicht abgeschnitten wird.`,
       });
       return;
     }
     setItems((current) => {
       const existing = current.find(
-        (item) => item.type === "project" && item.projectId === project.id,
+        (item) => item.type === "showcase" && item.showcaseId === showcase.id,
       );
       return existing
         ? current.filter((item) => item.id !== existing.id)
-        : [...current, createProjectItem(project)];
+        : [...current, createShowcaseItem(showcase)];
     });
   };
 
@@ -607,13 +623,13 @@ export default function GenerateNewsletterClient({
     });
   };
 
-  const updateProjectOptions = (
+  const updateShowcaseOptions = (
     id: string,
-    patch: Partial<ProjectOptions>,
+    patch: Partial<ShowcaseOptions>,
   ) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "project"
+        item.id === id && item.type === "showcase"
           ? { ...item, options: { ...item.options, ...patch } }
           : item,
       ),
@@ -664,33 +680,33 @@ export default function GenerateNewsletterClient({
     ]);
   };
 
-  const addFilteredProjects = () => {
+  const addFilteredShowcases = () => {
     const availableSlots = Math.max(
-      MAX_SELECTED_PROJECTS - selectedProjectCount,
+      MAX_SELECTED_SHOWCASES - selectedShowcaseCount,
       0,
     );
-    const additions = filteredProjects
-      .filter((project) => !selectedProjectIds.has(project.id))
+    const additions = filteredShowcases
+      .filter((showcase) => !selectedShowcaseIds.has(showcase.id))
       .slice(0, availableSlots);
     if (
-      filteredProjects.filter((project) => !selectedProjectIds.has(project.id))
+      filteredShowcases.filter((showcase) => !selectedShowcaseIds.has(showcase.id))
         .length > additions.length
     ) {
       setStatus({
         kind: "error",
-        text: `Die Auswahl wurde auf ${MAX_SELECTED_PROJECTS} Projekte begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
+        text: `Die Auswahl wurde auf ${MAX_SELECTED_SHOWCASES} Beiträge begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
       });
     }
     setItems((current) => {
       return [
         ...current,
-        ...additions.map(createProjectItem),
+        ...additions.map(createShowcaseItem),
       ];
     });
   };
 
   const handleExport = async () => {
-    if (selectedProjectCount === 0) return;
+    if (selectedShowcaseCount === 0) return;
     setBusyAction("export");
     setStatus(null);
     try {
@@ -758,7 +774,7 @@ export default function GenerateNewsletterClient({
       }
       setStatus({
         kind: "success",
-        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.projects ?? selectedProjectCount} Projekten wurde erstellt.`,
+        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.showcases ?? selectedShowcaseCount} Beiträgen wurde erstellt.`,
       });
     } catch (error) {
       setStatus({
@@ -774,7 +790,7 @@ export default function GenerateNewsletterClient({
   };
 
   const canExport =
-    selectedProjectCount > 0 &&
+    selectedShowcaseCount > 0 &&
     Boolean(title.trim()) &&
     Boolean(subject.trim()) &&
     busyAction === null;
@@ -792,16 +808,16 @@ export default function GenerateNewsletterClient({
       <PageTitle
         eyebrow="Admin · Newsletter"
         title="Newsletter zusammenstellen"
-        subTitle="Wähle Projekte aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
+        subTitle="Wähle Beiträge aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
       />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Verfügbare Projekte
+            Verfügbare Beiträge
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
-            {projects.length}
+            {showcases.length}
           </p>
         </div>
         <div className="rounded-lg border border-primary-border bg-primary-soft p-4 shadow-sm">
@@ -809,7 +825,7 @@ export default function GenerateNewsletterClient({
             Im Newsletter
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
-            {selectedProjectCount}
+            {selectedShowcaseCount}
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -862,9 +878,9 @@ export default function GenerateNewsletterClient({
               <div className="md:col-span-2">
                 <Checkbox
                   label="Überschrift „Was so abgeht“ anzeigen"
-                  checked={showProjectsHeading}
+                  checked={showShowcasesHeading}
                   onChange={(event) =>
-                    setShowProjectsHeading(event.target.checked)
+                    setShowShowcasesHeading(event.target.checked)
                   }
                 />
               </div>
@@ -873,7 +889,7 @@ export default function GenerateNewsletterClient({
 
           <FormSection
             title="Inhalte und Reihenfolge"
-            description="Ausgewählte Projekte und freie Inhaltsblöcke lassen sich per Pfeilen oder Drag-and-drop sortieren."
+            description="Ausgewählte Beiträge und freie Inhaltsblöcke lassen sich per Pfeilen oder Drag-and-drop sortieren."
           >
             <div className="mb-5 flex flex-wrap gap-2">
               <Button type="button" kind="primary" icon={faPlus} onClick={addButton}>
@@ -905,18 +921,18 @@ export default function GenerateNewsletterClient({
                   Noch keine Inhalte ausgewählt
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Wähle unten mindestens ein Projekt aus.
+                  Wähle unten mindestens einen Beitrag aus.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {items.map((item, index) => {
-                  const project =
-                    item.type === "project"
-                      ? projectMap.get(item.projectId)
+                  const showcase =
+                    item.type === "showcase"
+                      ? showcaseMap.get(item.showcaseId)
                       : null;
                   const imageUrl =
-                    item.type === "project"
+                    item.type === "showcase"
                       ? previewImage(item.options.imageUrl, 180, 120)
                       : null;
 
@@ -959,7 +975,7 @@ export default function GenerateNewsletterClient({
                           </span>
                         </span>
 
-                        {item.type === "project" ? (
+                        {item.type === "showcase" ? (
                           imageUrl ? (
                             <Image
                               src={imageUrl}
@@ -971,7 +987,7 @@ export default function GenerateNewsletterClient({
                             />
                           ) : (
                             <span className="flex h-16 w-20 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
-                              Projekt
+                              Beitrag
                             </span>
                           )
                         ) : (
@@ -992,21 +1008,21 @@ export default function GenerateNewsletterClient({
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            {item.type === "project"
-                              ? "Projekt"
+                            {item.type === "showcase"
+                              ? "Beitrag"
                               : item.type === "banner"
                                 ? "Banner"
                                 : "Eigener Button"}
                           </p>
                           <h3 className="truncate font-semibold text-foreground">
-                            {item.type === "project"
-                              ? (project?.name ?? "Nicht verfügbares Projekt")
+                            {item.type === "showcase"
+                              ? (showcase?.name ?? "Nicht verfügbarer Beitrag")
                               : item.title || "Ohne Titel"}
                           </h3>
-                          {item.type === "project" && project ? (
+                          {item.type === "showcase" && showcase ? (
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {formatDate(
-                                project.publishDate ?? project.updatedAt,
+                                showcase.publishDate ?? showcase.updatedAt,
                               )}
                             </p>
                           ) : null}
@@ -1024,13 +1040,13 @@ export default function GenerateNewsletterClient({
                         />
                       </div>
 
-                      {item.type === "project" && project ? (
+                      {item.type === "showcase" && showcase ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
                           <FormField label="Layout">
                             <Select
                               value={item.options.layout}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   layout: event.target.value as
                                     | "split"
                                     | "stacked",
@@ -1046,7 +1062,7 @@ export default function GenerateNewsletterClient({
                               value={item.options.aspect}
                               disabled={!item.options.imageUrl}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   aspect: event.target.value as AspectRatio,
                                 })
                               }
@@ -1061,20 +1077,20 @@ export default function GenerateNewsletterClient({
                               ))}
                             </Select>
                           </FormField>
-                          <FormField label="Projektbild">
+                          <FormField label="Beitragsbild">
                             <Select
                               value={item.options.imageUrl ?? ""}
-                              disabled={project.images.length === 0}
+                              disabled={showcase.images.length === 0}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   imageUrl: event.target.value || null,
                                 })
                               }
                             >
-                              {project.images.length === 0 ? (
+                              {showcase.images.length === 0 ? (
                                 <option value="">Kein Bild vorhanden</option>
                               ) : null}
-                              {project.images.map((image, imageIndex) => (
+                              {showcase.images.map((image, imageIndex) => (
                                 <option key={image} value={image}>
                                   Bild {imageIndex + 1}
                                 </option>
@@ -1087,7 +1103,7 @@ export default function GenerateNewsletterClient({
                               disabled={!item.options.showLink}
                               maxLength={80}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   linkText: event.target.value,
                                 })
                               }
@@ -1095,10 +1111,10 @@ export default function GenerateNewsletterClient({
                           </FormField>
                           <div className="sm:col-span-2 xl:col-span-4">
                             <Checkbox
-                              label="Link zum Projekt anzeigen"
+                              label="Link zum Beitrag anzeigen"
                               checked={item.options.showLink}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   showLink: event.target.checked,
                                 })
                               }
@@ -1169,11 +1185,11 @@ export default function GenerateNewsletterClient({
           </FormSection>
 
           <FormSection
-            title="Projekte auswählen"
-            description="Die Projekte werden direkt aus KongloDigital geladen. Ein Klick fügt sie am Ende des Newsletters hinzu oder entfernt sie wieder."
+            title="Beiträge auswählen"
+            description="Die Beiträge werden direkt aus KongloDigital geladen. Ein Klick fügt sie am Ende des Newsletters hinzu oder entfernt sie wieder."
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <FormField label="Projekte durchsuchen" className="flex-1">
+              <FormField label="Beiträge durchsuchen" className="flex-1">
                 <Input
                   type="search"
                   value={query}
@@ -1184,12 +1200,12 @@ export default function GenerateNewsletterClient({
               <Button
                 type="button"
                 kind="secondary"
-                onClick={addFilteredProjects}
+                onClick={addFilteredShowcases}
                 disabled={
-                  selectedProjectCount >= MAX_SELECTED_PROJECTS ||
-                  filteredProjects.length === 0 ||
-                  filteredProjects.every((project) =>
-                    selectedProjectIds.has(project.id),
+                  selectedShowcaseCount >= MAX_SELECTED_SHOWCASES ||
+                  filteredShowcases.length === 0 ||
+                  filteredShowcases.every((showcase) =>
+                    selectedShowcaseIds.has(showcase.id),
                   )
                 }
               >
@@ -1197,33 +1213,33 @@ export default function GenerateNewsletterClient({
               </Button>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Maximal {MAX_SELECTED_PROJECTS} Projekte pro Newsletter, damit
+              Maximal {MAX_SELECTED_SHOWCASES} Beiträge pro Newsletter, damit
               Abmeldelink und Footer in E-Mail-Programmen sichtbar bleiben.
             </p>
 
-            {filteredProjects.length === 0 ? (
+            {filteredShowcases.length === 0 ? (
               <div className="mt-5 rounded-lg border border-dashed border-input bg-muted/40 px-5 py-8 text-center text-sm text-muted-foreground">
-                Keine passenden Projekte gefunden.
+                Keine passenden Beiträge gefunden.
               </div>
             ) : (
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filteredProjects.map((project) => {
-                  const selected = selectedProjectIds.has(project.id);
+                {filteredShowcases.map((showcase) => {
+                  const selected = selectedShowcaseIds.has(showcase.id);
                   const limitReached =
                     !selected &&
-                    selectedProjectCount >= MAX_SELECTED_PROJECTS;
+                    selectedShowcaseCount >= MAX_SELECTED_SHOWCASES;
                   const imageUrl = previewImage(
-                    project.images[0] ?? null,
+                    showcase.images[0] ?? null,
                     520,
                     300,
                   );
-                  const description = stripText(project.description);
+                  const description = stripText(showcase.description);
 
                   return (
                     <button
-                      key={project.id}
+                      key={showcase.id}
                       type="button"
-                      onClick={() => toggleProject(project)}
+                      onClick={() => toggleShowcase(showcase)}
                       disabled={limitReached}
                       aria-pressed={selected}
                       className={cn(
@@ -1253,7 +1269,7 @@ export default function GenerateNewsletterClient({
                       <span className="block space-y-2 p-4">
                         <span className="flex items-start justify-between gap-3">
                           <span className="font-semibold leading-snug text-foreground">
-                            {project.name}
+                            {showcase.name}
                           </span>
                           <span
                             className={cn(
@@ -1271,7 +1287,7 @@ export default function GenerateNewsletterClient({
                           </span>
                         </span>
                         <span className="block text-xs text-muted-foreground">
-                          {formatDate(project.publishDate ?? project.updatedAt)}
+                          {formatDate(showcase.publishDate ?? showcase.updatedAt)}
                         </span>
                         <span className="block text-sm leading-relaxed text-muted-foreground">
                           {description.slice(0, 130) ||
@@ -1342,9 +1358,9 @@ export default function GenerateNewsletterClient({
                   Newsletter fertigstellen
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {selectedProjectCount === 0
-                    ? "Wähle mindestens ein Projekt aus."
-                    : `${selectedProjectCount} ${selectedProjectCount === 1 ? "Projekt" : "Projekte"} im Entwurf.`}
+                  {selectedShowcaseCount === 0
+                    ? "Wähle mindestens einen Beitrag aus."
+                    : `${selectedShowcaseCount} ${selectedShowcaseCount === 1 ? "Beitrag" : "Beiträge"} im Entwurf.`}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1430,7 +1446,7 @@ export default function GenerateNewsletterClient({
                 <button
                   type="button"
                   onClick={() => setPreviewNonce((current) => current + 1)}
-                  disabled={selectedProjectCount === 0 || isPreviewLoading}
+                  disabled={selectedShowcaseCount === 0 || isPreviewLoading}
                   className="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Vorschau neu laden"
                 >
@@ -1476,7 +1492,7 @@ export default function GenerateNewsletterClient({
                       Vorschau wartet auf Inhalte
                     </p>
                     <p className="mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                      Sobald du ein Projekt auswählst, wird die echte
+                      Sobald du einen Beitrag auswählst, wird die echte
                       E-Mail-Vorschau automatisch erzeugt.
                     </p>
                   </div>

@@ -5,7 +5,7 @@ import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { localizePathname, type Locale } from "@/i18n/config";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import {
   getResourcePosterUrl,
   getResourcePreviewUrl,
@@ -13,19 +13,19 @@ import {
   getSupabaseRenderedImageUrl,
   isVideoUrl,
 } from "@/lib/resource-media";
-import type { ProjectRecord } from "./project-data";
+import type { ShowcaseRecord } from "./showcase-data";
 
-export type ProjectCardCopy = {
+export type ShowcaseCardCopy = {
   missingDescriptionLabel: string;
-  openProjectLabel: string;
-  projectLabel: string;
-  projectOfTheMonthLabel: string;
+  openShowcaseLabel: string;
+  showcaseLabel: string;
+  showcaseOfTheMonthLabel: string;
 };
 
-export type ProjectCardProps = {
-  project: ProjectRecord;
+export type ShowcaseCardProps = {
+  showcase: ShowcaseRecord;
   locale: Locale;
-  copy: ProjectCardCopy;
+  copy: ShowcaseCardCopy;
 };
 
 const stripMarkdown = (value: string) =>
@@ -44,49 +44,49 @@ const truncate = (value: string, maxLength: number) => {
   return `${value.slice(0, maxLength - 1).trimEnd()}…`;
 };
 
-export const getProjectArticleLink = (
-  project: Pick<ProjectRecord, "id" | "prettyTitle">,
+export const getShowcaseArticleLink = (
+  showcase: Pick<ShowcaseRecord, "id" | "prettyTitle">,
   locale: Locale,
-) => localizePathname(buildProjectPath(project), locale);
+) => localizePathname(buildShowcasePath(showcase), locale);
 
-export const getProjectPreviewText = (
-  project: Pick<ProjectRecord, "description">,
+export const getShowcasePreviewText = (
+  showcase: Pick<ShowcaseRecord, "description">,
   maxLength: number,
   fallback: string,
 ) => {
-  if (!project.description) {
+  if (!showcase.description) {
     return fallback;
   }
 
-  return truncate(stripMarkdown(project.description), maxLength);
+  return truncate(stripMarkdown(showcase.description), maxLength);
 };
 
-type ProjectCardMediaProps = {
+type ShowcaseCardMediaProps = {
   articleLink: string;
-  project: ProjectRecord;
-  copy: Pick<ProjectCardCopy, "projectLabel">;
+  showcase: ShowcaseRecord;
+  copy: Pick<ShowcaseCardCopy, "showcaseLabel">;
   featured?: boolean;
 };
 
-export function ProjectCardMedia({
+export function ShowcaseCardMedia({
   articleLink,
-  project,
+  showcase,
   copy,
   featured = false,
-}: ProjectCardMediaProps) {
+}: ShowcaseCardMediaProps) {
   const mediaItems =
-    project.images?.filter(
+    showcase.images?.filter(
       (media): media is string => typeof media === "string" && Boolean(media),
-    ) ?? (project.image ? [project.image] : []);
+    ) ?? (showcase.image ? [showcase.image] : []);
   const heroMediaUrl = mediaItems[0] ?? null;
   const hoverMediaUrl = mediaItems[1] ?? null;
   const heroPreviewUrl = getResourcePreviewUrl(
     heroMediaUrl,
-    project.mediaPreviews,
+    showcase.mediaPreviews,
   );
   const heroPosterUrl = getResourcePosterUrl(
     heroMediaUrl,
-    project.mediaPosters,
+    showcase.mediaPosters,
   );
   const heroMediaKind = getResourceMediaKindFromUrl(heroMediaUrl);
   const hoverMediaKind = getResourceMediaKindFromUrl(hoverMediaUrl);
@@ -157,7 +157,7 @@ export function ProjectCardMedia({
             <div className="relative">
               <img
                 src={heroThumbnailUrl ?? heroMediaUrl}
-                alt={project.name}
+                alt={showcase.name}
                 loading={featured ? "eager" : "lazy"}
                 fetchPriority={featured ? "high" : "auto"}
                 decoding="async"
@@ -193,7 +193,7 @@ export function ProjectCardMedia({
               : "aspect-[4/3] bg-[linear-gradient(135deg,#e6f0ff_0%,#fdf7e8_100%)] text-muted-foreground dark:bg-[linear-gradient(135deg,#172033_0%,#251710_100%)] dark:text-muted-foreground"
           }`}
         >
-          {copy.projectLabel}
+          {copy.showcaseLabel}
         </div>
       )}
     </Link>

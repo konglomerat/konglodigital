@@ -7,6 +7,7 @@ import {
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 type StoredCategory = {
   name?: string;
@@ -34,7 +35,6 @@ type ResourceRow = {
 const MAP_BASE_RESOURCE_TYPES = ["place", "furniture"] as const;
 const MAP_BASE_RESOURCE_LIMIT = 1000;
 const RESOURCES_PAGE_LIMIT = 100;
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 export const dynamic = "force-dynamic";
 
@@ -201,7 +201,7 @@ const loadResourcesFromDb = async ({
     let query = supabase
       .from("resources")
       .select("*", { count: "exact" })
-      .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE)
+      .not("type", "ilike", SHOWCASE_RESOURCE_TYPE)
       .order("priority", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(0, RESOURCES_PAGE_LIMIT - 1);

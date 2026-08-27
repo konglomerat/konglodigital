@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 
 import GenerateNewsletterClient from "./GenerateNewsletterClient";
 
-import { loadProjects } from "@/app/[lang]/projects/project-data";
+import { loadShowcases } from "@/app/[lang]/showcase/showcase-data";
 import { localizePathname } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/server";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import {
   listRapidmailMailings,
   listRapidmailRecipientLists,
@@ -16,7 +16,7 @@ import { isImageUrl } from "@/lib/resource-media";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type NewsletterProject = {
+type NewsletterShowcase = {
   id: string;
   name: string;
   prettyTitle: string | null;
@@ -92,18 +92,18 @@ export default async function GenerateNewsletterPage() {
     return null;
   }
 
-  const [projectRecords, rapidmailResult] = await Promise.all([
-    loadProjects(180),
+  const [showcaseRecords, rapidmailResult] = await Promise.all([
+    loadShowcases(180),
     Promise.allSettled([
       listRapidmailRecipientLists(),
       listRapidmailMailings(),
     ]),
   ]);
 
-  const projects = projectRecords.map((project) => {
+  const showcases = showcaseRecords.map((showcase) => {
     const images = Array.from(
       new Set(
-        [project.image, ...(project.images ?? [])].filter(
+        [showcase.image, ...(showcase.images ?? [])].filter(
           (value): value is string =>
             typeof value === "string" && Boolean(value) && isImageUrl(value),
         ),
@@ -111,15 +111,15 @@ export default async function GenerateNewsletterPage() {
     );
 
     return {
-      id: project.id,
-      name: project.name,
-      prettyTitle: project.prettyTitle ?? null,
-      description: project.description ?? null,
+      id: showcase.id,
+      name: showcase.name,
+      prettyTitle: showcase.prettyTitle ?? null,
+      description: showcase.description ?? null,
       images,
-      publishDate: project.publishDate ?? null,
-      updatedAt: project.updatedAt ?? null,
-      href: localizePathname(buildProjectPath(project), locale),
-    } satisfies NewsletterProject;
+      publishDate: showcase.publishDate ?? null,
+      updatedAt: showcase.updatedAt ?? null,
+      href: localizePathname(buildShowcasePath(showcase), locale),
+    } satisfies NewsletterShowcase;
   });
 
   let recipientLists: RapidmailRecipientList[] = [];
@@ -152,7 +152,7 @@ export default async function GenerateNewsletterPage() {
   return (
     <GenerateNewsletterClient
       locale={locale}
-      projects={projects}
+      showcases={showcases}
       recipientLists={recipientLists}
       issueDefaults={createIssueDefaults()}
       rapidmailDefaults={rapidmailDefaults}

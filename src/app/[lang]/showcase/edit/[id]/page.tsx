@@ -1,15 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 
-import ProjectEditorClient from "../../ProjectEditorClient";
+import ShowcaseEditorClient from "../../ShowcaseEditorClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRight } from "@/lib/permissions";
 import { userHasRole } from "@/lib/roles";
-import { buildProjectPath } from "@/lib/project-path";
-import { loadProjectByIdentifier } from "../../project-data";
+import { buildShowcasePath } from "@/lib/showcase-path";
+import { loadShowcaseByIdentifier } from "../../showcase-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditProjectPage({
+export default async function EditShowcasePage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -21,30 +21,30 @@ export default async function EditProjectPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?redirectedFrom=/projects/edit/${id}`);
+    redirect(`/login?redirectedFrom=/showcase/edit/${id}`);
   }
 
-  const project = await loadProjectByIdentifier(id);
-  if (!project) {
+  const showcase = await loadShowcaseByIdentifier(id);
+  if (!showcase) {
     notFound();
   }
 
   const canEdit =
-    project.ownerId === user.id || hasRight(user, "resources:edit");
+    showcase.ownerId === user.id || hasRight(user, "resources:edit");
   if (!canEdit) {
-    redirect(buildProjectPath(project));
+    redirect(buildShowcasePath(showcase));
   }
 
-  const isProjectOwner = project.ownerId === user.id;
-  const isAdmin = isProjectOwner
+  const isShowcaseOwner = showcase.ownerId === user.id;
+  const isAdmin = isShowcaseOwner
     ? false
     : await userHasRole(supabase, user, "admin");
-  const canDelete = isProjectOwner || isAdmin;
+  const canDelete = isShowcaseOwner || isAdmin;
 
   return (
-    <ProjectEditorClient
+    <ShowcaseEditorClient
       mode="edit"
-      initialProject={project}
+      initialShowcase={showcase}
       canDelete={canDelete}
     />
   );

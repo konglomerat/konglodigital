@@ -24,7 +24,7 @@ const SUPABASE_URL = requiredEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
 const STORAGE_BUCKET =
   process.env.SUPABASE_RESOURCES_BUCKET?.trim() || "resources";
-const EXISTING_PROJECT_PUBLISH_DATE = "2023-01-01";
+const EXISTING_SHOWCASE_PUBLISH_DATE = "2023-01-01";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -144,7 +144,7 @@ const toIsoDate = (value) => {
   return `${match[3]}-${match[2]}-${match[1]}`;
 };
 
-const sanitizeProjectLink = (value) => {
+const sanitizeShowcaseLink = (value) => {
   const trimmed = value.trim().replace(/[)>.,;]+$/g, "");
   if (
     /^https:\/\/drive\.google\.com\/open\?id=[A-Za-z0-9_-]+$/i.test(trimmed)
@@ -374,13 +374,13 @@ const parseCatalogText = (ocrText) => {
       : line;
   }
 
-  const projectLinks = [];
+  const showcaseLinks = [];
   if (metadata.fraesdateien) {
     const urlMatch = metadata.fraesdateien.match(/https?:\/\/\S+/i);
     if (urlMatch) {
-      const cleanedUrl = sanitizeProjectLink(urlMatch[0]);
+      const cleanedUrl = sanitizeShowcaseLink(urlMatch[0]);
       if (cleanedUrl) {
-        projectLinks.push({
+        showcaseLinks.push({
           label: LABEL_ALIASES.fraesdateien,
           url: cleanedUrl,
         });
@@ -412,7 +412,7 @@ const parseCatalogText = (ocrText) => {
     authorName,
     publishDate,
     description: fullDescription,
-    projectLinks,
+    showcaseLinks,
     rawText: ocrText,
   };
 };
@@ -489,7 +489,7 @@ const ensurePrettyTitle = async ({ resourceId, name }) => {
   return prettyTitle;
 };
 
-const findExistingProject = async ({ title, prettyTitle }) => {
+const findExistingShowcase = async ({ title, prettyTitle }) => {
   const byPrettyTitle = await supabase
     .from("resource_pretty_titles")
     .select("resource_id")
@@ -512,13 +512,13 @@ const findExistingProject = async ({ title, prettyTitle }) => {
     .maybeSingle();
   if (byName.error) {
     throw new Error(
-      `Unable to check existing project ${title}: ${byName.error.message}`,
+      `Unable to check existing showcase ${title}: ${byName.error.message}`,
     );
   }
   return byName.data?.id ?? null;
 };
 
-const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
+const createShowcase = async ({ parsed, coverImageUrl, pdfUrl }) => {
   const { data, error } = await supabase
     .from("resources")
     .insert({
@@ -528,7 +528,7 @@ const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
       image: coverImageUrl,
       images: [coverImageUrl, pdfUrl],
       project_links:
-        parsed.projectLinks.length > 0 ? parsed.projectLinks : null,
+        parsed.showcaseLinks.length > 0 ? parsed.showcaseLinks : null,
       social_media_consent: false,
       publish_date: parsed.publishDate,
       type: "project",
@@ -540,7 +540,7 @@ const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
 
   if (error || !data?.id) {
     throw new Error(
-      `Unable to create project ${parsed.title}: ${error?.message || "missing id"}`,
+      `Unable to create showcase ${parsed.title}: ${error?.message || "missing id"}`,
     );
   }
 
@@ -551,9 +551,9 @@ const createProject = async ({ parsed, coverImageUrl, pdfUrl }) => {
   return { id: data.id, prettyTitle };
 };
 
-const updateExistingProject = async ({ resourceId, parsed }) => {
+const updateExistingShowcase = async ({ resourceId, parsed }) => {
   const updatePayload = {
-    publish_date: EXISTING_PROJECT_PUBLISH_DATE,
+    publish_date: EXISTING_SHOWCASE_PUBLISH_DATE,
   };
 
   if (parsed.authorName) {
@@ -567,7 +567,7 @@ const updateExistingProject = async ({ resourceId, parsed }) => {
 
   if (error) {
     throw new Error(
-      `Unable to backfill project ${parsed.title}: ${error.message}`,
+      `Unable to backfill showcase ${parsed.title}: ${error.message}`,
     );
   }
 };
@@ -600,11 +600,11 @@ const main = async () => {
     .sort((left, right) => left.localeCompare(right, "de"));
 
   if (pdfPaths.length === 0) {
-    throw new Error("No project PDFs found in catalog directory.");
+    throw new Error("No showcase PDFs found in catalog directory.");
   }
 
   const tempRoot = await fs.mkdtemp(
-    path.join(os.tmpdir(), "konglo-project-catalog-"),
+    path.join(os.tmpdir(), "konglo-showcase-catalog-"),
   );
   const previewDir = path.join(tempRoot, "previews");
   const coverDir = path.join(tempRoot, "covers");
@@ -621,12 +621,12 @@ const main = async () => {
 
     if (!parsed.title) {
       throw new Error(
-        `Unable to extract a project title from ${path.basename(pdfPath)}.`,
+        `Unable to extract a showcase title from ${path.basename(pdfPath)}.`,
       );
     }
 
     const prettyTitle = slugify(parsed.title);
-    const existingId = await findExistingProject({
+    const existingId = await findExistingShowcase({
       title: parsed.title,
       prettyTitle,
     });
@@ -636,7 +636,7 @@ const main = async () => {
       title: parsed.title,
       authorName: parsed.authorName,
       publishDate: parsed.publishDate,
-      projectLinks: parsed.projectLinks,
+      showcaseLinks: parsed.showcaseLinks,
       existingId,
       createdId: null,
       backfilledExisting: false,
@@ -645,11 +645,11 @@ const main = async () => {
 
     if (existingId) {
       if (write) {
-        await updateExistingProject({
+        await updateExistingShowcase({
           resourceId: existingId,
           parsed,
         });
-        result.publishDate = EXISTING_PROJECT_PUBLISH_DATE;
+        result.publishDate = EXISTING_SHOWCASE_PUBLISH_DATE;
         result.backfilledExisting = true;
       }
       summary.push(result);
@@ -679,7 +679,7 @@ const main = async () => {
       }),
     ]);
 
-    const created = await createProject({ parsed, coverImageUrl, pdfUrl });
+    const created = await createShowcase({ parsed, coverImageUrl, pdfUrl });
     result.createdId = created.id;
     result.prettyTitle = created.prettyTitle;
     summary.push(result);

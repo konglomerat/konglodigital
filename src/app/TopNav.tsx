@@ -30,7 +30,7 @@ export default function TopNav({
   const sections = [
     { href: "/verein", label: "Verein" },
     { href: "/werkbereiche", label: "Werkbereiche" },
-    { href: "/projects", label: "Projekte" },
+    { href: "/showcase", label: "Hier entstanden" },
     ...(isAuthenticated ? [{ href: "/resources", label: "Inventar" }] : []),
   ];
 

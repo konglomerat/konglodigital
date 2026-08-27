@@ -23,22 +23,23 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
-import ProjectDeleteButton from "./ProjectDeleteButton";
+import ShowcaseDeleteButton from "./ShowcaseDeleteButton";
 import ReactSelect from "../components/ui/react-select";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ImageCropDialog from "../components/ImageCropDialog";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
-import { buildProjectPath } from "@/lib/project-path";
-import { normalizeProjectLinks } from "@/lib/project-links";
+import { buildShowcasePath } from "@/lib/showcase-path";
+import { normalizeShowcaseLinks } from "@/lib/showcase-links";
 import {
   getResourceMediaKindFromMimeType,
   getResourceMediaKindFromUrl,
   type ResourceMediaKind,
 } from "@/lib/resource-media";
 import { fetchJson, resizeImage } from "../resources/resource-form-utils";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
-type InitialProject = ResourcePayload & {
+type InitialShowcase = ResourcePayload & {
   createdAt?: string | null;
   updatedAt?: string | null;
   author?: {
@@ -52,7 +53,7 @@ type ResourceOption = {
   type?: string;
 };
 
-type ProjectFormValues = {
+type ShowcaseFormValues = {
   authorName: string;
   title: string;
   description: string;
@@ -64,13 +65,13 @@ type ProjectFormValues = {
   links: Array<{ label: string; url: string }>;
 };
 
-type ProjectEditorClientProps = {
+type ShowcaseEditorClientProps = {
   mode: "create" | "edit";
-  initialProject?: InitialProject | null;
+  initialShowcase?: InitialShowcase | null;
   canDelete?: boolean;
 };
 
-type ExistingProjectImageItem = {
+type ExistingShowcaseImageItem = {
   id: string;
   kind: "existing";
   mediaType: ResourceMediaKind;
@@ -79,7 +80,7 @@ type ExistingProjectImageItem = {
   imageName: string;
 };
 
-type NewProjectImageItem = {
+type NewShowcaseImageItem = {
   id: string;
   kind: "new";
   mediaType: ResourceMediaKind;
@@ -87,9 +88,9 @@ type NewProjectImageItem = {
   file: File;
 };
 
-type ProjectImageItem = ExistingProjectImageItem | NewProjectImageItem;
+type ShowcaseImageItem = ExistingShowcaseImageItem | NewShowcaseImageItem;
 
-type ProjectCropSession = {
+type ShowcaseCropSession = {
   itemId: string;
   sourceUrl: string;
   imageName: string;
@@ -129,28 +130,28 @@ const toDateInputValue = (value?: string | null) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-const normalizeImageList = (project?: InitialProject | null) => {
-  if (!project) {
+const normalizeImageList = (showcase?: InitialShowcase | null) => {
+  if (!showcase) {
     return [] as string[];
   }
 
-  if (Array.isArray(project.images) && project.images.length > 0) {
-    return project.images.filter(
+  if (Array.isArray(showcase.images) && showcase.images.length > 0) {
+    return showcase.images.filter(
       (image): image is string => typeof image === "string",
     );
   }
 
-  return project.image ? [project.image] : [];
+  return showcase.image ? [showcase.image] : [];
 };
 
-const createProjectImageItemId = () => {
+const createShowcaseImageItemId = () => {
   if (
     typeof crypto !== "undefined" &&
     typeof crypto.randomUUID === "function"
   ) {
     return crypto.randomUUID();
   }
-  return `project-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `showcase-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 };
 
 const getImageNameFromUrl = (imageUrl: string, fallbackIndex: number) => {
@@ -166,14 +167,14 @@ const getImageNameFromUrl = (imageUrl: string, fallbackIndex: number) => {
       return segment;
     }
   }
-  return `project-image-${fallbackIndex + 1}.jpg`;
+  return `showcase-image-${fallbackIndex + 1}.jpg`;
 };
 
-const createExistingProjectImageItem = (
+const createExistingShowcaseImageItem = (
   imageUrl: string,
   index: number,
-): ExistingProjectImageItem => ({
-  id: createProjectImageItemId(),
+): ExistingShowcaseImageItem => ({
+  id: createShowcaseImageItemId(),
   kind: "existing",
   mediaType: getResourceMediaKindFromUrl(imageUrl),
   previewUrl: imageUrl,
@@ -181,10 +182,10 @@ const createExistingProjectImageItem = (
   imageName: getImageNameFromUrl(imageUrl, index),
 });
 
-const createNewProjectImageItem = (
+const createNewShowcaseImageItem = (
   file: File,
-  id = createProjectImageItemId(),
-): NewProjectImageItem => ({
+  id = createShowcaseImageItemId(),
+): NewShowcaseImageItem => ({
   id,
   kind: "new",
   mediaType: getResourceMediaKindFromMimeType(file.type),
@@ -192,26 +193,26 @@ const createNewProjectImageItem = (
   file,
 });
 
-const isNewProjectImageItem = (
-  imageItem: ProjectImageItem,
-): imageItem is NewProjectImageItem => imageItem.kind === "new";
+const isNewShowcaseImageItem = (
+  imageItem: ShowcaseImageItem,
+): imageItem is NewShowcaseImageItem => imageItem.kind === "new";
 
-export default function ProjectEditorClient({
+export default function ShowcaseEditorClient({
   mode,
-  initialProject,
+  initialShowcase,
   canDelete = false,
-}: ProjectEditorClientProps) {
+}: ShowcaseEditorClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState<string | null>(null);
-  const [imageItems, setImageItems] = useState<ProjectImageItem[]>(() =>
-    normalizeImageList(initialProject).map((imageUrl, index) =>
-      createExistingProjectImageItem(imageUrl, index),
+  const [imageItems, setImageItems] = useState<ShowcaseImageItem[]>(() =>
+    normalizeImageList(initialShowcase).map((imageUrl, index) =>
+      createExistingShowcaseImageItem(imageUrl, index),
     ),
   );
-  const [cropSession, setCropSession] = useState<ProjectCropSession | null>(
+  const [cropSession, setCropSession] = useState<ShowcaseCropSession | null>(
     null,
   );
   const [cropLoadingId, setCropLoadingId] = useState<string | null>(null);
@@ -221,22 +222,22 @@ export default function ProjectEditorClient({
   const cropCleanupUrlRef = useRef<string | null>(null);
 
   const { control, register, handleSubmit, setValue, watch } =
-    useForm<ProjectFormValues>({
+    useForm<ShowcaseFormValues>({
       defaultValues: {
-        authorName: initialProject?.authorName ?? "",
-        title: initialProject?.name ?? "",
-        description: initialProject?.description ?? "",
-        publishDate: toDateInputValue(initialProject?.publishDate),
-        tags: toTagString(initialProject?.tags),
-        workshopResourceId: initialProject?.workshopResource?.id ?? "",
+        authorName: initialShowcase?.authorName ?? "",
+        title: initialShowcase?.name ?? "",
+        description: initialShowcase?.description ?? "",
+        publishDate: toDateInputValue(initialShowcase?.publishDate),
+        tags: toTagString(initialShowcase?.tags),
+        workshopResourceId: initialShowcase?.workshopResource?.id ?? "",
         usedResourceIds:
-          initialProject?.relatedResources
+          initialShowcase?.relatedResources
             ?.map((resource) => resource.id)
             .filter(Boolean) ?? [],
-        socialMediaConsent: initialProject?.socialMediaConsent ?? false,
+        socialMediaConsent: initialShowcase?.socialMediaConsent ?? false,
         links:
-          initialProject?.projectLinks && initialProject.projectLinks.length > 0
-            ? initialProject.projectLinks.map((link) => ({
+          initialShowcase?.showcaseLinks && initialShowcase.showcaseLinks.length > 0
+            ? initialShowcase.showcaseLinks.map((link) => ({
                 label: link.label,
                 url: link.url,
               }))
@@ -254,7 +255,7 @@ export default function ProjectEditorClient({
   const watchedTags = watch("tags");
   const [tagDraft, setTagDraft] = useState("");
 
-  const projectTags = useMemo(
+  const showcaseTags = useMemo(
     () => parseTagString(watchedTags ?? ""),
     [watchedTags],
   );
@@ -272,7 +273,7 @@ export default function ProjectEditorClient({
       return;
     }
 
-    const mergedTags = [...projectTags];
+    const mergedTags = [...showcaseTags];
     nextTags.forEach((tag) => {
       if (!mergedTags.includes(tag)) {
         mergedTags.push(tag);
@@ -284,7 +285,7 @@ export default function ProjectEditorClient({
   };
 
   const removeTag = (tagToRemove: string) => {
-    syncTags(projectTags.filter((tag) => tag !== tagToRemove));
+    syncTags(showcaseTags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -307,9 +308,9 @@ export default function ProjectEditorClient({
       return;
     }
 
-    if (event.key === "Backspace" && !tagDraft && projectTags.length > 0) {
+    if (event.key === "Backspace" && !tagDraft && showcaseTags.length > 0) {
       event.preventDefault();
-      removeTag(projectTags[projectTags.length - 1]);
+      removeTag(showcaseTags[showcaseTags.length - 1]);
     }
   };
 
@@ -364,7 +365,7 @@ export default function ProjectEditorClient({
 
   useEffect(() => {
     const nextPreviewUrls = imageItems
-      .filter(isNewProjectImageItem)
+      .filter(isNewShowcaseImageItem)
       .map((imageItem) => imageItem.previewUrl);
     newPreviewUrlsRef.current
       .filter((previewUrl) => !nextPreviewUrls.includes(previewUrl))
@@ -405,7 +406,7 @@ export default function ProjectEditorClient({
   );
 
   const usedResourceOptions = useMemo(
-    () => resourceOptions.filter((option) => option.type !== "project"),
+    () => resourceOptions.filter((option) => option.type !== SHOWCASE_RESOURCE_TYPE),
     [resourceOptions],
   );
 
@@ -433,7 +434,7 @@ export default function ProjectEditorClient({
     () =>
       imageItems
         .filter(
-          (imageItem): imageItem is ExistingProjectImageItem =>
+          (imageItem): imageItem is ExistingShowcaseImageItem =>
             imageItem.kind === "existing" && imageItem.mediaType === "image",
         )
         .map((imageItem) => imageItem.imageUrl),
@@ -453,12 +454,12 @@ export default function ProjectEditorClient({
     );
     setImageItems((previous) => [
       ...previous,
-      ...resized.map((file) => createNewProjectImageItem(file)),
+      ...resized.map((file) => createNewShowcaseImageItem(file)),
     ]);
     event.target.value = "";
   };
 
-  const handleStartCrop = async (imageItem: ProjectImageItem) => {
+  const handleStartCrop = async (imageItem: ShowcaseImageItem) => {
     setFormError(null);
 
     if (imageItem.mediaType !== "image") {
@@ -514,7 +515,7 @@ export default function ProjectEditorClient({
       setImageItems((previous) =>
         previous.map((imageItem) =>
           imageItem.id === activeCropSession.itemId
-            ? createNewProjectImageItem(resizedFile, imageItem.id)
+            ? createNewShowcaseImageItem(resizedFile, imageItem.id)
             : imageItem,
         ),
       );
@@ -524,7 +525,7 @@ export default function ProjectEditorClient({
     }
   };
 
-  const onSubmit = async (values: ProjectFormValues) => {
+  const onSubmit = async (values: ShowcaseFormValues) => {
     setSaving(true);
     setFormError(null);
     setFormMessage(null);
@@ -536,27 +537,27 @@ export default function ProjectEditorClient({
       return;
     }
 
-    const normalizedLinks = normalizeProjectLinks(values.links);
+    const normalizedLinks = normalizeShowcaseLinks(values.links);
     const existingImages = imageItems
       .filter(
-        (imageItem): imageItem is ExistingProjectImageItem =>
+        (imageItem): imageItem is ExistingShowcaseImageItem =>
           imageItem.kind === "existing",
       )
       .map((imageItem) => imageItem.imageUrl);
     const newImageFiles = imageItems
-      .filter(isNewProjectImageItem)
+      .filter(isNewShowcaseImageItem)
       .map((imageItem) => imageItem.file);
     const formData = new FormData();
     formData.append("authorName", values.authorName);
     formData.append("name", normalizedTitle);
     formData.append("description", values.description);
-    formData.append("type", "project");
+    formData.append("type", SHOWCASE_RESOURCE_TYPE);
     formData.append(
       "priority",
       values.tags
         .split(",")
         .map((tag) => tag.trim().toLowerCase())
-        .includes("projectofthemonth")
+        .includes("showcaseofthemonth")
         ? "5"
         : "3",
     );
@@ -567,7 +568,7 @@ export default function ProjectEditorClient({
     formData.append("attachable", "0");
     formData.append("publishDate", values.publishDate);
     formData.append("workshopResourceId", values.workshopResourceId);
-    formData.append("projectLinks", JSON.stringify(normalizedLinks));
+    formData.append("showcaseLinks", JSON.stringify(normalizedLinks));
     formData.append(
       "socialMediaConsent",
       values.socialMediaConsent ? "1" : "0",
@@ -577,8 +578,8 @@ export default function ProjectEditorClient({
 
     try {
       const response = await fetch(
-        mode === "edit" && initialProject?.id
-          ? `/api/campai/resources/${initialProject.id}`
+        mode === "edit" && initialShowcase?.id
+          ? `/api/campai/resources/${initialShowcase.id}`
           : "/api/campai/resources",
         {
           method: mode === "edit" ? "PUT" : "POST",
@@ -593,27 +594,27 @@ export default function ProjectEditorClient({
 
       if (!response.ok) {
         throw new Error(
-          data.error ?? tx("Projekt konnte nicht gespeichert werden.", "de"),
+          data.error ?? tx("Beitrag konnte nicht gespeichert werden.", "de"),
         );
       }
 
-      const targetProject = data.resource
+      const targetShowcase = data.resource
         ? data.resource
         : {
-            id: data.id ?? initialProject?.id ?? "",
-            prettyTitle: initialProject?.prettyTitle ?? null,
+            id: data.id ?? initialShowcase?.id ?? "",
+            prettyTitle: initialShowcase?.prettyTitle ?? null,
           };
       setFormMessage(
         mode === "edit"
-          ? tx("Projekt aktualisiert.", "de")
-          : tx("Projekt erstellt.", "de"),
+          ? tx("Beitrag aktualisiert.", "de")
+          : tx("Beitrag erstellt.", "de"),
       );
-      router.push(localizePathname(buildProjectPath(targetProject), locale));
+      router.push(localizePathname(buildShowcasePath(targetShowcase), locale));
     } catch (error) {
       setFormError(
         error instanceof Error
           ? error.message
-          : tx("Projekt konnte nicht gespeichert werden.", "de"),
+          : tx("Beitrag konnte nicht gespeichert werden.", "de"),
       );
     } finally {
       setSaving(false);
@@ -625,23 +626,23 @@ export default function ProjectEditorClient({
       <PageTitle
         title={
           mode === "edit"
-            ? tx("Projekt bearbeiten", "de")
-            : tx("Neues Projekt", "de")
+            ? tx("Beitrag bearbeiten", "de")
+            : tx("Neuer Beitrag", "de")
         }
         subTitle={tx(
-          "Lege ein Projekt mit Bildern, Markdown-Beschreibung, Werkstattbezug und verwendeten Ressourcen an.",
+          "Lege einen Beitrag mit Bildern, Markdown-Beschreibung, Werkstattbezug und verwendeten Ressourcen an.",
           "de",
         )}
         backLink={{
           href: localizePathname(
-            initialProject ? buildProjectPath(initialProject) : "/projects",
+            initialShowcase ? buildShowcasePath(initialShowcase) : "/showcase",
             locale,
           ),
           label: tx("Zurück", "de"),
         }}
         customActions={
-          mode === "edit" && initialProject && canDelete ? (
-            <ProjectDeleteButton projectId={initialProject.id} />
+          mode === "edit" && initialShowcase && canDelete ? (
+            <ShowcaseDeleteButton showcaseId={initialShowcase.id} />
           ) : null
         }
       />
@@ -691,9 +692,9 @@ export default function ProjectEditorClient({
                   shouldValidate: true,
                 });
               }}
-              ariaLabel={tx("Projektbeschreibung", "de")}
+              ariaLabel={tx("Beitragsbeschreibung", "de")}
               placeholder={tx(
-                "## Idee\n\nBeschreibe hier Entstehung, Ziel, Materialien und Ergebnis des Projekts.",
+                "## Idee\n\nBeschreibe hier Entstehung, Ziel, Materialien und Ergebnis des Beitrags.",
                 "de",
               )}
               availableImageUrls={descriptionImageUrls}
@@ -784,7 +785,7 @@ export default function ProjectEditorClient({
                         ) : (
                           <img
                             src={imageItem.previewUrl}
-                            alt={`${watch("title") || tx("Projektmedium", "de")} ${index + 1}`}
+                            alt={`${watch("title") || tx("Beitragsmedium", "de")} ${index + 1}`}
                             className="h-28 w-full object-cover"
                           />
                         )}
@@ -908,8 +909,8 @@ export default function ProjectEditorClient({
               placeholder={tx("z. B. Anna Beispiel", "de")}
             />
             <p className="text-xs text-muted-foreground">
-              {initialProject?.author?.name && !initialProject?.authorName
-                ? `${tx("Wenn das Feld leer bleibt, wird aktuell ", "de")}${initialProject.author.name}${tx(" als Autor angezeigt.", "de")}`
+              {initialShowcase?.author?.name && !initialShowcase?.authorName
+                ? `${tx("Wenn das Feld leer bleibt, wird aktuell ", "de")}${initialShowcase.author.name}${tx(" als Autor angezeigt.", "de")}`
                 : tx(
                     "Wenn das Feld leer bleibt, wird automatisch der verknüpfte Benutzer angezeigt.",
                     "de",
@@ -928,7 +929,7 @@ export default function ProjectEditorClient({
             />
             <p className="text-xs text-muted-foreground">
               {tx(
-                "Dieses Datum steuert die Reihenfolge in der Projektübersicht.",
+                "Dieses Datum steuert die Reihenfolge in der Übersicht.",
                 "de",
               )}
             </p>
@@ -950,7 +951,7 @@ export default function ProjectEditorClient({
                     setValue("workshopResourceId", value?.value ?? "")
                   }
                   className="text-sm"
-                  classNamePrefix="project-workshop-select"
+                  classNamePrefix="showcase-workshop-select"
                   placeholder={tx("Werkstatt auswählen", "de")}
                   isClearable
                 />
@@ -978,7 +979,7 @@ export default function ProjectEditorClient({
                     )
                   }
                   className="text-sm"
-                  classNamePrefix="project-resources-select"
+                  classNamePrefix="showcase-resources-select"
                   placeholder={tx("Ressourcen suchen und auswählen", "de")}
                 />
               )}
@@ -992,7 +993,7 @@ export default function ProjectEditorClient({
             <input type="hidden" {...register("tags")} />
             <div className="rounded-lg border border-border bg-card px-4 py-3 focus-within:border-ring/80">
               <div className="flex flex-wrap items-center gap-2">
-                {projectTags.map((tag) => (
+                {showcaseTags.map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm text-foreground/90"
@@ -1018,7 +1019,7 @@ export default function ProjectEditorClient({
                   autoComplete="off"
                   className="min-w-[12rem] flex-1 border-0 bg-transparent py-1 text-sm text-foreground outline-none"
                   placeholder={tx(
-                    "z. B. cnc, ausstellung, projectofthemonth",
+                    "z. B. cnc, ausstellung, showcaseofthemonth",
                     "de",
                   )}
                 />
@@ -1061,8 +1062,8 @@ export default function ProjectEditorClient({
                 {saving
                   ? tx("Speichert…", "de")
                   : mode === "edit"
-                    ? tx("Projekt speichern", "de")
-                    : tx("Projekt erstellen", "de")}
+                    ? tx("Beitrag speichern", "de")
+                    : tx("Beitrag erstellen", "de")}
               </Button>
             </div>
           </div>

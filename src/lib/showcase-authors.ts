@@ -23,7 +23,7 @@ const readFirstText = (
   return null;
 };
 
-export const getProjectAuthorName = (
+export const getShowcaseAuthorName = (
   metadata: MetadataRecord,
   fallbackEmail?: string | null,
 ) => {
@@ -51,7 +51,7 @@ export const getProjectAuthorName = (
   return "Mitglied";
 };
 
-export const getProjectAuthorAvatarUrl = (metadata: MetadataRecord) =>
+export const getShowcaseAuthorAvatarUrl = (metadata: MetadataRecord) =>
   readFirstText(metadata, [
     "avatar_url",
     "picture",
@@ -60,10 +60,10 @@ export const getProjectAuthorAvatarUrl = (metadata: MetadataRecord) =>
     "photo_url",
   ]);
 
-export const getProjectAuthorBio = (metadata: MetadataRecord) =>
+export const getShowcaseAuthorBio = (metadata: MetadataRecord) =>
   readFirstText(metadata, ["short_bio", "bio", "about", "description"]);
 
-export const getProjectAuthorInitials = (name: string) => {
+export const getShowcaseAuthorInitials = (name: string) => {
   const parts = name
     .split(/\s+/)
     .map((part) => part.trim())

@@ -94,13 +94,13 @@ type ReceiptValues = {
   senderAdditional?: string;
   senderAccount?: string;
   senderArea?: string;
-  senderProject?: string;
+  senderShowcase?: string;
   senderSplit?: string;
   receiverName: string;
   receiverAdditional?: string;
   receiverAccount?: string;
   receiverArea?: string;
-  receiverProject?: string;
+  receiverShowcase?: string;
   receiverSplit?: string;
   invoiceStatus: "offen" | "bezahlt";
   notes?: string;
@@ -230,7 +230,7 @@ function buildSenderLine(values: ReceiptValues) {
   if (values.senderAccount?.trim())
     parts.push(`– ${values.senderAccount.trim()} –`);
   if (values.senderArea?.trim()) parts.push(`– ${values.senderArea.trim()} –`);
-  if (values.senderProject?.trim()) parts.push(values.senderProject.trim());
+  if (values.senderShowcase?.trim()) parts.push(values.senderShowcase.trim());
   if (values.senderSplit?.trim()) parts.push(`(${values.senderSplit.trim()})`);
   return parts.join(" ");
 }
@@ -241,7 +241,7 @@ function buildReceiverLine(values: ReceiptValues) {
     parts.push(`– ${values.receiverAccount.trim()} –`);
   if (values.receiverArea?.trim())
     parts.push(`– ${values.receiverArea.trim()} –`);
-  if (values.receiverProject?.trim()) parts.push(values.receiverProject.trim());
+  if (values.receiverShowcase?.trim()) parts.push(values.receiverShowcase.trim());
   if (values.receiverSplit?.trim())
     parts.push(`(${values.receiverSplit.trim()})`);
   return parts.join(" ");
@@ -644,13 +644,13 @@ function buildReceiptValues(
       senderAdditional: undefined,
       senderAccount: values.transferSenderAccount,
       senderArea: transferSenderAreaLabel,
-      senderProject: undefined,
+      senderShowcase: undefined,
       senderSplit: undefined,
       receiverName: associationName,
       receiverAdditional: undefined,
       receiverAccount: values.transferReceiverAccount,
       receiverArea: transferReceiverAreaLabel,
-      receiverProject: undefined,
+      receiverShowcase: undefined,
       receiverSplit: undefined,
     };
   }
@@ -665,13 +665,13 @@ function buildReceiptValues(
       senderAdditional: undefined,
       senderAccount: values.associationAccount,
       senderArea: associationAreaLabel,
-      senderProject: undefined,
+      senderShowcase: undefined,
       senderSplit: undefined,
       receiverName: values.counterpartyName,
       receiverAdditional: undefined,
       receiverAccount: values.counterpartyAccount,
       receiverArea: undefined,
-      receiverProject: undefined,
+      receiverShowcase: undefined,
       receiverSplit: undefined,
     };
   }
@@ -685,13 +685,13 @@ function buildReceiptValues(
     senderAdditional: undefined,
     senderAccount: values.counterpartyAccount,
     senderArea: undefined,
-    senderProject: undefined,
+    senderShowcase: undefined,
     senderSplit: undefined,
     receiverName: associationName,
     receiverAdditional: undefined,
     receiverAccount: values.associationAccount,
     receiverArea: associationAreaLabel,
-    receiverProject: undefined,
+    receiverShowcase: undefined,
     receiverSplit: undefined,
   };
 }

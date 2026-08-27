@@ -3,20 +3,20 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
-  getProjectArticleLink,
-  getProjectPreviewText,
-  ProjectCardMedia,
-  type ProjectCardProps,
-} from "./projectCardShared";
+  getShowcaseArticleLink,
+  getShowcasePreviewText,
+  ShowcaseCardMedia,
+  type ShowcaseCardProps,
+} from "./showcaseCardShared";
 
-export default function ProjectOfTheMonthCard({
-  project,
+export default function ShowcaseOfTheMonthCard({
+  showcase,
   locale,
   copy,
-}: ProjectCardProps) {
-  const articleLink = getProjectArticleLink(project, locale);
-  const previewText = getProjectPreviewText(
-    project,
+}: ShowcaseCardProps) {
+  const articleLink = getShowcaseArticleLink(showcase, locale);
+  const previewText = getShowcasePreviewText(
+    showcase,
     280,
     copy.missingDescriptionLabel,
   );
@@ -32,9 +32,9 @@ export default function ProjectOfTheMonthCard({
         className="pointer-events-none absolute bottom-0 right-12 h-32 w-32 rounded-full bg-primary/30 blur-3xl dark:bg-primary/15"
       />
 
-      <ProjectCardMedia
+      <ShowcaseCardMedia
         articleLink={articleLink}
-        project={project}
+        showcase={showcase}
         copy={copy}
         featured
       />
@@ -43,11 +43,11 @@ export default function ProjectOfTheMonthCard({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/70">
             <span className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background shadow-sm">
-              {copy.projectOfTheMonthLabel}
+              {copy.showcaseOfTheMonthLabel}
             </span>
           </div>
           <h2 className="text-2xl text-pretty font-bold tracking-tight text-foreground md:text-3xl">
-            <Link href={articleLink}>{project.name}</Link>
+            <Link href={articleLink}>{showcase.name}</Link>
           </h2>
           <p className="max-w-2xl text-sm leading-relaxed text-foreground/80 md:text-base">
             {previewText}
@@ -59,7 +59,7 @@ export default function ProjectOfTheMonthCard({
             href={articleLink}
             className="inline-flex items-center gap-2 font-semibold text-foreground hover:text-foreground/80"
           >
-            <span>{copy.openProjectLabel}</span>
+            <span>{copy.openShowcaseLabel}</span>
             <FontAwesomeIcon icon={faArrowRight} className="h-3.5 w-3.5" />
           </Link>
         </div>

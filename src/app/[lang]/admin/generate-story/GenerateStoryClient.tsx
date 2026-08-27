@@ -93,8 +93,8 @@ const formatUpdatedAt = (value: string | null) => {
 };
 
 const getKindLabel = (item: StorySelectableItem) =>
-  item.contentKind === "project"
-    ? "Projekt"
+  item.contentKind === "showcase"
+    ? "Beitrag"
     : item.resourceType?.trim() || "Ressource";
 
 const renderPreviewImage = (item: StorySelectableItem) => {
@@ -111,7 +111,7 @@ const renderPreviewImage = (item: StorySelectableItem) => {
 
 const DEFAULT_VISIBLE_ITEM_COUNT = 9;
 const DEFAULT_LAYOUT_INSTRUCTIONS =
-  "Erstelle und layoute eine Instagramstory, Kontext: Projekt des Monats. Sehr einfaches Layout, nicht hochtrabend, eher informativ. Die Story darf mehrseitig werden. Starte mit Seite 1. Die erste Seite soll vor allem das Ergebnis zeigen. Grosse Bilder. Verwende als Stil die Vorlage im letzten Bild. Den Text darfst du kuerzen und optimieren.";
+  "Erstelle und layoute eine Instagramstory, Kontext: Beitrag des Monats. Sehr einfaches Layout, nicht hochtrabend, eher informativ. Die Story darf mehrseitig werden. Starte mit Seite 1. Die erste Seite soll vor allem das Ergebnis zeigen. Grosse Bilder. Verwende als Stil die Vorlage im letzten Bild. Den Text darfst du kuerzen und optimieren.";
 
 const isGeneratedImageModel = (model: StoryRenderModel) =>
   isStoryImageModel(model);
@@ -224,7 +224,7 @@ export default function GenerateStoryClient({
     "VORNAME hat mal wieder gewerkelt. INFOS ZUM PROJEKT. Schreibe witzig.",
   );
   const [query, setQuery] = useState("");
-  const [kindFilter, setKindFilter] = useState<"all" | "project" | "resource">(
+  const [kindFilter, setKindFilter] = useState<"all" | "showcase" | "resource">(
     "all",
   );
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.id ?? "");
@@ -424,7 +424,7 @@ export default function GenerateStoryClient({
 
   const handleGenerate = async () => {
     if (!selectedItemId) {
-      setSubmitError("Waehle zuerst eine Ressource oder ein Projekt aus.");
+      setSubmitError("Waehle zuerst eine Ressource oder einen Beitrag aus.");
       return;
     }
 
@@ -482,7 +482,7 @@ export default function GenerateStoryClient({
           Admin: Storys erzeugen
         </h1>
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Waehle eine Ressource oder ein Projekt, lasse kurze Story-Texte per
+          Waehle eine Ressource oder einen Beitrag, lasse kurze Story-Texte per
           OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als
           PNG herunter.
         </p>
@@ -490,7 +490,7 @@ export default function GenerateStoryClient({
 
       <FormSection
         title="Auswahl"
-        description="Der Generator arbeitet mit beliebigen Ressourcen und Projekten aus der Plattform. Es wird immer nur ein Eintrag gleichzeitig verarbeitet."
+        description="Der Generator arbeitet mit beliebigen Ressourcen und Beitraegen aus der Plattform. Es wird immer nur ein Eintrag gleichzeitig verarbeitet."
       >
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
           <FormField label="Suche">
@@ -505,12 +505,12 @@ export default function GenerateStoryClient({
               value={kindFilter}
               onChange={(event) =>
                 setKindFilter(
-                  event.target.value as "all" | "project" | "resource",
+                  event.target.value as "all" | "showcase" | "resource",
                 )
               }
             >
               <option value="all">Alles</option>
-              <option value="project">Projekte</option>
+              <option value="showcase">Hier entstanden</option>
               <option value="resource">Ressourcen</option>
             </Select>
           </FormField>

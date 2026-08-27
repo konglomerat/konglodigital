@@ -1,9 +1,9 @@
-export type ProjectLink = {
+export type ShowcaseLink = {
   label: string;
   url: string;
 };
 
-const MAX_PROJECT_LINKS = 8;
+const MAX_SHOWCASE_LINKS = 8;
 
 const readText = (value: unknown) => {
   if (typeof value !== "string") {
@@ -60,13 +60,13 @@ const defaultLabelForUrl = (url: string) => {
   }
 };
 
-export const normalizeProjectLinks = (value: unknown): ProjectLink[] => {
+export const normalizeShowcaseLinks = (value: unknown): ShowcaseLink[] => {
   if (!Array.isArray(value)) {
     return [];
   }
 
   const links = value
-    .map((entry): ProjectLink | null => {
+    .map((entry): ShowcaseLink | null => {
       if (!entry || typeof entry !== "object") {
         return null;
       }
@@ -89,22 +89,22 @@ export const normalizeProjectLinks = (value: unknown): ProjectLink[] => {
         url: normalizedUrl,
       };
     })
-    .filter((entry): entry is ProjectLink => entry !== null)
-    .slice(0, MAX_PROJECT_LINKS);
+    .filter((entry): entry is ShowcaseLink => entry !== null)
+    .slice(0, MAX_SHOWCASE_LINKS);
 
   return Array.from(
     new Map(links.map((link) => [`${link.label}|${link.url}`, link])).values(),
   );
 };
 
-export const parseProjectLinksJson = (value: string | null | undefined) => {
+export const parseShowcaseLinksJson = (value: string | null | undefined) => {
   if (!value?.trim()) {
-    return [] as ProjectLink[];
+    return [] as ShowcaseLink[];
   }
 
   try {
-    return normalizeProjectLinks(JSON.parse(value) as unknown);
+    return normalizeShowcaseLinks(JSON.parse(value) as unknown);
   } catch {
-    return [] as ProjectLink[];
+    return [] as ShowcaseLink[];
   }
 };

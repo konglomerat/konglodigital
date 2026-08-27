@@ -36,7 +36,7 @@ export default function SiteFooter({
         ...(isAuthenticated
           ? [{ href: "/resources", label: "Inventar" }]
           : []),
-        { href: "/projects", label: "Projekte" },
+        { href: "/showcase", label: "Hier entstanden" },
       ],
     },
     {
