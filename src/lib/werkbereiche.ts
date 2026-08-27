@@ -1,10 +1,7 @@
 // src/lib/werkbereiche.ts — die Werkbereiche als eine Quelle der Wahrheit.
 // Übernommen aus Branch `topnavigation` (16 reale Bereiche).
 // mark = Datei unter /public/branding/werkbereiche/<mark>.(svg|png).
-// Die Buchstabenmarken der DS-Bibliothek sind dort unbenannt; die Zuordnung
-// z→Metall, s→Siebdruck und foto-film→Darkroom ist eine Annahme aus dem
-// Handoff-README und gehört mit dem Grafik-Team gegengeprüft. Bereiche ohne
-// eigene Marke bekommen in WerkbereichMark eine gesetzte Initiale.
+// Bereiche ohne eigene Marke bekommen in WerkbereichMark eine gesetzte Initiale.
 export type Werkbereich = {
   slug: string;
   name: string;
@@ -30,6 +27,8 @@ export const WERKBEREICHE: Werkbereich[] = [
     name: "Printshop",
     description:
       "Digitaldruck, Plotten und Weiterverarbeitung für Plakate, Hefte und Aushänge.",
+    mark: "printshop",
+    markExt: "svg",
   },
   {
     slug: "neuweltbib",
@@ -42,6 +41,8 @@ export const WERKBEREICHE: Werkbereich[] = [
     name: "Buchdruck",
     description:
       "Bleisatz, Handsatz und Andruckpresse — Buchdruck im ursprünglichen Verfahren.",
+    mark: "buchdruck",
+    markExt: "svg",
   },
   {
     slug: "holz",
@@ -56,8 +57,6 @@ export const WERKBEREICHE: Werkbereich[] = [
     name: "Metall",
     description:
       "Schweißen, Drehen, Bohren und Blechbearbeitung in der Metallwerkstatt.",
-    mark: "z",
-    markExt: "svg",
   },
   {
     slug: "laser",
@@ -88,7 +87,7 @@ export const WERKBEREICHE: Werkbereich[] = [
     name: "Siebdruck",
     description:
       "Siebe belichten, drucken und trocknen — für Textil und für Papier.",
-    mark: "s",
+    mark: "siebdruck",
     markExt: "svg",
   },
   {
@@ -105,6 +104,8 @@ export const WERKBEREICHE: Werkbereich[] = [
     shortLabel: "Kunststoff",
     description:
       "Kunststoffreste sortieren, schreddern und zu neuen Teilen verpressen.",
+    mark: "k",
+    markExt: "svg",
   },
   {
     slug: "materialvermittlung",
@@ -112,6 +113,8 @@ export const WERKBEREICHE: Werkbereich[] = [
     shortLabel: "Material",
     description:
       "Das Materiallager des Vereins: gespendete Reste finden neue Projekte.",
+    mark: "materialvermittung",
+    markExt: "svg",
   },
   {
     slug: "cnc",

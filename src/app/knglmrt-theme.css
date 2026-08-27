@@ -1,24 +1,14 @@
-/* ============================================================
-   Konglomerat e.V. Design System — Theme-Override
-   Eingebunden in src/app/layout.tsx DIREKT NACH globals.css.
-   Überschreibt nur Token-Werte — kein Funktionscode betroffen.
-   Quelle: Konglo Library_v2.fig
-   Hinweis: Die Tailwind-Theme-Keys (--radius-full, --font-display)
-   liegen im @theme-inline-Block von globals.css, weil @theme nur in
-   der von Tailwind verarbeiteten Stylesheet-Kette wirkt.
-   ============================================================ */
-
 /* Display-Schrift (lizenziert, self-hosted → public/fonts/) */
 @font-face {
   font-family: "Fengardo Neue";
-  src: url("/fonts/FengardoNeue_Black.otf") format("opentype");
-  font-weight: 900;
+  src:
+    url("/fonts/FengardoNeue_Black.woff2") format("woff2"),
+    url("/fonts/FengardoNeue_Black.otf") format("opentype");
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* Light Theme = das Konglomerat-System.
-   Dark Mode bleibt unangetastet (das DS kennt keinen). */
 :root {
   --background: #ffffff;            /* Papier */
   --foreground: #000000;            /* Tinte — Body ist pures Schwarz */
@@ -73,14 +63,12 @@
 
   /* Zusätzliche knglmrt-Tokens für direkte Verwendung */
   --knglmrt-brown-100: #764951;     /* Hover-Ziel für Pink */
+  --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb — trägt weiße Schrift */
   --knglmrt-dark-100: #2e3846;
   --knglmrt-pink-60: #de86a5;
   --knglmrt-dark-30: #c1c3c9;
   --ui-quiet-hover: #e4e4e4;        /* die leise Taste, gehovert */
 
-  /* Schriftfamilien — Rollen aus knglmrt/tokens/typography.css.
-     Alle vier Schnitte werden in layout.tsx geladen; ohne die beiden
-     Fira-Varianten fiel „wide“ und „narrow“ bisher auf system-ui zurück. */
   --font-display: "Fengardo Neue", var(--font-geist-sans), sans-serif;
   --font-core: var(--font-geist-sans), "Fira Sans Condensed", system-ui, sans-serif;
   --font-wide: var(--font-knglmrt-wide), "Fira Sans", system-ui, sans-serif;
@@ -88,28 +76,23 @@
     var(--font-geist-sans), system-ui, sans-serif;
   --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
 
-  /* Schriftgrößen der Screen-Ebene — Literale aus knglmrt/tokens/ui.css.
-     Das gedruckte System läuft mit 11/16, der Bildschirm mit 13/18. */
-  --ui-size-body: 13px;
-  --ui-line-body: 18px;
-  --ui-size-label: 11px;   /* uppercase, tracked .04em — Feldbeschriftungen */
-  --ui-size-caption: 10px; /* uppercase, tracked .13em — Karten- und Tile-Label */
-  --ui-size-num: 12px;     /* Fira Mono — Daten, Zeiten, Beträge, IDs */
-  --ui-size-value: 25px;   /* Fira Mono Bold — die Zahl auf einer StatTile */
-  --ui-size-nav: 14px;
+  --ui-size-body: 16px;
+  --ui-line-body: 22px;
+  --ui-size-label: 14px;   /* uppercase, tracked .04em — Feldbeschriftungen */
+  --ui-size-caption: 12px; /* uppercase, tracked .13em — Karten- und Tile-Label */
+  --ui-size-num: 15px;     /* Fira Mono — Daten, Zeiten, Beträge, IDs */
+  --ui-size-value: 31px;   /* Fira Mono Bold — die Zahl auf einer StatTile */
+  --ui-size-nav: 17px;
 
-  /* Überschriften-Stufen — Literale aus dem Prototyp, nicht neu abgeleitet.
-     Das gedruckte System nennt nur 32/23; der Bildschirm ergänzt 17 für
-     Karten-Titel und 21 für die Lead-Zeile. */
-  --ui-size-title: 32px;   /* Fengardo Neue Black — Seitentitel */
-  --ui-line-title: 34px;
-  --ui-size-section: 23px; /* Fengardo Neue Black — Sektionsüberschrift */
-  --ui-line-section: 26px;
-  --ui-size-card: 17px;    /* Fira Sans Condensed Bold — Karten-Titel */
-  --ui-line-card: 22px;
-  --ui-size-lead: 21px;    /* Fira Sans Extra Condensed SemiBold */
-  --ui-line-lead: 28px;
-  --ui-size-eyebrow: 22px; /* Fira Sans, uppercase, .13em — die Augenbraue */
+  --ui-size-title: 39px;   /* Fengardo Neue Black — Seitentitel */
+  --ui-line-title: 42px;
+  --ui-size-section: 28px; /* Fengardo Neue Black — Sektionsüberschrift */
+  --ui-line-section: 32px;
+  --ui-size-card: 21px;    /* Fira Sans Condensed Bold — Karten-Titel */
+  --ui-line-card: 27px;
+  --ui-size-lead: 26px;    /* Fira Sans Extra Condensed SemiBold */
+  --ui-line-lead: 34px;
+  --ui-size-eyebrow: 27px; /* Fira Sans, uppercase, .13em — die Augenbraue */
 }
 
 @layer base {
@@ -118,8 +101,6 @@
     font-size: var(--ui-size-body);
     line-height: var(--ui-line-body);
   }
-  /* Überschriften sprechen Fengardo Neue Black — bis auf h3 und tiefer,
-     die im DS als fetter Fira-Sans-Condensed-Karten-Titel laufen. */
   h1, h2 {
     font-family: var(--font-display);
     font-weight: 900;
@@ -138,13 +119,9 @@
     font-size: var(--ui-size-card);
     line-height: var(--ui-line-card);
   }
-  /* Links: pink, Hover braun — Muster aus den Print-Vorlagen */
   a { text-underline-offset: 2px; }
 }
 
-/* ── Textrollen des Systems ───────────────────────────────────────────
-   Jede Rolle ist genau eine Zeile aus dem Prototyp. Wer eine Rolle
-   braucht, nimmt die Klasse — nicht eine neu gemischte Größe. */
 .knglmrt-eyebrow {
   font-family: var(--font-wide);
   font-weight: 400;
@@ -202,12 +179,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Terrazzo ─────────────────────────────────────────────────────────
-   Die Hintergrund-Kacheln der Bibliothek, 400x400, kachelnd. Nur die
-   monochromen Schnitte sind hier eingespielt — die sind leise genug, um
-   unter kleinem Satz zu liegen. Die drei bunten "Kontrast"-Kacheln gehören
-   laut DS nur hinter ein weißes Panel und fehlen deshalb.
-   Im Dark Mode aus: die Kacheln sind auf Papierweiß gezeichnet. */
 .knglmrt-terrazzo-fein-rosa,
 .knglmrt-terrazzo-hellgelb {
   background-repeat: repeat;
@@ -218,7 +189,7 @@
   background-color: #f7e1e9;
 }
 .knglmrt-terrazzo-hellgelb {
-  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_g.svg");
+  background-image: url("/branding/backgrounds/terrazzo-hellgelb.svg");
   background-color: #fffcee;
 }
 .dark .knglmrt-terrazzo-fein-rosa,
@@ -227,11 +198,13 @@
   background-color: var(--card);
 }
 
-/* Einzige erlaubte "Tiefe" im System: der 3px-Offset-Schatten,
-   max. 1× pro View (Emphasis-Button ODER Dialog). Als Utility: */
 .knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 #000; }
 
-/* Weißes Panel mit 3px paper-pink Keyline (die eine Karte des Systems) */
 .knglmrt-panel { background: #fff; box-shadow: inset 0 0 0 3px #faecf1; }
-/* Im Dark Mode kein Papierweiß — das DS kennt keinen, die App schon. */
 .dark .knglmrt-panel { background: var(--card); box-shadow: inset 0 0 0 3px var(--border); }
+
+.knglmrt-full-bleed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+html { overflow-x: clip; }

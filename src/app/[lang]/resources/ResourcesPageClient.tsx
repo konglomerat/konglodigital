@@ -999,7 +999,7 @@ export default function ResourcesPageClient({
   }, [tx]);
 
   return (
-    <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
+    <div className="flex w-full flex-1 flex-col gap-8">
       <PageTitle
         title={tx("Inventar", "de")}
         subTitle={tx(
@@ -1271,6 +1271,6 @@ export default function ResourcesPageClient({
           </div>
         </aside>
       </section>
-    </main>
+    </div>
   );
 }
