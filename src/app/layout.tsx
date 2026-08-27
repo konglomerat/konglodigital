@@ -508,7 +508,7 @@ export default async function RootLayout({
                 adminAreaHref={adminAreaHref}
               />
             }
-            footer={<SiteFooter isAuthenticated={isAuthenticated} />}
+            footer={<SiteFooter />}
           >
             {children}
           </AppShell>
