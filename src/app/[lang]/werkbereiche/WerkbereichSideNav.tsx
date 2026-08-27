@@ -3,15 +3,28 @@
 // aktiver Eintrag: 2px-Pink-Kante + paper-pink (SideNav-Muster des DS).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { stripLocalePrefix } from "@/i18n/config";
 import { VEREINSPROJEKTE, WERKBEREICHE } from "@/lib/werkbereiche";
 
-export default function WerkbereichSideNav() {
+export default function WerkbereichSideNav({
+  className,
+  children,
+}: {
+  /** Zusatzklassen für die Spalte, z. B. die Trennkante der Detailseite. */
+  className?: string;
+  /** Fuß der Spalte — Linie, Hinweistext. */
+  children?: ReactNode;
+} = {}) {
   const pathname = usePathname() ?? "/";
   const current = stripLocalePrefix(pathname).pathname.replace(/\/+$/, "");
   return (
-    <aside className="sticky top-24 hidden flex-col gap-4 md:flex">
+    <aside
+      className={`sticky top-24 hidden flex-col gap-4 md:flex${
+        className ? ` ${className}` : ""
+      }`}
+    >
       <div>
         <div className="knglmrt-caption px-3.5 pb-2 text-muted-foreground">
           Werkbereiche
@@ -63,6 +76,8 @@ export default function WerkbereichSideNav() {
           })}
         </nav>
       </div>
+
+      {children}
     </aside>
   );
 }
