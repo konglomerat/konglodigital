@@ -208,7 +208,10 @@
   width: 100vw;
   margin-inline: calc(50% - 50vw);
 }
-html { overflow-x: clip; }
+html {
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+}
 
 /* ---------------------------------------------------------------------------
    Gezeichnete Linien (public/branding/lines/Lines_01…06.svg)

@@ -22,6 +22,20 @@ type QuickAction = {
   description: string;
 };
 
+const quickActionImages: Record<
+  string,
+  { bw: typeof print3dBwImage; color: typeof print3dImage; alt: string }
+> = {
+  "/checkout": { bw: print3dBwImage, color: print3dImage, alt: "3D-Druck" },
+  "/resources": { bw: inventoryBwImage, color: inventoryImage, alt: "Inventar" },
+  "/calendar": { bw: calendarBwImage, color: calendarImage, alt: "Kalender" },
+  "/showcase": {
+    bw: showcasesBwImage,
+    color: showcasesImage,
+    alt: "Hier entstanden",
+  },
+};
+
 export default async function Home() {
   const { tx } = await getServerI18n();
   const supabase = await createSupabaseServerClient({ readOnly: true });
@@ -64,10 +78,8 @@ export default async function Home() {
           <div className="knglmrt-panel grid h-fit gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
             <div className="order-2 md:order-1">
               <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
-              <h1 className="mt-3 text-[40px] leading-[38px] md:text-[56px] md:leading-[52px]">
-                Konglo
-                <br />
-                digital
+              <h1 className="mt-3 whitespace-nowrap text-[clamp(28px,7.5vw,40px)] leading-[1.05] md:text-[56px] md:leading-[52px]">
+                Konglomerat e.V.
               </h1>
               <p className="knglmrt-lead mt-4 max-w-[420px]">
                 {tx(
@@ -77,11 +89,11 @@ export default async function Home() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <Button href="/resources" kind="primary">
-                  {tx("Zum Inventar", "de")}
+                <Button href="/werkbereiche" kind="primary">
+                  {tx("Werkbereiche ansehen", "de")}
                 </Button>
-                <Button href="/calendar" kind="secondary">
-                  {tx("Termine ansehen", "de")}
+                <Button href="/verein" kind="secondary">
+                  {tx("Über uns", "de")}
                 </Button>
               </div>
             </div>
@@ -172,77 +184,90 @@ export default async function Home() {
         </section>
       ) : null}
 
+      <section className="bg-primary-soft px-6 py-8 md:px-10 md:py-10">
+        <h2 className="mb-1.5 text-primary">
+          {tx("Neu hier? So wirst du Mitglied", "de")}
+        </h2>
+        <div className="mb-7 max-w-[520px]">
+          <Divider number={3} height={14} color="var(--primary)" />
+        </div>
+
+        <ol className="grid gap-7 md:grid-cols-3 md:gap-10">
+          {[
+            {
+              title: tx("Kennenlernen", "de"),
+              description: tx(
+                "Komm zum offenen Abend, schau dich um und sprich mit uns.",
+                "de",
+              ),
+            },
+            {
+              title: tx("Antrag stellen", "de"),
+              description: tx(
+                "Mitgliedsantrag ausfüllen, der Vorstand bestätigt die Aufnahme.",
+                "de",
+              ),
+            },
+            {
+              title: tx("Einweisung erhalten", "de"),
+              description: tx(
+                "Sicherheitseinweisung an den Maschinen, danach hast du Zugang.",
+                "de",
+              ),
+            },
+          ].map((step, index) => (
+            <li key={step.title} className="flex flex-col gap-1.5">
+              <span className="font-display text-[28px] leading-[28px] text-primary">
+                {index + 1}
+              </span>
+              <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
+                {step.title}
+              </h3>
+              <p>{step.description}</p>
+              {index === 1 ? (
+                <div className="mt-3">
+                  <Button href="/mitglied-werden" kind="emphasis" size="large">
+                    {tx("Online Antrag", "de")}
+                  </Button>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <section>
         <h2 className="mb-3.5">{tx("Schnellzugriff", "de")}</h2>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
+            const image = quickActionImages[action.href];
+
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group flex flex-col border border-foreground bg-card transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="group flex items-center gap-2.5 border border-foreground bg-card p-2 transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {action.href === "/checkout" ? (
-                  <div className="relative border-b border-foreground">
+                {image ? (
+                  <div className="relative h-9 w-9 shrink-0 overflow-hidden border border-foreground">
                     <Image
-                      src={print3dBwImage}
-                      alt="3D-Druck"
-                      className="h-auto w-full multiply negative-multiply"
+                      src={image.bw}
+                      alt={image.alt}
+                      className="h-full w-full object-cover multiply negative-multiply"
                     />
                     <Image
-                      src={print3dImage}
-                      alt="3D-Druck"
-                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
-                    />
-                  </div>
-                ) : action.href === "/resources" ? (
-                  <div className="relative border-b border-foreground">
-                    <Image
-                      src={inventoryBwImage}
-                      alt="Inventar"
-                      className="h-auto w-full multiply negative-multiply"
-                    />
-                    <Image
-                      src={inventoryImage}
-                      alt="Inventar"
-                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
-                    />
-                  </div>
-                ) : action.href === "/calendar" ? (
-                  <div className="relative border-b border-foreground">
-                    <Image
-                      src={calendarBwImage}
-                      alt="Kalender"
-                      className="h-auto w-full multiply negative-multiply"
-                    />
-                    <Image
-                      src={calendarImage}
-                      alt="Kalender"
-                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
-                    />
-                  </div>
-                ) : action.href === "/showcase" ? (
-                  <div className="relative border-b border-foreground">
-                    <Image
-                      src={showcasesBwImage}
-                      alt="Hier entstanden"
-                      className="h-auto w-full multiply negative-multiply"
-                    />
-                    <Image
-                      src={showcasesImage}
-                      alt="Hier entstanden"
-                      className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
+                      src={image.color}
+                      alt=""
+                      aria-hidden
+                      className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100 multiply negative-multiply"
                     />
                   </div>
                 ) : null}
 
-                <div className="flex flex-col gap-1.5 px-[18px] py-4">
-                  <h3 className="knglmrt-card-title text-primary">
-                    {action.title}
-                  </h3>
-                  <p className="text-muted-foreground">{action.description}</p>
-                </div>
+                <h3 className="knglmrt-card-title text-[13px] leading-4 text-primary">
+                  {action.title}
+                </h3>
               </Link>
             );
           })}
