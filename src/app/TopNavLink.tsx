@@ -20,7 +20,7 @@ export default function TopNavLink({ href, label }: TopNavLinkProps) {
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
-      className="flex items-center px-[18px] text-sm text-foreground transition hover:text-primary"
+      className="flex items-center px-[18px] font-display text-[21px] text-foreground transition hover:text-primary"
     >
       <span className="relative inline-block w-max">
         <span className={isActive ? "font-bold text-primary" : undefined}>

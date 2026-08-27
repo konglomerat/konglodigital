@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/client";
 
 type LanguageSwitcherProps = {
   className?: string;
-  variant?: "default" | "topnav";
+  variant?: "default" | "topnav" | "footer";
 };
 
 const buttonClassName =
@@ -22,6 +22,8 @@ const buttonClassName =
 // aktive Sprache schwarz auf weiß invertiert — Muster aus dem Prototyp.
 const topNavButtonClassName =
   "border border-foreground px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
+const footerButtonClassName =
+  "border border-white px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
 
 export default function LanguageSwitcher({
   className,
@@ -53,11 +55,17 @@ export default function LanguageSwitcher({
   const localeButtonClassName = (targetLocale: "de" | "en") => {
     const isCurrent = currentLocale === targetLocale;
 
-    if (variant === "topnav") {
-      return `${topNavButtonClassName} ${
+    if (variant === "topnav" || variant === "footer") {
+      const buttonClass =
+        variant === "footer" ? footerButtonClassName : topNavButtonClassName;
+      return `${buttonClass} ${
         isCurrent
-          ? "bg-foreground font-bold text-background"
-          : "bg-card font-normal text-foreground hover:bg-primary-soft"
+          ? variant === "footer"
+            ? "bg-white font-bold text-[var(--knglmrt-dark-100)]"
+            : "bg-foreground font-bold text-background"
+          : variant === "footer"
+            ? "bg-transparent font-normal text-white hover:bg-white/10"
+            : "bg-card font-normal text-foreground hover:bg-primary-soft"
       }`;
     }
 
@@ -89,7 +97,7 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => switchToLocale(ENGLISH_LOCALE)}
         className={`${localeButtonClassName(ENGLISH_LOCALE)} ${
-          variant === "topnav" ? "-ml-px" : ""
+          variant === "topnav" || variant === "footer" ? "-ml-px" : ""
         }`}
         aria-current={currentLocale === ENGLISH_LOCALE ? "page" : undefined}
       >

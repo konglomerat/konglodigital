@@ -4,8 +4,7 @@
 // wie in der TopNav.
 import Image from "next/image";
 import Link from "next/link";
-
-import ThemeToggle from "./[lang]/components/ThemeToggle";
+import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 
 type FooterLink = { href: string; label: string; external?: boolean };
 
@@ -77,6 +76,7 @@ export default function SiteFooter({
             Werkstatt, Self-Service und Verwaltung des Konglomerat e.V. —
             betrieben von den vielen Gesichtern des Vereins.
           </p>
+          <LanguageSwitcher variant="footer" />
         </div>
 
         {columns.map((column) => (
@@ -107,15 +107,6 @@ export default function SiteFooter({
             )}
           </div>
         ))}
-      </div>
-
-      <div className="border-t border-[var(--knglmrt-dark-60)]">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-3 px-3 py-4 md:px-7">
-          <span className="knglmrt-num text-[var(--knglmrt-dark-30)]">
-            Konglomerat e.V. · Dresden
-          </span>
-          <ThemeToggle />
-        </div>
       </div>
     </footer>
   );

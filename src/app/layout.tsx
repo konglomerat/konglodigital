@@ -44,7 +44,6 @@ import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
 import ChatwootWidget from "./[lang]/components/ChatwootWidget";
-import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
@@ -187,6 +186,15 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${knglmrtWide.variable} ${knglmrtNarrow.variable} ${storyOpenSans.variable}`}
     >
       <head>
+        {/* Fengardo trägt Topnav und Seitentitel — früh laden, damit der
+            swap-Fallback nicht sichtbar umbricht. */}
+        <link
+          rel="preload"
+          href="/fonts/FengardoNeue_Black.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var stored=localStorage.getItem("theme");var theme=stored?stored:"light";var root=document.documentElement;root.classList.toggle("dark", theme==="dark");}catch(e){}})();`,
@@ -209,7 +217,6 @@ export default async function RootLayout({
                     digital
                   </Link>
                   <div className="flex items-center gap-3">
-                    <LanguageSwitcher variant="topnav" />
                     <AutoCloseMenuDetails
                       className="group"
                       summary={
