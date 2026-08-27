@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
-import SectionNav, {
-  type SectionNavItem,
-} from "@/components/knglmrt/SectionNav";
 import StatTile from "@/components/knglmrt/StatTile";
 import {
   Table,
@@ -22,6 +18,7 @@ import { type InvoicePayload } from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
 import Button from "../components/Button";
 import PasswordInput from "../components/PasswordInput";
+import { AccountHeaderSkeleton, SkeletonBlock } from "./AccountSkeleton";
 
 type AccountUser = {
   email: string;
@@ -120,27 +117,6 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   return data;
 };
 
-
-type AccountSectionKey =
-  | "uebersicht"
-  | "profil"
-  | "rechnungen"
-  | "sicherheit";
-
-const SECTION_KEYS: AccountSectionKey[] = [
-  "uebersicht",
-  "profil",
-  "rechnungen",
-  "sicherheit",
-];
-
-const SECTION_LABELS: Record<AccountSectionKey, string> = {
-  uebersicht: "Übersicht",
-  profil: "Profil",
-  rechnungen: "Rechnungen",
-  sicherheit: "Passwort",
-};
-
 // Campai liefert die Status als freien Text — nur ein eindeutig offener
 // Beleg zählt als offen, alles Unklare bleibt neutral.
 const isInvoiceOpen = (invoice: InvoicePayload) => {
@@ -175,18 +151,10 @@ const readOnlyFieldClassName =
 const panelClassName = "border border-foreground bg-card p-[18px]";
 
 type AccountClientProps = {
-  canAccessBackOffice: boolean;
-  canAccessFinanzen: boolean;
-  backOfficeHref: string;
   roleLabels: string[];
 };
 
-export default function AccountClient({
-  canAccessBackOffice,
-  canAccessFinanzen,
-  backOfficeHref,
-  roleLabels,
-}: AccountClientProps) {
+export default function AccountClient({ roleLabels }: AccountClientProps) {
   const searchParams = useSearchParams();
   const debug = useMemo(
     () => searchParams.get("debug") === "1",
@@ -208,6 +176,7 @@ export default function AccountClient({
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [campaiError, setCampaiError] = useState<string | null>(null);
   const [campaiDebug, setCampaiDebug] = useState<unknown>(null);
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
@@ -333,12 +302,14 @@ export default function AccountClient({
       setCampaiInvoices([]);
       setDebtorAccount(null);
       setCampaiDebug(null);
+      setInvoicesLoading(loadingUser);
       return;
     }
 
     let active = true;
     const loadInvoices = async () => {
       setCampaiError(null);
+      setInvoicesLoading(true);
       try {
         setDebtorAccount(linkedDebtorAccount);
 
@@ -371,6 +342,10 @@ export default function AccountClient({
               : "Campai-Belege konnten nicht geladen werden.",
           );
         }
+      } finally {
+        if (active) {
+          setInvoicesLoading(false);
+        }
       }
     };
 
@@ -379,7 +354,7 @@ export default function AccountClient({
     return () => {
       active = false;
     };
-  }, [user, linkedDebtorAccount, debug]);
+  }, [user, linkedDebtorAccount, debug, loadingUser]);
 
   const handleProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -426,19 +401,6 @@ export default function AccountClient({
     }
   };
 
-  const requestedSection = searchParams.get("bereich");
-  const activeSection: AccountSectionKey = SECTION_KEYS.includes(
-    requestedSection as AccountSectionKey,
-  )
-    ? (requestedSection as AccountSectionKey)
-    : "uebersicht";
-
-  const sectionNavItems: SectionNavItem[] = SECTION_KEYS.map((key) => ({
-    key,
-    label: SECTION_LABELS[key],
-    href: key === "uebersicht" ? "/account" : `/account?bereich=${key}`,
-  }));
-
   const openInvoices = useMemo(
     () => campaiInvoices.filter(isInvoiceOpen),
     [campaiInvoices],
@@ -449,44 +411,6 @@ export default function AccountClient({
       openInvoices.reduce((sum, invoice) => sum + (invoiceTotal(invoice) ?? 0), 0),
     [openInvoices],
   );
-
-  const quickLinks = [
-    {
-      href: "/checkout",
-      title: "Warenkorb",
-      description: "Offene Positionen prüfen und abschließen.",
-    },
-    {
-      href: "/products",
-      title: "Produkte",
-      description: "Was der Verein im Self-Service abgibt.",
-    },
-    {
-      href: "/monatsbeitrag",
-      title: "Mitgliedschaft & Beitrag",
-      description: "Beitragsstufe einsehen und anpassen.",
-    },
-    ...(canAccessFinanzen
-      ? [
-          {
-            href: "/receipts",
-            title: "Belege",
-            description: "Belege einbuchen und prüfen.",
-          },
-          {
-            href: "/balance",
-            title: "Guthaben",
-            description: "Kontostand und Bewegungen.",
-          },
-        ]
-      : []),
-  ];
-
-  if (loadingUser) {
-    return (
-      <p className="text-muted-foreground">Konto wird geladen …</p>
-    );
-  }
 
   if (accountLoadError) {
     return (
@@ -499,7 +423,7 @@ export default function AccountClient({
     );
   }
 
-  if (!user) {
+  if (!loadingUser && !user) {
     return (
       <div className={panelClassName}>
         <h2 className="mb-1">Anmeldung erforderlich</h2>
@@ -520,45 +444,46 @@ export default function AccountClient({
   return (
     <div>
       {/* Kopf: quadratischer Avatar (das DS kennt keine Kreise), Name,
-          eine Mono-Zeile mit den harten Fakten. */}
-      <header className="mb-[22px] flex flex-wrap items-center gap-4">
-        {activeAvatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={activeAvatarUrl}
-            alt={displayName || user.email || "Profilbild"}
-            className="h-14 w-14 flex-none border border-foreground object-cover"
-            onError={() => {
-              setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
-            }}
-          />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="flex h-14 w-14 flex-none items-center justify-center border border-foreground bg-primary-soft font-bold"
-          >
-            {getInitials(displayName || user.email || "?")}
-          </span>
-        )}
-        <div className="min-w-[240px] flex-1">
-          <h1 className="mb-0.5">{displayName || "Dein Profil"}</h1>
-          <p className="knglmrt-num text-muted-foreground">
-            {[user.email, roleLabels.join(" · ")].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <form action={signOut}>
-          <Button type="submit" kind="secondary">
-            Abmelden
-          </Button>
-        </form>
-      </header>
-
-      <SectionNav
-        items={sectionNavItems}
-        activeKey={activeSection}
-        ariaLabel="Profilbereiche"
-        className="mb-[22px]"
-      />
+          eine Mono-Zeile mit den harten Fakten. Solange /api/account/me
+          unterwegs ist, steht hier ein Platzhalter — die Navigation und die
+          Bereiche darunter sind trotzdem schon bedienbar. */}
+      {loadingUser ? (
+        <AccountHeaderSkeleton />
+      ) : (
+        <header className="mb-[22px] flex flex-wrap items-center gap-4">
+          {activeAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={activeAvatarUrl}
+              alt={displayName || user?.email || "Profilbild"}
+              className="h-14 w-14 flex-none border border-foreground object-cover"
+              onError={() => {
+                setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
+              }}
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="flex h-14 w-14 flex-none items-center justify-center border border-foreground bg-primary-soft font-bold"
+            >
+              {getInitials(displayName || user?.email || "?")}
+            </span>
+          )}
+          <div className="min-w-[240px] flex-1">
+            <h1 className="mb-0.5">{displayName || "Dein Profil"}</h1>
+            <p className="knglmrt-num text-muted-foreground">
+              {[user?.email, roleLabels.join(" · ")]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+          <form action={signOut}>
+            <Button type="submit" kind="secondary">
+              Abmelden
+            </Button>
+          </form>
+        </header>
+      )}
 
       {error ? (
         <div className="mb-4 border border-destructive-border bg-destructive-soft px-4 py-3 text-destructive">
@@ -571,274 +496,102 @@ export default function AccountClient({
         </div>
       ) : null}
 
-      {activeSection === "uebersicht" ? (
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="flex min-w-0 flex-col gap-6">
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              <StatTile
-                label="Offene Rechnungen"
-                value={
-                  openInvoices.length > 0
-                    ? formatAmount(openInvoicesTotal, "EUR")
-                    : "0,00 €"
-                }
-                hint={
-                  openInvoices.length === 1
-                    ? "1 offener Beleg"
-                    : `${openInvoices.length} offene Belege`
-                }
-                tone="rosa"
-              />
-              <StatTile
-                label="Belege gesamt"
-                value={String(campaiInvoices.length)}
-                hint={
-                  debtorAccount
-                    ? `Debitor-Konto ${debtorAccount}`
-                    : "Kein Campai-Debitor verknüpft"
-                }
-                tone="grau"
-              />
-            </div>
-
-            <section>
-              <h2 className="mb-2.5">Schnellzugriff</h2>
-              <div className="grid gap-3.5 sm:grid-cols-2">
-                {quickLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex flex-col gap-1.5 border border-foreground bg-card p-[18px] transition hover:bg-primary-soft"
-                  >
-                    <span className="knglmrt-card-title">{link.title}</span>
-                    <span className="text-muted-foreground">
-                      {link.description}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <aside className="flex flex-col gap-3.5">
-            <div className="bg-muted px-[18px] py-4">
-              <div className="knglmrt-caption mb-2 text-muted-foreground">
-                Mitgliedschaft
-              </div>
-              {[
-                { label: "E-Mail", value: user.email || "—" },
-                { label: "Campai", value: campaiName || "nicht verknüpft" },
-                {
-                  label: "Debitor",
-                  value: debtorAccount ? `#${debtorAccount}` : "—",
-                },
-                { label: "Rollen", value: roleLabels.join(", ") || "—" },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="knglmrt-num flex justify-between gap-3 border-t border-border py-1.5"
-                >
-                  <span>{row.label}</span>
-                  <span className="truncate text-muted-foreground">
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {canAccessBackOffice ? (
-              <div className="flex flex-col gap-2.5 bg-[var(--knglmrt-dark-100)] px-[18px] py-4 text-white">
-                <div className="knglmrt-caption text-[var(--knglmrt-dark-30)]">
-                  Back-Office
-                </div>
-                <p>
-                  Mitglieder, Einladungen und Raumbuchungen verwaltest du im
-                  Back-Office.
-                </p>
-                {/* Auf der dunklen Fläche kehrt die sekundäre Taste um:
-                    weiße Kontur statt schwarzer, sonst dieselben Maße. */}
-                <Button
-                  href={backOfficeHref}
-                  kind="secondary"
-                  size="chip"
-                  className="w-fit border-white bg-transparent text-white hover:bg-white hover:text-[var(--knglmrt-dark-100)]"
-                >
-                  Back-Office öffnen
-                </Button>
-              </div>
-            ) : null}
-          </aside>
-        </div>
-      ) : null}
-
-      {activeSection === "profil" ? (
-        <section className={`${panelClassName} max-w-[640px]`}>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,460px)]">
+        <section id="profil" className={panelClassName}>
           <h2 className="mb-1">Profil</h2>
           <p className="mb-4 text-muted-foreground">
             Bild und Kurzbiografie erscheinen als Autoreninfo an deinen
-            Projekten. Der Name kommt direkt aus Campai.
+            Beiträgen. Der Name kommt direkt aus Campai.
           </p>
-          <form onSubmit={handleProfileSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className={labelClassName} htmlFor="account-campai-name">
-                Name in Campai
-              </label>
-              <input
-                id="account-campai-name"
-                type="text"
-                value={campaiName}
-                readOnly
-                placeholder="Kein Campai-Kontakt verknüpft"
-                className={`mt-1 ${readOnlyFieldClassName}`}
-              />
-              <p className="mt-1 text-muted-foreground">
-                Soll der Name sich ändern, ändere ihn bitte direkt in Campai.
-              </p>
+          {/* Erst rendern, wenn die Werte da sind — sonst tippt man in ein
+              Feld, das gleich darauf überschrieben wird. */}
+          {loadingUser ? (
+            <div className="flex flex-col gap-4">
+              <SkeletonBlock className="h-16 w-full" />
+              <SkeletonBlock className="h-16 w-full" />
+              <SkeletonBlock className="h-16 w-full" />
+              <SkeletonBlock className="h-24 w-full" />
             </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-email">
-                E-Mail
-              </label>
-              <input
-                id="account-email"
-                type="email"
-                value={user.email ?? ""}
-                disabled
-                className={`mt-1 ${readOnlyFieldClassName}`}
-              />
-            </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-avatar-url">
-                Profilbild-URL
-              </label>
-              <input
-                id="account-avatar-url"
-                name="avatarUrl"
-                type="url"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                placeholder="https://…"
-                className={`mt-1 ${fieldClassName}`}
-              />
-              <p className="mt-1 text-muted-foreground">
-                Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
-                Gravatar anhand deiner E-Mail-Adresse.
-              </p>
-            </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-short-bio">
-                Kurzbiografie
-              </label>
-              <textarea
-                id="account-short-bio"
-                name="shortBio"
-                value={shortBio}
-                onChange={(event) => setShortBio(event.target.value)}
-                rows={4}
-                placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
-                className={`mt-1 ${fieldClassName}`}
-              />
-            </div>
-            <Button type="submit" kind="primary" className="w-fit px-4 py-2">
-              Profil speichern
-            </Button>
-            {profileError ? (
-              <p className="text-destructive">{profileError}</p>
-            ) : null}
-            {profileStatus ? <p className="font-bold">{profileStatus}</p> : null}
-          </form>
-        </section>
-      ) : null}
-
-      {activeSection === "rechnungen" ? (
-        <section>
-          <div className="mb-2.5 flex flex-wrap items-baseline gap-3">
-            <h2 className="m-0">Rechnungen</h2>
-            <span className="knglmrt-num text-muted-foreground">
-              {debtorAccount
-                ? `Debitor ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
-                : "Kein Campai-Debitor im Profil hinterlegt"}
-            </span>
-          </div>
-
-          {campaiError ? (
-            <p className="text-destructive">{campaiError}</p>
           ) : (
-            <Table>
-              <THead>
-                <Th>Beleg</Th>
-                <Th>Ausgestellt</Th>
-                <Th>Fällig</Th>
-                <Th>Betrag</Th>
-                <Th>Status</Th>
-                <Th>
-                  <span className="sr-only">Download</span>
-                </Th>
-              </THead>
-              <TBody>
-                {campaiInvoices.length === 0 ? (
-                  <TableEmpty colSpan={6}>
-                    {linkedDebtorAccount === null
-                      ? "Dein Konto ist noch nicht mit einem Campai-Debitor verknüpft."
-                      : `Keine Belege für Debitor-Konto ${debtorAccount} gefunden.`}
-                  </TableEmpty>
-                ) : (
-                  campaiInvoices.map((invoice) => (
-                    <Tr key={invoice.id} interactive>
-                      <Td>
-                        <span className="block font-bold">
-                          {invoice.receiptNumber ?? "Beleg"}
-                        </span>
-                        {invoice.title ? (
-                          <span className="block text-muted-foreground">
-                            {invoice.title}
-                          </span>
-                        ) : null}
-                      </Td>
-                      <Td className="knglmrt-num text-muted-foreground">
-                        {formatDate(invoice.receiptDate)}
-                      </Td>
-                      <Td className="knglmrt-num text-muted-foreground">
-                        {formatDate(invoice.dueDate)}
-                      </Td>
-                      <Td className="knglmrt-num whitespace-nowrap">
-                        {formatAmount(invoiceTotal(invoice), invoice.currency)}
-                      </Td>
-                      <Td>
-                        {invoice.status ? (
-                          <Badge tone={invoiceBadgeTone(invoice)}>
-                            {invoice.status}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </Td>
-                      <Td className="text-right">
-                        <a
-                          href={`/api/campai/invoices/${invoice.id}/download`}
-                          className="whitespace-nowrap font-bold text-primary"
-                        >
-                          Herunterladen
-                        </a>
-                      </Td>
-                    </Tr>
-                  ))
-                )}
-              </TBody>
-            </Table>
+            <form
+              onSubmit={handleProfileSubmit}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className={labelClassName} htmlFor="account-campai-name">
+                  Name in Campai
+                </label>
+                <input
+                  id="account-campai-name"
+                  type="text"
+                  value={campaiName}
+                  readOnly
+                  placeholder="Kein Campai-Kontakt verknüpft"
+                  className={`mt-1 ${readOnlyFieldClassName}`}
+                />
+                <p className="mt-1 text-muted-foreground">
+                  Soll der Name sich ändern, ändere ihn bitte direkt in Campai.
+                </p>
+              </div>
+              <div>
+                <label className={labelClassName} htmlFor="account-email">
+                  E-Mail
+                </label>
+                <input
+                  id="account-email"
+                  type="email"
+                  value={user?.email ?? ""}
+                  disabled
+                  className={`mt-1 ${readOnlyFieldClassName}`}
+                />
+              </div>
+              <div>
+                <label className={labelClassName} htmlFor="account-avatar-url">
+                  Profilbild-URL
+                </label>
+                <input
+                  id="account-avatar-url"
+                  name="avatarUrl"
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(event) => setAvatarUrl(event.target.value)}
+                  placeholder="https://…"
+                  className={`mt-1 ${fieldClassName}`}
+                />
+                <p className="mt-1 text-muted-foreground">
+                  Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
+                  Gravatar anhand deiner E-Mail-Adresse.
+                </p>
+              </div>
+              <div>
+                <label className={labelClassName} htmlFor="account-short-bio">
+                  Kurzbiografie
+                </label>
+                <textarea
+                  id="account-short-bio"
+                  name="shortBio"
+                  value={shortBio}
+                  onChange={(event) => setShortBio(event.target.value)}
+                  rows={4}
+                  placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
+                  className={`mt-1 ${fieldClassName}`}
+                />
+              </div>
+              <Button type="submit" kind="primary" className="w-fit px-4 py-2">
+                Profil speichern
+              </Button>
+              {profileError ? (
+                <p className="text-destructive">{profileError}</p>
+              ) : null}
+              {profileStatus ? (
+                <p className="font-bold">{profileStatus}</p>
+              ) : null}
+            </form>
           )}
-
-          {debug && campaiDebug ? (
-            <pre className="mt-4 max-h-64 overflow-auto bg-foreground p-4 text-xs text-background">
-              {JSON.stringify(campaiDebug, null, 2)}
-            </pre>
-          ) : null}
         </section>
-      ) : null}
 
-      {activeSection === "sicherheit" ? (
-        <section className={`${panelClassName} max-w-[460px]`}>
-          <h2 className="mb-1">Passwort</h2>
+        <section id="sicherheit" className={panelClassName}>
+          <h2 className="mb-1">Passwort ändern</h2>
           <p className="mb-4 text-muted-foreground">
             Wähle ein neues Passwort mit mindestens 8 Zeichen.
           </p>
@@ -880,7 +633,128 @@ export default function AccountClient({
             ) : null}
           </form>
         </section>
-      ) : null}
+      </div>
+
+      <section id="rechnungen" className="mt-[38px]">
+        <div className="mb-3.5 flex flex-wrap items-baseline gap-3">
+          <h2 className="m-0">Meine Rechnungen</h2>
+          <span className="knglmrt-num text-muted-foreground">
+            {invoicesLoading
+              ? "Belege werden geladen …"
+              : debtorAccount
+                ? `Debitor ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
+                : "Kein Campai-Debitor im Profil hinterlegt"}
+          </span>
+        </div>
+
+        <div className="mb-3.5 grid gap-3.5 sm:grid-cols-2">
+          <StatTile
+            label="Offene Rechnungen"
+            value={
+              invoicesLoading
+                ? "…"
+                : openInvoices.length > 0
+                  ? formatAmount(openInvoicesTotal, "EUR")
+                  : "0,00 €"
+            }
+            hint={
+              invoicesLoading
+                ? "Belege werden geladen …"
+                : openInvoices.length === 1
+                  ? "1 offener Beleg"
+                  : `${openInvoices.length} offene Belege`
+            }
+            tone="rosa"
+          />
+          <StatTile
+            label="Belege gesamt"
+            value={invoicesLoading ? "…" : String(campaiInvoices.length)}
+            hint={
+              invoicesLoading
+                ? "Belege werden geladen …"
+                : debtorAccount
+                  ? `Debitor-Konto ${debtorAccount}`
+                  : "Kein Campai-Debitor verknüpft"
+            }
+            tone="grau"
+          />
+        </div>
+
+        {campaiError ? (
+          <p className="text-destructive">{campaiError}</p>
+        ) : (
+          <Table>
+            <THead>
+              <Th>Beleg</Th>
+              <Th>Ausgestellt</Th>
+              <Th>Fällig</Th>
+              <Th>Betrag</Th>
+              <Th>Status</Th>
+              <Th>
+                <span className="sr-only">Download</span>
+              </Th>
+            </THead>
+            <TBody>
+              {invoicesLoading ? (
+                <TableEmpty colSpan={6}>Belege werden geladen …</TableEmpty>
+              ) : campaiInvoices.length === 0 ? (
+                <TableEmpty colSpan={6}>
+                  {linkedDebtorAccount === null
+                    ? "Dein Konto ist noch nicht mit einem Campai-Debitor verknüpft."
+                    : `Keine Belege für Debitor-Konto ${debtorAccount} gefunden.`}
+                </TableEmpty>
+              ) : (
+                campaiInvoices.map((invoice) => (
+                  <Tr key={invoice.id} interactive>
+                    <Td>
+                      <span className="block font-bold">
+                        {invoice.receiptNumber ?? "Beleg"}
+                      </span>
+                      {invoice.title ? (
+                        <span className="block text-muted-foreground">
+                          {invoice.title}
+                        </span>
+                      ) : null}
+                    </Td>
+                    <Td className="knglmrt-num text-muted-foreground">
+                      {formatDate(invoice.receiptDate)}
+                    </Td>
+                    <Td className="knglmrt-num text-muted-foreground">
+                      {formatDate(invoice.dueDate)}
+                    </Td>
+                    <Td className="knglmrt-num whitespace-nowrap">
+                      {formatAmount(invoiceTotal(invoice), invoice.currency)}
+                    </Td>
+                    <Td>
+                      {invoice.status ? (
+                        <Badge tone={invoiceBadgeTone(invoice)}>
+                          {invoice.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </Td>
+                    <Td className="text-right">
+                      <a
+                        href={`/api/campai/invoices/${invoice.id}/download`}
+                        className="whitespace-nowrap font-bold text-primary"
+                      >
+                        Herunterladen
+                      </a>
+                    </Td>
+                  </Tr>
+                ))
+              )}
+            </TBody>
+          </Table>
+        )}
+
+        {debug && campaiDebug ? (
+          <pre className="mt-4 max-h-64 overflow-auto bg-foreground p-4 text-xs text-background">
+            {JSON.stringify(campaiDebug, null, 2)}
+          </pre>
+        ) : null}
+      </section>
     </div>
   );
 }

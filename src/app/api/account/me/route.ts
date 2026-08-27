@@ -19,8 +19,12 @@ export const GET = async (request: NextRequest) => {
   }
 
   const user = data.user;
-  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
-  const roles = await getUserRoles(supabase, user);
+  // Profil und Rollen hängen nicht voneinander ab — parallel abfragen spart
+  // eine komplette Roundtrip-Zeit auf der Kontoseite.
+  const [memberProfile, roles] = await Promise.all([
+    getMemberProfileByUserId(supabase, user.id),
+    getUserRoles(supabase, user),
+  ]);
   let liveCampaiName: string | null = null;
 
   if (memberProfile?.campaiContactId) {
