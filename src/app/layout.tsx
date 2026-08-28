@@ -38,9 +38,12 @@ import "./globals.css";
 import "./knglmrt-theme.css";
 import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
-import { getUserRoles, rolesCanAccessModule } from "@/lib/roles";
+import { rolesCanAccessModule } from "@/lib/roles";
 import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getServerSession,
+  getServerSessionRoles,
+} from "@/lib/server-session";
 import Button from "./[lang]/components/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
@@ -150,13 +153,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getRequestLocale();
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const { data: userData } = await supabase.auth.getUser();
-  const isAuthenticated = Boolean(userData.user);
-  const currentUserDisplayName = userData.user
-    ? getCampaiBookingDisplayName(userData.user)
+  const { user } = await getServerSession();
+  const isAuthenticated = Boolean(user);
+  const currentUserDisplayName = user
+    ? getCampaiBookingDisplayName(user)
     : null;
-  const userRoles = await getUserRoles(supabase, userData.user);
+  const userRoles = await getServerSessionRoles();
   const canAccessAdmin =
     isAuthenticated && rolesCanAccessModule(userRoles, "admin");
   const canAccessVolkshaus =

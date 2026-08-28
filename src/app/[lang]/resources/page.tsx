@@ -330,20 +330,16 @@ export default async function ResourcesPage({
   const queryText = getSearchParam(resolvedSearchParams, "q").trim();
   const resourceType = getSearchParam(resolvedSearchParams, "type").trim();
 
-  const [
-    { resources, count, errorMessage },
-    { resources: mapBasemapResources },
-  ] = await Promise.all([
-    loadResources({ queryText, resourceType }),
-    loadMapBasemapResources(),
-  ]);
+  // Intentionally not awaited: the shell renders immediately and the client
+  // component resolves these promises so only the data-driven parts stay in a
+  // loading state.
+  const resourcesPromise = loadResources({ queryText, resourceType });
+  const mapBasemapResourcesPromise = loadMapBasemapResources();
 
   return (
     <ResourcesPageClient
-      initialResources={resources}
-      initialMapBasemapResources={mapBasemapResources}
-      initialCount={count}
-      initialErrorMessage={errorMessage}
+      resourcesPromise={resourcesPromise}
+      mapBasemapResourcesPromise={mapBasemapResourcesPromise}
       initialQueryText={queryText}
       initialResourceType={resourceType}
     />

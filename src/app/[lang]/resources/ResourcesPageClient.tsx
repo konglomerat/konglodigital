@@ -57,11 +57,15 @@ type ResourceCardProps = {
   onNavigate?: () => void;
 };
 
+type ResourcesDataPayload = {
+  resources: Resource[];
+  count: number | null;
+  errorMessage: string | null;
+};
+
 type ResourcesPageClientProps = {
-  initialResources: Resource[];
-  initialMapBasemapResources: Resource[];
-  initialCount: number | null;
-  initialErrorMessage: string | null;
+  resourcesPromise: Promise<ResourcesDataPayload>;
+  mapBasemapResourcesPromise: Promise<{ resources: Resource[] }>;
   initialQueryText: string;
   initialResourceType: string;
 };
@@ -356,11 +360,22 @@ const ResourceCard = ({
   );
 };
 
+const RESOURCE_SKELETON_COUNT = 6;
+
+const ResourceCardSkeleton = () => (
+  <div className="animate-pulse overflow-hidden rounded-lg border border-border bg-card">
+    <div className="aspect-[4/3.7] w-full bg-muted" />
+    <div className="space-y-3 p-4">
+      <div className="h-4 w-2/3 rounded bg-muted" />
+      <div className="h-3 w-full rounded bg-muted" />
+      <div className="h-3 w-4/5 rounded bg-muted" />
+    </div>
+  </div>
+);
+
 export default function ResourcesPageClient({
-  initialResources,
-  initialMapBasemapResources,
-  initialCount,
-  initialErrorMessage,
+  resourcesPromise,
+  mapBasemapResourcesPromise,
   initialQueryText,
   initialResourceType,
 }: ResourcesPageClientProps) {
@@ -390,15 +405,16 @@ export default function ResourcesPageClient({
   );
   const [hasMapVisibilitySnapshot, setHasMapVisibilitySnapshot] =
     useState(false);
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [count, setCount] = useState<number | null>(initialCount);
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    initialErrorMessage,
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [count, setCount] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mapBasemapResources, setMapBasemapResources] = useState<Resource[]>(
+    [],
   );
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [syncingCampai, setSyncingCampai] = useState(false);
   const normalizedSearchTerm = searchTerm.trim();
-  const loading = false;
   const resourceTypes = useMemo(
     () =>
       Array.from(
@@ -440,13 +456,68 @@ export default function ResourcesPageClient({
   }, [resourceTypes, selectedResourceType]);
 
   useEffect(() => {
-    setResources(initialResources);
-    setCount(initialCount);
-    setErrorMessage(initialErrorMessage);
+    let cancelled = false;
+
+    setLoading(true);
+    setResources([]);
+    setCount(null);
+    setErrorMessage(null);
     setVisibleMapResourceIds([]);
     setHasMapVisibilitySnapshot(false);
     setLoadingMore(false);
-  }, [initialCount, initialErrorMessage, initialResources]);
+
+    // Promises handed over from a server component are React thenables whose
+    // `then` returns undefined, so they cannot be chained - await them instead.
+    void (async () => {
+      try {
+        const payload = await resourcesPromise;
+        if (cancelled) {
+          return;
+        }
+        setResources(payload.resources);
+        setCount(payload.count);
+        setErrorMessage(payload.errorMessage);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setErrorMessage(
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load resources.",
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resourcesPromise]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const payload = await mapBasemapResourcesPromise;
+        if (!cancelled) {
+          setMapBasemapResources(payload.resources);
+        }
+      } catch {
+        if (!cancelled) {
+          setMapBasemapResources([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapBasemapResourcesPromise]);
 
   const parseBooleanUrlParam = useCallback((value: string | null) => {
     if (value === null) {
@@ -850,12 +921,12 @@ export default function ResourcesPageClient({
 
   const normalizedMapBasemapResources = useMemo(
     () =>
-      initialMapBasemapResources.map((resource) => ({
+      mapBasemapResources.map((resource) => ({
         ...resource,
         image: resource.image ?? null,
         images: resource.images ?? (resource.image ? [resource.image] : null),
       })),
-    [initialMapBasemapResources],
+    [mapBasemapResources],
   );
 
   const searchAndTypeFilteredResources = normalizedResources;
@@ -906,6 +977,7 @@ export default function ResourcesPageClient({
     normalizedSearchTerm === initialQueryText &&
     selectedResourceType.trim() === initialResourceType;
   const canLoadMore =
+    !loading &&
     filtersMatchLoadedResources &&
     (count === null || resources.length < count);
 
@@ -1209,9 +1281,17 @@ export default function ResourcesPageClient({
 
           <section className="relative mt-6">
             {visibleResources.length === 0 && loading ? (
-              <p className="text-sm text-muted-foreground">
-                {tx("Loading resources...")}
-              </p>
+              <div
+                className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3"
+                aria-busy="true"
+                aria-label={tx("Loading resources...")}
+              >
+                {Array.from({ length: RESOURCE_SKELETON_COUNT }).map(
+                  (_, index) => (
+                    <ResourceCardSkeleton key={index} />
+                  ),
+                )}
+              </div>
             ) : visibleResources.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {tx("No resources found.")}
