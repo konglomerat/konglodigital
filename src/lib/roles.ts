@@ -5,14 +5,23 @@ import {
   isMissingRelationError,
 } from "@/lib/supabase-errors";
 
-export const USER_ROLES = ["admin", "vhc", "buchhaltung", "member"] as const;
+export const USER_ROLES = [
+  "admin",
+  "vhc",
+  "buchhaltung",
+  "werkbereich_lead",
+  "member",
+] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 
+// Vorbereitet, noch nicht als Gate im Einsatz: `werkbereich_lead` ist bereichsgebunden
+// und braucht erst eine Zuordnung (z. B. Tabelle werkbereich_leads).
 export const MODULE_ACCESS = {
   admin: ["admin"],
   volkshaus: ["admin", "vhc"],
   invoices: ["admin", "buchhaltung"],
+  finanzen: ["admin", "buchhaltung", "werkbereich_lead"],
 } as const satisfies Record<string, readonly UserRole[]>;
 
 export type AppModule = keyof typeof MODULE_ACCESS;
@@ -21,6 +30,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin",
   vhc: "VHC",
   buchhaltung: "Buchhaltung",
+  werkbereich_lead: "Werkbereichs-Leitung",
   member: "Mitglied",
 };
 

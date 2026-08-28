@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map } from "mapbox-gl";
+import Button from "@/components/knglmrt/Button";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
@@ -402,8 +403,7 @@ export default function ResourcesMapView({
       }
       ensureResourceFeatureLayers(map, resourceTypes);
       const source = map.getSource(RESOURCE_FEATURES_SOURCE_ID) as
-        | import("mapbox-gl").GeoJSONSource
-        | undefined;
+        import("mapbox-gl").GeoJSONSource | undefined;
       source?.setData(resourceFeatureCollection);
     };
 
@@ -734,13 +734,14 @@ export default function ResourcesMapView({
         className="relative z-20 h-full w-full"
         aria-label={tx("Map view")}
       />
-      <button
-        type="button"
+      <Button
+        kind="secondary"
+        size="chip"
         onClick={() => setIsSatellite((prev) => !prev)}
-        className="absolute left-3 top-3 z-10 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground shadow-sm transition hover:border-input hover:text-foreground"
+        className="absolute left-3 top-3 z-10"
       >
         {isSatellite ? tx("Karte", "de") : tx("Satellit", "de")}
-      </button>
+      </Button>
     </div>
   );
 }

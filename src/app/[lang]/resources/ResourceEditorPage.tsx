@@ -355,7 +355,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
 
   return (
     <div>
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <PageTitle
           title={tx(config.title)}
           subTitle={tx(config.subtitle)}
@@ -414,7 +414,7 @@ export default function ResourceEditorPage({}: Record<string, never>) {
             relatedResourceLoading={relatedResourceOptionsLoading}
           />
         </section>
-      </main>
+      </div>
     </div>
   );
 }

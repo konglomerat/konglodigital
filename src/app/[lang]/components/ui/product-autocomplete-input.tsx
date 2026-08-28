@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { ComboboxInput } from "./combobox-input";
@@ -60,12 +54,7 @@ export const ProductAutocompleteInput = forwardRef<
   ProductAutocompleteInputProps
 >(
   (
-    {
-      onChange,
-      onSelect,
-      apiPath = "/api/campai/products",
-      ...inputProps
-    },
+    { onChange, onSelect, apiPath = "/api/campai/products", ...inputProps },
     ref,
   ) => {
     const [loading, setLoading] = useState(false);
@@ -142,31 +131,29 @@ export const ProductAutocompleteInput = forwardRef<
         getOptionInputValue={(option) => option.name}
         showToggleButton
         toggleAriaLabel="Produktliste öffnen"
-        dropdownClassName="absolute left-0 top-full z-50 mt-1 max-h-56 w-[min(90vw,36rem)] min-w-full overflow-y-auto rounded-lg border border-border bg-card py-1 shadow-lg"
+        dropdownClassName="absolute left-0 top-full z-50 -mt-[var(--hairline-width)] max-h-64 w-[min(90vw,36rem)] min-w-full overflow-y-auto knglmrt-border border-primary bg-card [&>li+li]:border-t [&>li+li]:border-border"
         renderOption={(suggestion, { active }) => {
           const amount = formatAmount(suggestion.unitAmount);
 
           return (
             <div
-              className={`cursor-pointer px-3 py-2 text-sm ${
-                active
-                  ? "bg-primary-soft text-primary"
-                  : "text-foreground hover:bg-muted/50"
+              className={`cursor-pointer px-3 py-1.5 ${
+                active ? "bg-primary-soft" : ""
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 break-words font-medium leading-5">
+                  <p className="line-clamp-2 break-words font-semibold">
                     {suggestion.name}
                   </p>
                   {suggestion.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-2 text-[13px] leading-[18px] text-muted-foreground">
                       {suggestion.description}
                     </p>
                   ) : null}
                 </div>
                 {amount ? (
-                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                  <span className="knglmrt-num shrink-0 text-muted-foreground">
                     {amount}
                   </span>
                 ) : null}

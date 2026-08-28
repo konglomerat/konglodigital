@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
@@ -23,12 +23,10 @@ import {
 } from "../../components/ui/autocomplete-input";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -225,7 +223,7 @@ export default function EinnahmePage() {
       />
 
       {costCentersError ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
           {costCentersError}
         </div>
       ) : null}
@@ -240,7 +238,8 @@ export default function EinnahmePage() {
         {/* 2. Zahlende Person/Firma */}
         <FormSection title="Zahlende Person/Firma" icon={faUser}>
           <div className="space-y-4">
-            <FormField
+            <FieldShell
+              as="div"
               label="auswählen oder neu anlegen"
               required
               error={errors.debitorName?.message}
@@ -256,14 +255,13 @@ export default function EinnahmePage() {
                   required: "Bitte eine zahlende Person oder Firma auswählen.",
                 })}
               />
-            </FormField>
+            </FieldShell>
 
             {debitorAccount ? (
               <SelectedDebtorBadge
                 account={debitorAccount}
                 entityLabel="Person/Firma"
                 fallbackName={debitorName}
-                tone="emerald"
                 onClear={resetDebitor}
                 onEdit={() => setShowUpdatePanel((current) => !current)}
               />
@@ -301,80 +299,65 @@ export default function EinnahmePage() {
         {/* 3. Belegangaben */}
         <FormSection title="Belegangaben" icon={faFolderOpen}>
           <div className="space-y-4">
-            <FormField
+            <Field
               label="Beschreibung"
               required
               error={errors.beschreibung?.message}
-            >
-              <Input
-                placeholder="z. B. Mitgliedsbeitrag April"
-                {...register("beschreibung", {
-                  required: "Beschreibung ist erforderlich.",
-                })}
-              />
-            </FormField>
+              placeholder="z. B. Mitgliedsbeitrag April"
+              {...register("beschreibung", {
+                required: "Beschreibung ist erforderlich.",
+              })}
+            />
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Field
                 label="Belegdatum"
                 required
                 error={errors.belegdatum?.message}
-              >
-                <Input
-                  type="date"
-                  {...register("belegdatum", {
-                    required: "Belegdatum ist erforderlich.",
-                  })}
-                />
-              </FormField>
-              <FormField
+                type="date"
+                {...register("belegdatum", {
+                  required: "Belegdatum ist erforderlich.",
+                })}
+              />
+              <Field
                 label="Belegnummer"
                 hint="Optional – wird automatisch vergeben wenn leer."
                 error={errors.belegnummer?.message}
-              >
-                <Input
-                  placeholder="z. B. EIN-2024-001"
-                  {...register("belegnummer")}
-                />
-              </FormField>
-              <FormField
+                placeholder="z. B. EIN-2024-001"
+                {...register("belegnummer")}
+              />
+              <Field
                 label="Betrag (€)"
                 required
                 hint="Format: 12,50"
                 error={errors.betragEuro?.message}
-              >
-                <Input
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  {...register("betragEuro", {
-                    required: "Betrag ist erforderlich.",
-                    pattern: {
-                      value: euroAmountPattern,
-                      message: euroAmountValidationMessage,
-                    },
-                  })}
-                />
-              </FormField>
-              <FormField
+                inputMode="decimal"
+                placeholder="0,00"
+                {...register("betragEuro", {
+                  required: "Betrag ist erforderlich.",
+                  pattern: {
+                    value: euroAmountPattern,
+                    message: euroAmountValidationMessage,
+                  },
+                })}
+              />
+              <NativeSelect
                 label="Werkbereich/Projekt"
                 required
                 error={errors.costCenter2?.message}
+                disabled={costCentersLoading}
+                {...register("costCenter2", {
+                  required: "Bitte einen Werkbereich/Projekt auswählen.",
+                })}
               >
-                <Select
-                  disabled={costCentersLoading}
-                  {...register("costCenter2", {
-                    required: "Bitte einen Werkbereich/Projekt auswählen.",
-                  })}
-                >
-                  <option value="">
-                    {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
+                <option value="">
+                  {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
+                </option>
+                {costCenters.map((cc) => (
+                  <option key={cc.value} value={cc.value}>
+                    {cc.label}
                   </option>
-                  {costCenters.map((cc) => (
-                    <option key={cc.value} value={cc.value}>
-                      {cc.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                ))}
+              </NativeSelect>
             </div>
           </div>
         </FormSection>
@@ -383,17 +366,17 @@ export default function EinnahmePage() {
         <InternalNoteSection textareaProps={register("notes")} />
 
         {result?.id ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-foreground">
             <p className="font-medium">Einnahme gespeichert!</p>
-            <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
+            <p className="text-foreground">Campai Beleg-ID: {result.id}</p>
             {result.uploadWarning ? (
-              <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
+              <p className="mt-1 text-foreground">{result.uploadWarning}</p>
             ) : null}
           </div>
         ) : null}
 
         {result?.error ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
             {result.error}
           </div>
         ) : null}

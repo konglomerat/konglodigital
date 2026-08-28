@@ -17,6 +17,7 @@ import {
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 type StoredCategory = {
   name?: string;
@@ -42,7 +43,6 @@ type ResourceRow = {
 
 const MAP_BASE_RESOURCE_TYPES = ["place", "furniture"] as const;
 const MAP_BASE_RESOURCE_LIMIT = 1000;
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 const SITE_TITLE = "Konglomerat Digitale Werkstätten";
 
 export const dynamic = "force-static";
@@ -165,7 +165,7 @@ const getRelatedResourcesMap = async (
           type: string | null;
         } =>
           typeof row.id === "string" &&
-          row.type?.trim().toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
+          row.type?.trim().toLowerCase() !== SHOWCASE_RESOURCE_TYPE,
       )
       .map((row) => [
         row.id,
@@ -242,7 +242,7 @@ const loadResourceFromDb = async (idOrPrettyTitle: string) => {
   if (
     typeof (row as ResourceRow).type === "string" &&
     (row as ResourceRow).type?.trim().toLowerCase() ===
-      INVENTORY_HIDDEN_RESOURCE_TYPE
+      SHOWCASE_RESOURCE_TYPE
   ) {
     return {
       resource: null as ResourcePayload | null,
@@ -442,7 +442,7 @@ export const generateStaticParams = async () => {
   const { data: rows } = await supabase
     .from("resources")
     .select("id, pretty_title")
-    .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE)
+    .not("type", "ilike", SHOWCASE_RESOURCE_TYPE)
     .order("created_at", { ascending: false })
     .range(0, 499);
 

@@ -13,20 +13,19 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
 import SelectedDebtorBadge from "../../components/ui/selected-debtor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import { AutocompleteInput } from "../../components/ui/autocomplete-input";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-  Textarea,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 import ReceiptsPageHeader from "../create/header";
 import {
   euroAmountPattern,
@@ -94,13 +93,13 @@ type ReceiptValues = {
   senderAdditional?: string;
   senderAccount?: string;
   senderArea?: string;
-  senderProject?: string;
+  senderShowcase?: string;
   senderSplit?: string;
   receiverName: string;
   receiverAdditional?: string;
   receiverAccount?: string;
   receiverArea?: string;
-  receiverProject?: string;
+  receiverShowcase?: string;
   receiverSplit?: string;
   invoiceStatus: "offen" | "bezahlt";
   notes?: string;
@@ -230,7 +229,7 @@ function buildSenderLine(values: ReceiptValues) {
   if (values.senderAccount?.trim())
     parts.push(`– ${values.senderAccount.trim()} –`);
   if (values.senderArea?.trim()) parts.push(`– ${values.senderArea.trim()} –`);
-  if (values.senderProject?.trim()) parts.push(values.senderProject.trim());
+  if (values.senderShowcase?.trim()) parts.push(values.senderShowcase.trim());
   if (values.senderSplit?.trim()) parts.push(`(${values.senderSplit.trim()})`);
   return parts.join(" ");
 }
@@ -241,7 +240,8 @@ function buildReceiverLine(values: ReceiptValues) {
     parts.push(`– ${values.receiverAccount.trim()} –`);
   if (values.receiverArea?.trim())
     parts.push(`– ${values.receiverArea.trim()} –`);
-  if (values.receiverProject?.trim()) parts.push(values.receiverProject.trim());
+  if (values.receiverShowcase?.trim())
+    parts.push(values.receiverShowcase.trim());
   if (values.receiverSplit?.trim())
     parts.push(`(${values.receiverSplit.trim()})`);
   return parts.join(" ");
@@ -249,7 +249,7 @@ function buildReceiverLine(values: ReceiptValues) {
 
 async function loadLogoAsDataUrl(): Promise<string | null> {
   try {
-    const response = await fetch("/konglodigital-logo.svg");
+    const response = await fetch("/branding/logo/konglodigital-logo.svg");
     const svgText = await response.text();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -644,13 +644,13 @@ function buildReceiptValues(
       senderAdditional: undefined,
       senderAccount: values.transferSenderAccount,
       senderArea: transferSenderAreaLabel,
-      senderProject: undefined,
+      senderShowcase: undefined,
       senderSplit: undefined,
       receiverName: associationName,
       receiverAdditional: undefined,
       receiverAccount: values.transferReceiverAccount,
       receiverArea: transferReceiverAreaLabel,
-      receiverProject: undefined,
+      receiverShowcase: undefined,
       receiverSplit: undefined,
     };
   }
@@ -665,13 +665,13 @@ function buildReceiptValues(
       senderAdditional: undefined,
       senderAccount: values.associationAccount,
       senderArea: associationAreaLabel,
-      senderProject: undefined,
+      senderShowcase: undefined,
       senderSplit: undefined,
       receiverName: values.counterpartyName,
       receiverAdditional: undefined,
       receiverAccount: values.counterpartyAccount,
       receiverArea: undefined,
-      receiverProject: undefined,
+      receiverShowcase: undefined,
       receiverSplit: undefined,
     };
   }
@@ -685,13 +685,13 @@ function buildReceiptValues(
     senderAdditional: undefined,
     senderAccount: values.counterpartyAccount,
     senderArea: undefined,
-    senderProject: undefined,
+    senderShowcase: undefined,
     senderSplit: undefined,
     receiverName: associationName,
     receiverAdditional: undefined,
     receiverAccount: values.associationAccount,
     receiverArea: associationAreaLabel,
-    receiverProject: undefined,
+    receiverShowcase: undefined,
     receiverSplit: undefined,
   };
 }
@@ -1137,7 +1137,7 @@ export default function EigenbelegPage() {
 
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
         {errorCount > 0 ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
             Bitte korrigiere {errorCount} Feld{errorCount === 1 ? "" : "er"} vor
             dem Speichern.
           </div>
@@ -1149,35 +1149,29 @@ export default function EigenbelegPage() {
           description="Wähle zuerst den Grund für den Eigenbeleg."
         >
           <div className="space-y-5">
-            <FormField
+            <NativeSelect
               label="Grund des Eigenbelegs"
               required
               error={errors.reason?.message}
+              {...register("reason", {
+                required: "Bitte einen Grund auswählen.",
+              })}
             >
-              <Select
-                {...register("reason", {
-                  required: "Bitte einen Grund auswählen.",
-                })}
-              >
-                {reasonOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+              {reasonOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </NativeSelect>
 
             {selectedReason === "Sonstiges" ? (
-              <FormField
+              <Field
                 label="Sonstiger Grund"
                 required
                 error={errors.reasonOther?.message}
-              >
-                <Input
-                  placeholder="Bitte Grund ergänzen"
-                  {...register("reasonOther")}
-                />
-              </FormField>
+                placeholder="Bitte Grund ergänzen"
+                {...register("reasonOther")}
+              />
             ) : null}
           </div>
         </FormSection>
@@ -1185,44 +1179,35 @@ export default function EigenbelegPage() {
         <FormSection title="2. Belegangaben" icon={faFolderOpen}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Textarea
                 label="Anlass"
                 required
                 error={errors.occasion?.message}
-              >
-                <Textarea
-                  placeholder="Bitte nenne kurz den Hintergrund/Kontext der Erstellung des Eigenbelegs"
-                  {...register("occasion", {
-                    required: "Anlass ist erforderlich.",
-                  })}
-                />
-              </FormField>
+                placeholder="Bitte nenne kurz den Hintergrund/Kontext der Erstellung des Eigenbelegs"
+                {...register("occasion", {
+                  required: "Anlass ist erforderlich.",
+                })}
+              />
 
-              <FormField
+              <Textarea
                 label="Verweis auf Dokument"
                 hint="Gibt es einen Vertrag oder anderes Dokument, in dem die Transaktion geregelt ist?"
                 error={errors.documentReference?.message}
-              >
-                <Textarea
-                  placeholder="Optionaler Verweis"
-                  {...register("documentReference")}
-                />
-              </FormField>
+                placeholder="Optionaler Verweis"
+                {...register("documentReference")}
+              />
             </div>
 
-            <FormField
+            <Field
               label="Datum der Transaktion"
               required
               hint="Wann fand die Transaktion statt?"
               error={errors.transactionDate?.message}
-            >
-              <Input
-                type="date"
-                {...register("transactionDate", {
-                  required: "Das Transaktionsdatum ist erforderlich.",
-                })}
-              />
-            </FormField>
+              type="date"
+              {...register("transactionDate", {
+                required: "Das Transaktionsdatum ist erforderlich.",
+              })}
+            />
           </div>
         </FormSection>
 
@@ -1253,97 +1238,93 @@ export default function EigenbelegPage() {
               {...register("counterpartyAccount")}
             />
 
-            <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "ausgabe")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  isExpenseFlow
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faArrowTrendDown}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Ausgabe
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "einnahme")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  selectedBookingType === "einnahme"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faArrowTrendUp}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Einnahme
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "umbuchung")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  isTransferFlow
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faMoneyBillTransfer}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Umbuchung
-              </button>
-            </div>
+            <SegmentedControl
+              value={
+                isExpenseFlow
+                  ? "ausgabe"
+                  : isTransferFlow
+                    ? "umbuchung"
+                    : "einnahme"
+              }
+              size="small"
+              onChange={(next) => setValue("bookingType", next)}
+              options={[
+                {
+                  value: "ausgabe",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faArrowTrendDown}
+                        className="h-3.5 w-3.5"
+                      />
+                      Ausgabe
+                    </>
+                  ),
+                },
+                {
+                  value: "einnahme",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faArrowTrendUp}
+                        className="h-3.5 w-3.5"
+                      />
+                      Einnahme
+                    </>
+                  ),
+                },
+                {
+                  value: "umbuchung",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faMoneyBillTransfer}
+                        className="h-3.5 w-3.5"
+                      />
+                      Umbuchung
+                    </>
+                  ),
+                },
+              ]}
+            />
 
             {isTransferFlow ? (
               <div className="space-y-5">
-                <FormField
+                <Field
                   label="Umbuchungsbetrag in Euro"
                   required
                   hint="Bitte den Betrag der Umbuchung eintragen."
                   error={errors.amountEuro?.message}
-                >
-                  <Input
-                    placeholder="z. B. 95,00"
-                    inputMode="decimal"
-                    {...register("amountEuro", {
-                      required: "Bitte einen Betrag eintragen.",
-                      pattern: {
-                        value: euroAmountPattern,
-                        message: euroAmountValidationMessage,
-                      },
-                    })}
-                  />
-                </FormField>
+                  placeholder="z. B. 95,00"
+                  inputMode="decimal"
+                  {...register("amountEuro", {
+                    required: "Bitte einen Betrag eintragen.",
+                    pattern: {
+                      value: euroAmountPattern,
+                      message: euroAmountValidationMessage,
+                    },
+                  })}
+                />
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
+                  <div className="space-y-4 rounded-lg border border-border bg-muted p-3 sm:p-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-semibold text-zinc-900">
+                      <h3 className="text-sm font-semibold text-foreground">
                         Sender
                       </h3>
-                      <p className="text-sm text-zinc-600">
+                      <p className="text-sm text-muted-foreground">
                         Von hier wird der Betrag ausgebucht.
                       </p>
                     </div>
 
-                    <FormField label="Verein">
-                      <Input value={associationName} disabled readOnly />
-                    </FormField>
+                    <Field
+                      label="Verein"
+                      value={associationName}
+                      disabled
+                      readOnly
+                    />
 
-                    <FormField
+                    <NativeSelect
                       label="Werkbereich/Projekt"
                       required
                       error={
@@ -1351,65 +1332,60 @@ export default function EigenbelegPage() {
                         costCentersError ??
                         undefined
                       }
+                      disabled={costCentersLoading || costCenters.length === 0}
+                      {...register("transferSenderArea", {
+                        required:
+                          "Bitte eine Kostenstelle 2 für den Sender auswählen.",
+                      })}
                     >
-                      <Select
-                        disabled={
-                          costCentersLoading || costCenters.length === 0
-                        }
-                        {...register("transferSenderArea", {
-                          required:
-                            "Bitte eine Kostenstelle 2 für den Sender auswählen.",
-                        })}
-                      >
-                        {costCenters.length === 0 ? (
-                          <option value="">
-                            {costCentersLoading
-                              ? "Kostenstellen werden geladen…"
-                              : "Keine Kostenstellen verfügbar"}
-                          </option>
-                        ) : null}
-                        {costCenters.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      {costCenters.length === 0 ? (
+                        <option value="">
+                          {costCentersLoading
+                            ? "Kostenstellen werden geladen…"
+                            : "Keine Kostenstellen verfügbar"}
+                        </option>
+                      ) : null}
+                      {costCenters.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
 
-                    <FormField
+                    <NativeSelect
                       label="Konto/Kasse"
                       required
                       error={errors.transferSenderAccount?.message}
+                      {...register("transferSenderAccount", {
+                        required: "Bitte ein Konto für den Sender auswählen.",
+                      })}
                     >
-                      <Select
-                        {...register("transferSenderAccount", {
-                          required: "Bitte ein Konto für den Sender auswählen.",
-                        })}
-                      >
-                        {associationAccountOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      {associationAccountOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
 
-                  <div className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
+                  <div className="space-y-4 rounded-lg border border-border bg-muted p-3 sm:p-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-semibold text-zinc-900">
+                      <h3 className="text-sm font-semibold text-foreground">
                         Empfänger
                       </h3>
-                      <p className="text-sm text-zinc-600">
+                      <p className="text-sm text-muted-foreground">
                         Hier wird der Betrag wieder eingebucht.
                       </p>
                     </div>
 
-                    <FormField label="Verein">
-                      <Input value={associationName} disabled readOnly />
-                    </FormField>
+                    <Field
+                      label="Verein"
+                      value={associationName}
+                      disabled
+                      readOnly
+                    />
 
-                    <FormField
+                    <NativeSelect
                       label="Werkbereich/Projekt"
                       required
                       error={
@@ -1417,56 +1393,48 @@ export default function EigenbelegPage() {
                         costCentersError ??
                         undefined
                       }
+                      disabled={costCentersLoading || costCenters.length === 0}
+                      {...register("transferReceiverArea", {
+                        required:
+                          "Bitte eine Kostenstelle 2 für den Empfänger auswählen.",
+                      })}
                     >
-                      <Select
-                        disabled={
-                          costCentersLoading || costCenters.length === 0
-                        }
-                        {...register("transferReceiverArea", {
-                          required:
-                            "Bitte eine Kostenstelle 2 für den Empfänger auswählen.",
-                        })}
-                      >
-                        {costCenters.length === 0 ? (
-                          <option value="">
-                            {costCentersLoading
-                              ? "Kostenstellen werden geladen…"
-                              : "Keine Kostenstellen verfügbar"}
-                          </option>
-                        ) : null}
-                        {costCenters.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      {costCenters.length === 0 ? (
+                        <option value="">
+                          {costCentersLoading
+                            ? "Kostenstellen werden geladen…"
+                            : "Keine Kostenstellen verfügbar"}
+                        </option>
+                      ) : null}
+                      {costCenters.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
 
-                    <FormField
+                    <NativeSelect
                       label="Konto/Kasse"
                       required
                       error={errors.transferReceiverAccount?.message}
+                      {...register("transferReceiverAccount", {
+                        required:
+                          "Bitte ein Konto für den Empfänger auswählen.",
+                      })}
                     >
-                      <Select
-                        {...register("transferReceiverAccount", {
-                          required:
-                            "Bitte ein Konto für den Empfänger auswählen.",
-                        })}
-                      >
-                        {associationAccountOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      {associationAccountOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
                 </div>
               </div>
             ) : (
               <>
                 <div className="space-y-5">
-                  <FormField
+                  <Field
                     label={
                       isExpenseFlow ? "Ausgabe in Euro" : "Einnahme in Euro"
                     }
@@ -1477,38 +1445,37 @@ export default function EigenbelegPage() {
                         : "Bitte den Einnahmenbetrag des Eigenbelegs eintragen."
                     }
                     error={errors.amountEuro?.message}
-                  >
-                    <Input
-                      placeholder={
-                        isExpenseFlow ? "z. B. 95,00" : "z. B. 30,00"
-                      }
-                      inputMode="decimal"
-                      {...register("amountEuro", {
-                        required: "Bitte einen Betrag eintragen.",
-                        pattern: {
-                          value: euroAmountPattern,
-                          message: euroAmountValidationMessage,
-                        },
-                      })}
-                    />
-                  </FormField>
+                    placeholder={isExpenseFlow ? "z. B. 95,00" : "z. B. 30,00"}
+                    inputMode="decimal"
+                    {...register("amountEuro", {
+                      required: "Bitte einen Betrag eintragen.",
+                      pattern: {
+                        value: euroAmountPattern,
+                        message: euroAmountValidationMessage,
+                      },
+                    })}
+                  />
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
+                    <div className="space-y-4 rounded-lg border border-border bg-muted p-3 sm:p-4">
                       <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-zinc-900">
+                        <h3 className="text-sm font-semibold text-foreground">
                           Sender
                         </h3>
-                        <p className="text-sm text-zinc-600">
+                        <p className="text-sm text-muted-foreground">
                           {isExpenseLikeFlow
                             ? "Von hier wird der Betrag ausgebucht."
                             : "Hier kommt der Betrag von außen in den Verein hinein."}
                         </p>
                       </div>
 
-                      <FormField label="Name" required={!isExpenseLikeFlow}>
+                      <FieldShell
+                        as="div"
+                        label="Name"
+                        required={!isExpenseLikeFlow}
+                      >
                         {isExpenseLikeFlow ? (
-                          <Input value={senderDisplayValue} disabled readOnly />
+                          <Field value={senderDisplayValue} disabled readOnly />
                         ) : (
                           <AutocompleteInput
                             apiPath={counterpartyApiPath}
@@ -1533,11 +1500,11 @@ export default function EigenbelegPage() {
                             onCreateNew={handleCreateDebtor}
                           />
                         )}
-                      </FormField>
+                      </FieldShell>
 
                       {isExpenseLikeFlow ? (
                         <>
-                          <FormField
+                          <NativeSelect
                             label="Werkbereich/Projekt"
                             hint="Werkbereich des Vereins auswählen"
                             required
@@ -1546,65 +1513,62 @@ export default function EigenbelegPage() {
                               costCentersError ??
                               undefined
                             }
+                            disabled={
+                              costCentersLoading || costCenters.length === 0
+                            }
+                            {...register("associationArea", {
+                              required: "Bitte eine Kostenstelle 2 auswählen.",
+                            })}
                           >
-                            <Select
-                              disabled={
-                                costCentersLoading || costCenters.length === 0
-                              }
-                              {...register("associationArea", {
-                                required:
-                                  "Bitte eine Kostenstelle 2 auswählen.",
-                              })}
-                            >
-                              {costCenters.length === 0 ? (
-                                <option value="">
-                                  {costCentersLoading
-                                    ? "Kostenstellen werden geladen…"
-                                    : "Keine Kostenstellen verfügbar"}
-                                </option>
-                              ) : null}
-                              {costCenters.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
+                            {costCenters.length === 0 ? (
+                              <option value="">
+                                {costCentersLoading
+                                  ? "Kostenstellen werden geladen…"
+                                  : "Keine Kostenstellen verfügbar"}
+                              </option>
+                            ) : null}
+                            {costCenters.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </NativeSelect>
 
-                          <FormField
+                          <NativeSelect
                             label="Konto/Kasse"
                             required
                             error={errors.associationAccount?.message}
+                            {...register("associationAccount", {
+                              required: "Bitte ein Konto auswählen.",
+                            })}
                           >
-                            <Select
-                              {...register("associationAccount", {
-                                required: "Bitte ein Konto auswählen.",
-                              })}
-                            >
-                              {associationAccountOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
+                            {associationAccountOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </NativeSelect>
                         </>
                       ) : null}
                     </div>
 
-                    <div className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
+                    <div className="space-y-4 rounded-lg border border-border bg-muted p-3 sm:p-4">
                       <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-zinc-900">
+                        <h3 className="text-sm font-semibold text-foreground">
                           Empfänger
                         </h3>
-                        <p className="text-sm text-zinc-600">
+                        <p className="text-sm text-muted-foreground">
                           {isExpenseLikeFlow
                             ? "Hier geht der Betrag nach außen aus dem Verein heraus."
                             : "Hier wird der Betrag im Verein eingebucht."}
                         </p>
                       </div>
 
-                      <FormField label="Name" required={isExpenseLikeFlow}>
+                      <FieldShell
+                        as="div"
+                        label="Name"
+                        required={isExpenseLikeFlow}
+                      >
                         {isExpenseLikeFlow ? (
                           <AutocompleteInput
                             apiPath={counterpartyApiPath}
@@ -1628,17 +1592,17 @@ export default function EigenbelegPage() {
                             onCreateNew={handleCreateCreditor}
                           />
                         ) : (
-                          <Input
+                          <Field
                             value={receiverDisplayValue}
                             disabled
                             readOnly
                           />
                         )}
-                      </FormField>
+                      </FieldShell>
 
                       {!isExpenseLikeFlow ? (
                         <>
-                          <FormField
+                          <NativeSelect
                             label="Werkbereich/Projekt"
                             hint="Werkbereich des Vereins auswählen"
                             required
@@ -1647,48 +1611,41 @@ export default function EigenbelegPage() {
                               costCentersError ??
                               undefined
                             }
+                            disabled={
+                              costCentersLoading || costCenters.length === 0
+                            }
+                            {...register("associationArea", {
+                              required: "Bitte eine Kostenstelle 2 auswählen.",
+                            })}
                           >
-                            <Select
-                              disabled={
-                                costCentersLoading || costCenters.length === 0
-                              }
-                              {...register("associationArea", {
-                                required:
-                                  "Bitte eine Kostenstelle 2 auswählen.",
-                              })}
-                            >
-                              {costCenters.length === 0 ? (
-                                <option value="">
-                                  {costCentersLoading
-                                    ? "Kostenstellen werden geladen…"
-                                    : "Keine Kostenstellen verfügbar"}
-                                </option>
-                              ) : null}
-                              {costCenters.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
+                            {costCenters.length === 0 ? (
+                              <option value="">
+                                {costCentersLoading
+                                  ? "Kostenstellen werden geladen…"
+                                  : "Keine Kostenstellen verfügbar"}
+                              </option>
+                            ) : null}
+                            {costCenters.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </NativeSelect>
 
-                          <FormField
+                          <NativeSelect
                             label="Konto/Kasse"
                             required
                             error={errors.associationAccount?.message}
+                            {...register("associationAccount", {
+                              required: "Bitte ein Konto auswählen.",
+                            })}
                           >
-                            <Select
-                              {...register("associationAccount", {
-                                required: "Bitte ein Konto auswählen.",
-                              })}
-                            >
-                              {associationAccountOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
+                            {associationAccountOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </NativeSelect>
                         </>
                       ) : null}
                     </div>
@@ -1700,7 +1657,6 @@ export default function EigenbelegPage() {
                     account={Number(counterpartyAccount)}
                     entityLabel={counterpartyEntityLabel}
                     fallbackName={counterpartyName ?? ""}
-                    tone="emerald"
                     onClear={resetCounterparty}
                     onEdit={() =>
                       setShowUpdateDebtorPanel((current) => !current)
@@ -1709,7 +1665,7 @@ export default function EigenbelegPage() {
                 ) : null}
 
                 {counterpartyAccount && isExpenseLikeFlow ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  <div className="flex items-center gap-2 rounded-lg border border-success-border bg-success-soft px-3 py-2 text-sm text-foreground">
                     <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                     <span>
                       {counterpartyEntityLabel}{" "}
@@ -1717,13 +1673,15 @@ export default function EigenbelegPage() {
                       {counterpartyName ? ` (${counterpartyName})` : ""}{" "}
                       ausgewählt
                     </span>
-                    <button
-                      type="button"
-                      className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                    <Button
+                      kind="ghost"
+                      size="chip"
+                      iconOnly
+                      icon={faXmark}
+                      className="ml-auto"
+                      aria-label="Auswahl entfernen"
                       onClick={resetCounterparty}
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                    </button>
+                    />
                   </div>
                 ) : null}
 
@@ -1746,7 +1704,7 @@ export default function EigenbelegPage() {
                 ) : null}
 
                 {activeCounterpartyError ? (
-                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
                     {activeCounterpartyError}
                   </div>
                 ) : null}
@@ -1791,40 +1749,37 @@ export default function EigenbelegPage() {
           textareaProps={register("notes")}
         >
           <div className="mb-5 grid gap-4 md:grid-cols-2">
-            <FormField
+            <NativeSelect
               label="Status"
               required
               error={errors.invoiceStatus?.message}
+              {...register("invoiceStatus", {
+                required: "Bitte Status auswählen.",
+              })}
             >
-              <Select
-                {...register("invoiceStatus", {
-                  required: "Bitte Status auswählen.",
-                })}
-              >
-                <option value="offen">offen</option>
-                <option value="bezahlt">bezahlt</option>
-              </Select>
-            </FormField>
+              <option value="offen">offen</option>
+              <option value="bezahlt">bezahlt</option>
+            </NativeSelect>
           </div>
         </InternalNoteSection>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="mr-auto flex flex-wrap items-center gap-3">
             {submittedAt ? (
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-foreground">
                 Eigenbeleg erstellt: {submittedAt}
               </p>
             ) : null}
             {storeResult?.successMessage ? (
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-foreground">
                 {storeResult.successMessage}
               </p>
             ) : null}
             {storeResult?.warning ? (
-              <p className="text-sm text-amber-700">{storeResult.warning}</p>
+              <p className="text-sm text-foreground">{storeResult.warning}</p>
             ) : null}
             {storeResult?.error ? (
-              <p className="text-sm text-rose-700">{storeResult.error}</p>
+              <p className="text-sm text-destructive">{storeResult.error}</p>
             ) : null}
           </div>
 

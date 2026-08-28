@@ -1,0 +1,1075 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Reorder } from "motion/react";
+import {
+  faFilePdf,
+  faFloppyDisk,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+import type { ResourcePayload } from "@/lib/campai-resources";
+import Button from "@/components/knglmrt/Button";
+import FormSection from "@/components/knglmrt/FormSection";
+import PageTitle from "../components/PageTitle";
+import ShowcaseDeleteButton from "./ShowcaseDeleteButton";
+import ReactSelect from "../components/ui/react-select";
+import MdxEditorInput from "../components/MdxEditorInput";
+import ImageCropDialog from "../components/ImageCropDialog";
+import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import { useI18n } from "@/i18n/client";
+import { buildShowcasePath } from "@/lib/showcase-path";
+import { normalizeShowcaseLinks } from "@/lib/showcase-links";
+import {
+  getResourceMediaKindFromMimeType,
+  getResourceMediaKindFromUrl,
+  type ResourceMediaKind,
+} from "@/lib/resource-media";
+import { fetchJson, resizeImage } from "../resources/resource-form-utils";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import Field from "@/components/knglmrt/Field";
+import Choice from "@/components/knglmrt/Choice";
+
+type InitialShowcase = ResourcePayload & {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  author?: {
+    name: string;
+  } | null;
+};
+
+type ResourceOption = {
+  value: string;
+  label: string;
+  type?: string;
+};
+
+type ShowcaseFormValues = {
+  authorName: string;
+  title: string;
+  description: string;
+  publishDate: string;
+  tags: string;
+  workshopResourceId: string;
+  usedResourceIds: string[];
+  socialMediaConsent: boolean;
+  links: Array<{ label: string; url: string }>;
+};
+
+type ShowcaseEditorClientProps = {
+  mode: "create" | "edit";
+  initialShowcase?: InitialShowcase | null;
+  canDelete?: boolean;
+};
+
+type ExistingShowcaseImageItem = {
+  id: string;
+  kind: "existing";
+  mediaType: ResourceMediaKind;
+  previewUrl: string;
+  imageUrl: string;
+  imageName: string;
+};
+
+type NewShowcaseImageItem = {
+  id: string;
+  kind: "new";
+  mediaType: ResourceMediaKind;
+  previewUrl: string;
+  file: File;
+};
+
+type ShowcaseImageItem = ExistingShowcaseImageItem | NewShowcaseImageItem;
+
+type ShowcaseCropSession = {
+  itemId: string;
+  sourceUrl: string;
+  imageName: string;
+  imageType: string;
+  cleanupUrl?: string;
+};
+
+const normalizeTagValue = (value: string) => value.trim().replace(/^#+/, "");
+
+const parseTagString = (value: string) =>
+  value.split(",").map(normalizeTagValue).filter(Boolean);
+
+const splitTagDraft = (value: string) =>
+  value
+    .split(/[\s,;\n\r\t]+/)
+    .map(normalizeTagValue)
+    .filter(Boolean);
+
+const serializeTagList = (tags: string[]) => tags.join(", ");
+
+const toTagString = (tags?: string[]) => serializeTagList(tags ?? []);
+
+const toDateInputValue = (value?: string | null) => {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return parsed.toISOString().slice(0, 10);
+};
+
+const normalizeImageList = (showcase?: InitialShowcase | null) => {
+  if (!showcase) {
+    return [] as string[];
+  }
+
+  if (Array.isArray(showcase.images) && showcase.images.length > 0) {
+    return showcase.images.filter(
+      (image): image is string => typeof image === "string",
+    );
+  }
+
+  return showcase.image ? [showcase.image] : [];
+};
+
+const createShowcaseImageItemId = () => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return `showcase-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const getImageNameFromUrl = (imageUrl: string, fallbackIndex: number) => {
+  try {
+    const pathname = new URL(imageUrl).pathname;
+    const segment = pathname.split("/").filter(Boolean).at(-1);
+    if (segment) {
+      return decodeURIComponent(segment);
+    }
+  } catch {
+    const segment = imageUrl.split("/").filter(Boolean).at(-1);
+    if (segment) {
+      return segment;
+    }
+  }
+  return `showcase-image-${fallbackIndex + 1}.jpg`;
+};
+
+const createExistingShowcaseImageItem = (
+  imageUrl: string,
+  index: number,
+): ExistingShowcaseImageItem => ({
+  id: createShowcaseImageItemId(),
+  kind: "existing",
+  mediaType: getResourceMediaKindFromUrl(imageUrl),
+  previewUrl: imageUrl,
+  imageUrl,
+  imageName: getImageNameFromUrl(imageUrl, index),
+});
+
+const createNewShowcaseImageItem = (
+  file: File,
+  id = createShowcaseImageItemId(),
+): NewShowcaseImageItem => ({
+  id,
+  kind: "new",
+  mediaType: getResourceMediaKindFromMimeType(file.type),
+  previewUrl: URL.createObjectURL(file),
+  file,
+});
+
+const isNewShowcaseImageItem = (
+  imageItem: ShowcaseImageItem,
+): imageItem is NewShowcaseImageItem => imageItem.kind === "new";
+
+export default function ShowcaseEditorClient({
+  mode,
+  initialShowcase,
+  canDelete = false,
+}: ShowcaseEditorClientProps) {
+  const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formMessage, setFormMessage] = useState<string | null>(null);
+  const [imageItems, setImageItems] = useState<ShowcaseImageItem[]>(() =>
+    normalizeImageList(initialShowcase).map((imageUrl, index) =>
+      createExistingShowcaseImageItem(imageUrl, index),
+    ),
+  );
+  const [cropSession, setCropSession] = useState<ShowcaseCropSession | null>(
+    null,
+  );
+  const [cropLoadingId, setCropLoadingId] = useState<string | null>(null);
+  const [resourceOptions, setResourceOptions] = useState<ResourceOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const newPreviewUrlsRef = useRef<string[]>([]);
+  const cropCleanupUrlRef = useRef<string | null>(null);
+
+  const { control, register, handleSubmit, setValue, watch } =
+    useForm<ShowcaseFormValues>({
+      defaultValues: {
+        authorName: initialShowcase?.authorName ?? "",
+        title: initialShowcase?.name ?? "",
+        description: initialShowcase?.description ?? "",
+        publishDate: toDateInputValue(initialShowcase?.publishDate),
+        tags: toTagString(initialShowcase?.tags),
+        workshopResourceId: initialShowcase?.workshopResource?.id ?? "",
+        usedResourceIds:
+          initialShowcase?.relatedResources
+            ?.map((resource) => resource.id)
+            .filter(Boolean) ?? [],
+        socialMediaConsent: initialShowcase?.socialMediaConsent ?? false,
+        links:
+          initialShowcase?.showcaseLinks &&
+          initialShowcase.showcaseLinks.length > 0
+            ? initialShowcase.showcaseLinks.map((link) => ({
+                label: link.label,
+                url: link.url,
+              }))
+            : [{ label: "", url: "" }],
+      },
+    });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "links",
+  });
+
+  const watchedWorkshopResourceId = watch("workshopResourceId");
+  const watchedUsedResourceIds = watch("usedResourceIds");
+  const watchedTags = watch("tags");
+  const [tagDraft, setTagDraft] = useState("");
+
+  const showcaseTags = useMemo(
+    () => parseTagString(watchedTags ?? ""),
+    [watchedTags],
+  );
+
+  const syncTags = (nextTags: string[]) => {
+    setValue("tags", serializeTagList(nextTags), {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  const addTags = (rawValue: string) => {
+    const nextTags = splitTagDraft(rawValue);
+    if (nextTags.length === 0) {
+      return;
+    }
+
+    const mergedTags = [...showcaseTags];
+    nextTags.forEach((tag) => {
+      if (!mergedTags.includes(tag)) {
+        mergedTags.push(tag);
+      }
+    });
+
+    syncTags(mergedTags);
+    setTagDraft("");
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    syncTags(showcaseTags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      event.key === "Enter" ||
+      event.key === "Tab" ||
+      event.key === "," ||
+      event.key === ";" ||
+      event.key === " "
+    ) {
+      if (tagDraft.trim()) {
+        event.preventDefault();
+        addTags(tagDraft);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    if (event.key === "Backspace" && !tagDraft && showcaseTags.length > 0) {
+      event.preventDefault();
+      removeTag(showcaseTags[showcaseTags.length - 1]);
+    }
+  };
+
+  const handleTagPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    if (splitTagDraft(pastedText).length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    addTags(pastedText);
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    const loadOptions = async () => {
+      setOptionsLoading(true);
+      try {
+        const data = await fetchJson<{ resources: ResourcePayload[] }>(
+          "/api/campai/resources?limit=1500&offset=0",
+        );
+        if (!active) {
+          return;
+        }
+
+        const options = (data.resources ?? [])
+          .filter((resource) => resource.id)
+          .map((resource) => ({
+            value: resource.id,
+            label: resource.name?.trim() || resource.id,
+            type: resource.type?.trim().toLowerCase(),
+          }));
+        setResourceOptions(options);
+      } catch {
+        if (active) {
+          setResourceOptions([]);
+        }
+      } finally {
+        if (active) {
+          setOptionsLoading(false);
+        }
+      }
+    };
+
+    loadOptions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextPreviewUrls = imageItems
+      .filter(isNewShowcaseImageItem)
+      .map((imageItem) => imageItem.previewUrl);
+    newPreviewUrlsRef.current
+      .filter((previewUrl) => !nextPreviewUrls.includes(previewUrl))
+      .forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+    newPreviewUrlsRef.current = nextPreviewUrls;
+  }, [imageItems]);
+
+  useEffect(() => {
+    return () => {
+      newPreviewUrlsRef.current.forEach((previewUrl) =>
+        URL.revokeObjectURL(previewUrl),
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextCleanupUrl = cropSession?.cleanupUrl ?? null;
+    if (
+      cropCleanupUrlRef.current &&
+      cropCleanupUrlRef.current !== nextCleanupUrl
+    ) {
+      URL.revokeObjectURL(cropCleanupUrlRef.current);
+    }
+    cropCleanupUrlRef.current = nextCleanupUrl;
+  }, [cropSession]);
+
+  useEffect(() => {
+    return () => {
+      if (cropCleanupUrlRef.current) {
+        URL.revokeObjectURL(cropCleanupUrlRef.current);
+      }
+    };
+  }, []);
+
+  const workshopOptions = useMemo(
+    () => resourceOptions.filter((option) => option.type === "place"),
+    [resourceOptions],
+  );
+
+  const usedResourceOptions = useMemo(
+    () =>
+      resourceOptions.filter(
+        (option) => option.type !== SHOWCASE_RESOURCE_TYPE,
+      ),
+    [resourceOptions],
+  );
+
+  const selectedWorkshopOption = useMemo(
+    () =>
+      workshopOptions.find(
+        (option) => option.value === watchedWorkshopResourceId,
+      ) ?? null,
+    [watchedWorkshopResourceId, workshopOptions],
+  );
+
+  const selectedUsedResourceOptions = useMemo(
+    () =>
+      (watchedUsedResourceIds ?? []).map(
+        (resourceId) =>
+          usedResourceOptions.find((option) => option.value === resourceId) ?? {
+            value: resourceId,
+            label: resourceId,
+          },
+      ),
+    [usedResourceOptions, watchedUsedResourceIds],
+  );
+
+  const descriptionImageUrls = useMemo(
+    () =>
+      imageItems
+        .filter(
+          (imageItem): imageItem is ExistingShowcaseImageItem =>
+            imageItem.kind === "existing" && imageItem.mediaType === "image",
+        )
+        .map((imageItem) => imageItem.imageUrl),
+    [imageItems],
+  );
+
+  const handleAddImages = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    const resized = await Promise.all(
+      files.map((file) => resizeImage(file, 1800)),
+    );
+    setImageItems((previous) => [
+      ...previous,
+      ...resized.map((file) => createNewShowcaseImageItem(file)),
+    ]);
+    event.target.value = "";
+  };
+
+  const handleStartCrop = async (imageItem: ShowcaseImageItem) => {
+    setFormError(null);
+
+    if (imageItem.mediaType !== "image") {
+      return;
+    }
+
+    if (imageItem.kind === "new") {
+      setCropSession({
+        itemId: imageItem.id,
+        sourceUrl: imageItem.previewUrl,
+        imageName: imageItem.file.name,
+        imageType: imageItem.file.type || "image/jpeg",
+      });
+      return;
+    }
+
+    setCropLoadingId(imageItem.id);
+    try {
+      const response = await fetch(imageItem.imageUrl);
+      if (!response.ok) {
+        throw new Error(tx("Bild konnte nicht geladen werden.", "de"));
+      }
+      const blob = await response.blob();
+      const sourceUrl = URL.createObjectURL(blob);
+      setCropSession({
+        itemId: imageItem.id,
+        sourceUrl,
+        cleanupUrl: sourceUrl,
+        imageName: imageItem.imageName,
+        imageType: blob.type || "image/jpeg",
+      });
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : tx("Bild konnte nicht geladen werden.", "de"),
+      );
+    } finally {
+      setCropLoadingId((current) =>
+        current === imageItem.id ? null : current,
+      );
+    }
+  };
+
+  const handleApplyCrop = async (croppedFile: File) => {
+    const activeCropSession = cropSession;
+    if (!activeCropSession) {
+      return;
+    }
+
+    try {
+      const resizedFile = await resizeImage(croppedFile, 1800);
+      setImageItems((previous) =>
+        previous.map((imageItem) =>
+          imageItem.id === activeCropSession.itemId
+            ? createNewShowcaseImageItem(resizedFile, imageItem.id)
+            : imageItem,
+        ),
+      );
+      setCropSession(null);
+    } catch {
+      setFormError(tx("Bild konnte nicht zugeschnitten werden.", "de"));
+    }
+  };
+
+  const onSubmit = async (values: ShowcaseFormValues) => {
+    setSaving(true);
+    setFormError(null);
+    setFormMessage(null);
+
+    const normalizedTitle = values.title.trim();
+    if (!normalizedTitle) {
+      setSaving(false);
+      setFormError(tx("Ein Titel ist erforderlich.", "de"));
+      return;
+    }
+
+    const normalizedLinks = normalizeShowcaseLinks(values.links);
+    const existingImages = imageItems
+      .filter(
+        (imageItem): imageItem is ExistingShowcaseImageItem =>
+          imageItem.kind === "existing",
+      )
+      .map((imageItem) => imageItem.imageUrl);
+    const newImageFiles = imageItems
+      .filter(isNewShowcaseImageItem)
+      .map((imageItem) => imageItem.file);
+    const formData = new FormData();
+    formData.append("authorName", values.authorName);
+    formData.append("name", normalizedTitle);
+    formData.append("description", values.description);
+    formData.append("type", SHOWCASE_RESOURCE_TYPE);
+    formData.append(
+      "priority",
+      values.tags
+        .split(",")
+        .map((tag) => tag.trim().toLowerCase())
+        .includes("showcaseofthemonth")
+        ? "5"
+        : "3",
+    );
+    formData.append("tags", values.tags);
+    formData.append("relatedResourceIds", values.usedResourceIds.join(", "));
+    formData.append("categories", "");
+    formData.append("categoryIds", "");
+    formData.append("attachable", "0");
+    formData.append("publishDate", values.publishDate);
+    formData.append("workshopResourceId", values.workshopResourceId);
+    formData.append("showcaseLinks", JSON.stringify(normalizedLinks));
+    formData.append(
+      "socialMediaConsent",
+      values.socialMediaConsent ? "1" : "0",
+    );
+    formData.append("imageUrls", JSON.stringify(existingImages));
+    newImageFiles.forEach((file) => formData.append("images", file));
+
+    try {
+      const response = await fetch(
+        mode === "edit" && initialShowcase?.id
+          ? `/api/campai/resources/${initialShowcase.id}`
+          : "/api/campai/resources",
+        {
+          method: mode === "edit" ? "PUT" : "POST",
+          body: formData,
+        },
+      );
+      const data = (await response.json()) as {
+        error?: string;
+        resource?: ResourcePayload;
+        id?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? tx("Beitrag konnte nicht gespeichert werden.", "de"),
+        );
+      }
+
+      const targetShowcase = data.resource
+        ? data.resource
+        : {
+            id: data.id ?? initialShowcase?.id ?? "",
+            prettyTitle: initialShowcase?.prettyTitle ?? null,
+          };
+      setFormMessage(
+        mode === "edit"
+          ? tx("Beitrag aktualisiert.", "de")
+          : tx("Beitrag erstellt.", "de"),
+      );
+      router.push(localizePathname(buildShowcasePath(targetShowcase), locale));
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : tx("Beitrag konnte nicht gespeichert werden.", "de"),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageTitle
+        title={
+          mode === "edit"
+            ? tx("Beitrag bearbeiten", "de")
+            : tx("Neuer Beitrag", "de")
+        }
+        subTitle={tx(
+          "Lege einen Beitrag mit Bildern, Markdown-Beschreibung, Werkstattbezug und verwendeten Ressourcen an.",
+          "de",
+        )}
+        backLink={{
+          href: localizePathname(
+            initialShowcase ? buildShowcasePath(initialShowcase) : "/showcase",
+            locale,
+          ),
+          label: tx("Zurück", "de"),
+        }}
+        customActions={
+          mode === "edit" && initialShowcase && canDelete ? (
+            <ShowcaseDeleteButton showcaseId={initialShowcase.id} />
+          ) : null
+        }
+      />
+
+      {formError ? (
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+          {formError}
+        </section>
+      ) : null}
+      {formMessage ? (
+        <section className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+          {formMessage}
+        </section>
+      ) : null}
+
+      <form
+        className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]"
+        onSubmit={handleSubmit(onSubmit)}
+      >
+        <FormSection className="space-y-5">
+          <Field
+            label={tx("Titel", "de")}
+            type="text"
+            {...register("title", { required: true })}
+            placeholder={tx(
+              "z. B. Modulares Regal für die Holzwerkstatt",
+              "de",
+            )}
+          />
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tx("Beschreibung", "de")}
+            </label>
+            <textarea {...register("description")} className="hidden" />
+            <MdxEditorInput
+              value={watch("description") ?? ""}
+              onChange={(nextValue) => {
+                setValue("description", nextValue, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                });
+              }}
+              ariaLabel={tx("Beitragsbeschreibung", "de")}
+              placeholder={tx(
+                "## Idee\n\nBeschreibe hier Entstehung, Ziel, Materialien und Ergebnis des Beitrags.",
+                "de",
+              )}
+              availableImageUrls={descriptionImageUrls}
+              embedButtonLabel={tx("Hochgeladenes Bild einbetten", "de")}
+              emptyImageMessage={tx(
+                "Bereits gespeicherte Bilder erscheinen hier zum Einbetten.",
+                "de",
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "Unterstützt Überschriften, Listen, Links, Hervorhebungen und eingebettete Bilder.",
+                "de",
+              )}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {tx("Medien", "de")}
+              </label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {tx(
+                  "Mehrere Bilder, Videos und PDFs sind möglich. Bestehende Medien kannst du einzeln entfernen.",
+                  "de",
+                )}
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/*,video/*,.pdf,application/pdf"
+              multiple
+              className="w-full rounded-lg border border-dashed border-input bg-muted/50 px-4 py-5 text-sm"
+              onChange={(event) => {
+                void handleAddImages(event);
+              }}
+            />
+
+            {imageItems.length > 0 ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {tx(
+                    "Ziehe Medien, um die Reihenfolge festzulegen. Das erste Medium wird als Titelmedium verwendet.",
+                    "de",
+                  )}
+                </p>
+                <Reorder.Group
+                  axis="x"
+                  values={imageItems}
+                  onReorder={setImageItems}
+                  layoutScroll
+                  className="flex items-stretch gap-3 overflow-x-auto pb-2 pt-1"
+                >
+                  {imageItems.map((imageItem, index) => (
+                    <Reorder.Item
+                      key={imageItem.id}
+                      value={imageItem}
+                      layout
+                      whileDrag={{ scale: 1.03, zIndex: 20 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 32,
+                      }}
+                      className="flex w-44 shrink-0 cursor-grab flex-col gap-3 rounded-lg border border-border bg-accent p-3 active:cursor-grabbing"
+                    >
+                      <div className="overflow-hidden rounded-lg bg-card">
+                        {imageItem.mediaType === "video" ? (
+                          <video
+                            src={imageItem.previewUrl}
+                            className="h-28 w-full bg-foreground object-cover"
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                          />
+                        ) : imageItem.mediaType === "document" ? (
+                          <div className="flex h-28 w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
+                            <FontAwesomeIcon
+                              icon={faFilePdf}
+                              className="h-8 w-8"
+                            />
+                            <span className="mt-2 text-xs font-semibold uppercase tracking-[0.16em]">
+                              PDF
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={imageItem.previewUrl}
+                            alt={`${watch("title") || tx("Beitragsmedium", "de")} ${index + 1}`}
+                            className="h-28 w-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {index === 0
+                            ? tx("Titelmedium", "de")
+                            : imageItem.mediaType === "video"
+                              ? `${tx("Video", "de")} ${index + 1}`
+                              : imageItem.mediaType === "document"
+                                ? `PDF ${index + 1}`
+                                : `${tx("Bild", "de")} ${index + 1}`}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {imageItem.mediaType === "image" ? (
+                            <Button
+                              size="chip"
+                              type="button"
+                              kind="secondary"
+                              disabled={cropLoadingId === imageItem.id}
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onClick={() => {
+                                void handleStartCrop(imageItem);
+                              }}
+                            >
+                              {cropLoadingId === imageItem.id
+                                ? tx("Lädt…", "de")
+                                : tx("Zuschneiden", "de")}
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="chip"
+                            type="button"
+                            kind="secondary"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={() => {
+                              setImageItems((previous) =>
+                                previous.filter(
+                                  (currentImage) =>
+                                    currentImage.id !== imageItem.id,
+                                ),
+                              );
+                            }}
+                          >
+                            {tx("Entfernen", "de")}
+                          </Button>
+                        </div>
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
+              </>
+            ) : null}
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {tx("Links", "de")}
+              </label>
+              <Button
+                size="chip"
+                type="button"
+                kind="secondary"
+                icon={faPlus}
+                onClick={() => append({ label: "", url: "" })}
+              >
+                {tx("Link hinzufügen", "de")}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="grid gap-3 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+                >
+                  <Field
+                    type="text"
+                    {...register(`links.${index}.label`)}
+                    placeholder={tx("Linktitel", "de")}
+                  />
+                  <Field
+                    type="text"
+                    {...register(`links.${index}.url`)}
+                    placeholder="https://…"
+                  />
+                  <Button
+                    size="chip"
+                    type="button"
+                    kind="secondary"
+                    onClick={() => {
+                      if (fields.length === 1) {
+                        setValue(`links.${index}.label`, "");
+                        setValue(`links.${index}.url`, "");
+                        return;
+                      }
+                      remove(index);
+                    }}
+                  >
+                    {tx("Entfernen", "de")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection className="space-y-5">
+          <div className="space-y-2">
+            <Field
+              label={tx("Autor", "de")}
+              type="text"
+              {...register("authorName")}
+              placeholder={tx("z. B. Anna Beispiel", "de")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {initialShowcase?.author?.name && !initialShowcase?.authorName
+                ? `${tx("Wenn das Feld leer bleibt, wird aktuell ", "de")}${initialShowcase.author.name}${tx(" als Autor angezeigt.", "de")}`
+                : tx(
+                    "Wenn das Feld leer bleibt, wird automatisch der verknüpfte Benutzer angezeigt.",
+                    "de",
+                  )}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Field
+              label={tx("Veröffentlichungsdatum", "de")}
+              type="date"
+              {...register("publishDate")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "Dieses Datum steuert die Reihenfolge in der Übersicht.",
+                "de",
+              )}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tx("Werkstatt", "de")}
+            </label>
+            <Controller
+              control={control}
+              name="workshopResourceId"
+              render={() => (
+                <ReactSelect<ResourceOption, false>
+                  options={workshopOptions}
+                  value={selectedWorkshopOption}
+                  isLoading={optionsLoading}
+                  onChange={(value) =>
+                    setValue("workshopResourceId", value?.value ?? "")
+                  }
+                  className="text-sm"
+                  classNamePrefix="showcase-workshop-select"
+                  placeholder={tx("Werkstatt auswählen", "de")}
+                  isClearable
+                />
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tx("Verwendete Ressourcen", "de")}
+            </label>
+            <Controller
+              control={control}
+              name="usedResourceIds"
+              render={() => (
+                <ReactSelect<ResourceOption, true>
+                  isMulti
+                  options={usedResourceOptions}
+                  value={selectedUsedResourceOptions}
+                  isLoading={optionsLoading}
+                  onChange={(value) =>
+                    setValue(
+                      "usedResourceIds",
+                      value.map((entry) => entry.value),
+                    )
+                  }
+                  className="text-sm"
+                  classNamePrefix="showcase-resources-select"
+                  placeholder={tx("Ressourcen suchen und auswählen", "de")}
+                />
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tx("Tags", "de")}
+            </label>
+            <input type="hidden" {...register("tags")} />
+            <div className="knglmrt-border bg-card px-4 py-3 focus-within:border-ring/80">
+              <div className="flex flex-wrap items-center gap-2">
+                {showcaseTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm text-foreground/90"
+                  >
+                    <span>{tag}</span>
+                    <Button
+                      kind="ghost"
+                      size="chip"
+                      iconOnly
+                      className="h-5 w-5 text-muted-foreground"
+                      aria-label={`${tx("Tag entfernen", "de")}: ${tag}`}
+                      onClick={() => removeTag(tag)}
+                    >
+                      ×
+                    </Button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={tagDraft}
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={() => addTags(tagDraft)}
+                  onPaste={handleTagPaste}
+                  autoComplete="off"
+                  className="min-w-[12rem] flex-1 border-0 bg-transparent py-1 text-sm text-foreground outline-none"
+                  placeholder={tx(
+                    "z. B. cnc, ausstellung, showcaseofthemonth",
+                    "de",
+                  )}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {tx("Mit Enter, Komma oder Leerzeichen trennen.", "de")}
+            </p>
+          </div>
+
+          <Choice
+            className="knglmrt-border bg-muted px-4 py-3"
+            label={tx(
+              "Darf für Social Media auf den Accounts des Konglomerat e.V. verwendet werden.",
+              "de",
+            )}
+            {...register("socialMediaConsent")}
+          />
+
+          <div className="pt-2">
+            <p className="mb-3 text-sm text-muted-foreground">
+              {tx(
+                "Bitte stelle sicher, dass alle Rechte am Material hast. Danke!",
+                "de",
+              )}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="submit"
+                kind="primary"
+                size="medium"
+                icon={mode === "edit" ? faFloppyDisk : faPlus}
+                disabled={saving}
+              >
+                {saving
+                  ? tx("Speichert…", "de")
+                  : mode === "edit"
+                    ? tx("Beitrag speichern", "de")
+                    : tx("Beitrag erstellen", "de")}
+              </Button>
+            </div>
+          </div>
+        </FormSection>
+      </form>
+
+      {cropSession ? (
+        <ImageCropDialog
+          imageUrl={cropSession.sourceUrl}
+          imageName={cropSession.imageName}
+          imageType={cropSession.imageType}
+          onClose={() => setCropSession(null)}
+          onApply={handleApplyCrop}
+        />
+      ) : null}
+    </div>
+  );
+}

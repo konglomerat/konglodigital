@@ -7,7 +7,7 @@ import { faArrowLeft, faCodeCompare } from "@fortawesome/free-solid-svg-icons";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 
 export type DuplicateDetectionResource = {
   id: string;
@@ -343,8 +343,8 @@ export default function DuplicatesPageClient({
   };
 
   return (
-    <main className="min-h-screen bg-muted/50 text-foreground">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
+    <div>
+      <div className="flex flex-col gap-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -366,7 +366,7 @@ export default function DuplicatesPageClient({
           </Button>
         </header>
 
-        <section className="rounded-lg border border-border bg-card p-4 text-sm text-foreground/80">
+        <section className="knglmrt-border-section bg-card p-4 text-sm text-foreground/80">
           {tx(
             "Detection uses normalized name similarity, pretty title matches, tag overlap, and shared photo URLs. Only high-confidence matches are shown.",
             "en",
@@ -386,7 +386,7 @@ export default function DuplicatesPageClient({
         ) : null}
 
         {duplicatePairs.length === 0 ? (
-          <section className="rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
+          <section className="knglmrt-border-section bg-card p-8 text-sm text-muted-foreground">
             {tx("No high-confidence duplicates found.")}
           </section>
         ) : (
@@ -402,7 +402,7 @@ export default function DuplicatesPageClient({
               return (
                 <article
                   key={pair.id}
-                  className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                  className="knglmrt-border-section bg-card p-4"
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
@@ -600,6 +600,6 @@ export default function DuplicatesPageClient({
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

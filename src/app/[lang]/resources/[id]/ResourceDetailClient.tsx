@@ -169,8 +169,8 @@ export default function ResourceDetailClient({
     : undefined;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
+    <div>
+      <div className="flex flex-col gap-6">
         <PageTitle
           title={resource?.name ?? tx("Resource not found.")}
           backLink={{
@@ -321,7 +321,7 @@ export default function ResourceDetailClient({
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

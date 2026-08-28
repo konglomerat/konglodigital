@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { faPenToSquare, faPlus } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../Button";
-import { FormField, Input } from "./form";
-import { SegmentedControl } from "./segmented-control";
+import Button from "@/components/knglmrt/Button";
+import Notice from "@/components/knglmrt/Notice";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 
 export type DebtorCreateType = "business" | "person";
 
@@ -320,26 +322,29 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
   return (
     <div
       className={[
-        "space-y-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4",
+        // Ein Formular im Formular: die Kontur des Systems auf dem blauen Tint.
+        "space-y-4 knglmrt-border bg-info-soft p-4",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
       <div className="space-y-1">
-        <p className="text-sm font-medium text-blue-900">
+        <p className="knglmrt-card-title text-foreground">
           {title ??
             (isUpdate
               ? `Kunde (Debitor) bearbeiten: "${draft.name || initialName}"`
               : `Neuen Kunde (Debitor) anlegen: "${draft.name || initialName}"`)}
         </p>
         {addressRequirementHint ? (
-          <p className="text-xs text-blue-800">{addressRequirementHint}</p>
+          <p className="text-[13px] leading-[18px] text-muted-foreground">
+            {addressRequirementHint}
+          </p>
         ) : null}
       </div>
 
       <div className="space-y-4">
-        <FormField label="Typ" required>
+        <FieldShell as="div" label="Typ" required>
           <SegmentedControl
             value={draft.type}
             options={[
@@ -348,64 +353,55 @@ export default function DebtorCreatePanel(props: DebtorCreatePanelProps) {
             ]}
             onChange={(next) => updateDraft("type", next)}
           />
-        </FormField>
+        </FieldShell>
 
-        <FormField label="Name" required>
-          <Input
-            placeholder="Max Mustermann oder Muster GmbH"
-            value={draft.name}
-            onChange={(event) => updateDraft("name", event.target.value)}
-          />
-        </FormField>
+        <Field
+          label="Name"
+          required
+          placeholder="Max Mustermann oder Muster GmbH"
+          value={draft.name}
+          onChange={(event) => updateDraft("name", event.target.value)}
+        />
 
-        <FormField label="E-Mail">
-          <Input
-            type="email"
-            placeholder="kontakt@beispiel.de"
-            value={draft.email}
-            onChange={(event) => updateDraft("email", event.target.value)}
-          />
-        </FormField>
+        <Field
+          label="E-Mail"
+          type="email"
+          placeholder="kontakt@beispiel.de"
+          value={draft.email}
+          onChange={(event) => updateDraft("email", event.target.value)}
+        />
 
-        <FormField label="Details">
-          <Input
-            placeholder="z. B. Ansprechpartner oder Zusatz"
-            value={draft.details}
-            onChange={(event) => updateDraft("details", event.target.value)}
-          />
-        </FormField>
+        <Field
+          label="Details"
+          placeholder="z. B. Ansprechpartner oder Zusatz"
+          value={draft.details}
+          onChange={(event) => updateDraft("details", event.target.value)}
+        />
 
-        <FormField label="Straße / Adresse">
-          <Input
-            placeholder="Musterstraße 1"
-            value={draft.addressLine}
-            onChange={(event) => updateDraft("addressLine", event.target.value)}
-          />
-        </FormField>
+        <Field
+          label="Straße / Adresse"
+          placeholder="Musterstraße 1"
+          value={draft.addressLine}
+          onChange={(event) => updateDraft("addressLine", event.target.value)}
+        />
 
         <div className="grid gap-4 md:grid-cols-2">
-          <FormField label="PLZ">
-            <Input
-              placeholder="01099"
-              value={draft.zip}
-              onChange={(event) => updateDraft("zip", event.target.value)}
-            />
-          </FormField>
-          <FormField label="Stadt">
-            <Input
-              placeholder="Dresden"
-              value={draft.city}
-              onChange={(event) => updateDraft("city", event.target.value)}
-            />
-          </FormField>
+          <Field
+            label="PLZ"
+            placeholder="01099"
+            value={draft.zip}
+            onChange={(event) => updateDraft("zip", event.target.value)}
+          />
+          <Field
+            label="Stadt"
+            placeholder="Dresden"
+            value={draft.city}
+            onChange={(event) => updateDraft("city", event.target.value)}
+          />
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
-        </div>
-      ) : null}
+      {error ? <Notice tone="rosa">{error}</Notice> : null}
 
       <div className="flex items-center gap-3">
         <Button

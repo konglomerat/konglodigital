@@ -32,6 +32,7 @@ const VOLKSHAUS_LOGO_PATH = path.join(
   process.cwd(),
   "public",
   "branding",
+  "logo",
   "vhc-bildmarke.png",
 );
 

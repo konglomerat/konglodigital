@@ -1,0 +1,520 @@
+/* Display-Schrift (lizenziert, self-hosted → public/fonts/) */
+@font-face {
+  font-family: "Fengardo Neue";
+  src:
+    url("/fonts/FengardoNeue_Black.woff2") format("woff2"),
+    url("/fonts/FengardoNeue_Black.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ------------------------------------------------------------------
+   * 1 — PALETTE. Die einzige Stelle im Projekt, an der Farb-Hex-Werte
+   * stehen. Quelle: colors.tokens.json / tailwind.colors.js (Export des
+   * Design-Systems). Die Rampe läuft 100 / 60 / 30 (Prozent-Tints),
+   * NICHT Tailwinds 50–900. Nichts hier referenziert etwas anderes.
+   * ------------------------------------------------------------------ */
+  --knglmrt-pink-100: #c83669;      /* die eine Markenfarbe — nur Akzent */
+  --knglmrt-pink-60: #de86a5;
+  --knglmrt-pink-30: #eec2d2;
+  --knglmrt-yellow-100: #ffd93d;    /* Erinnerungs-Tints, Terrazzo-Konfetti */
+  --knglmrt-yellow-60: #ffe88b;
+  --knglmrt-yellow-30: #fff4c5;
+  --knglmrt-blue-100: #72a7c6;      /* kühle Tint-Blöcke, Terrazzo-Konfetti */
+  --knglmrt-blue-60: #aacadd;
+  --knglmrt-blue-30: #d5e4ee;
+  --knglmrt-brown-100: #764951;     /* Handschrift-Tinte, Link-Hover */
+  --knglmrt-brown-60: #ad9296;
+  --knglmrt-brown-30: #d7c7ca;
+  --knglmrt-dark-100: #2e3846;      /* invertierte Flächen, Fließtext */
+  --knglmrt-dark-60: #828891;       /* stille Schrift */
+  --knglmrt-dark-30: #c1c3c9;       /* Haarlinien */
+  --knglmrt-ink: #000000;           /* Artwork und Kontur sind pures Schwarz */
+  --knglmrt-ink-soft: #1a1919;      /* nur Werkbereich-Marken */
+  --knglmrt-paper: #ffffff;         /* das Blatt */
+  --knglmrt-paper-pink: #faecf1;    /* Tint-Band */
+  --knglmrt-paper-grey: #f3f3f3;    /* Summenzeilen */
+  --knglmrt-vhc-primary: #0062ae;   /* nur Sub-Marke Volkshaus */
+  --knglmrt-vhc-secondary: #f39200;
+  --knglmrt-tint-avatar: #f7e1e9;   /* liegt unter einem Gesicht im Avatar */
+  --knglmrt-tint-zebra: #f8f8f8;    /* optionale Zebra-Zeile in DataTable */
+  --knglmrt-tint-quiet-hover: #e4e4e4; /* die leise Taste, gehovert */
+  /* Ergänzungen außerhalb des Exports — hier begründen, nicht verstreuen. */
+  --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb, trägt weiße Schrift */
+  --knglmrt-pink-15: #f4dce5;       /* die zarte Kachelkontur */
+
+  /* ------------------------------------------------------------------
+   * 2 — APP-TOKENS (shadcn/Tailwind). Rollen, keine Farben: hier steht
+   * nur, welcher Palettenwert welche Rolle spielt. Der Dark Mode
+   * überschreibt genau diese Ebene (siehe .dark in globals.css).
+   * ------------------------------------------------------------------ */
+  --background: var(--knglmrt-paper);
+  --foreground: var(--knglmrt-dark-100);
+  --card: var(--knglmrt-paper);
+  --card-foreground: var(--knglmrt-dark-100);
+  --popover: var(--knglmrt-paper);
+  --popover-foreground: var(--knglmrt-dark-100);
+
+  --primary: var(--knglmrt-pink-100);
+  --primary-foreground: var(--knglmrt-paper);
+  --primary-soft: var(--knglmrt-paper-pink);
+  --primary-border: var(--knglmrt-pink-60);
+  --primary-hairline: var(--knglmrt-pink-15);
+
+  --secondary: var(--knglmrt-paper-grey);
+  --secondary-foreground: var(--knglmrt-dark-100);
+  --muted: var(--knglmrt-paper-grey);
+  --muted-foreground: var(--knglmrt-dark-60);
+  --accent: var(--knglmrt-yellow-100);
+  --accent-foreground: var(--knglmrt-dark-100);
+
+  /* Die Palette kennt kein Grün/Rot: Status läuft über pink/gelb/blau. */
+  --destructive: var(--knglmrt-pink-100);
+  --destructive-foreground: var(--knglmrt-paper);
+  --destructive-soft: var(--knglmrt-pink-30);
+  --destructive-border: var(--knglmrt-pink-100);
+  --success: var(--knglmrt-blue-100);
+  --success-foreground: var(--knglmrt-ink);
+  --success-soft: var(--knglmrt-blue-30);
+  --success-border: var(--knglmrt-blue-100);
+  --warning: var(--knglmrt-yellow-100);
+  --warning-foreground: var(--knglmrt-ink);
+  --warning-soft: var(--knglmrt-yellow-30);
+  --warning-border: var(--knglmrt-yellow-60);
+  --info: var(--knglmrt-dark-100);
+  --info-foreground: var(--knglmrt-paper);
+  --info-soft: var(--knglmrt-blue-30);
+  --info-border: var(--knglmrt-dark-100);
+  --highlight: var(--knglmrt-yellow-100);
+  --highlight-foreground: var(--knglmrt-ink);
+
+  --border: var(--knglmrt-dark-30);
+  --input: var(--knglmrt-ink);      /* Kontur um Formulare */
+  --ring: var(--knglmrt-ink);       /* Fokus: schwarze Outline */
+
+  --chart-1: var(--knglmrt-pink-100);
+  --chart-2: var(--knglmrt-yellow-100);
+  --chart-3: var(--knglmrt-blue-100);
+  --chart-4: var(--knglmrt-brown-100);
+  --chart-5: var(--knglmrt-dark-100);
+
+  --radius: 0rem;                   /* das System kennt keine Rundungen */
+
+  /* ------------------------------------------------------------------
+   * 3 — SEMANTISCHE TOKENS (semantic-Block aus colors.tokens.json).
+   * Sagen, wofür eine Farbe da ist. Zeigen auf Ebene 2, wo die Rolle im
+   * Dark Mode mitlaufen soll, sonst direkt auf die Palette.
+   * ------------------------------------------------------------------ */
+  --text-body: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --text-accent: var(--primary);
+  --text-on-dark: var(--primary-foreground);
+
+  --surface-page: var(--background);
+  --surface-tint: var(--primary-soft);
+  --surface-quiet: var(--secondary);
+  --surface-invert: var(--info);
+
+  /* Die durchgehende Kontur um Buttons, Karten, Sektionen und Felder.
+     Breite und Farbe an einer Stelle. */
+  --hairline-width: 1px;
+  --hairline-color: var(--foreground);
+  --hairline: var(--hairline-width) solid var(--hairline-color);
+  /* Die Kontur um einen Formularabschnitt — braun statt schwarz, damit ein
+     Abschnitt eine Gruppe rahmt und nicht wie ein Bedienelement wirkt. */
+  --hairline-section-color: var(--knglmrt-pink-30);
+  --hairline-section: var(--hairline-width) solid var(--hairline-section-color);
+  --frame-color: var(--primary-soft);
+
+  --link-color: var(--primary);
+  --link-color-hover: var(--knglmrt-brown-100);
+
+  --ui-action: var(--primary);
+  --ui-action-hover: var(--knglmrt-brown-100);
+  --ui-attention: var(--primary-soft);
+  --ui-remember: var(--knglmrt-yellow-30);
+  --ui-announce: var(--info);
+  --ui-disabled-ink: var(--muted-foreground);
+  --ui-disabled-edge: var(--border);
+  --ui-quiet-hover: var(--knglmrt-tint-quiet-hover);
+  --ui-tint-avatar: var(--knglmrt-tint-avatar);
+  --ui-tint-zebra: var(--knglmrt-tint-zebra);
+
+  --font-display: "Fengardo Neue", var(--font-geist-sans), sans-serif;
+  --font-core: var(--font-geist-sans), "Fira Sans Condensed", system-ui, sans-serif;
+  --font-wide: var(--font-knglmrt-wide), "Fira Sans", system-ui, sans-serif;
+  --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
+    var(--font-geist-sans), system-ui, sans-serif;
+  --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
+  /* Handschrift — nur für das handschriftliche Feld (Field kind="hand"). */
+  --font-hand: var(--font-knglmrt-hand), "Permanent Marker", cursive;
+
+  --ui-size-body: 18px;
+  --ui-line-body: 25px;
+  /* Formularfelder sitzen eine Stufe unter dem Fließtext: 16/19 statt 18/25,
+     Innenabstand ein Viertel schmaler als der Rest des Systems (12/8 → 9/6).
+     Ein Feld wird dadurch 35px hoch statt 45px. */
+  --ui-size-field: 16px;
+  --ui-line-field: 19px;
+  --ui-field-pad-x: 9px;
+  --ui-field-pad-y: 6px;
+  --ui-size-label: 14px;   /* uppercase, tracked .04em — Feldbeschriftungen */
+  --ui-size-caption: 18px; /* uppercase, tracked .13em — Karten- und Tile-Label */
+  --ui-size-tag: 12px;     /* Statusmarke — bleibt klein, sitzt in Badges */
+  --ui-size-num: 15px;     /* Fira Mono — Daten, Zeiten, Beträge, IDs */
+  --ui-size-value: 31px;   /* Fira Mono Bold — die Zahl auf einer StatTile */
+  --ui-size-nav: 17px;
+
+  --ui-size-title: 39px;   /* Fengardo Neue Black — Seitentitel */
+  --ui-line-title: 42px;
+  --ui-size-section: 28px; /* Fengardo Neue Black — Sektionsüberschrift */
+  --ui-line-section: 32px;
+  --ui-size-card: 21px;    /* Fira Sans Condensed Bold — Karten-Titel */
+  --ui-line-card: 27px;
+  --ui-size-lead: 26px;    /* Fira Sans Extra Condensed SemiBold */
+  --ui-line-lead: 34px;
+  --ui-size-eyebrow: 27px; /* Fira Sans, uppercase, .13em — die Augenbraue */
+}
+
+
+/* ------------------------------------------------------------------
+ * DARK MODE. Überschreibt ausschließlich Ebene 2 (App-Tokens) — die
+ * semantischen Tokens aus Ebene 3 zeigen darauf und laufen mit, weil
+ * .dark auf demselben Element (<html>) sitzt wie :root.
+ * Die Marken-Palette bleibt absolut und wird hier nicht angefasst.
+ * Muss NACH :root stehen, sonst gewinnt :root bei gleicher Spezifität.
+ * ------------------------------------------------------------------ */
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.141 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.185 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--knglmrt-pink-60);
+  --primary-foreground: var(--knglmrt-dark-100);
+  --primary-soft: color-mix(in oklab, var(--knglmrt-pink-100) 30%, var(--card));
+  --primary-border: var(--knglmrt-pink-100);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: var(--knglmrt-pink-60);
+  --destructive-foreground: var(--knglmrt-dark-100);
+  --destructive-soft: color-mix(in oklab, var(--knglmrt-pink-100) 30%, var(--card));
+  --destructive-border: var(--knglmrt-pink-100);
+  --success: var(--knglmrt-blue-60);
+  --success-foreground: var(--knglmrt-dark-100);
+  --success-soft: color-mix(in oklab, var(--knglmrt-blue-100) 30%, var(--card));
+  --success-border: var(--knglmrt-blue-100);
+  --warning: var(--knglmrt-yellow-100);
+  --warning-foreground: var(--knglmrt-dark-100);
+  --warning-soft: color-mix(in oklab, var(--knglmrt-yellow-100) 26%, var(--card));
+  --warning-border: var(--knglmrt-yellow-60);
+  --info: var(--knglmrt-blue-60);
+  --info-foreground: var(--knglmrt-dark-100);
+  --info-soft: color-mix(in oklab, var(--knglmrt-blue-100) 30%, var(--card));
+  --info-border: var(--knglmrt-blue-100);
+  --highlight: var(--knglmrt-yellow-100);
+  --highlight-foreground: var(--knglmrt-dark-100);
+  --border: oklch(0.272 0 0);
+  --input: oklch(0.272 0 0);
+  --ring: oklch(0.556 0 0);
+  --chart-1: var(--knglmrt-pink-60);
+  --chart-2: var(--knglmrt-yellow-100);
+  --chart-3: var(--knglmrt-blue-60);
+  --chart-4: var(--knglmrt-brown-60);
+  --chart-5: var(--knglmrt-dark-30);
+
+  /* Ebene 3, wo sie im Dunkeln nicht aus der Palette kommen kann. */
+  --primary-hairline: var(--border);
+  --hairline-section-color: var(--knglmrt-brown-60);
+  --frame-color: var(--border);
+  --ui-remember: var(--muted);
+  --ui-quiet-hover: var(--muted);
+  --ui-tint-avatar: var(--muted);
+  --link-color-hover: var(--knglmrt-brown-60);
+  --ui-action-hover: var(--knglmrt-brown-60);
+  --ui-tint-zebra: color-mix(in oklab, var(--card) 92%, var(--foreground));
+}
+
+@layer base {
+  body {
+    font-family: var(--font-core);
+    font-size: var(--ui-size-body);
+    line-height: var(--ui-line-body);
+  }
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 900;
+  }
+  h1 {
+    font-size: var(--ui-size-title);
+    line-height: var(--ui-line-title);
+  }
+  h2 {
+    font-size: var(--ui-size-section);
+    line-height: var(--ui-line-section);
+  }
+  h3, h4 {
+    font-family: var(--font-core);
+    font-weight: 700;
+    font-size: var(--ui-size-card);
+    line-height: var(--ui-line-card);
+  }
+  a { text-underline-offset: 2px; }
+}
+
+.knglmrt-eyebrow {
+  font-family: var(--font-wide);
+  font-weight: 400;
+  font-size: var(--ui-size-eyebrow);
+  line-height: 16px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.knglmrt-lead {
+  font-family: var(--font-narrow);
+  font-weight: 600;
+  font-size: var(--ui-size-lead);
+  line-height: var(--ui-line-lead);
+  text-wrap: pretty;
+}
+.knglmrt-card-title {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-card);
+  line-height: var(--ui-line-card);
+}
+/* Feldbeschriftung: uppercase, .04em — enger getrackt als die Caption */
+.knglmrt-label {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-label);
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* Karten- und Tile-Label: 10px, uppercase, .13em */
+.knglmrt-caption {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-caption);
+  line-height: 21px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+/* Statusmarke: 10px Fira Sans (wide), .08em — enger getrackt als das Label */
+.knglmrt-tag {
+  font-family: var(--font-wide);
+  font-weight: 700;
+  font-size: var(--ui-size-tag);
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Daten, Zeiten, Beträge, IDs */
+.knglmrt-num {
+  font-family: var(--font-num);
+  font-weight: 400;
+  font-size: var(--ui-size-num);
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+/* Die Zahl auf einer StatTile */
+.knglmrt-value {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: var(--ui-size-value);
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Die Grundfarben unten stammen aus dem SVG-Artwork, nicht aus der
+ * Palette — deshalb stehen sie als Hex hier und nicht als Token.
+ */
+.knglmrt-terrazzo-fein-rosa,
+.knglmrt-terrazzo-grob-rosa,
+.knglmrt-terrazzo-grob-blau,
+.knglmrt-terrazzo-grob-grau,
+.knglmrt-terrazzo-grob-hellgrau,
+.knglmrt-terrazzo-hellgelb,
+.knglmrt-terrazzo-kraeftig-gelb,
+.knglmrt-terrazzo-kraeftig-blau,
+.knglmrt-terrazzo-kraeftig-pink {
+  background-repeat: repeat;
+  background-size: 400px 400px;
+}
+
+.knglmrt-terrazzo-fein-rosa {
+  /* fein, zartrosa – Standard-Hintergrund */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_fein_01.svg");
+  background-color: var(--knglmrt-tint-avatar);
+}
+.knglmrt-terrazzo-grob-rosa {
+  /* grob, zartrosa */
+  background-image: url("/branding/backgrounds/terrazzo-grob-rosa.svg");
+  background-color: #faedf2;
+}
+.knglmrt-terrazzo-grob-blau {
+  /* grob, hellblau */
+  background-image: url("/branding/backgrounds/terrazzo-grob-blau.svg");
+  background-color: #f2f7fa;
+}
+.knglmrt-terrazzo-grob-grau {
+  /* grob, warmgrau */
+  background-image: url("/branding/backgrounds/terrazzo-grob-grau.svg");
+  background-color: #f3efef;
+}
+.knglmrt-terrazzo-grob-hellgrau {
+  /* grob, kühles hellgrau */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_d.svg");
+  background-color: #ecedee;
+}
+.knglmrt-terrazzo-hellgelb {
+  /* grob, cremegelb */
+  background-image: url("/branding/backgrounds/terrazzo-hellgelb.svg");
+  background-color: #fffcee;
+}
+.knglmrt-terrazzo-kraeftig-gelb {
+  /* grob, kräftiges Gelb – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_03.svg");
+  background-color: var(--knglmrt-yellow-60);
+}
+.knglmrt-terrazzo-kraeftig-blau {
+  /* grob, kräftiges Blau – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_01.svg");
+  background-color: var(--knglmrt-blue-60);
+}
+.knglmrt-terrazzo-kraeftig-pink {
+  /* grob, kräftiges Pink – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_02.svg");
+  background-color: var(--knglmrt-pink-60);
+}
+/* Im Dark Mode tragen die Muster nicht – überall die neutrale Kartenfläche. */
+.dark .knglmrt-terrazzo-fein-rosa,
+.dark .knglmrt-terrazzo-grob-rosa,
+.dark .knglmrt-terrazzo-grob-blau,
+.dark .knglmrt-terrazzo-grob-grau,
+.dark .knglmrt-terrazzo-grob-hellgrau,
+.dark .knglmrt-terrazzo-hellgelb,
+.dark .knglmrt-terrazzo-kraeftig-gelb,
+.dark .knglmrt-terrazzo-kraeftig-blau,
+.dark .knglmrt-terrazzo-kraeftig-pink {
+  background-image: none;
+  background-color: var(--card);
+}
+
+.knglmrt-terrazzo-hover {
+  position: relative;
+  isolation: isolate;
+}
+.knglmrt-terrazzo-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--terrazzo);
+  background-repeat: repeat;
+  background-size: var(--terrazzo-size, 320px 320px);
+  background-position: var(--terrazzo-pos, 0 0);
+  opacity: 0;
+  transition: opacity 320ms ease-out;
+}
+.knglmrt-terrazzo-hover:hover::before,
+.knglmrt-terrazzo-hover:focus-visible::before {
+  opacity: 1;
+}
+.dark .knglmrt-terrazzo-hover::before {
+  background-image: none;
+  background-color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .knglmrt-terrazzo-hover::before {
+    transition: none;
+  }
+}
+
+/*
+ * Die schwarze Kontur als Utility — Breite und Farbe kommen aus
+ * --hairline-width / --hairline-color, nicht aus Tailwinds border-Skala.
+ */
+@layer components {
+  .knglmrt-border   { border: var(--hairline); }
+  .knglmrt-border-section { border: var(--hairline-section); }
+  .knglmrt-border-t { border-top: var(--hairline); }
+  .knglmrt-border-b { border-bottom: var(--hairline); }
+  .knglmrt-border-l { border-left: var(--hairline); }
+  .knglmrt-border-r { border-right: var(--hairline); }
+  .knglmrt-border-x { border-inline: var(--hairline); }
+  .knglmrt-border-y { border-block: var(--hairline); }
+}
+
+.knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 var(--knglmrt-ink); }
+
+.knglmrt-panel { background: var(--card); box-shadow: inset 0 0 0 3px var(--frame-color); }
+
+.knglmrt-full-bleed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+html {
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+}
+
+.knglmrt-line {
+  display: block;
+  width: 100%;
+  height: 9px;
+  border: 0;
+  margin: 0;
+  background-color: currentColor;
+  -webkit-mask-image: var(--knglmrt-line, url("/branding/lines/Lines_04.svg"));
+  mask-image: var(--knglmrt-line, url("/branding/lines/Lines_04.svg"));
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+/* Original-Breite kacheln statt strecken — für 5 und 6 der bessere Default. */
+.knglmrt-line-repeat {
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: auto 100%;
+  mask-size: auto 100%;
+}
+.knglmrt-line-1 { --knglmrt-line: url("/branding/lines/Lines_01.svg"); }
+.knglmrt-line-2 { --knglmrt-line: url("/branding/lines/Lines_02.svg"); }
+.knglmrt-line-3 { --knglmrt-line: url("/branding/lines/Lines_03.svg"); }
+.knglmrt-line-4 { --knglmrt-line: url("/branding/lines/Lines_04.svg"); }
+.knglmrt-line-5 { --knglmrt-line: url("/branding/lines/Lines_05.svg"); }
+.knglmrt-line-6 { --knglmrt-line: url("/branding/lines/Lines_06.svg"); }
+/* Handgezeichnete Unterstreichung für Überschriften/Links. */
+.knglmrt-underline {
+  position: relative;
+  display: inline-block;
+}
+.knglmrt-underline::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.28em;
+  height: 7px;
+  background-color: currentColor;
+  -webkit-mask-image: var(--knglmrt-line, url("/branding/lines/Lines_04.svg"));
+  mask-image: var(--knglmrt-line, url("/branding/lines/Lines_04.svg"));
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}

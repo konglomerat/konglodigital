@@ -19,9 +19,9 @@ import {
   type NewsletterAspect,
   type NewsletterCalendar,
   type NewsletterItem,
-  type NewsletterProject,
+  type NewsletterShowcase,
 } from "@/lib/newsletter-builder";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import { createHtmlZip, createRapidmailDraft } from "@/lib/rapidmail";
 import {
   getSupabaseRenderedImageUrl,
@@ -30,10 +30,11 @@ import {
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 export const runtime = "nodejs";
 
-type ProjectRow = {
+type ShowcaseRow = {
   id: string;
   pretty_title?: string | null;
   name: string;
@@ -45,9 +46,9 @@ type ProjectRow = {
   created_at?: string | null;
 };
 
-type RawProjectItem = {
-  type: "project";
-  projectId: string;
+type RawShowcaseItem = {
+  type: "showcase";
+  showcaseId: string;
   layout?: unknown;
   aspect?: unknown;
   imageUrl?: unknown;
@@ -67,7 +68,7 @@ type RawBannerItem = {
   content?: unknown;
 };
 
-type RawNewsletterItem = RawProjectItem | RawButtonItem | RawBannerItem;
+type RawNewsletterItem = RawShowcaseItem | RawButtonItem | RawBannerItem;
 
 type NewsletterRequestBody = {
   action?: unknown;
@@ -75,9 +76,9 @@ type NewsletterRequestBody = {
   title?: unknown;
   subject?: unknown;
   intro?: unknown;
-  showProjectsHeading?: unknown;
+  showShowcasesHeading?: unknown;
   items?: unknown;
-  projectIds?: unknown;
+  showcaseIds?: unknown;
   fromName?: unknown;
   fromEmail?: unknown;
   recipientListId?: unknown;
@@ -100,7 +101,7 @@ const ASPECT_DIMENSIONS: Record<
 };
 
 const MAX_ITEMS = 80;
-const MAX_PROJECTS = 24;
+const MAX_SHOWCASES = 24;
 const MAX_HTML_BYTES = 90_000;
 const CALENDAR_TIMEOUT_MS = 15_000;
 const NEWSLETTER_ACTIONS = ["preview", "export", "draft"] as const;
@@ -122,7 +123,7 @@ const normalizeIdList = (value: unknown) => {
       value
         .map((entry) => textValue(entry, 200))
         .filter(Boolean)
-        .slice(0, MAX_PROJECTS),
+        .slice(0, MAX_SHOWCASES),
     ),
   );
 };
@@ -130,30 +131,32 @@ const normalizeIdList = (value: unknown) => {
 const normalizeRawItems = (body: NewsletterRequestBody) => {
   const source = Array.isArray(body.items)
     ? body.items
-    : normalizeIdList(body.projectIds).map((projectId) => ({
-        type: "project",
-        projectId,
+    : normalizeIdList(body.showcaseIds).map((showcaseId) => ({
+        type: "showcase",
+        showcaseId,
       }));
   const items: RawNewsletterItem[] = [];
-  const usedProjectIds = new Set<string>();
+  const usedShowcaseIds = new Set<string>();
 
   for (const candidate of source.slice(0, MAX_ITEMS)) {
     if (!candidate || typeof candidate !== "object") continue;
     const raw = candidate as Record<string, unknown>;
 
-    if (raw.type === "project") {
-      const projectId = textValue(raw.projectId, 200);
-      if (!projectId || usedProjectIds.has(projectId)) continue;
+    // Ältere Clients senden noch "project"/"projectId".
+    if (raw.type === "showcase" || raw.type === "project") {
+      const showcaseId =
+        textValue(raw.showcaseId, 200) || textValue(raw.projectId, 200);
+      if (!showcaseId || usedShowcaseIds.has(showcaseId)) continue;
       items.push({
-        type: "project",
-        projectId,
+        type: "showcase",
+        showcaseId,
         layout: raw.layout,
         aspect: raw.aspect,
         imageUrl: raw.imageUrl,
         showLink: raw.showLink,
         linkText: raw.linkText,
       });
-      usedProjectIds.add(projectId);
+      usedShowcaseIds.add(showcaseId);
       continue;
     }
 
@@ -191,7 +194,7 @@ const getPublicSiteUrl = (request: NextRequest) => {
   }
 };
 
-const projectImages = (row: ProjectRow) =>
+const showcaseImages = (row: ShowcaseRow) =>
   Array.from(
     new Set(
       [row.image, ...(row.images ?? [])].filter(
@@ -201,12 +204,12 @@ const projectImages = (row: ProjectRow) =>
     ),
   );
 
-const resolveProjectImage = (
-  row: ProjectRow,
+const resolveShowcaseImage = (
+  row: ShowcaseRow,
   requested: unknown,
   aspect: NewsletterAspect,
 ) => {
-  const images = projectImages(row);
+  const images = showcaseImages(row);
   const requestedImage = textValue(requested, 2_000);
   const source = images.includes(requestedImage)
     ? requestedImage
@@ -324,41 +327,41 @@ export const POST = async (request: NextRequest) => {
     }
 
     const rawItems = normalizeRawItems(body);
-    const projectItems = rawItems.filter(
-      (item): item is RawProjectItem => item.type === "project",
+    const showcaseItems = rawItems.filter(
+      (item): item is RawShowcaseItem => item.type === "showcase",
     );
-    if (projectItems.length === 0) {
+    if (showcaseItems.length === 0) {
       return NextResponse.json(
-        { error: "Wähle mindestens ein Projekt aus." },
+        { error: "Wähle mindestens einen Beitrag aus." },
         { status: 400 },
       );
     }
-    if (projectItems.length > MAX_PROJECTS) {
+    if (showcaseItems.length > MAX_SHOWCASES) {
       return NextResponse.json(
-        { error: `Es können höchstens ${MAX_PROJECTS} Projekte verwendet werden.` },
+        { error: `Es können höchstens ${MAX_SHOWCASES} Beiträge verwendet werden.` },
         { status: 400 },
       );
     }
 
     const adminSupabase = createSupabaseAdminClient();
-    const { data: projectRows, error: projectError } = await adminSupabase
+    const { data: showcaseRows, error: showcaseError } = await adminSupabase
       .from("resources")
       .select(
         "id, pretty_title, name, description, image, images, publish_date, updated_at, created_at, type",
       )
       .in(
         "id",
-        projectItems.map((item) => item.projectId),
+        showcaseItems.map((item) => item.showcaseId),
       )
-      .ilike("type", "project");
+      .ilike("type", SHOWCASE_RESOURCE_TYPE);
 
-    if (projectError) throw projectError;
+    if (showcaseError) throw showcaseError;
     const rowById = new Map(
-      ((projectRows ?? []) as ProjectRow[]).map((row) => [row.id, row]),
+      ((showcaseRows ?? []) as ShowcaseRow[]).map((row) => [row.id, row]),
     );
-    if (rowById.size !== projectItems.length) {
+    if (rowById.size !== showcaseItems.length) {
       return NextResponse.json(
-        { error: "Mindestens ein ausgewähltes Projekt ist nicht mehr verfügbar." },
+        { error: "Mindestens ein ausgewählter Beitrag ist nicht mehr verfügbar." },
         { status: 400 },
       );
     }
@@ -368,8 +371,8 @@ export const POST = async (request: NextRequest) => {
         ? normalizeLocale(body.locale)
         : DEFAULT_LOCALE;
     const baseUrl = getPublicSiteUrl(request);
-    const projects: NewsletterProject[] = projectItems.map((item) => {
-      const row = rowById.get(item.projectId)!;
+    const showcases: NewsletterShowcase[] = showcaseItems.map((item) => {
+      const row = rowById.get(item.showcaseId)!;
       const aspect = NEWSLETTER_ASPECTS.includes(
         String(item.aspect) as NewsletterAspect,
       )
@@ -377,7 +380,7 @@ export const POST = async (request: NextRequest) => {
         : "original";
       const href = new URL(
         localizePathname(
-          buildProjectPath({
+          buildShowcasePath({
             id: row.id,
             prettyTitle: row.pretty_title ?? null,
           }),
@@ -393,7 +396,7 @@ export const POST = async (request: NextRequest) => {
         date:
           row.publish_date ?? row.updated_at ?? row.created_at ?? "",
         url: href,
-        imageUrl: resolveProjectImage(row, item.imageUrl, aspect),
+        imageUrl: resolveShowcaseImage(row, item.imageUrl, aspect),
         layout: normalizeNewsletterLayout(item.layout),
         aspect,
         showLink: item.showLink !== false,
@@ -402,8 +405,8 @@ export const POST = async (request: NextRequest) => {
     });
 
     const items: NewsletterItem[] = rawItems.map((item) => {
-      if (item.type === "project") {
-        return { type: "project", projectId: item.projectId };
+      if (item.type === "showcase") {
+        return { type: "showcase", showcaseId: item.showcaseId };
       }
       if (item.type === "button") {
         return {
@@ -420,7 +423,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     const html = renderNewsletter({
-      projects,
+      showcases,
       items,
       title,
       subject,
@@ -429,7 +432,7 @@ export const POST = async (request: NextRequest) => {
       calendar: await getCalendar(
         new URL(localizePathname("/calendar", locale), baseUrl).toString(),
       ),
-      showProjectsHeading: body.showProjectsHeading !== false,
+      showShowcasesHeading: body.showShowcasesHeading !== false,
       membershipUrl:
         process.env.NEWSLETTER_MEMBERSHIP_URL ??
         "https://konglomerat.org/der-verein/mitglied-werden",
@@ -503,7 +506,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({
       ok: true,
       mailing,
-      counts: { projects: projects.length },
+      counts: { showcases: showcases.length },
     });
   } catch (error) {
     const message =

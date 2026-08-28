@@ -3,15 +3,14 @@
 import dynamic from "next/dynamic";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import Button from "@/app/[lang]/components/Button";
-import {
-  Checkbox,
-  FormField,
-  FormSection,
-  Input,
-  Select,
-  Textarea,
-} from "@/app/[lang]/components/ui/form";
+import Button from "@/components/knglmrt/Button";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
 import {
   isStoryImageModel,
@@ -29,7 +28,7 @@ const FabricStorySlideEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/50 ">
         <div className="flex aspect-[9/16] items-center justify-center bg-card text-sm text-muted-foreground">
           Fabric-Editor wird geladen...
         </div>
@@ -93,8 +92,8 @@ const formatUpdatedAt = (value: string | null) => {
 };
 
 const getKindLabel = (item: StorySelectableItem) =>
-  item.contentKind === "project"
-    ? "Projekt"
+  item.contentKind === "showcase"
+    ? "Beitrag"
     : item.resourceType?.trim() || "Ressource";
 
 const renderPreviewImage = (item: StorySelectableItem) => {
@@ -111,7 +110,7 @@ const renderPreviewImage = (item: StorySelectableItem) => {
 
 const DEFAULT_VISIBLE_ITEM_COUNT = 9;
 const DEFAULT_LAYOUT_INSTRUCTIONS =
-  "Erstelle und layoute eine Instagramstory, Kontext: Projekt des Monats. Sehr einfaches Layout, nicht hochtrabend, eher informativ. Die Story darf mehrseitig werden. Starte mit Seite 1. Die erste Seite soll vor allem das Ergebnis zeigen. Grosse Bilder. Verwende als Stil die Vorlage im letzten Bild. Den Text darfst du kuerzen und optimieren.";
+  "Erstelle und layoute eine Instagramstory, Kontext: Beitrag des Monats. Sehr einfaches Layout, nicht hochtrabend, eher informativ. Die Story darf mehrseitig werden. Starte mit Seite 1. Die erste Seite soll vor allem das Ergebnis zeigen. Grosse Bilder. Verwende als Stil die Vorlage im letzten Bild. Den Text darfst du kuerzen und optimieren.";
 
 const isGeneratedImageModel = (model: StoryRenderModel) =>
   isStoryImageModel(model);
@@ -154,8 +153,8 @@ function SelectableGrid({
             onClick={() => onSelect(item.id)}
             className={`overflow-hidden rounded-lg border text-left transition ${
               isSelected
-                ? "border-primary bg-primary-soft shadow-sm"
-                : "border-border bg-card hover:border-input hover:shadow-sm"
+                ? "border-primary bg-primary-soft "
+                : "border-border bg-card hover:border-input "
             }`}
           >
             {imageUrl ? (
@@ -224,7 +223,7 @@ export default function GenerateStoryClient({
     "VORNAME hat mal wieder gewerkelt. INFOS ZUM PROJEKT. Schreibe witzig.",
   );
   const [query, setQuery] = useState("");
-  const [kindFilter, setKindFilter] = useState<"all" | "project" | "resource">(
+  const [kindFilter, setKindFilter] = useState<"all" | "showcase" | "resource">(
     "all",
   );
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.id ?? "");
@@ -424,7 +423,7 @@ export default function GenerateStoryClient({
 
   const handleGenerate = async () => {
     if (!selectedItemId) {
-      setSubmitError("Waehle zuerst eine Ressource oder ein Projekt aus.");
+      setSubmitError("Waehle zuerst eine Ressource oder einen Beitrag aus.");
       return;
     }
 
@@ -477,43 +476,36 @@ export default function GenerateStoryClient({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Admin: Storys erzeugen
-        </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Waehle eine Ressource oder ein Projekt, lasse kurze Story-Texte per
-          OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als
-          PNG herunter.
-        </p>
-      </header>
+      <SubPageTitle
+        ressort="oeffentlichkeitsarbeit"
+        title="Storys erzeugen"
+        subTitle="Waehle eine Ressource oder einen Beitrag, lasse kurze Story-Texte per OpenAI vorschlagen und lade die gerenderten Story-Bilder direkt als PNG herunter."
+      />
 
       <FormSection
         title="Auswahl"
-        description="Der Generator arbeitet mit beliebigen Ressourcen und Projekten aus der Plattform. Es wird immer nur ein Eintrag gleichzeitig verarbeitet."
+        description="Der Generator arbeitet mit beliebigen Ressourcen und Beitraegen aus der Plattform. Es wird immer nur ein Eintrag gleichzeitig verarbeitet."
       >
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-          <FormField label="Suche">
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Nach Name, Beschreibung oder Typ filtern"
-            />
-          </FormField>
-          <FormField label="Typ">
-            <Select
-              value={kindFilter}
-              onChange={(event) =>
-                setKindFilter(
-                  event.target.value as "all" | "project" | "resource",
-                )
-              }
-            >
-              <option value="all">Alles</option>
-              <option value="project">Projekte</option>
-              <option value="resource">Ressourcen</option>
-            </Select>
-          </FormField>
+          <Field
+            label="Suche"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Nach Name, Beschreibung oder Typ filtern"
+          />
+          <NativeSelect
+            label="Typ"
+            value={kindFilter}
+            onChange={(event) =>
+              setKindFilter(
+                event.target.value as "all" | "showcase" | "resource",
+              )
+            }
+          >
+            <option value="all">Alles</option>
+            <option value="showcase">Hier entstanden</option>
+            <option value="resource">Ressourcen</option>
+          </NativeSelect>
         </div>
 
         <div className="mt-6">
@@ -550,7 +542,7 @@ export default function GenerateStoryClient({
         description="OpenAI erzeugt einen ersten Textentwurf. Danach kannst du jede Zeile anpassen und die Vorschau ohne neue Generierung aktualisiert sich automatisch."
       >
         <div className="grid gap-4 lg:grid-cols-2">
-          <FormField label="Ausgewaehlter Eintrag">
+          <FieldShell as="div" label="Ausgewaehlter Eintrag">
             <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
               {selectedItem ? (
                 <div className="space-y-1">
@@ -568,74 +560,63 @@ export default function GenerateStoryClient({
                 "Noch nichts ausgewaehlt."
               )}
             </div>
-          </FormField>
+          </FieldShell>
 
-          <FormField label="Anzahl Slides">
-            <Select
-              value={slideCount}
-              onChange={(event) => {
-                setSlideCount(event.target.value as "1" | "2");
-                clearDraftMessages();
-              }}
-            >
-              <option value="1">1 Slide</option>
-              <option value="2">2 Slides</option>
-            </Select>
-          </FormField>
+          <NativeSelect
+            label="Anzahl Slides"
+            value={slideCount}
+            onChange={(event) => {
+              setSlideCount(event.target.value as "1" | "2");
+              clearDraftMessages();
+            }}
+          >
+            <option value="1">1 Slide</option>
+            <option value="2">2 Slides</option>
+          </NativeSelect>
 
-          <FormField
+          <Textarea
             label="Basisprompt"
             className="lg:col-span-2"
             hint="Platzhalter: VORNAME und INFOS ZUM PROJEKT werden automatisch ersetzt."
-          >
-            <Textarea
-              value={basePrompt}
-              onChange={(event) => setBasePrompt(event.target.value)}
-              className="min-h-20"
-              placeholder="VORNAME hat mal wieder gewerkelt. INFOS ZUM PROJEKT. Schreibe witzig."
-            />
-          </FormField>
+            value={basePrompt}
+            onChange={(event) => setBasePrompt(event.target.value)}
+            textareaClassName="min-h-20"
+            placeholder="VORNAME hat mal wieder gewerkelt. INFOS ZUM PROJEKT. Schreibe witzig."
+          />
 
-          <FormField
+          <Textarea
             label="Zusatzanweisungen fuer OpenAI"
             className="lg:col-span-2"
             hint="Zum Beispiel: eher sachlich, eher werkstattnah, Fokus auf Material, ohne Call-to-Action."
-          >
-            <Textarea
-              value={customInstructions}
-              onChange={(event) => setCustomInstructions(event.target.value)}
-              placeholder="Optional: besonderer Ton, Fokus oder Formulierungshinweise"
-            />
-          </FormField>
+            value={customInstructions}
+            onChange={(event) => setCustomInstructions(event.target.value)}
+            placeholder="Optional: besonderer Ton, Fokus oder Formulierungshinweise"
+          />
 
-          <FormField
+          <Textarea
             label="Bild- und Layout-Anweisungen"
             className="lg:col-span-2"
             hint="Fuer GPT + Fabric steuert das die Layout-Generierung. Fuer Nano Banana und OpenAI ImageGen wird daraus der Prompt fuer das fertige Story-Bild gebaut. Seite 1 nutzt samplecover.png als Stilvorlage, Seite 2 nutzt makingof.png als Stilvorlage."
-          >
-            <Textarea
-              value={layoutInstructions}
-              onChange={(event) => setLayoutInstructions(event.target.value)}
-              placeholder="Hinweise fuer Bildaufbau und Textplatzierung"
-            />
-          </FormField>
+            value={layoutInstructions}
+            onChange={(event) => setLayoutInstructions(event.target.value)}
+            placeholder="Hinweise fuer Bildaufbau und Textplatzierung"
+          />
 
-          <FormField label="Ausgabe-Modell">
-            <Select
-              value={renderModel}
-              onChange={(event) => {
-                setRenderModel(event.target.value as StoryRenderModel);
-                clearDraftMessages();
-              }}
-            >
-              <option value="gpt-4.1-mini">GPT + Fabric</option>
-              <option value="gemini-3.1-flash-image">Nano Banana 2</option>
-              <option value="gemini-3.1-flash-lite-image">
-                Nano Banana 2 Lite (schnell)
-              </option>
-              <option value="gpt-image-2">OpenAI GPT Image 2</option>
-            </Select>
-          </FormField>
+          <NativeSelect
+            label="Ausgabe-Modell"
+            value={renderModel}
+            onChange={(event) => {
+              setRenderModel(event.target.value as StoryRenderModel);
+              clearDraftMessages();
+            }}
+          >
+            <option value="gpt-4.1-mini">GPT + Fabric</option>
+            <option value="gemini-3.1-flash-image">Nano Banana 2</option>
+            <option value="gemini-3.1-flash-lite-image">
+              Nano Banana 2 Lite (schnell)
+            </option>
+            <option value="gpt-image-2">OpenAI GPT Image 2</option>
+          </NativeSelect>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -672,7 +653,7 @@ export default function GenerateStoryClient({
                 : "Layout neu anordnen"}
           </Button>
           {!isGeneratedImageModel(renderModel) ? (
-            <Checkbox
+            <Choice
               label="Text auf dem Bild anzeigen"
               checked={showTextOverlay}
               onChange={(event) => setShowTextOverlay(event.target.checked)}
@@ -681,25 +662,25 @@ export default function GenerateStoryClient({
         </div>
 
         {submitError ? (
-          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive ">
             {submitError}
           </div>
         ) : null}
 
         {submitWarning ? (
-          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
+          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning ">
             {submitWarning}
           </div>
         ) : null}
 
         {layoutError ? (
-          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
+          <div className="mt-4 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive ">
             {layoutError}
           </div>
         ) : null}
 
         {layoutWarning ? (
-          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning shadow-sm">
+          <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning ">
             {layoutWarning}
           </div>
         ) : null}
@@ -729,31 +710,28 @@ export default function GenerateStoryClient({
                   <h3 className="text-base font-semibold text-foreground">
                     Slide {index + 1}
                   </h3>
-                  <FormField label="Kicker">
-                    <Input
-                      value={slide.kicker}
-                      onChange={(event) =>
-                        updateSlide(index, "kicker", event.target.value)
-                      }
-                    />
-                  </FormField>
-                  <FormField label="Headline">
-                    <Textarea
-                      value={slide.headline}
-                      onChange={(event) =>
-                        updateSlide(index, "headline", event.target.value)
-                      }
-                      className="min-h-20"
-                    />
-                  </FormField>
-                  <FormField label="Body">
-                    <Textarea
-                      value={slide.body}
-                      onChange={(event) =>
-                        updateSlide(index, "body", event.target.value)
-                      }
-                    />
-                  </FormField>
+                  <Field
+                    label="Kicker"
+                    value={slide.kicker}
+                    onChange={(event) =>
+                      updateSlide(index, "kicker", event.target.value)
+                    }
+                  />
+                  <Textarea
+                    label="Headline"
+                    value={slide.headline}
+                    onChange={(event) =>
+                      updateSlide(index, "headline", event.target.value)
+                    }
+                    textareaClassName="min-h-20"
+                  />
+                  <Textarea
+                    label="Body"
+                    value={slide.body}
+                    onChange={(event) =>
+                      updateSlide(index, "body", event.target.value)
+                    }
+                  />
                 </div>
               ))}
             </div>
@@ -787,7 +765,7 @@ export default function GenerateStoryClient({
                 generatedImages.map((image) => (
                   <div
                     key={image.fileName}
-                    className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm"
+                    className="overflow-hidden rounded-lg border border-border bg-muted/50 "
                   >
                     <img
                       src={image.dataUrl}

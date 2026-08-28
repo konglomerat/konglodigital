@@ -68,7 +68,7 @@ export default async function CalendarPage() {
         {days.map((day) => (
           <section
             key={day.key}
-            className="rounded-lg border border-border bg-card p-4 shadow-sm"
+            className="knglmrt-border-section bg-card p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-foreground">

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { getCampaiMemberContactById } from "@/lib/campai-contacts";
 import {
   getMemberProfileByUserId,
   mergeUserMetadataWithMemberProfile,
@@ -19,21 +18,16 @@ export const GET = async (request: NextRequest) => {
   }
 
   const user = data.user;
-  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
-  const roles = await getUserRoles(supabase, user);
-  let liveCampaiName: string | null = null;
+  // Profil und Rollen hängen nicht voneinander ab — parallel abfragen spart
+  // eine komplette Roundtrip-Zeit auf der Kontoseite.
+  const [memberProfile, roles] = await Promise.all([
+    getMemberProfileByUserId(supabase, user.id),
+    getUserRoles(supabase, user),
+  ]);
 
-  if (memberProfile?.campaiContactId) {
-    try {
-      const linkedContact = await getCampaiMemberContactById(
-        memberProfile.campaiContactId,
-      );
-      liveCampaiName = linkedContact?.name?.trim() || null;
-    } catch {
-      liveCampaiName = null;
-    }
-  }
-
+  // Bewusst ohne Campai-Aufruf: der Live-Namensabgleich blättert durch alle
+  // Kontakte und lag damit vor jeder Antwort. Er hat jetzt eine eigene Route
+  // (/api/account/campai-name), die niemand blockiert.
   const metadata = mergeUserMetadataWithMemberProfile(
     user.user_metadata ?? {},
     memberProfile,
@@ -44,7 +38,6 @@ export const GET = async (request: NextRequest) => {
       email: user.email ?? "",
       metadata: {
         ...metadata,
-        ...(liveCampaiName ? { campai_name: liveCampaiName } : {}),
         roles,
         role: getLegacyUserRole(roles),
         rights: getUserRightsFromAppMetadata(user),

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { MemberProfile } from "@/lib/member-profiles";
 import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 export type CampaiSyncStatus = "pending" | "synced" | "failed" | "skipped";
 
@@ -202,7 +203,7 @@ const mapLocalResourceTypeToCampai = (value: string | null | undefined) => {
       return normalized;
     case "furniture":
       return "object";
-    case "project":
+    case SHOWCASE_RESOURCE_TYPE:
       return null;
     default:
       return "other";
@@ -1072,7 +1073,7 @@ const upsertCampaiResource = async (
   if (!type) {
     return {
       skipped: true as const,
-      reason: "Projects are not synced to Campai rentals.",
+      reason: "Showcases are not synced to Campai rentals.",
     };
   }
 

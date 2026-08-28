@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 
 declare global {
   interface Window {

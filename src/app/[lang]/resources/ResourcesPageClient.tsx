@@ -29,8 +29,11 @@ import {
   RESOURCES_NAMESPACE,
   type Locale,
 } from "@/i18n/config";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import PageTitle from "../components/PageTitle";
-import { Input, Select } from "../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +47,8 @@ import {
   getResourceMediaKindFromUrl,
   getResourcePreviewUrl,
 } from "@/lib/resource-media";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import Choice from "@/components/knglmrt/Choice";
 
 type Resource = ResourcePayload;
 
@@ -56,11 +61,15 @@ type ResourceCardProps = {
   onNavigate?: () => void;
 };
 
+type ResourcesDataPayload = {
+  resources: Resource[];
+  count: number | null;
+  errorMessage: string | null;
+};
+
 type ResourcesPageClientProps = {
-  initialResources: Resource[];
-  initialMapBasemapResources: Resource[];
-  initialCount: number | null;
-  initialErrorMessage: string | null;
+  resourcesPromise: Promise<ResourcesDataPayload>;
+  mapBasemapResourcesPromise: Promise<{ resources: Resource[] }>;
   initialQueryText: string;
   initialResourceType: string;
 };
@@ -72,7 +81,6 @@ type ResourcesListResponse = {
 };
 
 const RESOURCES_PAGE_SIZE = 100;
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 const highlightText = (text: string, term: string): ReactNode => {
   const normalizedTerm = term.trim();
@@ -262,22 +270,22 @@ const ResourceCard = ({
 
         {hasCarousel ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              type="button"
+            <Button
+              kind="secondary"
+              iconOnly
+              icon={faChevronLeft}
               aria-label={tx("Previous image")}
               onClick={handlePrev}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
-            </button>
-            <button
-              type="button"
+              className="pointer-events-auto"
+            />
+            <Button
+              kind="secondary"
+              iconOnly
+              icon={faChevronRight}
               aria-label={tx("Next image")}
               onClick={handleNext}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
-            >
-              <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
-            </button>
+              className="pointer-events-auto"
+            />
           </div>
         ) : null}
 
@@ -289,7 +297,7 @@ const ResourceCard = ({
                 type="button"
                 aria-label={`${tx("Image")} ${index + 1}`}
                 onClick={(event) => handleDotClick(event, index)}
-                className={`pointer-events-auto h-1.5 w-1.5 rounded-full transition ${
+                className={`pointer-events-auto h-1.5 w-1.5 transition ${
                   index === activeIndex ? "bg-card" : "bg-card/50"
                 }`}
               />
@@ -356,11 +364,22 @@ const ResourceCard = ({
   );
 };
 
+const RESOURCE_SKELETON_COUNT = 6;
+
+const ResourceCardSkeleton = () => (
+  <div className="animate-pulse overflow-hidden rounded-lg border border-border bg-card">
+    <div className="aspect-[4/3.7] w-full bg-muted" />
+    <div className="space-y-3 p-4">
+      <div className="h-4 w-2/3 rounded bg-muted" />
+      <div className="h-3 w-full rounded bg-muted" />
+      <div className="h-3 w-4/5 rounded bg-muted" />
+    </div>
+  </div>
+);
+
 export default function ResourcesPageClient({
-  initialResources,
-  initialMapBasemapResources,
-  initialCount,
-  initialErrorMessage,
+  resourcesPromise,
+  mapBasemapResourcesPromise,
   initialQueryText,
   initialResourceType,
 }: ResourcesPageClientProps) {
@@ -390,15 +409,16 @@ export default function ResourcesPageClient({
   );
   const [hasMapVisibilitySnapshot, setHasMapVisibilitySnapshot] =
     useState(false);
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [count, setCount] = useState<number | null>(initialCount);
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    initialErrorMessage,
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [count, setCount] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mapBasemapResources, setMapBasemapResources] = useState<Resource[]>(
+    [],
   );
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [syncingCampai, setSyncingCampai] = useState(false);
   const normalizedSearchTerm = searchTerm.trim();
-  const loading = false;
   const resourceTypes = useMemo(
     () =>
       Array.from(
@@ -408,7 +428,7 @@ export default function ResourcesPageClient({
             .filter(
               (resourceType): resourceType is string =>
                 typeof resourceType === "string" &&
-                resourceType.toLowerCase() !== INVENTORY_HIDDEN_RESOURCE_TYPE,
+                resourceType.toLowerCase() !== SHOWCASE_RESOURCE_TYPE,
             ),
         ),
       ).sort((left, right) => left.localeCompare(right)),
@@ -418,7 +438,7 @@ export default function ResourcesPageClient({
     const optionsByValue = new Map<string, string>();
 
     Object.entries(RESOURCE_TYPES).forEach(([value, config]) => {
-      if (value === INVENTORY_HIDDEN_RESOURCE_TYPE) {
+      if (value === SHOWCASE_RESOURCE_TYPE) {
         return;
       }
       optionsByValue.set(value, config.label);
@@ -440,13 +460,68 @@ export default function ResourcesPageClient({
   }, [resourceTypes, selectedResourceType]);
 
   useEffect(() => {
-    setResources(initialResources);
-    setCount(initialCount);
-    setErrorMessage(initialErrorMessage);
+    let cancelled = false;
+
+    setLoading(true);
+    setResources([]);
+    setCount(null);
+    setErrorMessage(null);
     setVisibleMapResourceIds([]);
     setHasMapVisibilitySnapshot(false);
     setLoadingMore(false);
-  }, [initialCount, initialErrorMessage, initialResources]);
+
+    // Promises handed over from a server component are React thenables whose
+    // `then` returns undefined, so they cannot be chained - await them instead.
+    void (async () => {
+      try {
+        const payload = await resourcesPromise;
+        if (cancelled) {
+          return;
+        }
+        setResources(payload.resources);
+        setCount(payload.count);
+        setErrorMessage(payload.errorMessage);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setErrorMessage(
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load resources.",
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resourcesPromise]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const payload = await mapBasemapResourcesPromise;
+        if (!cancelled) {
+          setMapBasemapResources(payload.resources);
+        }
+      } catch {
+        if (!cancelled) {
+          setMapBasemapResources([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapBasemapResourcesPromise]);
 
   const parseBooleanUrlParam = useCallback((value: string | null) => {
     if (value === null) {
@@ -722,10 +797,7 @@ export default function ResourcesPageClient({
     if (!hasRestoredState) {
       return;
     }
-    if (
-      selectedResourceType.trim().toLowerCase() ===
-      INVENTORY_HIDDEN_RESOURCE_TYPE
-    ) {
+    if (selectedResourceType.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE) {
       setSelectedResourceType("");
       replaceFilterParamsInUrl(
         searchTerm.trim(),
@@ -850,12 +922,12 @@ export default function ResourcesPageClient({
 
   const normalizedMapBasemapResources = useMemo(
     () =>
-      initialMapBasemapResources.map((resource) => ({
+      mapBasemapResources.map((resource) => ({
         ...resource,
         image: resource.image ?? null,
         images: resource.images ?? (resource.image ? [resource.image] : null),
       })),
-    [initialMapBasemapResources],
+    [mapBasemapResources],
   );
 
   const searchAndTypeFilteredResources = normalizedResources;
@@ -906,6 +978,7 @@ export default function ResourcesPageClient({
     normalizedSearchTerm === initialQueryText &&
     selectedResourceType.trim() === initialResourceType;
   const canLoadMore =
+    !loading &&
     filtersMatchLoadedResources &&
     (count === null || resources.length < count);
 
@@ -999,7 +1072,7 @@ export default function ResourcesPageClient({
   }, [tx]);
 
   return (
-    <main className="flex min-h-screen w-full max-w-none flex-col gap-8">
+    <div className="flex flex-col gap-8">
       <PageTitle
         title={tx("Inventar", "de")}
         subTitle={tx(
@@ -1039,34 +1112,31 @@ export default function ResourcesPageClient({
       />
 
       <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setViewMode("list")}
-          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-            viewMode === "list"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <span className="inline-flex items-center gap-2">
-            <FontAwesomeIcon icon={faList} className="text-[10px]" />
-            {tx("List view")}
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode("map")}
-          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-            viewMode === "map"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <span className="inline-flex items-center gap-2">
-            <FontAwesomeIcon icon={faMap} className="text-[10px]" />
-            {tx("Map view")}
-          </span>
-        </button>
+        <SegmentedControl
+          value={viewMode}
+          size="small"
+          onChange={setViewMode}
+          options={[
+            {
+              value: "list" as const,
+              label: (
+                <>
+                  <FontAwesomeIcon icon={faList} className="text-[10px]" />
+                  {tx("List view")}
+                </>
+              ),
+            },
+            {
+              value: "map" as const,
+              label: (
+                <>
+                  <FontAwesomeIcon icon={faMap} className="text-[10px]" />
+                  {tx("Map view")}
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {errorMessage ? (
@@ -1075,7 +1145,7 @@ export default function ResourcesPageClient({
         </section>
       ) : null}
 
-      <section className="grid w-full flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
         <div className={`${viewMode === "list" ? "block" : "hidden"} lg:block`}>
           <section className="space-y-4">
             <div className="relative">
@@ -1086,7 +1156,7 @@ export default function ResourcesPageClient({
                 icon={faMagnifyingGlass}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
               />
-              <Input
+              <Field
                 id="resource-search"
                 type="search"
                 value={searchTerm}
@@ -1099,30 +1169,30 @@ export default function ResourcesPageClient({
                 }}
                 aria-label={tx("Search resources")}
                 placeholder={tx("Search by name, tag, or category")}
-                className="pl-9 pr-10 py-3 text-base"
+                inputClassName="pl-9 pr-10 py-3 text-base"
               />
               {searchTerm.trim().length > 0 ? (
-                <button
-                  type="button"
+                <Button
+                  kind="ghost"
+                  iconOnly
+                  icon={faXmark}
                   aria-label={tx("Clear search")}
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
-                </button>
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
               ) : null}
             </div>
 
             <TooltipProvider delayDuration={200}>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="w-full sm:w-auto sm:min-w-30">
-                  <Select
+                  <NativeSelect
                     value={selectedResourceType}
                     onChange={(event) =>
                       handleResourceTypeChange(event.target.value)
                     }
                     aria-label={tx("Filter by resource type")}
-                    className="py-2 text-xs font-semibold text-foreground"
+                    selectClassName="py-2 text-xs font-semibold text-foreground"
                   >
                     <option value="">{tx("All types")}</option>
                     {resourceTypeOptions.map((resourceType) => (
@@ -1133,12 +1203,24 @@ export default function ResourcesPageClient({
                         {resourceType.label}
                       </option>
                     ))}
-                  </Select>
+                  </NativeSelect>
                 </div>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
+                <span className="inline-flex">
+                  <Choice
+                    className="items-center"
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{tx("Filter by map viewport")}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {tx(
+                            "Only show resources that are currently visible in the map area.",
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    }
                     checked={filterByMapView}
                     onChange={(event) => {
                       const nextValue = event.target.checked;
@@ -1150,23 +1232,24 @@ export default function ResourcesPageClient({
                         includeWithinPolygons,
                       );
                     }}
-                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{tx("Filter by map viewport")}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {tx(
-                        "Only show resources that are currently visible in the map area.",
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </label>
+                </span>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
+                <span className="inline-flex">
+                  <Choice
+                    className="items-center"
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{tx("Show resources in rooms")}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {tx(
+                            "Also include resources that are placed inside mapped room areas when searching for rooms.",
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    }
                     checked={includeWithinPolygons}
                     onChange={(event) => {
                       const nextValue = event.target.checked;
@@ -1179,19 +1262,8 @@ export default function ResourcesPageClient({
                       );
                     }}
                     disabled={normalizedSearchTerm.length === 0}
-                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{tx("Show resources in rooms")}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {tx(
-                        "Also include resources that are placed inside mapped room areas when searching for rooms.",
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </label>
+                </span>
 
                 <div className="ml-auto hidden text-right md:block">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1209,9 +1281,17 @@ export default function ResourcesPageClient({
 
           <section className="relative mt-6">
             {visibleResources.length === 0 && loading ? (
-              <p className="text-sm text-muted-foreground">
-                {tx("Loading resources...")}
-              </p>
+              <div
+                className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3"
+                aria-busy="true"
+                aria-label={tx("Loading resources...")}
+              >
+                {Array.from({ length: RESOURCE_SKELETON_COUNT }).map(
+                  (_, index) => (
+                    <ResourceCardSkeleton key={index} />
+                  ),
+                )}
+              </div>
             ) : visibleResources.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {tx("No resources found.")}
@@ -1234,20 +1314,20 @@ export default function ResourcesPageClient({
 
                 {canLoadMore ? (
                   <div className="mt-6 flex justify-center">
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
                       onClick={handleLoadMore}
-                      disabled={loadingMore}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-input bg-card px-5 py-2 text-sm font-semibold text-foreground transition hover:border-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      loading={loadingMore}
                     >
                       {loadingMore ? tx("Loading more...") : tx("Load more")}
-                    </button>
+                    </Button>
                   </div>
                 ) : null}
               </>
             )}
             {loading ? (
-              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground ">
                 {tx("Loading...")}
               </div>
             ) : null}
@@ -1257,13 +1337,13 @@ export default function ResourcesPageClient({
         <aside
           className={`${viewMode === "map" ? "block" : "hidden"} lg:block`}
         >
-          <div className="rounded-lg lg:sticky lg:top-[30px] lg:h-[calc(100vh-60px)]">
+          <div className="flex flex-col lg:sticky lg:top-[86px] lg:h-[calc(100vh-102px)]">
             <ResourcesMapView
               resources={mapOverlayResources}
               pointResources={searchAndTypeFilteredResources}
               highlightedResourceId={hoveredResourceId}
               onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
-              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-full"
+              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-auto lg:min-h-0 lg:flex-1"
             />
             <p className="mt-2 text-xs text-muted-foreground">
               {tx("Showing resources with saved locations.")}
@@ -1271,6 +1351,6 @@ export default function ResourcesPageClient({
           </div>
         </aside>
       </section>
-    </main>
+    </div>
   );
 }
