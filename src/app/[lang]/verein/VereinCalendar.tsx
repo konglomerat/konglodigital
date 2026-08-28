@@ -90,7 +90,7 @@ const groupByMonth = (events: CalendarEvent[]): CalendarMonth[] => {
 /** Der Rahmen — geteilt von Skelett, Fehlerfall und gefülltem Panel. */
 function CalendarPanel({ children }: { children: ReactNode }) {
   return (
-    <div className="border border-foreground bg-card">
+    <div className="knglmrt-border bg-card">
       <div className="flex items-baseline gap-2.5 bg-[var(--knglmrt-dark-100)] px-3.5 py-3 text-white">
         <span className="font-[family-name:var(--font-display)] text-[17px] font-black leading-5">
           Kalender
@@ -100,7 +100,7 @@ function CalendarPanel({ children }: { children: ReactNode }) {
         </span>
       </div>
       {children}
-      <div className="border-t border-foreground px-3.5 py-[11px]">
+      <div className="knglmrt-border-t px-3.5 py-[11px]">
         <Link href="/calendar" className="text-primary hover:text-primary/80">
           Ganzer Kalender
         </Link>
@@ -113,7 +113,7 @@ function MonthBand({ label, first }: { label: string; first: boolean }) {
   return (
     <div
       className={`knglmrt-caption bg-muted px-3.5 py-[7px] text-[var(--knglmrt-brown-100)]${
-        first ? "" : " border-t border-foreground"
+        first ? "" : " knglmrt-border-t"
       }`}
     >
       {label}

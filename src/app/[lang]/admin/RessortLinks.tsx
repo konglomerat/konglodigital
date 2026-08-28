@@ -8,7 +8,7 @@ export type RessortLink = {
 };
 
 const tileClassName =
-  "flex flex-col gap-1.5 border border-foreground bg-card p-[18px]";
+  "flex flex-col gap-1.5 knglmrt-border bg-card p-[18px]";
 
 export default function RessortLinks({ links }: { links: RessortLink[] }) {
   return (

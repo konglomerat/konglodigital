@@ -384,7 +384,7 @@ const CashflowChart = ({
           Ausgaben
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-px w-5 border-t border-dashed border-foreground/70" />
+          <span className="h-px w-5 border-t border-dashed border-hairline/70" />
           Saldo-Trend
         </span>
       </div>
@@ -1132,7 +1132,7 @@ export default function KoFiPage() {
               aria-label={option.buttonLabel}
               className={`min-w-0 rounded-full border px-2 py-2 text-sm font-medium transition sm:px-4 ${
                 viewMode === option.value
-                  ? "border-foreground bg-foreground text-background"
+                  ? "border-hairline bg-foreground text-background"
                   : "border-input bg-card text-foreground/80 hover:border-ring/80"
               }`}
             >

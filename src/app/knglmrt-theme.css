@@ -11,11 +11,11 @@
 
 :root {
   --background: #ffffff;            /* Papier */
-  --foreground: #000000;            /* Tinte — Body ist pures Schwarz */
+  --foreground: #2E3846;            /* Tinte — Body ist pures Schwarz */
   --card: #ffffff;
-  --card-foreground: #000000;
+  --card-foreground: #2E3846;
   --popover: #ffffff;
-  --popover-foreground: #000000;
+  --popover-foreground: #2E3846;
 
   --primary: #c83669;               /* knglmrt-pink-100 — nur Akzent, nie Fläche */
   --primary-foreground: #ffffff;
@@ -24,11 +24,11 @@
   --primary-hairline: #f4dce5;      /* pink-15 — die zarte Kachelkontur */
 
   --secondary: #f3f3f3;             /* paper-grey */
-  --secondary-foreground: #000000;
+  --secondary-foreground: #2E3846;
   --muted: #f3f3f3;
   --muted-foreground: #828891;      /* dark-60 */
   --accent: #ffd93d;                /* yellow-100 */
-  --accent-foreground: #000000;
+  --accent-foreground: #2E3846;
 
   /* Die Palette kennt kein Grün/Rot: Status läuft über pink/gelb/blau. */
   --destructive: #c83669;
@@ -53,6 +53,10 @@
   --border: #c1c3c9;                /* dark-30 — Hairlines */
   --input: #000000;                 /* Kontur: 1px Schwarz um Formulare */
   --ring: #000000;                  /* Fokus: schwarze Outline */
+
+  --hairline-width: 2px;
+  --hairline-color: var(--foreground);
+  --hairline: var(--hairline-width) solid var(--hairline-color);
 
   --chart-1: #c83669;
   --chart-2: #ffd93d;
@@ -303,6 +307,20 @@
   .knglmrt-terrazzo-hover::before {
     transition: none;
   }
+}
+
+/*
+ * Die schwarze Kontur als Utility — Breite und Farbe kommen aus
+ * --hairline-width / --hairline-color, nicht aus Tailwinds border-Skala.
+ */
+@layer components {
+  .knglmrt-border   { border: var(--hairline); }
+  .knglmrt-border-t { border-top: var(--hairline); }
+  .knglmrt-border-b { border-bottom: var(--hairline); }
+  .knglmrt-border-l { border-left: var(--hairline); }
+  .knglmrt-border-r { border-right: var(--hairline); }
+  .knglmrt-border-x { border-inline: var(--hairline); }
+  .knglmrt-border-y { border-block: var(--hairline); }
 }
 
 .knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 #000; }

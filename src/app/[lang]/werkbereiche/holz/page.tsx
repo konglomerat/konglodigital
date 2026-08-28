@@ -60,7 +60,7 @@ const SELF_SERVICE_TILES = [
 export default function HolzwerkstattPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)] xl:grid-cols-[212px_minmax(0,1fr)_300px]">
-      <WerkbereichSideNav className="border-r border-foreground">
+      <WerkbereichSideNav className="knglmrt-border-r">
         <div className="px-3.5">
           <Divider number={4} height={9} color="var(--foreground)" />
         </div>
@@ -89,12 +89,12 @@ export default function HolzwerkstattPage() {
         </div>
 
         {/* ---------- Projekte & News ---------- */}
-        <section className="mt-6 border-t border-foreground pt-6 pb-7">
+        <section className="mt-6 knglmrt-border-t pt-6 pb-7">
           <h2 className="mb-3.5">Projekte &amp; News</h2>
 
           <div className="mb-5 grid gap-3.5 sm:grid-cols-2">
-            <article className="border border-foreground bg-card transition hover:bg-primary-soft">
-              <div className="flex h-[110px] items-center justify-center border-b border-foreground bg-muted">
+            <article className="knglmrt-border bg-card transition hover:bg-primary-soft">
+              <div className="flex h-[110px] items-center justify-center knglmrt-border-b bg-muted">
                 <Hand number={4} size={64} color="var(--foreground)" />
               </div>
               <div className="px-3.5 py-3">
@@ -105,8 +105,8 @@ export default function HolzwerkstattPage() {
               </div>
             </article>
 
-            <article className="border border-foreground bg-card transition hover:bg-primary-soft">
-              <div className="flex h-[110px] items-center justify-center border-b border-foreground bg-muted">
+            <article className="knglmrt-border bg-card transition hover:bg-primary-soft">
+              <div className="flex h-[110px] items-center justify-center knglmrt-border-b bg-muted">
                 <Face number={19} size={64} color="var(--foreground)" />
               </div>
               <div className="px-3.5 py-3">
@@ -141,7 +141,7 @@ export default function HolzwerkstattPage() {
         </section>
 
         {/* ---------- Self-Service ---------- */}
-        <section className="border-t border-foreground pt-6 pb-7">
+        <section className="knglmrt-border-t pt-6 pb-7">
           <div className="mb-1 flex flex-wrap items-baseline gap-3">
             <h2>Self-Service</h2>
             <Badge tone="wartet">nur für Mitglieder</Badge>
@@ -156,7 +156,7 @@ export default function HolzwerkstattPage() {
               <Link
                 key={tile.title}
                 href={tile.href}
-                className={`group flex min-h-20 flex-col justify-center gap-1 border border-foreground px-5 py-4 transition-[background-color,color,rotate] duration-300 ease-out hover:rotate-0 hover:text-white focus-visible:rotate-0 focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground motion-reduce:transform-none ${tile.style} ${tile.rotation}`}
+                className={`group flex min-h-20 flex-col justify-center gap-1 knglmrt-border px-5 py-4 transition-[background-color,color,rotate] duration-300 ease-out hover:rotate-0 hover:text-white focus-visible:rotate-0 focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground motion-reduce:transform-none ${tile.style} ${tile.rotation}`}
               >
                 <span className="knglmrt-card-title">{tile.title}</span>
                 <span className="text-muted-foreground group-hover:text-white group-focus-visible:text-white">
@@ -168,7 +168,7 @@ export default function HolzwerkstattPage() {
         </section>
 
         {/* ---------- Ressourcen ---------- */}
-        <section className="border-t border-foreground pt-6 pb-7">
+        <section className="knglmrt-border-t pt-6 pb-7">
           <div className="mb-1 flex flex-wrap items-baseline gap-3">
             <h2>Ressourcen</h2>
             <span className="knglmrt-num text-muted-foreground">
@@ -234,7 +234,7 @@ export default function HolzwerkstattPage() {
         {/* ---------- Ampelsystem ----------
             Ausnahme von der Palette: hier führen bewusst die Ampelfarben
             grün/gelb/rot, weil die Sektion genau das erklärt. */}
-        <section className="border-t border-foreground pt-6 pb-7">
+        <section className="knglmrt-border-t pt-6 pb-7">
           <h2 className="mb-1">Ampelsystem</h2>
           <p className="mb-3.5 max-w-[560px] text-muted-foreground">
             Jede Maschine hat einen Status: frei nutzbar, Einweisung nötig oder
@@ -280,7 +280,7 @@ export default function HolzwerkstattPage() {
         </section>
 
         {/* ---------- Häufige Fragen ---------- */}
-        <section className="border-t border-foreground pt-6">
+        <section className="knglmrt-border-t pt-6">
           <h2 className="mb-3.5">Häufige Fragen</h2>
           <div className="flex max-w-[640px] flex-col gap-3.5">
             <div>
@@ -341,7 +341,7 @@ export default function HolzwerkstattPage() {
           </div>
         </div>
 
-        <div className="border border-foreground bg-card px-[18px] py-4">
+        <div className="knglmrt-border bg-card px-[18px] py-4">
           <div className="knglmrt-caption mb-2.5 text-muted-foreground">
             Standort
           </div>

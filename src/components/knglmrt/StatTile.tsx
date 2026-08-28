@@ -30,7 +30,7 @@ export default function StatTile({
   return (
     <div
       className={`flex flex-col gap-[5px] px-[18px] py-4 ${TONE_SURFACE[tone]}${
-        tone === "weiss" ? " border border-foreground" : ""
+        tone === "weiss" ? " knglmrt-border" : ""
       }${className ? ` ${className}` : ""}`}
     >
       <span

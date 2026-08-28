@@ -147,7 +147,7 @@ const fieldClassName =
 const readOnlyFieldClassName =
   "w-full border border-border bg-muted px-3.5 py-2 text-[length:var(--ui-size-body)] text-muted-foreground";
 
-const panelClassName = "border border-foreground bg-card p-[18px]";
+const panelClassName = "knglmrt-border bg-card p-[18px]";
 
 // Beispiel-Tarife für die Zugangskarte. Noch nicht angebunden — sobald die
 // Tarife aus Campai kommen, ersetzt diese Liste die Auswahl.
@@ -478,7 +478,7 @@ export default function AccountClient({
           <img
             src={activeAvatarUrl}
             alt={displayName || user.email || "Profilbild"}
-            className="h-14 w-14 flex-none border border-foreground object-cover"
+            className="h-14 w-14 flex-none knglmrt-border object-cover"
             onError={() => {
               setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
             }}
@@ -486,7 +486,7 @@ export default function AccountClient({
         ) : (
           <span
             aria-hidden="true"
-            className="flex h-14 w-14 flex-none items-center justify-center border border-foreground bg-primary-soft font-bold"
+            className="flex h-14 w-14 flex-none items-center justify-center knglmrt-border bg-primary-soft font-bold"
           >
             {getInitials(displayName || user.email || "?")}
           </span>

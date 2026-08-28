@@ -46,7 +46,7 @@ const TILES = [
 export default function DreiDDruckPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)]">
-      <WerkbereichSideNav className="border-r border-foreground">
+      <WerkbereichSideNav className="knglmrt-border-r">
         <div className="px-3.5">
           <Divider number={4} height={9} color="var(--foreground)" />
         </div>
@@ -70,7 +70,7 @@ export default function DreiDDruckPage() {
           }
         />
 
-        <section className="mt-6 border-t border-foreground pt-6">
+        <section className="mt-6 knglmrt-border-t pt-6">
           <h2 className="mb-1">Drucker-Werkzeuge</h2>
           <p className="mb-6 max-w-[560px] text-muted-foreground">
             Status, Entleerung und Zugangscodes der Drucker. Angemeldet siehst du
@@ -82,7 +82,7 @@ export default function DreiDDruckPage() {
               <Link
                 key={tile.href}
                 href={tile.href}
-                className={`group flex min-h-20 flex-col justify-center gap-1 border border-foreground px-5 py-4 transition-[background-color,color,rotate] duration-300 ease-out hover:rotate-0 hover:text-white focus-visible:rotate-0 focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground motion-reduce:transform-none ${tile.style} ${tile.rotation}`}
+                className={`group flex min-h-20 flex-col justify-center gap-1 knglmrt-border px-5 py-4 transition-[background-color,color,rotate] duration-300 ease-out hover:rotate-0 hover:text-white focus-visible:rotate-0 focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground motion-reduce:transform-none ${tile.style} ${tile.rotation}`}
               >
                 <span className="knglmrt-card-title">{tile.title}</span>
                 <span className="text-muted-foreground group-hover:text-white group-focus-visible:text-white">

@@ -22,7 +22,7 @@ export default function WerkbereichMark({
       <span
         aria-hidden="true"
         style={{ height, width: height, fontSize: Math.round(height * 0.58) }}
-        className={`flex flex-none items-center justify-center border border-foreground font-display leading-none text-foreground${
+        className={`flex flex-none items-center justify-center knglmrt-border font-display leading-none text-foreground${
           className ? ` ${className}` : ""
         }`}
       >

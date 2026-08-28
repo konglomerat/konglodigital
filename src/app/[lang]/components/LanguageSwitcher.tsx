@@ -21,7 +21,7 @@ const buttonClassName =
 // DE/EN als eckiges Segment: 11px Fira Sans (wide), .08em getrackt,
 // aktive Sprache schwarz auf weiß invertiert — Muster aus dem Prototyp.
 const topNavButtonClassName =
-  "border border-foreground px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
+  "knglmrt-border px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
 const footerButtonClassName =
   "border border-white px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
 

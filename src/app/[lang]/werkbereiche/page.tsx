@@ -116,7 +116,7 @@ export default function WerkbereichePage() {
             >
               <span
                 aria-hidden="true"
-                className="flex size-10 flex-none items-center justify-center border border-foreground font-display text-2xl leading-none"
+                className="flex size-10 flex-none items-center justify-center knglmrt-border font-display text-2xl leading-none"
               >
                 {projekt.name.charAt(0)}
               </span>

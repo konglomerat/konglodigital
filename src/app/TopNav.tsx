@@ -36,12 +36,12 @@ export default function TopNav({
   ];
 
   return (
-    <header className="sticky top-0 z-40 hidden border-b border-foreground bg-card md:block">
+    <header className="sticky top-0 z-40 hidden knglmrt-border-b bg-card md:block">
       <div className="flex h-[70px] w-full items-stretch justify-between px-7">
         <div className="flex min-w-0 items-stretch">
           <Link
             href="/"
-            className="flex flex-none items-center border-r border-foreground pr-[22px]"
+            className="flex flex-none items-center knglmrt-border-r pr-[22px]"
           >
             <Image
               src="/branding/logo/konglodigital-logo.svg"
@@ -63,7 +63,7 @@ export default function TopNav({
           </nav>
         </div>
 
-        <div className="flex flex-none items-center border-l border-foreground pl-6">
+        <div className="flex flex-none items-center knglmrt-border-l pl-6">
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
               {/* Kein Hover-Menü mehr: das Profil ist eine Seite mit eigener
@@ -74,7 +74,7 @@ export default function TopNav({
               >
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 flex-none items-center justify-center border border-foreground bg-primary-soft text-xs font-bold text-foreground"
+                  className="flex h-9 w-9 flex-none items-center justify-center knglmrt-border bg-primary-soft text-xs font-bold text-foreground"
                 >
                   {getInitials(currentUserDisplayName)}
                 </span>

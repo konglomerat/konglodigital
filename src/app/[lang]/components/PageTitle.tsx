@@ -92,7 +92,7 @@ export default function PageTitle({
   const backLinkElement = backLink ? (
     <Link
       href={backLink.href}
-      className="inline-flex w-fit shrink-0 items-center gap-2 border border-foreground bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft"
+      className="inline-flex w-fit shrink-0 items-center gap-2 knglmrt-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft"
     >
       <FontAwesomeIcon
         icon={backLink.icon ?? faArrowLeft}

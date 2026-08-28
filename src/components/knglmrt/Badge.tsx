@@ -17,7 +17,7 @@ const TONE_CLASSNAME: Record<BadgeTone, string> = {
   gebucht: "bg-success-soft text-foreground",
   neutral: "bg-muted text-muted-foreground",
   neu: "bg-warning-soft text-foreground",
-  kontur: "border border-foreground text-foreground",
+  kontur: "knglmrt-border text-foreground",
 };
 
 type BadgeProps = {

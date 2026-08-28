@@ -52,7 +52,7 @@ type ButtonAsLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> &
 type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 
 const baseClassName =
-  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-none border border-foreground font-[family-name:var(--font-core)] font-bold transition-colors duration-200 ease-[cubic-bezier(.2,0,0,1)] disabled:cursor-default disabled:border-border disabled:bg-muted disabled:text-muted-foreground";
+  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-none knglmrt-border font-[family-name:var(--font-core)] font-bold transition-colors duration-200 ease-[cubic-bezier(.2,0,0,1)] disabled:cursor-default disabled:border-border disabled:bg-muted disabled:text-muted-foreground";
 
 const sizeClassName: Record<ButtonSize, string> = {
   chip: "px-[11px] py-[5px] text-[11px] leading-4",

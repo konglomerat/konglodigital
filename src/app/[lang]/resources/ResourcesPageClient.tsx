@@ -1318,7 +1318,7 @@ export default function ResourcesPageClient({
                       type="button"
                       onClick={handleLoadMore}
                       disabled={loadingMore}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-input bg-card px-5 py-2 text-sm font-semibold text-foreground transition hover:border-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-input bg-card px-5 py-2 text-sm font-semibold text-foreground transition hover:border-hairline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {loadingMore ? tx("Loading more...") : tx("Load more")}
                     </button>

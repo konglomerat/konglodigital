@@ -13,7 +13,7 @@ export default async function Home() {
   return (
     <>
       <TerrazzoParallax />
-      <section className="frontpage-hero knglmrt-terrazzo-fein-rosa relative left-1/2 -mt-4 w-[100dvw] -translate-x-1/2 border-b border-foreground py-8 md:-mt-10 md:py-11">
+      <section className="frontpage-hero knglmrt-terrazzo-fein-rosa relative left-1/2 -mt-4 w-[100dvw] -translate-x-1/2 knglmrt-border-b py-8 md:-mt-10 md:py-11">
         <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
           <div className="knglmrt-panel grid h-fit gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
             <div className="order-2 md:order-1">
@@ -120,7 +120,7 @@ export default async function Home() {
 
       <ResourceOfTheMonthSection />
 
-      <section className="knglmrt-terrazzo-hellgelb relative left-1/2 w-[100dvw] -translate-x-1/2 border-t border-foreground px-3 py-9 text-center md:px-7">
+      <section className="knglmrt-terrazzo-hellgelb relative left-1/2 w-[100dvw] -translate-x-1/2 knglmrt-border-t px-3 py-9 text-center md:px-7">
         <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
           {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
         </p>

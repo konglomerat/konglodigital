@@ -12,7 +12,7 @@ export function Table({
 }) {
   return (
     <div
-      className={`overflow-x-auto border border-foreground bg-card${
+      className={`overflow-x-auto knglmrt-border bg-card${
         className ? ` ${className}` : ""
       }`}
     >
@@ -23,7 +23,7 @@ export function Table({
 
 export function THead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-b border-foreground">
+    <thead className="knglmrt-border-b">
       <tr>{children}</tr>
     </thead>
   );
@@ -86,7 +86,7 @@ export function Td({
 /** Abschlusszeile (Saldo, Summe) — 1px Kontur oben, paper-grey. */
 export function TFoot({ children }: { children: ReactNode }) {
   return (
-    <tfoot className="border-t border-foreground bg-muted font-bold">
+    <tfoot className="knglmrt-border-t bg-muted font-bold">
       <tr>{children}</tr>
     </tfoot>
   );

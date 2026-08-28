@@ -205,7 +205,7 @@ export default async function RootLayout({
         <I18nProvider locale={locale}>
           <AppShell
             mobileNavigation={
-              <header className="sticky top-0 z-40 border-b border-foreground bg-card md:hidden">
+              <header className="sticky top-0 z-40 knglmrt-border-b bg-card md:hidden">
                 <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                   <Link
                     href="/"
@@ -219,7 +219,7 @@ export default async function RootLayout({
                     <AutoCloseMenuDetails
                       className="group"
                       summary={
-                        <summary className="flex cursor-pointer list-none items-center gap-2 border border-foreground bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft">
+                        <summary className="flex cursor-pointer list-none items-center gap-2 knglmrt-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft">
                           Menü
                           <span className="text-lg transition group-open:rotate-45">
                             +
@@ -227,7 +227,7 @@ export default async function RootLayout({
                         </summary>
                       }
                     >
-                      <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto border border-foreground bg-popover text-popover-foreground">
+                      <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto knglmrt-border bg-popover text-popover-foreground">
                         <nav className="flex flex-col px-2 py-2">
                           <p className={navSectionTitleClassName}>Verein</p>
                           <ActiveNavLink
@@ -441,7 +441,7 @@ export default async function RootLayout({
                             </>
                           ) : null}
                         </nav>
-                        <div className="border-t border-foreground px-4 py-4">
+                        <div className="knglmrt-border-t px-4 py-4">
                           {isAuthenticated ? (
                             <div className="space-y-3">
                               <ThemeToggle />

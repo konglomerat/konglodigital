@@ -49,7 +49,7 @@ export default function ShowcaseOfTheMonthCarousel({
   }
 
   return (
-    <section className="overflow-hidden border border-foreground bg-card">
+    <section className="overflow-hidden knglmrt-border bg-card">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,520px)]">
         <div className="flex flex-col justify-center px-6 py-6 md:px-8 md:py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">

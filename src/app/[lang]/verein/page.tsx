@@ -223,7 +223,7 @@ export default function VereinPage() {
         </div>
       </section>
 
-      <section className="border-t border-foreground pt-[26px]">
+      <section className="knglmrt-border-t pt-[26px]">
         <h2 className="text-[length:var(--ui-size-title)] leading-[var(--ui-line-title)]">
           Das #Rosenwerk
         </h2>
