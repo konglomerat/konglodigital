@@ -1,6 +1,6 @@
 // Platzhalter für die Kontoseite. Wird als <Suspense>-Fallback der
-// Server-Hülle und innerhalb des Clients gezeigt, solange /api/account/me
-// noch unterwegs ist. Bewusst nur Flächen — keine erfundenen Inhalte.
+// Server-Hülle gezeigt, solange Session, Rollen und Profil aus Supabase
+// kommen. Bewusst nur Flächen — keine erfundenen Inhalte.
 
 export function SkeletonBlock({ className }: { className?: string }) {
   return (

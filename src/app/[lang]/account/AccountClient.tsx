@@ -18,7 +18,6 @@ import { type InvoicePayload } from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
 import Button from "../components/Button";
 import PasswordInput from "../components/PasswordInput";
-import { AccountHeaderSkeleton, SkeletonBlock } from "./AccountSkeleton";
 
 type AccountUser = {
   email: string;
@@ -150,11 +149,34 @@ const readOnlyFieldClassName =
 
 const panelClassName = "border border-foreground bg-card p-[18px]";
 
+// Beispiel-Tarife für die Zugangskarte. Noch nicht angebunden — sobald die
+// Tarife aus Campai kommen, ersetzt diese Liste die Auswahl.
+const ACCESS_CARD_PLANS = [
+  { id: "punktekarte", label: "Punktekarte – 50 € für 10 Zugänge" },
+  { id: "abo-klein", label: "Abo Klein – 15 €/Monat für 15 Zugänge/Quartal" },
+  { id: "abo-gross", label: "Abo Groß – 30 €/Monat für 24/7-Zugang" },
+] as const;
+
+// Gleiche Marke wie in der Navigation: kein eigener Look für „kommt noch".
+function SoonBadge() {
+  return (
+    <span className="whitespace-nowrap rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+      Coming soon
+    </span>
+  );
+}
+
 type AccountClientProps = {
   roleLabels: string[];
+  // Kommt fertig aus der Server-Hülle. Damit steht der Kopf — Name, E-Mail,
+  // Rollen, Abmelden — schon im ersten Paint, ohne Fetch nach dem Mount.
+  initialUser: AccountUser | null;
 };
 
-export default function AccountClient({ roleLabels }: AccountClientProps) {
+export default function AccountClient({
+  roleLabels,
+  initialUser,
+}: AccountClientProps) {
   const searchParams = useSearchParams();
   const debug = useMemo(
     () => searchParams.get("debug") === "1",
@@ -164,15 +186,17 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
   const message = searchParams.get("message");
   const error = searchParams.get("error");
 
-  const [user, setUser] = useState<AccountUser | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [accountLoadError, setAccountLoadError] = useState<string | null>(null);
+  const [user, setUser] = useState<AccountUser | null>(initialUser);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [shortBio, setShortBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(() =>
+    initialUser ? readMetadataText(initialUser.metadata, "avatar_url") : "",
+  );
+  const [shortBio, setShortBio] = useState(() =>
+    initialUser ? readMetadataText(initialUser.metadata, "short_bio") : "",
+  );
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
@@ -182,6 +206,11 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
   const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
   const [gravatarUrl, setGravatarUrl] = useState("");
   const [avatarCandidateIndex, setAvatarCandidateIndex] = useState(0);
+  const [accessCardPlan, setAccessCardPlan] = useState<string>(
+    ACCESS_CARD_PLANS[1].id,
+  );
+
+  const hasAccount = Boolean(initialUser);
 
   const fullName = useMemo(() => {
     const first =
@@ -221,43 +250,47 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
   const activeAvatarUrl = avatarCandidateUrls[avatarCandidateIndex] ?? "";
   const avatarCandidateKey = avatarCandidateUrls.join("|");
 
+  // Der Live-Name aus Campai kostet Sekunden: die Suche blättert seitenweise
+  // durch alle Kontakte, bis die verknüpfte ID auftaucht. Deshalb rendert die
+  // Seite mit dem in member_profiles gespeicherten Namen und zieht Campai erst
+  // nach dem ersten Paint nach — und nur, wenn dort etwas anderes steht.
   useEffect(() => {
+    if (!hasAccount) {
+      return;
+    }
+
     let active = true;
-    const loadUser = async () => {
-      setLoadingUser(true);
-      setAccountLoadError(null);
+
+    const refreshCampaiName = async () => {
       try {
-        const data = await fetchJson<{ user: AccountUser }>("/api/account/me");
-        if (!active) {
+        const data = await fetchJson<{ name: string | null }>(
+          "/api/account/campai-name",
+        );
+        const liveName = data.name?.trim();
+        if (!active || !liveName) {
           return;
         }
-        setUser(data.user);
-        setAvatarUrl(readMetadataText(data.user.metadata, "avatar_url"));
-        setShortBio(readMetadataText(data.user.metadata, "short_bio"));
-      } catch (loadError) {
-        if (active) {
-          setUser(null);
-          const errorMessage =
-            loadError instanceof Error
-              ? loadError.message
-              : "Kontodaten konnten nicht geladen werden.";
-          if (errorMessage !== "Unauthorized") {
-            setAccountLoadError(errorMessage);
+        setUser((current) => {
+          if (!current || current.metadata.campai_name === liveName) {
+            return current;
           }
-        }
-      } finally {
-        if (active) {
-          setLoadingUser(false);
-        }
+          return {
+            ...current,
+            metadata: { ...current.metadata, campai_name: liveName },
+          };
+        });
+      } catch {
+        // Ohne Campai bleibt der gespeicherte Name stehen — kein Fehlerfall
+        // für die Seite.
       }
     };
 
-    loadUser();
+    void refreshCampaiName();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [hasAccount]);
 
   useEffect(() => {
     const normalizedEmail = normalizeEmail(user?.email);
@@ -298,11 +331,11 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
   }, [avatarCandidateKey]);
 
   useEffect(() => {
-    if (!user || linkedDebtorAccount === null) {
+    if (!hasAccount || linkedDebtorAccount === null) {
       setCampaiInvoices([]);
       setDebtorAccount(null);
       setCampaiDebug(null);
-      setInvoicesLoading(loadingUser);
+      setInvoicesLoading(false);
       return;
     }
 
@@ -354,7 +387,7 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
     return () => {
       active = false;
     };
-  }, [user, linkedDebtorAccount, debug, loadingUser]);
+  }, [hasAccount, linkedDebtorAccount, debug]);
 
   const handleProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -408,22 +441,14 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
 
   const openInvoicesTotal = useMemo(
     () =>
-      openInvoices.reduce((sum, invoice) => sum + (invoiceTotal(invoice) ?? 0), 0),
+      openInvoices.reduce(
+        (sum, invoice) => sum + (invoiceTotal(invoice) ?? 0),
+        0,
+      ),
     [openInvoices],
   );
 
-  if (accountLoadError) {
-    return (
-      <div className="border border-destructive-border bg-destructive-soft p-[18px]">
-        <h2 className="mb-1 text-destructive">
-          Konto konnte nicht geladen werden
-        </h2>
-        <p className="text-destructive">{accountLoadError}</p>
-      </div>
-    );
-  }
-
-  if (!loadingUser && !user) {
+  if (!user) {
     return (
       <div className={panelClassName}>
         <h2 className="mb-1">Anmeldung erforderlich</h2>
@@ -444,46 +469,40 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
   return (
     <div>
       {/* Kopf: quadratischer Avatar (das DS kennt keine Kreise), Name,
-          eine Mono-Zeile mit den harten Fakten. Solange /api/account/me
-          unterwegs ist, steht hier ein Platzhalter — die Navigation und die
-          Bereiche darunter sind trotzdem schon bedienbar. */}
-      {loadingUser ? (
-        <AccountHeaderSkeleton />
-      ) : (
-        <header className="mb-[22px] flex flex-wrap items-center gap-4">
-          {activeAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={activeAvatarUrl}
-              alt={displayName || user?.email || "Profilbild"}
-              className="h-14 w-14 flex-none border border-foreground object-cover"
-              onError={() => {
-                setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
-              }}
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="flex h-14 w-14 flex-none items-center justify-center border border-foreground bg-primary-soft font-bold"
-            >
-              {getInitials(displayName || user?.email || "?")}
-            </span>
-          )}
-          <div className="min-w-[240px] flex-1">
-            <h1 className="mb-0.5">{displayName || "Dein Profil"}</h1>
-            <p className="knglmrt-num text-muted-foreground">
-              {[user?.email, roleLabels.join(" · ")]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </div>
-          <form action={signOut}>
-            <Button type="submit" kind="secondary">
-              Abmelden
-            </Button>
-          </form>
-        </header>
-      )}
+          eine Mono-Zeile mit den harten Fakten. Alle Werte kommen aus der
+          Server-Hülle, deshalb steht der Kopf inklusive Abmelden-Button
+          sofort — hier wird auf nichts mehr gewartet. */}
+      <header className="mb-[22px] flex flex-wrap items-center gap-4">
+        {activeAvatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={activeAvatarUrl}
+            alt={displayName || user.email || "Profilbild"}
+            className="h-14 w-14 flex-none border border-foreground object-cover"
+            onError={() => {
+              setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
+            }}
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="flex h-14 w-14 flex-none items-center justify-center border border-foreground bg-primary-soft font-bold"
+          >
+            {getInitials(displayName || user.email || "?")}
+          </span>
+        )}
+        <div className="min-w-[240px] flex-1">
+          <h1 className="mb-0.5">{displayName || "Dein Profil"}</h1>
+          <p className="knglmrt-num text-muted-foreground">
+            {[user.email, roleLabels.join(" · ")].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <form action={signOut}>
+          <Button type="submit" kind="secondary">
+            Abmelden
+          </Button>
+        </form>
+      </header>
 
       {error ? (
         <div className="mb-4 border border-destructive-border bg-destructive-soft px-4 py-3 text-destructive">
@@ -503,91 +522,77 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
             Bild und Kurzbiografie erscheinen als Autoreninfo an deinen
             Beiträgen. Der Name kommt direkt aus Campai.
           </p>
-          {/* Erst rendern, wenn die Werte da sind — sonst tippt man in ein
-              Feld, das gleich darauf überschrieben wird. */}
-          {loadingUser ? (
-            <div className="flex flex-col gap-4">
-              <SkeletonBlock className="h-16 w-full" />
-              <SkeletonBlock className="h-16 w-full" />
-              <SkeletonBlock className="h-16 w-full" />
-              <SkeletonBlock className="h-24 w-full" />
+          <form onSubmit={handleProfileSubmit} className="flex flex-col gap-4">
+            <div>
+              <label className={labelClassName} htmlFor="account-campai-name">
+                Name in Campai
+              </label>
+              <input
+                id="account-campai-name"
+                type="text"
+                value={campaiName}
+                readOnly
+                placeholder="Kein Campai-Kontakt verknüpft"
+                className={`mt-1 ${readOnlyFieldClassName}`}
+              />
+              <p className="mt-1 text-muted-foreground">
+                Soll der Name sich ändern, ändere ihn bitte direkt in Campai.
+              </p>
             </div>
-          ) : (
-            <form
-              onSubmit={handleProfileSubmit}
-              className="flex flex-col gap-4"
-            >
-              <div>
-                <label className={labelClassName} htmlFor="account-campai-name">
-                  Name in Campai
-                </label>
-                <input
-                  id="account-campai-name"
-                  type="text"
-                  value={campaiName}
-                  readOnly
-                  placeholder="Kein Campai-Kontakt verknüpft"
-                  className={`mt-1 ${readOnlyFieldClassName}`}
-                />
-                <p className="mt-1 text-muted-foreground">
-                  Soll der Name sich ändern, ändere ihn bitte direkt in Campai.
-                </p>
-              </div>
-              <div>
-                <label className={labelClassName} htmlFor="account-email">
-                  E-Mail
-                </label>
-                <input
-                  id="account-email"
-                  type="email"
-                  value={user?.email ?? ""}
-                  disabled
-                  className={`mt-1 ${readOnlyFieldClassName}`}
-                />
-              </div>
-              <div>
-                <label className={labelClassName} htmlFor="account-avatar-url">
-                  Profilbild-URL
-                </label>
-                <input
-                  id="account-avatar-url"
-                  name="avatarUrl"
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(event) => setAvatarUrl(event.target.value)}
-                  placeholder="https://…"
-                  className={`mt-1 ${fieldClassName}`}
-                />
-                <p className="mt-1 text-muted-foreground">
-                  Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
-                  Gravatar anhand deiner E-Mail-Adresse.
-                </p>
-              </div>
-              <div>
-                <label className={labelClassName} htmlFor="account-short-bio">
-                  Kurzbiografie
-                </label>
-                <textarea
-                  id="account-short-bio"
-                  name="shortBio"
-                  value={shortBio}
-                  onChange={(event) => setShortBio(event.target.value)}
-                  rows={4}
-                  placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
-                  className={`mt-1 ${fieldClassName}`}
-                />
-              </div>
-              <Button type="submit" kind="primary" className="w-fit px-4 py-2">
-                Profil speichern
-              </Button>
-              {profileError ? (
-                <p className="text-destructive">{profileError}</p>
-              ) : null}
-              {profileStatus ? (
-                <p className="font-bold">{profileStatus}</p>
-              ) : null}
-            </form>
-          )}
+            <div>
+              <label className={labelClassName} htmlFor="account-email">
+                E-Mail
+              </label>
+              <input
+                id="account-email"
+                type="email"
+                value={user?.email ?? ""}
+                disabled
+                className={`mt-1 ${readOnlyFieldClassName}`}
+              />
+            </div>
+            <div>
+              <label className={labelClassName} htmlFor="account-avatar-url">
+                Profilbild-URL
+              </label>
+              <input
+                id="account-avatar-url"
+                name="avatarUrl"
+                type="url"
+                value={avatarUrl}
+                onChange={(event) => setAvatarUrl(event.target.value)}
+                placeholder="https://…"
+                className={`mt-1 ${fieldClassName}`}
+              />
+              <p className="mt-1 text-muted-foreground">
+                Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
+                Gravatar anhand deiner E-Mail-Adresse.
+              </p>
+            </div>
+            <div>
+              <label className={labelClassName} htmlFor="account-short-bio">
+                Kurzbiografie
+              </label>
+              <textarea
+                id="account-short-bio"
+                name="shortBio"
+                value={shortBio}
+                onChange={(event) => setShortBio(event.target.value)}
+                rows={4}
+                placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
+                className={`mt-1 ${fieldClassName}`}
+              />
+            </div>
+            <Button type="submit" kind="primary" className="w-fit px-4 py-2">
+              Profil speichern
+            </Button>
+            {profileError ? (
+              <p className="text-destructive">{profileError}</p>
+            ) : null}
+            {profileStatus ? (
+              <p className="font-bold">{profileStatus}</p>
+            ) : null}
+          </form>
         </section>
 
         <section id="sicherheit" className={panelClassName}>
@@ -632,6 +637,88 @@ export default function AccountClient({ roleLabels }: AccountClientProps) {
               <p className="font-bold">{passwordStatus}</p>
             ) : null}
           </form>
+        </section>
+      </div>
+
+      {/* Zugangskarte und Ehrenamtsbonus sind noch nicht angebunden: die
+          Kacheln zeigen Beispielwerte und tote Bedienelemente, damit die
+          Struktur der Seite schon steht. Sobald es echte Daten gibt, fallen
+          nur die Platzhalter-Werte und das SoonBadge weg. */}
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,460px)]">
+        <section id="zugangskarte" className={panelClassName}>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <h2 className="m-0">Zugangskarte</h2>
+            <SoonBadge />
+          </div>
+          <p className="mb-4 text-muted-foreground">
+            Deine Karte öffnet die Werkbereiche und bucht dabei Zugänge von
+            deinem Tarif ab. Beispielwerte — die Anbindung an die Schließanlage
+            folgt.
+          </p>
+
+          <div className="mb-4 grid gap-3.5 sm:grid-cols-2">
+            <StatTile
+              label="Verbleibende Zugänge"
+              value="9"
+              hint="von 15 · Quartal läuft bis 30.09.2026"
+              percent={60}
+              tone="rosa"
+            />
+            <StatTile
+              label="Letzte Abbuchung"
+              value="04.08.2026"
+              hint="Werkbereich Holz · 1 Zugang"
+              tone="grau"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              className={labelClassName}
+              htmlFor="account-zugangskarte-tarif"
+            >
+              Tarif wechseln
+            </label>
+            <select
+              id="account-zugangskarte-tarif"
+              value={accessCardPlan}
+              onChange={(event) => setAccessCardPlan(event.target.value)}
+              className={`mt-1 ${fieldClassName}`}
+            >
+              {ACCESS_CARD_PLANS.map((plan) => (
+                <option key={plan.id} value={plan.id}>
+                  {plan.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-muted-foreground">
+              Ein Wechsel gilt ab dem nächsten Abrechnungsmonat.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" kind="primary" disabled>
+              Tarif wechseln
+            </Button>
+            <Button type="button" kind="danger-secondary" disabled>
+              Karte verloren
+            </Button>
+          </div>
+        </section>
+
+        <section id="ehrenamtsbonus" className={panelClassName}>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <h2 className="m-0">Ehrenamtsbonus beantragen</h2>
+            <SoonBadge />
+          </div>
+          <p className="mb-4 text-muted-foreground">
+            Für ehrenamtliche Arbeit im Verein kannst du je nach Umfang
+            zusätzliche Zugangstage für das folgende Quartal bekommen oder
+            bekommst sogar den 24/7-Zugang erlassen.
+          </p>
+          <Button type="button" kind="secondary" disabled>
+            Antrag starten
+          </Button>
         </section>
       </div>
 
