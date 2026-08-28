@@ -20,6 +20,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 
 import { Input } from "./form";
+import Button from "@/components/knglmrt/Button";
 
 type ComboboxInputProps<T> = Omit<
   ComponentPropsWithoutRef<"input">,
@@ -242,9 +243,11 @@ function ComboboxInputInner<T>(
       ) : null}
 
       {showToggleButton ? (
-        <button
-          type="button"
-          className="absolute inset-y-1 right-1 inline-flex w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground/80"
+        <Button
+          kind="ghost"
+          size="chip"
+          iconOnly
+          className="absolute inset-y-1 right-1 h-auto w-8 text-muted-foreground"
           aria-label={toggleAriaLabel}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -257,7 +260,7 @@ function ComboboxInputInner<T>(
             icon={faChevronDown}
             className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`}
           />
-        </button>
+        </Button>
       ) : null}
 
       {open && options.length > 0 ? (

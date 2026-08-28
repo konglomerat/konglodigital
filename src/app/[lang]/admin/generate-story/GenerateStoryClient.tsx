@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
   Checkbox,

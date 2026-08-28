@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, use } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 
 type CampaiProduct = {
@@ -177,10 +177,10 @@ export default function CampaiProductDetailPage({
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
+                    size="small"
                     type="button"
                     onClick={handleDecreaseProduct}
                     kind="secondary"
-                    className="px-4 py-2 text-sm"
                     disabled={!cartEntry}
                   >
                     −

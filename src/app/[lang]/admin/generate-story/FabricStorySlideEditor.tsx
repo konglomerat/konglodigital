@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import type { StoryDraftSlide, StorySource } from "@/lib/story-drafts";
 import {
   STORY_CONTENT_FONT_FAMILY,

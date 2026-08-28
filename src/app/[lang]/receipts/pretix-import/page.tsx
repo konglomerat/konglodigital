@@ -11,7 +11,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import ReceiptsPageHeader from "../create/header";
 import {
@@ -697,17 +697,15 @@ export default function PretixImportPage() {
                                 className="h-3 w-3"
                               />
                               #{debtor.account} {debtor.name}
-                              <button
-                                type="button"
-                                className="ml-1 rounded p-0.5 text-emerald-600 hover:bg-emerald-100"
+                              <Button
+                                kind="ghost"
+                                size="chip"
+                                iconOnly
+                                icon={faXmark}
+                                className="ml-1 h-5 w-5"
                                 onClick={() => clearDebtor(row.key)}
                                 aria-label="Debitor entfernen"
-                              >
-                                <FontAwesomeIcon
-                                  icon={faXmark}
-                                  className="h-3 w-3"
-                                />
-                              </button>
+                              />
                             </span>
                           ) : (
                             <div className="min-w-[16rem]">

@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import Button from "@/components/knglmrt/Button";
 import { stripLocalePrefix } from "@/i18n/config";
 
 export type RessortNavItem = {
@@ -73,16 +74,17 @@ export default function VerwaltungSideNav({
   return (
     <>
       <div className="md:hidden">
-        <button
-          type="button"
+        <Button
+          kind="quiet"
+          fullWidth
           aria-expanded={isOpen}
           aria-controls="verwaltung-ressorts"
           onClick={() => setIsOpen((open) => !open)}
-          className="flex w-full cursor-pointer items-center justify-between bg-[var(--knglmrt-dark-100)] px-5 py-3 text-[length:var(--ui-size-nav)] font-bold text-white"
+          className="justify-between bg-[var(--knglmrt-dark-100)] px-5 py-3 text-[length:var(--ui-size-nav)] text-white hover:bg-[var(--knglmrt-dark-100)]/90"
         >
           Verwaltung
           <span aria-hidden="true">{isOpen ? "–" : "+"}</span>
-        </button>
+        </Button>
         {isOpen ? (
           <div
             id="verwaltung-ressorts"

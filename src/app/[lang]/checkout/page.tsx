@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
 
 import {
@@ -552,10 +552,10 @@ export default function CheckoutPage() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button
+            size="small"
             type="button"
             onClick={handleInvoiceDraft}
             kind="primary"
-            className="px-4 py-2 text-sm"
             disabled={creatingInvoice}
           >
             {creatingInvoice ? "Creating draft..." : "Create invoice draft"}

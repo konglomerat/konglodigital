@@ -13,7 +13,7 @@ import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Reorder } from "motion/react";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import MdxEditorInput from "../components/MdxEditorInput";
 import ReactSelect from "../components/ui/react-select";
 import ResourceMapCrosshair from "./ResourceMapCrosshair";
@@ -222,9 +222,10 @@ export default function ResourceForm({
               {[1, 2, 3, 4, 5].map((value) => {
                 const active = Number(selectedPriority) >= value;
                 return (
-                  <button
+                  <Button
                     key={value}
-                    type="button"
+                    kind={active ? "primary" : "secondary"}
+                    iconOnly
                     role="radio"
                     aria-checked={Number(selectedPriority) === value}
                     aria-label={`${tx("Set priority to")} ${value}`}
@@ -235,14 +236,10 @@ export default function ResourceForm({
                         shouldValidate: true,
                       });
                     }}
-                    className={`h-8 w-8 rounded-md border text-lg leading-none transition ${
-                      active
-                        ? "border-warning-border bg-warning-soft text-warning"
-                        : "border-border bg-card text-muted-foreground hover:border-input hover:text-foreground"
-                    }`}
+                    className="text-lg leading-none"
                   >
                     ★
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -515,13 +512,16 @@ export default function ResourceForm({
                       />
                     )}
 
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="chip"
+                      iconOnly
+                      aria-label={tx("Remove image")}
                       onClick={() => onRemoveImage(previewIndex)}
-                      className="rounded-full bg-card w-6 h-6 text-[10px] font-semibold text-muted-foreground shadow absolute top-[-5px] right-[-5px] transition hover:bg-accent group-hover:opacity-100"
+                      className="absolute right-[-5px] top-[-5px]"
                     >
                       ✕
-                    </button>
+                    </Button>
                   </Reorder.Item>
                 );
               })}

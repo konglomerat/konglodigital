@@ -40,11 +40,8 @@ import { signOut } from "./actions";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { rolesCanAccessModule } from "@/lib/roles";
 import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
-import {
-  getServerSession,
-  getServerSessionRoles,
-} from "@/lib/server-session";
-import Button from "./[lang]/components/Button";
+import { getServerSession, getServerSessionRoles } from "@/lib/server-session";
+import Button from "@/components/knglmrt/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
 import { I18nProvider } from "@/i18n/client";
@@ -341,7 +338,9 @@ export default async function RootLayout({
                             Lagerplatz
                           </ComingSoonNavItem>
 
-                          <p className={navSectionTitleClassName}>Hier entstanden</p>
+                          <p className={navSectionTitleClassName}>
+                            Hier entstanden
+                          </p>
                           <ActiveNavLink
                             href="/showcase"
                             className={navLinkClassName}
@@ -447,9 +446,9 @@ export default async function RootLayout({
                               <ThemeToggle />
                               {canAccessBackOffice ? (
                                 <Button
+                                  fullWidth
                                   href={adminAreaHref}
                                   kind="secondary"
-                                  className="w-full"
                                 >
                                   <FontAwesomeIcon
                                     icon={faLock}
@@ -475,11 +474,7 @@ export default async function RootLayout({
                           ) : (
                             <div className="space-y-3">
                               <ThemeToggle />
-                              <Button
-                                href="/login"
-                                kind="secondary"
-                                className="w-full"
-                              >
+                              <Button fullWidth href="/login" kind="secondary">
                                 <FontAwesomeIcon
                                   icon={faRightToBracket}
                                   className="h-4 w-4"

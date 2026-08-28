@@ -21,7 +21,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
 import ShowcaseDeleteButton from "./ShowcaseDeleteButton";
 import ReactSelect from "../components/ui/react-select";
@@ -236,7 +236,8 @@ export default function ShowcaseEditorClient({
             .filter(Boolean) ?? [],
         socialMediaConsent: initialShowcase?.socialMediaConsent ?? false,
         links:
-          initialShowcase?.showcaseLinks && initialShowcase.showcaseLinks.length > 0
+          initialShowcase?.showcaseLinks &&
+          initialShowcase.showcaseLinks.length > 0
             ? initialShowcase.showcaseLinks.map((link) => ({
                 label: link.label,
                 url: link.url,
@@ -406,7 +407,10 @@ export default function ShowcaseEditorClient({
   );
 
   const usedResourceOptions = useMemo(
-    () => resourceOptions.filter((option) => option.type !== SHOWCASE_RESOURCE_TYPE),
+    () =>
+      resourceOptions.filter(
+        (option) => option.type !== SHOWCASE_RESOURCE_TYPE,
+      ),
     [resourceOptions],
   );
 
@@ -803,9 +807,9 @@ export default function ShowcaseEditorClient({
                         <div className="flex flex-wrap gap-2">
                           {imageItem.mediaType === "image" ? (
                             <Button
+                              size="chip"
                               type="button"
                               kind="secondary"
-                              className="px-3 py-1.5 text-[11px]"
                               disabled={cropLoadingId === imageItem.id}
                               onPointerDown={(event) => event.stopPropagation()}
                               onClick={() => {
@@ -818,9 +822,9 @@ export default function ShowcaseEditorClient({
                             </Button>
                           ) : null}
                           <Button
+                            size="chip"
                             type="button"
                             kind="secondary"
-                            className="px-3 py-1.5 text-[11px]"
                             onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => {
                               setImageItems((previous) =>
@@ -848,10 +852,10 @@ export default function ShowcaseEditorClient({
                 {tx("Links", "de")}
               </label>
               <Button
+                size="chip"
                 type="button"
                 kind="secondary"
                 icon={faPlus}
-                className="px-3 py-2 text-xs"
                 onClick={() => append({ label: "", url: "" })}
               >
                 {tx("Link hinzufügen", "de")}
@@ -877,9 +881,9 @@ export default function ShowcaseEditorClient({
                     placeholder="https://…"
                   />
                   <Button
+                    size="chip"
                     type="button"
                     kind="secondary"
-                    className="px-3 py-2 text-xs"
                     onClick={() => {
                       if (fields.length === 1) {
                         setValue(`links.${index}.label`, "");
@@ -999,14 +1003,16 @@ export default function ShowcaseEditorClient({
                     className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm text-foreground/90"
                   >
                     <span>{tag}</span>
-                    <button
-                      type="button"
-                      className="text-muted-foreground transition hover:text-foreground"
+                    <Button
+                      kind="ghost"
+                      size="chip"
+                      iconOnly
+                      className="h-5 w-5 text-muted-foreground"
                       aria-label={`${tx("Tag entfernen", "de")}: ${tag}`}
                       onClick={() => removeTag(tag)}
                     >
                       ×
-                    </button>
+                    </Button>
                   </span>
                 ))}
                 <input

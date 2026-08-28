@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { type PrinterStatus } from "@/lib/bambu";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
 import {
   getCartJobs,
@@ -579,28 +579,24 @@ export default function Home() {
                   : "Select all"}
               </Button>
               <Button
+                size="chip"
                 type="button"
                 onClick={handleClaimSelected}
                 kind="primary"
-                className="px-3 py-2 text-xs"
                 disabled={selectedJobIds.length === 0}
               >
                 Claim selected
               </Button>
               <Button
+                size="chip"
                 type="button"
                 onClick={handleAddSelectedToCart}
                 kind="secondary"
-                className="px-3 py-2 text-xs"
                 disabled={selectedJobIds.length === 0}
               >
                 Add selected to checkout
               </Button>
-              <Button
-                href="/checkout"
-                kind="secondary"
-                className="px-3 py-2 text-xs"
-              >
+              <Button size="chip" href="/checkout" kind="secondary">
                 Checkout ({cartJobIds.length + cartProducts.length})
               </Button>
             </div>

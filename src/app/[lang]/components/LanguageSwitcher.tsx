@@ -9,21 +9,20 @@ import {
   stripLocalePrefix,
 } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
+import Button, { type ButtonKind } from "@/components/knglmrt/Button";
 
 type LanguageSwitcherProps = {
   className?: string;
   variant?: "default" | "topnav" | "footer";
 };
 
-const buttonClassName =
-  "rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition";
-
-// DE/EN als eckiges Segment: 11px Fira Sans (wide), .08em getrackt,
-// aktive Sprache schwarz auf weiß invertiert — Muster aus dem Prototyp.
-const topNavButtonClassName =
-  "knglmrt-border px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
-const footerButtonClassName =
-  "border border-white px-2 py-1 font-wide text-[11px] uppercase leading-[14px] tracking-[.08em] transition";
+// DE/EN als eckiges Segment: 11px Fira Sans (wide), .08em getrackt, aktive
+// Sprache invertiert. Die Taste selbst kommt aus dem DS; hier steht nur, was
+// die Sprachwahl daran ändert — der Satz und, im Fuß, die weiße Kontur auf
+// dunklem Grund.
+const localeTypeClassName =
+  "font-wide text-[11px] uppercase leading-[14px] tracking-[.08em]";
+const footerLocaleClassName = "border-white";
 
 export default function LanguageSwitcher({
   className,
@@ -52,28 +51,23 @@ export default function LanguageSwitcher({
     router.refresh();
   };
 
+  // Die Variante bestimmt nur, wie die aktive Sprache markiert wird; Größe,
+  // Kontur und Hover kommen aus der Taste.
+  const localeButtonKind = (targetLocale: "de" | "en"): ButtonKind =>
+    currentLocale === targetLocale ? "primary" : "secondary";
+
   const localeButtonClassName = (targetLocale: "de" | "en") => {
     const isCurrent = currentLocale === targetLocale;
 
-    if (variant === "topnav" || variant === "footer") {
-      const buttonClass =
-        variant === "footer" ? footerButtonClassName : topNavButtonClassName;
-      return `${buttonClass} ${
+    if (variant === "footer") {
+      return `${localeTypeClassName} ${footerLocaleClassName} ${
         isCurrent
-          ? variant === "footer"
-            ? "bg-white font-bold text-[var(--knglmrt-dark-100)]"
-            : "bg-foreground font-bold text-background"
-          : variant === "footer"
-            ? "bg-transparent font-normal text-white hover:bg-white/10"
-            : "bg-card font-normal text-foreground hover:bg-primary-soft"
+          ? "bg-white font-bold text-[var(--knglmrt-dark-100)] hover:bg-white"
+          : "bg-transparent font-normal text-white hover:bg-white/10"
       }`;
     }
 
-    return `${buttonClassName} ${
-      isCurrent
-        ? "border-primary bg-primary text-primary-foreground"
-        : "border-input bg-card text-muted-foreground hover:border-primary-border hover:text-foreground"
-    }`;
+    return `${localeTypeClassName} ${isCurrent ? "font-bold" : "font-normal"}`;
   };
 
   return (
@@ -85,16 +79,22 @@ export default function LanguageSwitcher({
           : "inline-flex items-center gap-1")
       }
     >
-      <button
-        type="button"
+      <Button
+        kind={
+          variant === "footer" ? "secondary" : localeButtonKind(DEFAULT_LOCALE)
+        }
+        size="chip"
         onClick={() => switchToLocale(DEFAULT_LOCALE)}
         className={localeButtonClassName(DEFAULT_LOCALE)}
         aria-current={currentLocale === DEFAULT_LOCALE ? "page" : undefined}
       >
         DE
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        kind={
+          variant === "footer" ? "secondary" : localeButtonKind(ENGLISH_LOCALE)
+        }
+        size="chip"
         onClick={() => switchToLocale(ENGLISH_LOCALE)}
         className={`${localeButtonClassName(ENGLISH_LOCALE)} ${
           variant === "topnav" || variant === "footer" ? "-ml-px" : ""
@@ -102,7 +102,7 @@ export default function LanguageSwitcher({
         aria-current={currentLocale === ENGLISH_LOCALE ? "page" : undefined}
       >
         EN
-      </button>
+      </Button>
     </div>
   );
 }

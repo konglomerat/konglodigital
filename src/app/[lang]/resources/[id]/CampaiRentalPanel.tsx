@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 
 type RentalStatusItem = {
   id: string;

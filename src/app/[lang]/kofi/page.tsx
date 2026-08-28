@@ -25,6 +25,7 @@ import type {
   KoFiMonthlySummary,
   KoFiResponse,
 } from "@/lib/campai-kofi";
+import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "../admin/SubPageTitle";
 
 type ViewMode = "month" | "quarter" | "year";
@@ -969,9 +970,7 @@ export default function KoFiPage() {
           cache: "no-store",
         });
         const payload = (await response.json().catch(() => null)) as
-          | KoFiResponse
-          | { error?: string }
-          | null;
+          KoFiResponse | { error?: string } | null;
 
         if (!response.ok) {
           throw new Error(
@@ -1125,20 +1124,17 @@ export default function KoFiPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           {VIEW_OPTIONS.map((option) => (
-            <button
+            <Button
               key={option.value}
-              type="button"
-              onClick={() => setViewMode(option.value)}
+              kind={viewMode === option.value ? "primary" : "secondary"}
+              className="min-w-0"
+              aria-pressed={viewMode === option.value}
               aria-label={option.buttonLabel}
-              className={`min-w-0 rounded-full border px-2 py-2 text-sm font-medium transition sm:px-4 ${
-                viewMode === option.value
-                  ? "border-hairline bg-foreground text-background"
-                  : "border-input bg-card text-foreground/80 hover:border-ring/80"
-              }`}
+              onClick={() => setViewMode(option.value)}
             >
               <span className="sm:hidden">{option.label}</span>
               <span className="hidden sm:inline">{option.buttonLabel}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </section>

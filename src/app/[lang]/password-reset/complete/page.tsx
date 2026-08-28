@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../../components/PasswordInput";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -204,9 +204,10 @@ export default function PasswordResetCompletePage() {
             ) : null}
 
             <Button
+              fullWidth
+              size="small"
               type="submit"
               kind="primary"
-              className="w-full px-4 py-2 text-sm"
               disabled={isSaving}
             >
               {isSaving

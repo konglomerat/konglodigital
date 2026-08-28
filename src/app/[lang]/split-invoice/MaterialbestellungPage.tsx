@@ -19,9 +19,8 @@ import {
   faUser,
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import { FormField, FormSection, Input, Select } from "../components/ui/form";
 import {
@@ -539,13 +538,11 @@ export default function MaterialInvoicesPage({
   const handleEditorBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
     const target = event.target;
 
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLSelectElement ||
-        target instanceof HTMLTextAreaElement
-      )
-    ) {
+    if (!(
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement ||
+      target instanceof HTMLTextAreaElement
+    )) {
       return;
     }
 
@@ -1002,15 +999,16 @@ export default function MaterialInvoicesPage({
           >
             {isParsing ? "Wird ausgelesen…" : "E-Rechnung auslesen"}
           </Button>
-          <button
-            type="button"
+          <Button
+            kind="secondary"
+            size="medium"
+            iconOnly
+            icon={faArrowRotateLeft}
             title="Zurücksetzen"
+            aria-label="Zurücksetzen"
             onClick={resetEditor}
             disabled={isParsing}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            <FontAwesomeIcon icon={faArrowRotateLeft} />
-          </button>
+          />
         </div>
         {parseError ? (
           <p className="mt-3 text-sm text-rose-600">{parseError}</p>
@@ -1480,14 +1478,15 @@ export default function MaterialInvoicesPage({
                                 <td className="px-3 py-2 text-right">
                                   <div className="row-actions inline-flex gap-1">
                                     <div className="relative inline-flex">
-                                      <button
-                                        type="button"
+                                      <Button
+                                        kind="secondary"
+                                        size="chip"
+                                        iconOnly
+                                        icon={faRightLeft}
                                         title="Position neu zuweisen"
-                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-xs text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        aria-label="Position neu zuweisen"
                                         disabled={participants.length <= 1}
-                                      >
-                                        <FontAwesomeIcon icon={faRightLeft} />
-                                      </button>
+                                      />
                                       {participants.length > 1 && (
                                         <select
                                           className="absolute inset-0 cursor-pointer opacity-0"
@@ -1511,10 +1510,13 @@ export default function MaterialInvoicesPage({
                                         </select>
                                       )}
                                     </div>
-                                    <button
-                                      type="button"
+                                    <Button
+                                      kind="danger-secondary"
+                                      size="chip"
+                                      iconOnly
+                                      icon={faTrash}
                                       title="Position entfernen"
-                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-rose-200 bg-white text-xs text-rose-700 transition hover:bg-rose-50"
+                                      aria-label="Position entfernen"
                                       onClick={() =>
                                         updateParticipant(
                                           participant.id,
@@ -1527,9 +1529,7 @@ export default function MaterialInvoicesPage({
                                           }),
                                         )
                                       }
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} />
-                                    </button>
+                                    />
                                   </div>
                                 </td>
                               </tr>

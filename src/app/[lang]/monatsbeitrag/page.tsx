@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
 
 type AccessCardPlanId = "none" | "quarter" | "full";
@@ -397,10 +397,10 @@ export default function MonatsbeitragPage() {
               <div className="flex items-center gap-2">
                 {tenVisitInCart ? (
                   <Button
+                    size="chip"
                     type="button"
                     onClick={handleDecreaseTenVisitCard}
                     kind="secondary"
-                    className="px-3 py-1 text-xs"
                   >
                     −
                   </Button>

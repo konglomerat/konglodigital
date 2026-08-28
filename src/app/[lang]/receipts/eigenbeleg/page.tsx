@@ -13,7 +13,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
@@ -51,11 +52,7 @@ type ReasonOption = (typeof reasonOptions)[number];
 
 type BookingType = "ausgabe" | "einnahme" | "umbuchung";
 type AssociationAccount =
-  | "K0004 B"
-  | "K0104 A"
-  | "BAR"
-  | "PAYPAL"
-  | "Kreditkarte";
+  "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
 type CostCenterOption = {
   value: string;
   label: string;
@@ -241,7 +238,8 @@ function buildReceiverLine(values: ReceiptValues) {
     parts.push(`– ${values.receiverAccount.trim()} –`);
   if (values.receiverArea?.trim())
     parts.push(`– ${values.receiverArea.trim()} –`);
-  if (values.receiverShowcase?.trim()) parts.push(values.receiverShowcase.trim());
+  if (values.receiverShowcase?.trim())
+    parts.push(values.receiverShowcase.trim());
   if (values.receiverSplit?.trim())
     parts.push(`(${values.receiverSplit.trim()})`);
   return parts.join(" ");
@@ -1253,59 +1251,55 @@ export default function EigenbelegPage() {
               {...register("counterpartyAccount")}
             />
 
-            <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "ausgabe")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  isExpenseFlow
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faArrowTrendDown}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Ausgabe
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "einnahme")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  selectedBookingType === "einnahme"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faArrowTrendUp}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Einnahme
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("bookingType", "umbuchung")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  isTransferFlow
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <span className="mr-2 inline-flex items-center">
-                  <FontAwesomeIcon
-                    icon={faMoneyBillTransfer}
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                Umbuchung
-              </button>
-            </div>
+            <SegmentedControl
+              value={
+                isExpenseFlow
+                  ? "ausgabe"
+                  : isTransferFlow
+                    ? "umbuchung"
+                    : "einnahme"
+              }
+              size="small"
+              onChange={(next) => setValue("bookingType", next)}
+              options={[
+                {
+                  value: "ausgabe",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faArrowTrendDown}
+                        className="h-3.5 w-3.5"
+                      />
+                      Ausgabe
+                    </>
+                  ),
+                },
+                {
+                  value: "einnahme",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faArrowTrendUp}
+                        className="h-3.5 w-3.5"
+                      />
+                      Einnahme
+                    </>
+                  ),
+                },
+                {
+                  value: "umbuchung",
+                  label: (
+                    <>
+                      <FontAwesomeIcon
+                        icon={faMoneyBillTransfer}
+                        className="h-3.5 w-3.5"
+                      />
+                      Umbuchung
+                    </>
+                  ),
+                },
+              ]}
+            />
 
             {isTransferFlow ? (
               <div className="space-y-5">
@@ -1717,13 +1711,15 @@ export default function EigenbelegPage() {
                       {counterpartyName ? ` (${counterpartyName})` : ""}{" "}
                       ausgewählt
                     </span>
-                    <button
-                      type="button"
-                      className="ml-auto rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                    <Button
+                      kind="ghost"
+                      size="chip"
+                      iconOnly
+                      icon={faXmark}
+                      className="ml-auto"
+                      aria-label="Auswahl entfernen"
                       onClick={resetCounterparty}
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                    </button>
+                    />
                   </div>
                 ) : null}
 

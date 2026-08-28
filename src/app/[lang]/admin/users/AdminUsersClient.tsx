@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import type { UserRole } from "@/lib/roles";
 
@@ -394,9 +394,9 @@ export default function AdminUsersClient() {
             </p>
           </div>
           <Button
+            size="small"
             type="button"
             kind="secondary"
-            className="px-4 py-2 text-sm"
             disabled={isLoadingProfiles}
             onClick={() => {
               void loadProfiles();
@@ -469,8 +469,10 @@ export default function AdminUsersClient() {
                                 Mit Campai verknuepft
                               </span>
                             ) : (
-                              <button
-                                type="button"
+                              <Button
+                                kind="quiet"
+                                size="chip"
+                                className="whitespace-nowrap"
                                 disabled={savingCampaiForId === profile.id}
                                 onClick={() => {
                                   if (isEditingCampai) {
@@ -479,12 +481,11 @@ export default function AdminUsersClient() {
                                   }
                                   void startCampaiLink(profile);
                                 }}
-                                className="inline-flex whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {isEditingCampai
                                   ? "Campai-Auswahl schliessen"
                                   : "Mit Campai verknuepfen"}
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -593,9 +594,9 @@ export default function AdminUsersClient() {
                   </p>
                 </div>
                 <Button
+                  size="chip"
                   type="button"
                   kind="secondary"
-                  className="px-2 py-1 text-xs"
                   disabled={savingCampaiForId === editingCampaiProfile.id}
                   onClick={cancelCampaiLink}
                 >
@@ -689,18 +690,18 @@ export default function AdminUsersClient() {
 
               <div className="flex items-center justify-end gap-2">
                 <Button
+                  size="chip"
                   type="button"
                   kind="secondary"
-                  className="px-3 py-1.5 text-xs"
                   disabled={savingCampaiForId === editingCampaiProfile.id}
                   onClick={cancelCampaiLink}
                 >
                   Abbrechen
                 </Button>
                 <Button
+                  size="chip"
                   type="button"
                   kind="secondary"
-                  className="px-3 py-1.5 text-xs"
                   disabled={
                     !selectedCampaiContactId ||
                     savingCampaiForId === editingCampaiProfile.id

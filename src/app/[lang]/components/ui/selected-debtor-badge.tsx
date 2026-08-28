@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
+import Button from "@/components/knglmrt/Button";
 import {
   faCheck,
   faPenToSquare,
@@ -136,22 +138,25 @@ export default function SelectedDebtorBadge({
           {displayName ? ` (${displayName})` : ""} ausgewählt
         </span>
         {onEdit ? (
-          <button
-            type="button"
-            className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium underline-offset-2 hover:underline ${styles.edit}`}
+          <Button
+            kind="ghost"
+            size="chip"
+            icon={faPenToSquare}
+            className={`ml-auto ${styles.edit}`}
             onClick={onEdit}
           >
-            <FontAwesomeIcon icon={faPenToSquare} className="h-3 w-3" />
             Bearbeiten
-          </button>
+          </Button>
         ) : null}
-        <button
-          type="button"
-          className={`${onEdit ? "" : "ml-auto"} rounded p-1 ${styles.clear}`}
+        <Button
+          kind="ghost"
+          size="chip"
+          iconOnly
+          icon={faXmark}
+          aria-label="Auswahl entfernen"
+          className={`${onEdit ? "" : "ml-auto"} ${styles.clear}`}
           onClick={onClear}
-        >
-          <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-        </button>
+        />
       </div>
       {showSecondary ? (
         <div

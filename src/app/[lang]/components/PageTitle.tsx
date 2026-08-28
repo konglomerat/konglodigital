@@ -4,13 +4,10 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 
 type PageTitleButtonKind =
-  | "primary"
-  | "secondary"
-  | "danger-primary"
-  | "danger-secondary";
+  "primary" | "secondary" | "danger-primary" | "danger-secondary";
 
 type PageTitleButtonSize = "small" | "medium" | "large";
 
@@ -108,7 +105,9 @@ export default function PageTitle({
         <div className="min-w-0">
           {backLinkElement}
           {eyebrow ? (
-            <p className={`${resolvedEyebrowClassName} ${backLink ? "mt-4" : ""}`}>
+            <p
+              className={`${resolvedEyebrowClassName} ${backLink ? "mt-4" : ""}`}
+            >
               {eyebrow}
             </p>
           ) : null}

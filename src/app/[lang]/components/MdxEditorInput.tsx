@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import Button from "@/components/knglmrt/Button";
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -155,16 +157,16 @@ export default function MdxEditorInput({
                 <ListsToggle />
                 <Separator />
                 <CreateLink />
-                <button
-                  type="button"
+                <Button
+                  kind="secondary"
+                  size="chip"
                   onClick={() => setIsImagePickerOpen((current) => !current)}
                   disabled={readOnly || imageOptions.length === 0}
-                  className="rounded-md border border-input bg-card px-2 py-1 text-sm font-medium text-muted-foreground transition hover:border-primary-border hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/70"
                   title={imagePickerButtonLabel}
                   aria-label={imagePickerButtonLabel}
                 >
                   Bild
-                </button>
+                </Button>
               </>
             ),
           }),
@@ -173,14 +175,14 @@ export default function MdxEditorInput({
 
       <div className="border-t border-border bg-muted px-3 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
+          <Button
+            kind="secondary"
+            size="chip"
             onClick={() => setIsImagePickerOpen((current) => !current)}
             disabled={readOnly || imageOptions.length === 0}
-            className="inline-flex items-center rounded-full border border-input bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary-border hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/70"
           >
             {imagePickerButtonLabel}
-          </button>
+          </Button>
           <p className="text-xs text-muted-foreground">
             {imageOptions.length > 0
               ? `${imageOptions.length} verfugbare Bilder`

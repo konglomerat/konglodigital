@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import CreditorCreatePanel from "../../components/ui/creditor-create-panel";
 import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";

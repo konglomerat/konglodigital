@@ -17,7 +17,7 @@ import {
 } from "@/lib/resource-media";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
-import Button from "./[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 
 // Redaktionell gesetzte Beiträge: Wer einen Artikel auf der Startseite zeigen
 // will, hängt diesen Tag an die Ressource. Ohne getaggte Beiträge fällt die

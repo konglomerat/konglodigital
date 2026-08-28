@@ -12,7 +12,7 @@ import Face from "@/components/knglmrt/Face";
 import Hand from "@/components/knglmrt/Hand";
 import StatTile from "@/components/knglmrt/StatTile";
 import { WERKBEREICHE } from "@/lib/werkbereiche";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import VereinCalendar, { VereinCalendarSkeleton } from "./VereinCalendar";
 
 // TODO: Sobald die Dokumente als PDF liegen (public/ oder CMS), hier die
@@ -90,10 +90,7 @@ const captionClassName =
 export default function VereinPage() {
   return (
     <div>
-      <PageTitle
-        title="Konglomerat e.V."
-        className="mb-2.5"
-      />
+      <PageTitle title="Konglomerat e.V." className="mb-2.5" />
       {/* Subheadline: nicht knglmrt-lead — die Rollenklasse setzt 21px und
           gewinnt gegen jede Tailwind-Größe. Hier die Rolle direkt aufgebaut. */}
       <p className="mb-1.5 max-w-[620px] text-pretty font-[family-name:var(--font-narrow)] text-[28px] font-semibold leading-[34px] text-primary">

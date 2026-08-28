@@ -24,7 +24,7 @@ import {
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import {
   formatEuro,
   getEquipmentLabel,

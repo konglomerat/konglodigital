@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../components/PasswordInput";
 
 export const dynamic = "force-dynamic";
@@ -103,9 +103,10 @@ function LoginForm() {
             </p>
           ) : null}
           <Button
+            fullWidth
+            size="small"
             type="submit"
             kind="primary"
-            className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
             {isLoading ? "Anmeldung läuft ..." : "Anmelden"}

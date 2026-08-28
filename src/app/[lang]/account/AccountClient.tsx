@@ -16,7 +16,7 @@ import {
 } from "@/components/knglmrt/Table";
 import { type InvoicePayload } from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../components/PasswordInput";
 
 type AccountUser = {
@@ -456,9 +456,9 @@ export default function AccountClient({
           Bitte melde dich an, um dein Profil zu verwalten.
         </p>
         <Button
+          size="small"
           href="/login?redirectedFrom=/account"
           kind="primary"
-          className="px-4 py-2"
         >
           Anmelden
         </Button>
@@ -583,7 +583,7 @@ export default function AccountClient({
                 className={`mt-1 ${fieldClassName}`}
               />
             </div>
-            <Button type="submit" kind="primary" className="w-fit px-4 py-2">
+            <Button size="small" type="submit" kind="primary">
               Profil speichern
             </Button>
             {profileError ? (
@@ -627,7 +627,7 @@ export default function AccountClient({
                 className={`mt-1 ${fieldClassName}`}
               />
             </div>
-            <Button type="submit" kind="primary" className="w-fit px-4 py-2">
+            <Button size="small" type="submit" kind="primary">
               Passwort aktualisieren
             </Button>
             {passwordError ? (

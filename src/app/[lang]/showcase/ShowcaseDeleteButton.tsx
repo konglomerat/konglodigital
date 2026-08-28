@@ -6,7 +6,7 @@ import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import { useI18n } from "@/i18n/client";
 import { localizePathname } from "@/i18n/config";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 
 type ShowcaseDeleteButtonProps = {
   showcaseId: string;
@@ -73,7 +73,10 @@ export default function ShowcaseDeleteButton({
           : tx("Beitrag löschen", "de")}
       </Button>
       {errorMessage ? (
-        <p className="max-w-xs text-right text-xs text-destructive" role="alert">
+        <p
+          className="max-w-xs text-right text-xs text-destructive"
+          role="alert"
+        >
           {errorMessage}
         </p>
       ) : null}

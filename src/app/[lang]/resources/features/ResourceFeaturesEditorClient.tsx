@@ -19,7 +19,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import MdxEditorInput from "../../components/MdxEditorInput";
 import ReactSelect from "../../components/ui/react-select";
 import ResourceForm from "../ResourceForm";
@@ -2583,17 +2583,14 @@ export default function ResourceFeaturesEditorClient({
             <div ref={mapContainerRef} className="h-[70vh] w-full" />
           )}
           <div className="absolute left-3 top-3 flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              kind="secondary"
+              size="chip"
+              icon={isSatellite ? faMap : faSatellite}
               onClick={() => setIsSatellite((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground/80 shadow-sm"
             >
-              <FontAwesomeIcon
-                icon={isSatellite ? faMap : faSatellite}
-                className="text-[10px]"
-              />
               {isSatellite ? tx("Map") : tx("Satellite")}
-            </button>
+            </Button>
           </div>
           {switchMenu && !hasFixedResource ? (
             <div

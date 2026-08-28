@@ -12,6 +12,7 @@ import {
   faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
+import Button from "@/components/knglmrt/Button";
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
 import RessortPage from "@/app/[lang]/admin/RessortPage";
 import type {
@@ -1849,25 +1850,23 @@ export default function ReceiptsPage() {
       ) : null}
 
       <div className="mb-3 flex justify-end gap-2">
-        <button
-          type="button"
+        <Button
+          kind="ghost"
           onClick={() => setIsSaldoHidden((current) => !current)}
-          className="inline-flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950"
           aria-pressed={isSaldoHidden}
         >
           {isSaldoHidden ? "Saldo einblenden" : "Saldo ausblenden"}
-        </button>
+        </Button>
         <div className="relative" ref={columnPanelRef}>
-          <button
-            type="button"
+          <Button
+            kind="ghost"
+            icon={faColumns}
             onClick={() => setIsColumnPanelOpen((current) => !current)}
-            className="inline-flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950"
             aria-haspopup="dialog"
             aria-expanded={isColumnPanelOpen}
           >
-            <FontAwesomeIcon icon={faColumns} className="h-4 w-4" />
             Spalten verwalten
-          </button>
+          </Button>
 
           {isColumnPanelOpen ? (
             <div
@@ -1909,30 +1908,22 @@ export default function ReceiptsPage() {
                         <span className="truncate">{column.label}</span>
                       </label>
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
+                        <Button
+                          kind="ghost"
+                          iconOnly
+                          icon={faArrowUp}
                           onClick={() => moveColumn(column.key, -1)}
                           disabled={index === 0}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`${column.label} nach oben verschieben`}
-                        >
-                          <FontAwesomeIcon
-                            icon={faArrowUp}
-                            className="h-3.5 w-3.5"
-                          />
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <Button
+                          kind="ghost"
+                          iconOnly
+                          icon={faArrowDown}
                           onClick={() => moveColumn(column.key, 1)}
                           disabled={index === columnOrder.length - 1}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`${column.label} nach unten verschieben`}
-                        >
-                          <FontAwesomeIcon
-                            icon={faArrowDown}
-                            className="h-3.5 w-3.5"
-                          />
-                        </button>
+                        />
                       </div>
                     </div>
                   );

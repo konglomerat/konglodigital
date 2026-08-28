@@ -7,7 +7,7 @@ import { faArrowLeft, faCodeCompare } from "@fortawesome/free-solid-svg-icons";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 
 export type DuplicateDetectionResource = {
   id: string;

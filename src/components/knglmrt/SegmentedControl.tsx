@@ -1,6 +1,11 @@
 "use client";
 
+// Eine Zeile, mehrere Schalter, genau einer aktiv. Optisch keine eigene
+// Erfindung: der Rahmen ist die eine Kontur des Systems, jedes Segment ist die
+// Taste aus Button.tsx — aktiv gefüllt, sonst still.
 import type { ReactNode } from "react";
+
+import Button, { type ButtonSize } from "@/components/knglmrt/Button";
 
 export type SegmentedControlOption<T extends string> = {
   value: T;
@@ -11,6 +16,7 @@ type SegmentedControlProps<T extends string> = {
   value: T;
   options: ReadonlyArray<SegmentedControlOption<T>>;
   onChange: (value: T) => void;
+  size?: ButtonSize;
   className?: string;
 };
 
@@ -18,35 +24,37 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  size = "chip",
   className,
 }: SegmentedControlProps<T>) {
   const containerClassName = [
-    "inline-flex rounded-md border border-border bg-secondary/60 p-0.5",
+    // Die eine Kontur sitzt am Rahmen, die Haarlinien dazwischen zeichnet
+    // `divide` — die Segmente selbst bleiben randlos.
+    "inline-flex knglmrt-border divide-x-[var(--hairline-width)] divide-[var(--hairline-color)] bg-card",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={containerClassName}>
+    <div className={containerClassName} role="group">
       {options.map((option) => {
         const isActive = option.value === value;
         return (
-          <button
+          <Button
             key={option.value}
-            type="button"
-            className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
-              isActive
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
-            }`}
+            kind={isActive ? "primary" : "ghost"}
+            size={size}
             onClick={() => onChange(option.value)}
             aria-pressed={isActive}
+            className="border-0"
           >
             {option.label}
-          </button>
+          </Button>
         );
       })}
     </div>
   );
 }
+
+export default SegmentedControl;

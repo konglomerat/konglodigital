@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { faPenToSquare, faPlus } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../Button";
+import Button from "@/components/knglmrt/Button";
 import { FormField, Input } from "./form";
-import { SegmentedControl } from "./segmented-control";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 
 export type DebtorCreateType = "business" | "person";
 

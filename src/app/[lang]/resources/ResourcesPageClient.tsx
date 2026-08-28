@@ -29,6 +29,8 @@ import {
   RESOURCES_NAMESPACE,
   type Locale,
 } from "@/i18n/config";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import PageTitle from "../components/PageTitle";
 import { Input, Select } from "../components/ui/form";
 import {
@@ -266,22 +268,22 @@ const ResourceCard = ({
 
         {hasCarousel ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              type="button"
+            <Button
+              kind="secondary"
+              iconOnly
+              icon={faChevronLeft}
               aria-label={tx("Previous image")}
               onClick={handlePrev}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
-            </button>
-            <button
-              type="button"
+              className="pointer-events-auto"
+            />
+            <Button
+              kind="secondary"
+              iconOnly
+              icon={faChevronRight}
               aria-label={tx("Next image")}
               onClick={handleNext}
-              className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-card/90 text-xs font-semibold text-foreground shadow-sm transition hover:bg-card"
-            >
-              <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
-            </button>
+              className="pointer-events-auto"
+            />
           </div>
         ) : null}
 
@@ -293,7 +295,7 @@ const ResourceCard = ({
                 type="button"
                 aria-label={`${tx("Image")} ${index + 1}`}
                 onClick={(event) => handleDotClick(event, index)}
-                className={`pointer-events-auto h-1.5 w-1.5 rounded-full transition ${
+                className={`pointer-events-auto h-1.5 w-1.5 transition ${
                   index === activeIndex ? "bg-card" : "bg-card/50"
                 }`}
               />
@@ -793,10 +795,7 @@ export default function ResourcesPageClient({
     if (!hasRestoredState) {
       return;
     }
-    if (
-      selectedResourceType.trim().toLowerCase() ===
-      SHOWCASE_RESOURCE_TYPE
-    ) {
+    if (selectedResourceType.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE) {
       setSelectedResourceType("");
       replaceFilterParamsInUrl(
         searchTerm.trim(),
@@ -1111,34 +1110,31 @@ export default function ResourcesPageClient({
       />
 
       <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setViewMode("list")}
-          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-            viewMode === "list"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <span className="inline-flex items-center gap-2">
-            <FontAwesomeIcon icon={faList} className="text-[10px]" />
-            {tx("List view")}
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode("map")}
-          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-            viewMode === "map"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <span className="inline-flex items-center gap-2">
-            <FontAwesomeIcon icon={faMap} className="text-[10px]" />
-            {tx("Map view")}
-          </span>
-        </button>
+        <SegmentedControl
+          value={viewMode}
+          size="small"
+          onChange={setViewMode}
+          options={[
+            {
+              value: "list" as const,
+              label: (
+                <>
+                  <FontAwesomeIcon icon={faList} className="text-[10px]" />
+                  {tx("List view")}
+                </>
+              ),
+            },
+            {
+              value: "map" as const,
+              label: (
+                <>
+                  <FontAwesomeIcon icon={faMap} className="text-[10px]" />
+                  {tx("Map view")}
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {errorMessage ? (
@@ -1174,14 +1170,14 @@ export default function ResourcesPageClient({
                 className="pl-9 pr-10 py-3 text-base"
               />
               {searchTerm.trim().length > 0 ? (
-                <button
-                  type="button"
+                <Button
+                  kind="ghost"
+                  iconOnly
+                  icon={faXmark}
                   aria-label={tx("Clear search")}
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
-                </button>
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
               ) : null}
             </div>
 
@@ -1314,14 +1310,14 @@ export default function ResourcesPageClient({
 
                 {canLoadMore ? (
                   <div className="mt-6 flex justify-center">
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
                       onClick={handleLoadMore}
-                      disabled={loadingMore}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-input bg-card px-5 py-2 text-sm font-semibold text-foreground transition hover:border-hairline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      loading={loadingMore}
                     >
                       {loadingMore ? tx("Loading more...") : tx("Load more")}
-                    </button>
+                    </Button>
                   </div>
                 ) : null}
               </>

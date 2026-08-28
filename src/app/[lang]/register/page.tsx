@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +92,10 @@ export default function RegisterPage() {
             </div>
           ) : null}
           <Button
+            fullWidth
+            size="small"
             type="submit"
             kind="primary"
-            className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
             {isLoading ? "Prüfung läuft ..." : "Registrierung starten"}

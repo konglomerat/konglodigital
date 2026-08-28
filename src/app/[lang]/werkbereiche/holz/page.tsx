@@ -9,15 +9,8 @@ import Badge from "@/components/knglmrt/Badge";
 import Divider from "@/components/knglmrt/Divider";
 import Face from "@/components/knglmrt/Face";
 import Hand from "@/components/knglmrt/Hand";
-import {
-  Table,
-  TBody,
-  Td,
-  Th,
-  THead,
-  Tr,
-} from "@/components/knglmrt/Table";
-import Button from "../../components/Button";
+import { Table, TBody, Td, Th, THead, Tr } from "@/components/knglmrt/Table";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 import WerkbereichSideNav from "../WerkbereichSideNav";
 
@@ -220,7 +213,9 @@ export default function HolzwerkstattPage() {
             className="mt-3 flex items-center gap-3.5 bg-muted px-4 py-3.5 transition hover:bg-primary-soft"
           >
             <span className="flex-1">
-              <span className="block font-bold">Alle 32 Einträge im Inventar</span>
+              <span className="block font-bold">
+                Alle 32 Einträge im Inventar
+              </span>
               <span className="knglmrt-num block text-muted-foreground">
                 Filter „Werkbereich: Holzwerkstatt“
               </span>

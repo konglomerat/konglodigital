@@ -6,9 +6,8 @@ import {
   faPlus,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import type { MaterialOrderSummary } from "@/lib/material-orders";
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
@@ -191,15 +190,16 @@ export default function MaterialbestellungListPage() {
                       <Button href={`/split-invoice/${order.id}`} size="small">
                         Öffnen
                       </Button>
-                      <button
-                        type="button"
+                      <Button
+                        kind="danger-secondary"
+                        size="chip"
+                        iconOnly
+                        icon={faTrash}
                         title="Löschen"
+                        aria-label="Löschen"
                         disabled={deletingId === order.id}
                         onClick={() => void handleDelete(order)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
-                      </button>
+                      />
                     </div>
                   </td>
                 </tr>

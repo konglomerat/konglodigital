@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   faArrowDown,
@@ -24,7 +18,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
   Checkbox,
@@ -54,14 +49,7 @@ type RecipientList = {
   isDefault: boolean;
 };
 
-type AspectRatio =
-  | "original"
-  | "1:1"
-  | "4:3"
-  | "3:2"
-  | "16:9"
-  | "4:5"
-  | "3:4";
+type AspectRatio = "original" | "1:1" | "4:3" | "3:2" | "16:9" | "4:5" | "3:4";
 
 type ShowcaseOptions = {
   layout: "split" | "stacked";
@@ -283,7 +271,9 @@ const restoreItems = (
         id: raw.id,
         type: "button",
         title:
-          typeof raw.title === "string" ? raw.title.slice(0, 80) : "Mehr erfahren",
+          typeof raw.title === "string"
+            ? raw.title.slice(0, 80)
+            : "Mehr erfahren",
         href: typeof raw.href === "string" ? raw.href.slice(0, 1000) : "",
       });
       usedItemIds.add(raw.id);
@@ -324,32 +314,29 @@ function ItemControls({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <button
-        type="button"
+      <Button
+        kind="secondary"
+        iconOnly
+        icon={faArrowUp}
         onClick={() => onMove(-1)}
         disabled={index === 0}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Nach oben verschieben"
-      >
-        <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
+      />
+      <Button
+        kind="secondary"
+        iconOnly
+        icon={faArrowDown}
         onClick={() => onMove(1)}
         disabled={index === itemCount - 1}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Nach unten verschieben"
-      >
-        <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
+      />
+      <Button
+        kind="danger-secondary"
+        iconOnly
+        icon={faTrash}
         onClick={onRemove}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-destructive-border bg-card text-destructive transition hover:bg-destructive-soft"
         aria-label="Inhalt entfernen"
-      >
-        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-      </button>
+      />
     </div>
   );
 }
@@ -380,16 +367,14 @@ export default function GenerateNewsletterClient({
       ? String(rapidmailDefaults.recipientListId)
       : "",
   );
-  const [previewViewport, setPreviewViewport] = useState<
-    "desktop" | "mobile"
-  >("desktop");
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile">(
+    "desktop",
+  );
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
-  const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(
-    null,
-  );
+  const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(null);
   const [status, setStatus] = useState<{
     kind: "success" | "error";
     text: string;
@@ -517,11 +502,7 @@ export default function GenerateNewsletterClient({
 
   useEffect(() => {
     if (!isConfigReady) return;
-    if (
-      selectedShowcaseCount === 0 ||
-      !title.trim() ||
-      !subject.trim()
-    ) {
+    if (selectedShowcaseCount === 0 || !title.trim() || !subject.trim()) {
       setPreviewHtml("");
       setPreviewError(
         selectedShowcaseCount > 0 && (!title.trim() || !subject.trim())
@@ -554,7 +535,8 @@ export default function GenerateNewsletterClient({
         }
         setPreviewHtml(raw);
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
         setPreviewError(
           error instanceof Error
             ? error.message
@@ -616,7 +598,9 @@ export default function GenerateNewsletterClient({
       const source = current.find((item) => item.id === sourceId);
       if (!source) return current;
       const withoutSource = current.filter((item) => item.id !== sourceId);
-      const targetIndex = withoutSource.findIndex((item) => item.id === targetId);
+      const targetIndex = withoutSource.findIndex(
+        (item) => item.id === targetId,
+      );
       if (targetIndex < 0) return current;
       withoutSource.splice(targetIndex, 0, source);
       return withoutSource;
@@ -639,9 +623,7 @@ export default function GenerateNewsletterClient({
   const updateButton = (id: string, patch: Partial<ButtonItem>) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "button"
-          ? { ...item, ...patch }
-          : item,
+        item.id === id && item.type === "button" ? { ...item, ...patch } : item,
       ),
     );
   };
@@ -649,9 +631,7 @@ export default function GenerateNewsletterClient({
   const updateBanner = (id: string, patch: Partial<BannerItem>) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "banner"
-          ? { ...item, ...patch }
-          : item,
+        item.id === id && item.type === "banner" ? { ...item, ...patch } : item,
       ),
     );
   };
@@ -689,8 +669,9 @@ export default function GenerateNewsletterClient({
       .filter((showcase) => !selectedShowcaseIds.has(showcase.id))
       .slice(0, availableSlots);
     if (
-      filteredShowcases.filter((showcase) => !selectedShowcaseIds.has(showcase.id))
-        .length > additions.length
+      filteredShowcases.filter(
+        (showcase) => !selectedShowcaseIds.has(showcase.id),
+      ).length > additions.length
     ) {
       setStatus({
         kind: "error",
@@ -698,10 +679,7 @@ export default function GenerateNewsletterClient({
       });
     }
     setItems((current) => {
-      return [
-        ...current,
-        ...additions.map(createShowcaseItem),
-      ];
+      return [...current, ...additions.map(createShowcaseItem)];
     });
   };
 
@@ -718,7 +696,10 @@ export default function GenerateNewsletterClient({
       if (!response.ok) {
         const raw = await response.text();
         throw new Error(
-          errorMessageFromResponse(raw, "Newsletter konnte nicht exportiert werden."),
+          errorMessageFromResponse(
+            raw,
+            "Newsletter konnte nicht exportiert werden.",
+          ),
         );
       }
 
@@ -892,7 +873,12 @@ export default function GenerateNewsletterClient({
             description="Ausgewählte Beiträge und freie Inhaltsblöcke lassen sich per Pfeilen oder Drag-and-drop sortieren."
           >
             <div className="mb-5 flex flex-wrap gap-2">
-              <Button type="button" kind="primary" icon={faPlus} onClick={addButton}>
+              <Button
+                type="button"
+                kind="primary"
+                icon={faPlus}
+                onClick={addButton}
+              >
                 Button
               </Button>
               <Button
@@ -1000,7 +986,9 @@ export default function GenerateNewsletterClient({
                             )}
                           >
                             <FontAwesomeIcon
-                              icon={item.type === "banner" ? faBullhorn : faLink}
+                              icon={
+                                item.type === "banner" ? faBullhorn : faLink
+                              }
                               className="h-4 w-4"
                             />
                           </span>
@@ -1034,7 +1022,9 @@ export default function GenerateNewsletterClient({
                           onMove={(direction) => moveItem(item.id, direction)}
                           onRemove={() =>
                             setItems((current) =>
-                              current.filter((candidate) => candidate.id !== item.id),
+                              current.filter(
+                                (candidate) => candidate.id !== item.id,
+                              ),
                             )
                           }
                         />
@@ -1048,8 +1038,7 @@ export default function GenerateNewsletterClient({
                               onChange={(event) =>
                                 updateShowcaseOptions(item.id, {
                                   layout: event.target.value as
-                                    | "split"
-                                    | "stacked",
+                                    "split" | "stacked",
                                 })
                               }
                             >
@@ -1143,7 +1132,9 @@ export default function GenerateNewsletterClient({
                               maxLength={1000}
                               placeholder="https://…"
                               onChange={(event) =>
-                                updateButton(item.id, { href: event.target.value })
+                                updateButton(item.id, {
+                                  href: event.target.value,
+                                })
                               }
                             />
                           </FormField>
@@ -1287,7 +1278,9 @@ export default function GenerateNewsletterClient({
                           </span>
                         </span>
                         <span className="block text-xs text-muted-foreground">
-                          {formatDate(showcase.publishDate ?? showcase.updatedAt)}
+                          {formatDate(
+                            showcase.publishDate ?? showcase.updatedAt,
+                          )}
                         </span>
                         <span className="block text-sm leading-relaxed text-muted-foreground">
                           {description.slice(0, 130) ||
@@ -1327,7 +1320,11 @@ export default function GenerateNewsletterClient({
                   onChange={(event) => setFromEmail(event.target.value)}
                 />
               </FormField>
-              <FormField label="Empfängerliste" required className="md:col-span-2">
+              <FormField
+                label="Empfängerliste"
+                required
+                className="md:col-span-2"
+              >
                 <Select
                   value={recipientListId}
                   disabled={recipientLists.length === 0}
@@ -1406,55 +1403,53 @@ export default function GenerateNewsletterClient({
           <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
-                <h2 className="font-semibold text-foreground">E-Mail-Vorschau</h2>
+                <h2 className="font-semibold text-foreground">
+                  E-Mail-Vorschau
+                </h2>
                 <p className="text-xs text-muted-foreground">
                   {previewViewport === "mobile" ? "390 px" : "580 px"}
                 </p>
               </div>
-              <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-1">
-                <button
-                  type="button"
-                  onClick={() => setPreviewViewport("desktop")}
-                  aria-pressed={previewViewport === "desktop"}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
-                    previewViewport === "desktop"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <FontAwesomeIcon icon={faDesktop} className="h-3.5 w-3.5" />
-                  Desktop
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewViewport("mobile")}
-                  aria-pressed={previewViewport === "mobile"}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
-                    previewViewport === "mobile"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <FontAwesomeIcon
-                    icon={faMobileScreen}
-                    className="h-3.5 w-3.5"
-                  />
-                  Mobil
-                </button>
-                <button
-                  type="button"
+              <div className="flex items-center gap-2">
+                <SegmentedControl
+                  value={previewViewport}
+                  onChange={setPreviewViewport}
+                  options={[
+                    {
+                      value: "desktop" as const,
+                      label: (
+                        <>
+                          <FontAwesomeIcon
+                            icon={faDesktop}
+                            className="h-3.5 w-3.5"
+                          />
+                          Desktop
+                        </>
+                      ),
+                    },
+                    {
+                      value: "mobile" as const,
+                      label: (
+                        <>
+                          <FontAwesomeIcon
+                            icon={faMobileScreen}
+                            className="h-3.5 w-3.5"
+                          />
+                          Mobil
+                        </>
+                      ),
+                    },
+                  ]}
+                />
+                <Button
+                  kind="ghost"
+                  iconOnly
+                  icon={faRotate}
                   onClick={() => setPreviewNonce((current) => current + 1)}
-                  disabled={selectedShowcaseCount === 0 || isPreviewLoading}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={selectedShowcaseCount === 0}
+                  loading={isPreviewLoading}
                   aria-label="Vorschau neu laden"
-                >
-                  <FontAwesomeIcon
-                    icon={faRotate}
-                    className={cn("h-3.5 w-3.5", isPreviewLoading && "animate-spin")}
-                  />
-                </button>
+                />
               </div>
             </header>
 
@@ -1486,7 +1481,10 @@ export default function GenerateNewsletterClient({
                 <div className="flex min-h-[720px] items-center justify-center rounded-md border border-dashed border-input bg-card px-8 text-center">
                   <div>
                     <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
-                      <FontAwesomeIcon icon={faPaperPlane} className="h-5 w-5" />
+                      <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        className="h-5 w-5"
+                      />
                     </span>
                     <p className="mt-4 font-semibold text-foreground">
                       Vorschau wartet auf Inhalte

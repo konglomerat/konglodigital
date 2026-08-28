@@ -12,7 +12,7 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import {
@@ -32,7 +32,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/form";
-import { SegmentedControl } from "../../components/ui/segmented-control";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
@@ -963,9 +963,12 @@ export default function NewSimpleInvoicePage() {
                   className="group relative inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   <span>Steuer</span>
-                  <button
-                    type="button"
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground/80 transition hover:text-muted-foreground"
+                  <Button
+                    kind="ghost"
+                    size="chip"
+                    iconOnly
+                    icon={faCircleInfo}
+                    className="h-4 w-4 text-muted-foreground"
                     aria-label="Hinweis zu Steuercodes anzeigen"
                     aria-expanded={showTaxHint}
                     onClick={() => setShowTaxHint((prev) => !prev)}
@@ -973,9 +976,7 @@ export default function NewSimpleInvoicePage() {
                     onMouseLeave={() => setShowTaxHint(false)}
                     onFocus={() => setShowTaxHint(true)}
                     onBlur={() => setShowTaxHint(false)}
-                  >
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                  </button>
+                  />
                   <span
                     className={`pointer-events-none absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-foreground/80 shadow-sm transition ${
                       showTaxHint
@@ -1164,19 +1165,17 @@ export default function NewSimpleInvoicePage() {
                         <p className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground xl:hidden">
                           Aktion
                         </p>
-                        <button
-                          type="button"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-destructive-border bg-card text-destructive transition hover:bg-destructive-soft disabled:cursor-not-allowed disabled:opacity-60 xl:self-end"
+                        <Button
+                          kind="danger-secondary"
+                          size="medium"
+                          iconOnly
+                          icon={faTrash}
+                          className="xl:self-end"
                           aria-label="Position entfernen"
                           title="Position entfernen"
                           onClick={() => removePosition(position.id)}
                           disabled={positions.length === 1}
-                        >
-                          <FontAwesomeIcon
-                            icon={faTrash}
-                            className="h-3.5 w-3.5"
-                          />
-                        </button>
+                        />
                       </div>
                     </div>
                   );

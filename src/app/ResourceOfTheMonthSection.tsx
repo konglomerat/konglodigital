@@ -13,7 +13,7 @@ import {
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
-import Button from "./[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 
 type ResourceOfTheMonthRow = {
   id: string;
@@ -160,7 +160,6 @@ export default async function ResourceOfTheMonthSection() {
               )}
               kind="primary"
               size="medium"
-              className="!bg-[#102a1a] !text-white hover:!bg-[#07180d]"
               icon={faArrowRight}
               iconPosition="right"
             >

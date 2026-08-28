@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Divider from "@/components/knglmrt/Divider";
-import Button from "./[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import ShowcaseOfTheMonthSection from "./ShowcaseOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import NewsSection from "./NewsSection";

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { useCallback, useEffect, useState } from "react";
 import print3dImage from "../../../3dprint.jpg";
+import Button from "@/components/knglmrt/Button";
 
 type AccessCodeEntry = {
   id: string;
@@ -177,17 +178,18 @@ export default function PrinterAccessCodesClient() {
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <button
-                            type="button"
+                          <Button
+                            kind="secondary"
+                            size="chip"
+                            aria-expanded={isExpanded}
                             onClick={() =>
                               setExpandedEntryId((current) =>
                                 current === entry.id ? null : entry.id,
                               )
                             }
-                            className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground/80 transition hover:bg-muted/50"
                           >
                             {isExpanded ? "Body ausblenden" : "Body anzeigen"}
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                       {isExpanded ? (

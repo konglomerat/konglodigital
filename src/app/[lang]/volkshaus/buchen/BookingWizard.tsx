@@ -41,7 +41,7 @@ import {
   faVolumeHigh,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import attendeesOneIllustration from "./assets/volkshaus-attendees-1.webp";
 import attendeesTenIllustration from "./assets/volkshaus-attendees-10.webp";
 import attendeesTwentyIllustration from "./assets/volkshaus-attendees-20.webp";
@@ -564,8 +564,7 @@ export default function BookingWizard({
         body: JSON.stringify(form),
       });
       const data = (await response.json().catch(() => ({}))) as
-        | (SubmissionResult & { error?: string })
-        | { error?: string };
+        (SubmissionResult & { error?: string }) | { error?: string };
       if (!response.ok) {
         throw new Error(
           data.error ?? "Anfrage konnte nicht gespeichert werden.",
@@ -1038,18 +1037,18 @@ function BookingTimeStep({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                kind="secondary"
+                size="medium"
+                iconOnly
+                icon={faChevronLeft}
                 aria-label="Vorheriger Monat"
                 title="Vorheriger Monat"
                 disabled={visibleMonth <= minimumMonth}
                 onClick={() =>
                   setVisibleMonth((current) => shiftMonth(current, -1))
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-card text-foreground shadow-sm ring-1 ring-foreground/5 transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                <FontAwesomeIcon icon={faChevronLeft} className="h-3.5 w-3.5" />
-              </button>
+              />
               <label className="relative">
                 <span className="sr-only">Monat direkt auswählen</span>
                 <input
@@ -1064,20 +1063,17 @@ function BookingTimeStep({
                   className="h-10 rounded-md border-0 bg-card px-3 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-foreground/10 focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </label>
-              <button
-                type="button"
+              <Button
+                kind="secondary"
+                size="medium"
+                iconOnly
+                icon={faChevronRight}
                 aria-label="Nächster Monat"
                 title="Nächster Monat"
                 onClick={() =>
                   setVisibleMonth((current) => shiftMonth(current, 1))
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-card text-foreground shadow-sm ring-1 ring-foreground/5 transition hover:text-primary"
-              >
-                <FontAwesomeIcon
-                  icon={faChevronRight}
-                  className="h-3.5 w-3.5"
-                />
-              </button>
+              />
             </div>
           </div>
 
@@ -1645,31 +1641,33 @@ function UsageStep({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
+                      iconOnly
+                      icon={faMinus}
+                      className="shrink-0"
                       aria-label={`${item.label} verringern`}
                       disabled={quantity <= 0}
                       onClick={() =>
                         setEquipmentQuantity(item.id, quantity - 1)
                       }
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-inset ring-border transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <FontAwesomeIcon icon={faMinus} className="h-3 w-3" />
-                    </button>
+                    />
                     <span className="w-8 text-center font-mono font-bold text-foreground">
                       {quantity}
                     </span>
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
+                      iconOnly
+                      icon={faPlus}
+                      className="shrink-0"
                       aria-label={`${item.label} erhöhen`}
                       disabled={quantity >= item.maxQuantity}
                       onClick={() =>
                         setEquipmentQuantity(item.id, quantity + 1)
                       }
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-inset ring-border transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-                    </button>
+                    />
                   </div>
                 </div>
               );

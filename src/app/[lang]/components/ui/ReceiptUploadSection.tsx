@@ -6,9 +6,8 @@ import {
   faPlus,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "../Button";
+import Button from "@/components/knglmrt/Button";
 import { FormField, FormSection } from "./form";
 
 type ReceiptUploadSectionProps = {
@@ -67,14 +66,15 @@ export default function ReceiptUploadSection({
                   {files.length > 1 ? `${index + 1}. ` : ""}
                   {file.name}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  kind="ghost"
+                  size="chip"
+                  iconOnly
+                  icon={faXmark}
                   onClick={() => removeFile(index)}
-                  className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-rose-600"
+                  className="shrink-0 text-muted-foreground"
                   aria-label="Datei entfernen"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-                </button>
+                />
               </li>
             ))}
           </ul>
@@ -87,9 +87,7 @@ export default function ReceiptUploadSection({
             icon={faPlus}
             onClick={() => inputRef.current?.click()}
           >
-            {files.length === 0
-              ? "Datei auswählen"
-              : "Weitere Datei auswählen"}
+            {files.length === 0 ? "Datei auswählen" : "Weitere Datei auswählen"}
           </Button>
         </div>
 

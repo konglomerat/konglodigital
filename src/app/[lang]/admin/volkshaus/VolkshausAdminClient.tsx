@@ -31,7 +31,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 import {
   STATUS_LABELS,
@@ -113,9 +113,7 @@ const getPersonOptionLabel = (person: AssignablePerson) => {
   return name === person.email ? name : `${name} · ${person.email}`;
 };
 
-const getBookedEquipment = (
-  booking: Pick<VolkshausBooking, "equipment">,
-) =>
+const getBookedEquipment = (booking: Pick<VolkshausBooking, "equipment">) =>
   VOLKSHAUS_EQUIPMENT.filter(
     (item) => Number(booking.equipment[item.id] ?? 0) > 0,
   );
@@ -455,19 +453,16 @@ export default function VolkshausAdminClient() {
             </div>
             <div className="flex flex-wrap gap-2">
               {FILTERS.map(({ value, label, icon }) => (
-                <button
+                <Button
                   key={value}
-                  type="button"
+                  kind={filter === value ? "primary" : "secondary"}
+                  size="chip"
+                  icon={icon}
+                  aria-pressed={filter === value}
                   onClick={() => setFilter(value)}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold transition ${
-                    filter === value
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-background text-muted-foreground hover:text-foreground"
-                  }`}
                 >
-                  <FontAwesomeIcon icon={icon} className="h-3 w-3" />
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -510,88 +505,88 @@ export default function VolkshausAdminClient() {
                 {filtered.map((booking) => {
                   const bookedEquipment = getBookedEquipment(booking);
                   return (
-                  <li key={booking.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(booking.id)}
-                      className={`w-full p-4 text-left transition ${
-                        booking.id === selectedId
-                          ? "bg-primary-soft"
-                          : "hover:bg-muted/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-bold text-foreground">
-                            {booking.eventTitle}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            {booking.customerName}
-                          </p>
+                    <li key={booking.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(booking.id)}
+                        className={`w-full p-4 text-left transition ${
+                          booking.id === selectedId
+                            ? "bg-primary-soft"
+                            : "hover:bg-muted/60"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-foreground">
+                              {booking.eventTitle}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                              {booking.customerName}
+                            </p>
+                          </div>
+                          <StatusDot booking={booking} />
                         </div>
-                        <StatusDot booking={booking} />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <FontAwesomeIcon
-                            icon={faCalendarDays}
-                            className="h-3 w-3"
-                          />
-                          {dateFormatter.format(
-                            new Date(`${booking.bookingDate}T12:00:00Z`),
-                          )}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 font-mono">
-                          <FontAwesomeIcon
-                            icon={faReceipt}
-                            className="h-3 w-3"
-                          />
-                          {booking.referenceCode}
-                        </span>
-                      </div>
-                      {bookedEquipment.length > 0 ||
-                      booking.internalNotes ||
-                      booking.specialRequirements ? (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {bookedEquipment.length > 0 ? (
-                            <span
-                              title={bookedEquipment
-                                .map(
-                                  (item) =>
-                                    `${Number(booking.equipment[item.id] ?? 0)} × ${item.label}`,
-                                )
-                                .join(", ")}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-[0.7rem] font-bold text-warning"
-                            >
-                              <FontAwesomeIcon
-                                icon={faScrewdriverWrench}
-                                className="h-2.5 w-2.5"
-                              />
-                              Technik: {bookedEquipment.length}
-                            </span>
-                          ) : null}
-                          {booking.internalNotes ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-soft px-2 py-1 text-[0.7rem] font-bold text-primary">
-                              <FontAwesomeIcon
-                                icon={faNoteSticky}
-                                className="h-2.5 w-2.5"
-                              />
-                              Interne Absprache
-                            </span>
-                          ) : null}
-                          {booking.specialRequirements ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-card px-2 py-1 text-[0.7rem] font-bold text-primary">
-                              <FontAwesomeIcon
-                                icon={faCircleExclamation}
-                                className="h-2.5 w-2.5"
-                              />
-                              Hinweis
-                            </span>
-                          ) : null}
+                        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <FontAwesomeIcon
+                              icon={faCalendarDays}
+                              className="h-3 w-3"
+                            />
+                            {dateFormatter.format(
+                              new Date(`${booking.bookingDate}T12:00:00Z`),
+                            )}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 font-mono">
+                            <FontAwesomeIcon
+                              icon={faReceipt}
+                              className="h-3 w-3"
+                            />
+                            {booking.referenceCode}
+                          </span>
                         </div>
-                      ) : null}
-                    </button>
-                  </li>
+                        {bookedEquipment.length > 0 ||
+                        booking.internalNotes ||
+                        booking.specialRequirements ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {bookedEquipment.length > 0 ? (
+                              <span
+                                title={bookedEquipment
+                                  .map(
+                                    (item) =>
+                                      `${Number(booking.equipment[item.id] ?? 0)} × ${item.label}`,
+                                  )
+                                  .join(", ")}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-[0.7rem] font-bold text-warning"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faScrewdriverWrench}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Technik: {bookedEquipment.length}
+                              </span>
+                            ) : null}
+                            {booking.internalNotes ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-soft px-2 py-1 text-[0.7rem] font-bold text-primary">
+                                <FontAwesomeIcon
+                                  icon={faNoteSticky}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Interne Absprache
+                              </span>
+                            ) : null}
+                            {booking.specialRequirements ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-card px-2 py-1 text-[0.7rem] font-bold text-primary">
+                                <FontAwesomeIcon
+                                  icon={faCircleExclamation}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Hinweis
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </button>
+                    </li>
                   );
                 })}
               </ul>
@@ -760,15 +755,16 @@ function ActionConfirmationModal({
               </h2>
             </div>
           </div>
-          <button
-            type="button"
+          <Button
+            kind="ghost"
+            size="medium"
+            iconOnly
+            icon={faXmark}
             onClick={onCancel}
             disabled={isExecuting}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="shrink-0"
             aria-label="Dialog schließen"
-          >
-            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-          </button>
+          />
         </header>
 
         <div className="min-h-0 space-y-4 overflow-y-auto p-5">
@@ -901,7 +897,10 @@ function BookingDetail({
     backupAssignedUserId !== (booking.backupAssignedUserId ?? "");
   const hasDuplicateAssignees =
     Boolean(assignedUserId) && assignedUserId === backupAssignedUserId;
-  const missingAssignedPersonIds = [assignedUserId, backupAssignedUserId].filter(
+  const missingAssignedPersonIds = [
+    assignedUserId,
+    backupAssignedUserId,
+  ].filter(
     (userId, index, userIds) =>
       Boolean(userId) &&
       userIds.indexOf(userId) === index &&
@@ -1177,7 +1176,6 @@ function BookingDetail({
             </address>
           </div>
         </div>
-
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -1228,9 +1226,7 @@ function BookingDetail({
               className={inputClassName}
               value={backupAssignedUserId}
               disabled={isBusy || !assignedUserId}
-              onChange={(event) =>
-                setBackupAssignedUserId(event.target.value)
-              }
+              onChange={(event) => setBackupAssignedUserId(event.target.value)}
             >
               <option value="">Kein Ersatz</option>
               {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
@@ -1252,9 +1248,7 @@ function BookingDetail({
           <Button
             kind="secondary"
             icon={faSave}
-            disabled={
-              isBusy || !hasAssignmentChanges || hasDuplicateAssignees
-            }
+            disabled={isBusy || !hasAssignmentChanges || hasDuplicateAssignees}
             onClick={() =>
               void performAction("save_assignees", {
                 assignedUserId: assignedUserId || null,
@@ -1301,86 +1295,83 @@ function BookingDetail({
       ) : null}
 
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <FontAwesomeIcon
-              icon={faEuroSign}
-              className="h-4 w-4 text-primary"
-            />
-            Preisprüfung
-          </h3>
-          <div className="mt-4 divide-y divide-border">
-            {effectivePrice.lines.map((line) => (
-              <div
-                key={line.code}
-                className="flex justify-between gap-3 py-2.5 text-sm"
-              >
-                <span className="text-foreground">{line.description}</span>
-                <span
-                  className={`whitespace-nowrap font-semibold ${
-                    line.totalNetCents < 0
-                      ? "text-destructive"
-                      : "text-foreground"
-                  }`}
-                >
-                  {formatEuro(line.totalNetCents)}
-                </span>
-              </div>
-            ))}
-          </div>
-          <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Netto</dt>
-              <dd>{formatEuro(effectivePrice.netCents)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">USt. 19 %</dt>
-              <dd>{formatEuro(effectivePrice.taxCents)}</dd>
-            </div>
-            <div className="flex justify-between text-lg font-black">
-              <dt>Brutto</dt>
-              <dd>{formatEuro(effectivePrice.grossCents)}</dd>
-            </div>
-          </dl>
-          <div className="mt-5 grid gap-3">
-            <label>
-              <span className="mb-1.5 block text-sm font-semibold">
-                Anpassung netto in Euro
-              </span>
-              <input
-                className={inputClassName}
-                type="number"
-                step="0.01"
-                value={adjustmentEuro}
-                disabled={booking.contractStatus !== "draft"}
-                onChange={(event) => setAdjustmentEuro(event.target.value)}
-              />
-            </label>
-            <label>
-              <span className="mb-1.5 block text-sm font-semibold">
-                Begründung
-              </span>
-              <input
-                className={inputClassName}
-                value={adjustmentReason}
-                disabled={booking.contractStatus !== "draft"}
-                placeholder="z. B. Kulanz oder Sondervereinbarung"
-                onChange={(event) => setAdjustmentReason(event.target.value)}
-              />
-            </label>
-            <Button
-              kind="secondary"
-              icon={faSave}
-              disabled={isBusy || booking.contractStatus !== "draft"}
-              onClick={() =>
-                void performAction("save_price_adjustment", {
-                  adjustmentEuro: Number(adjustmentEuro.replace(",", ".")),
-                  reason: adjustmentReason,
-                })
-              }
+        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+          <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4 text-primary" />
+          Preisprüfung
+        </h3>
+        <div className="mt-4 divide-y divide-border">
+          {effectivePrice.lines.map((line) => (
+            <div
+              key={line.code}
+              className="flex justify-between gap-3 py-2.5 text-sm"
             >
-              Preis speichern
-            </Button>
+              <span className="text-foreground">{line.description}</span>
+              <span
+                className={`whitespace-nowrap font-semibold ${
+                  line.totalNetCents < 0
+                    ? "text-destructive"
+                    : "text-foreground"
+                }`}
+              >
+                {formatEuro(line.totalNetCents)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Netto</dt>
+            <dd>{formatEuro(effectivePrice.netCents)}</dd>
           </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">USt. 19 %</dt>
+            <dd>{formatEuro(effectivePrice.taxCents)}</dd>
+          </div>
+          <div className="flex justify-between text-lg font-black">
+            <dt>Brutto</dt>
+            <dd>{formatEuro(effectivePrice.grossCents)}</dd>
+          </div>
+        </dl>
+        <div className="mt-5 grid gap-3">
+          <label>
+            <span className="mb-1.5 block text-sm font-semibold">
+              Anpassung netto in Euro
+            </span>
+            <input
+              className={inputClassName}
+              type="number"
+              step="0.01"
+              value={adjustmentEuro}
+              disabled={booking.contractStatus !== "draft"}
+              onChange={(event) => setAdjustmentEuro(event.target.value)}
+            />
+          </label>
+          <label>
+            <span className="mb-1.5 block text-sm font-semibold">
+              Begründung
+            </span>
+            <input
+              className={inputClassName}
+              value={adjustmentReason}
+              disabled={booking.contractStatus !== "draft"}
+              placeholder="z. B. Kulanz oder Sondervereinbarung"
+              onChange={(event) => setAdjustmentReason(event.target.value)}
+            />
+          </label>
+          <Button
+            kind="secondary"
+            icon={faSave}
+            disabled={isBusy || booking.contractStatus !== "draft"}
+            onClick={() =>
+              void performAction("save_price_adjustment", {
+                adjustmentEuro: Number(adjustmentEuro.replace(",", ".")),
+                reason: adjustmentReason,
+              })
+            }
+          >
+            Preis speichern
+          </Button>
+        </div>
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">

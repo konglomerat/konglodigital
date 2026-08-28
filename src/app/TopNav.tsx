@@ -4,7 +4,7 @@ import Link from "next/link";
 import Face from "@/components/knglmrt/Face";
 
 import TopNavLink from "./TopNavLink";
-import Button from "./[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 
 type TopNavProps = {
   isAuthenticated: boolean;
@@ -82,11 +82,7 @@ export default function TopNav({
                   {currentUserDisplayName ?? "Profil"}
                 </span>
               </Link>
-              <Button
-                href={adminAreaHref}
-                kind="secondary"
-                className="h-9 !bg-[var(--knglmrt-brown-100)] !text-white hover:!bg-foreground hover:!text-background"
-              >
+              <Button href={adminAreaHref} kind="secondary">
                 <span aria-hidden="true" className="flex-none">
                   <Face number={6} size={40} />
                 </span>

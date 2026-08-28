@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 
-import Button from "./[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import { isVideoUrl } from "@/lib/resource-media";
 
 type ShowcaseSlide = {
@@ -125,7 +125,7 @@ export default function ShowcaseOfTheMonthCarousel({
                   key={dot.id}
                   type="button"
                   aria-label={`Gehe zu Slide ${index + 1}`}
-                  className={`h-2.5 rounded-full transition ${
+                  className={`h-2.5 transition ${
                     index === activeIndex ? "w-8 bg-primary" : "w-2.5 bg-border"
                   }`}
                   onClick={() => setActiveIndex(index)}

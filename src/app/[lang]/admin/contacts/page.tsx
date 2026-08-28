@@ -8,7 +8,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useMemo, useState } from "react";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 
 type InviteStatus = "idle" | "loading" | "sent" | "error";
@@ -204,9 +204,9 @@ const ContactSection = ({
             />
           ) : null}
           <Button
+            size="small"
             type="button"
             kind="secondary"
-            className="px-4 py-2 text-sm"
             disabled={isLoading}
             onClick={() => {
               void load();
@@ -308,9 +308,11 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
   }
 
   return (
-    <button
-      type="button"
-      disabled={state.status === "loading"}
+    <Button
+      kind="secondary"
+      size="chip"
+      icon={faPaperPlane}
+      loading={state.status === "loading"}
       onClick={() => {
         void sendInvite();
       }}
@@ -319,14 +321,9 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
           ? state.message
           : "Einladung senden"
       }
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-foreground/80 shadow-sm transition hover:border-primary hover:text-foreground disabled:opacity-60"
     >
-      <FontAwesomeIcon
-        icon={state.status === "loading" ? faSpinner : faPaperPlane}
-        className={state.status === "loading" ? "animate-spin" : undefined}
-      />
       {state.status === "loading" ? "..." : "Einladen"}
-    </button>
+    </Button>
   );
 };
 

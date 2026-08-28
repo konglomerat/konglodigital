@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 
 type MediaLightboxGalleryProps = {
