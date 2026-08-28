@@ -10,69 +10,133 @@
 }
 
 :root {
-  --background: #ffffff;            /* Papier */
-  --foreground: #2E3846;            /* Tinte — Body ist pures Schwarz */
-  --card: #ffffff;
-  --card-foreground: #2E3846;
-  --popover: #ffffff;
-  --popover-foreground: #2E3846;
+  /* ------------------------------------------------------------------
+   * 1 — PALETTE. Die einzige Stelle im Projekt, an der Farb-Hex-Werte
+   * stehen. Quelle: colors.tokens.json / tailwind.colors.js (Export des
+   * Design-Systems). Die Rampe läuft 100 / 60 / 30 (Prozent-Tints),
+   * NICHT Tailwinds 50–900. Nichts hier referenziert etwas anderes.
+   * ------------------------------------------------------------------ */
+  --knglmrt-pink-100: #c83669;      /* die eine Markenfarbe — nur Akzent */
+  --knglmrt-pink-60: #de86a5;
+  --knglmrt-pink-30: #eec2d2;
+  --knglmrt-yellow-100: #ffd93d;    /* Erinnerungs-Tints, Terrazzo-Konfetti */
+  --knglmrt-yellow-60: #ffe88b;
+  --knglmrt-yellow-30: #fff4c5;
+  --knglmrt-blue-100: #72a7c6;      /* kühle Tint-Blöcke, Terrazzo-Konfetti */
+  --knglmrt-blue-60: #aacadd;
+  --knglmrt-blue-30: #d5e4ee;
+  --knglmrt-brown-100: #764951;     /* Handschrift-Tinte, Link-Hover */
+  --knglmrt-brown-60: #ad9296;
+  --knglmrt-brown-30: #d7c7ca;
+  --knglmrt-dark-100: #2e3846;      /* invertierte Flächen, Fließtext */
+  --knglmrt-dark-60: #828891;       /* stille Schrift */
+  --knglmrt-dark-30: #c1c3c9;       /* Haarlinien */
+  --knglmrt-ink: #000000;           /* Artwork und Kontur sind pures Schwarz */
+  --knglmrt-ink-soft: #1a1919;      /* nur Werkbereich-Marken */
+  --knglmrt-paper: #ffffff;         /* das Blatt */
+  --knglmrt-paper-pink: #faecf1;    /* Tint-Band */
+  --knglmrt-paper-grey: #f3f3f3;    /* Summenzeilen */
+  --knglmrt-vhc-primary: #0062ae;   /* nur Sub-Marke Volkshaus */
+  --knglmrt-vhc-secondary: #f39200;
+  --knglmrt-tint-avatar: #f7e1e9;   /* liegt unter einem Gesicht im Avatar */
+  --knglmrt-tint-zebra: #f8f8f8;    /* optionale Zebra-Zeile in DataTable */
+  --knglmrt-tint-quiet-hover: #e4e4e4; /* die leise Taste, gehovert */
+  /* Ergänzungen außerhalb des Exports — hier begründen, nicht verstreuen. */
+  --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb, trägt weiße Schrift */
+  --knglmrt-pink-15: #f4dce5;       /* die zarte Kachelkontur */
 
-  --primary: #c83669;               /* knglmrt-pink-100 — nur Akzent, nie Fläche */
-  --primary-foreground: #ffffff;
-  --primary-soft: #faecf1;          /* paper-pink Tint-Block */
-  --primary-border: #de86a5;        /* pink-60 */
-  --primary-hairline: #f4dce5;      /* pink-15 — die zarte Kachelkontur */
+  /* ------------------------------------------------------------------
+   * 2 — APP-TOKENS (shadcn/Tailwind). Rollen, keine Farben: hier steht
+   * nur, welcher Palettenwert welche Rolle spielt. Der Dark Mode
+   * überschreibt genau diese Ebene (siehe .dark in globals.css).
+   * ------------------------------------------------------------------ */
+  --background: var(--knglmrt-paper);
+  --foreground: var(--knglmrt-dark-100);
+  --card: var(--knglmrt-paper);
+  --card-foreground: var(--knglmrt-dark-100);
+  --popover: var(--knglmrt-paper);
+  --popover-foreground: var(--knglmrt-dark-100);
 
-  --secondary: #f3f3f3;             /* paper-grey */
-  --secondary-foreground: #2E3846;
-  --muted: #f3f3f3;
-  --muted-foreground: #828891;      /* dark-60 */
-  --accent: #ffd93d;                /* yellow-100 */
-  --accent-foreground: #2E3846;
+  --primary: var(--knglmrt-pink-100);
+  --primary-foreground: var(--knglmrt-paper);
+  --primary-soft: var(--knglmrt-paper-pink);
+  --primary-border: var(--knglmrt-pink-60);
+  --primary-hairline: var(--knglmrt-pink-15);
+
+  --secondary: var(--knglmrt-paper-grey);
+  --secondary-foreground: var(--knglmrt-dark-100);
+  --muted: var(--knglmrt-paper-grey);
+  --muted-foreground: var(--knglmrt-dark-60);
+  --accent: var(--knglmrt-yellow-100);
+  --accent-foreground: var(--knglmrt-dark-100);
 
   /* Die Palette kennt kein Grün/Rot: Status läuft über pink/gelb/blau. */
-  --destructive: #c83669;
-  --destructive-foreground: #ffffff;
-  --destructive-soft: #eec2d2;      /* pink-30 */
-  --destructive-border: #c83669;
-  --success: #72a7c6;               /* blue-100 */
-  --success-foreground: #000000;
-  --success-soft: #d5e4ee;          /* blue-30 */
-  --success-border: #72a7c6;
-  --warning: #ffd93d;
-  --warning-foreground: #000000;
-  --warning-soft: #fff4c5;          /* yellow-30 */
-  --warning-border: #ffe88b;
-  --info: #2e3846;                  /* dark-100 */
-  --info-foreground: #ffffff;
-  --info-soft: #d5e4ee;
-  --info-border: #2e3846;
-  --highlight: #ffd93d;
-  --highlight-foreground: #000000;
+  --destructive: var(--knglmrt-pink-100);
+  --destructive-foreground: var(--knglmrt-paper);
+  --destructive-soft: var(--knglmrt-pink-30);
+  --destructive-border: var(--knglmrt-pink-100);
+  --success: var(--knglmrt-blue-100);
+  --success-foreground: var(--knglmrt-ink);
+  --success-soft: var(--knglmrt-blue-30);
+  --success-border: var(--knglmrt-blue-100);
+  --warning: var(--knglmrt-yellow-100);
+  --warning-foreground: var(--knglmrt-ink);
+  --warning-soft: var(--knglmrt-yellow-30);
+  --warning-border: var(--knglmrt-yellow-60);
+  --info: var(--knglmrt-dark-100);
+  --info-foreground: var(--knglmrt-paper);
+  --info-soft: var(--knglmrt-blue-30);
+  --info-border: var(--knglmrt-dark-100);
+  --highlight: var(--knglmrt-yellow-100);
+  --highlight-foreground: var(--knglmrt-ink);
 
-  --border: #c1c3c9;                /* dark-30 — Hairlines */
-  --input: #000000;                 /* Kontur: 1px Schwarz um Formulare */
-  --ring: #000000;                  /* Fokus: schwarze Outline */
+  --border: var(--knglmrt-dark-30);
+  --input: var(--knglmrt-ink);      /* Kontur um Formulare */
+  --ring: var(--knglmrt-ink);       /* Fokus: schwarze Outline */
 
-  --hairline-width: 2px;
-  --hairline-color: var(--foreground);
-  --hairline: var(--hairline-width) solid var(--hairline-color);
-
-  --chart-1: #c83669;
-  --chart-2: #ffd93d;
-  --chart-3: #72a7c6;
-  --chart-4: #764951;
-  --chart-5: #2e3846;
+  --chart-1: var(--knglmrt-pink-100);
+  --chart-2: var(--knglmrt-yellow-100);
+  --chart-3: var(--knglmrt-blue-100);
+  --chart-4: var(--knglmrt-brown-100);
+  --chart-5: var(--knglmrt-dark-100);
 
   --radius: 0rem;                   /* das System kennt keine Rundungen */
 
-  /* Zusätzliche knglmrt-Tokens für direkte Verwendung */
-  --knglmrt-brown-100: #764951;     /* Hover-Ziel für Pink */
-  --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb — trägt weiße Schrift */
-  --knglmrt-dark-100: #2e3846;
-  --knglmrt-pink-60: #de86a5;
-  --knglmrt-dark-30: #c1c3c9;
-  --ui-quiet-hover: #e4e4e4;        /* die leise Taste, gehovert */
+  /* ------------------------------------------------------------------
+   * 3 — SEMANTISCHE TOKENS (semantic-Block aus colors.tokens.json).
+   * Sagen, wofür eine Farbe da ist. Zeigen auf Ebene 2, wo die Rolle im
+   * Dark Mode mitlaufen soll, sonst direkt auf die Palette.
+   * ------------------------------------------------------------------ */
+  --text-body: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --text-accent: var(--primary);
+  --text-on-dark: var(--primary-foreground);
+
+  --surface-page: var(--background);
+  --surface-tint: var(--primary-soft);
+  --surface-quiet: var(--secondary);
+  --surface-invert: var(--info);
+
+  /* Die durchgehende Kontur um Buttons, Karten, Sektionen und Felder.
+     Breite und Farbe an einer Stelle. */
+  --hairline-width: 2px;
+  --hairline-color: var(--foreground);
+  --hairline: var(--hairline-width) solid var(--hairline-color);
+  --frame-color: var(--primary-soft);
+
+  --link-color: var(--primary);
+  --link-color-hover: var(--knglmrt-brown-100);
+
+  --ui-action: var(--primary);
+  --ui-action-hover: var(--knglmrt-brown-100);
+  --ui-attention: var(--primary-soft);
+  --ui-remember: var(--knglmrt-yellow-30);
+  --ui-announce: var(--info);
+  --ui-disabled-ink: var(--muted-foreground);
+  --ui-disabled-edge: var(--border);
+  --ui-quiet-hover: var(--knglmrt-tint-quiet-hover);
+  --ui-tint-avatar: var(--knglmrt-tint-avatar);
+  --ui-tint-zebra: var(--knglmrt-tint-zebra);
 
   --font-display: "Fengardo Neue", var(--font-geist-sans), sans-serif;
   --font-core: var(--font-geist-sans), "Fira Sans Condensed", system-ui, sans-serif;
@@ -101,6 +165,70 @@
   --ui-size-eyebrow: 27px; /* Fira Sans, uppercase, .13em — die Augenbraue */
 }
 
+
+/* ------------------------------------------------------------------
+ * DARK MODE. Überschreibt ausschließlich Ebene 2 (App-Tokens) — die
+ * semantischen Tokens aus Ebene 3 zeigen darauf und laufen mit, weil
+ * .dark auf demselben Element (<html>) sitzt wie :root.
+ * Die Marken-Palette bleibt absolut und wird hier nicht angefasst.
+ * Muss NACH :root stehen, sonst gewinnt :root bei gleicher Spezifität.
+ * ------------------------------------------------------------------ */
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.141 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.185 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--knglmrt-pink-60);
+  --primary-foreground: var(--knglmrt-dark-100);
+  --primary-soft: color-mix(in oklab, var(--knglmrt-pink-100) 30%, var(--card));
+  --primary-border: var(--knglmrt-pink-100);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: var(--knglmrt-pink-60);
+  --destructive-foreground: var(--knglmrt-dark-100);
+  --destructive-soft: color-mix(in oklab, var(--knglmrt-pink-100) 30%, var(--card));
+  --destructive-border: var(--knglmrt-pink-100);
+  --success: var(--knglmrt-blue-60);
+  --success-foreground: var(--knglmrt-dark-100);
+  --success-soft: color-mix(in oklab, var(--knglmrt-blue-100) 30%, var(--card));
+  --success-border: var(--knglmrt-blue-100);
+  --warning: var(--knglmrt-yellow-100);
+  --warning-foreground: var(--knglmrt-dark-100);
+  --warning-soft: color-mix(in oklab, var(--knglmrt-yellow-100) 26%, var(--card));
+  --warning-border: var(--knglmrt-yellow-60);
+  --info: var(--knglmrt-blue-60);
+  --info-foreground: var(--knglmrt-dark-100);
+  --info-soft: color-mix(in oklab, var(--knglmrt-blue-100) 30%, var(--card));
+  --info-border: var(--knglmrt-blue-100);
+  --highlight: var(--knglmrt-yellow-100);
+  --highlight-foreground: var(--knglmrt-dark-100);
+  --border: oklch(0.272 0 0);
+  --input: oklch(0.272 0 0);
+  --ring: oklch(0.556 0 0);
+  --chart-1: var(--knglmrt-pink-60);
+  --chart-2: var(--knglmrt-yellow-100);
+  --chart-3: var(--knglmrt-blue-60);
+  --chart-4: var(--knglmrt-brown-60);
+  --chart-5: var(--knglmrt-dark-30);
+
+  /* Ebene 3, wo sie im Dunkeln nicht aus der Palette kommen kann. */
+  --primary-hairline: var(--border);
+  --frame-color: var(--border);
+  --ui-remember: var(--muted);
+  --ui-quiet-hover: var(--muted);
+  --ui-tint-avatar: var(--muted);
+  --link-color-hover: var(--knglmrt-brown-60);
+  --ui-action-hover: var(--knglmrt-brown-60);
+  --ui-tint-zebra: color-mix(in oklab, var(--card) 92%, var(--foreground));
+}
+
 @layer base {
   body {
     font-family: var(--font-core);
@@ -126,19 +254,6 @@
     line-height: var(--ui-line-card);
   }
   a { text-underline-offset: 2px; }
-}
-
-.frontpage-hero {
-  background-size: 800px 800px;
-  background-position: calc(var(--terrazzo-mx, 0) * -36px)
-    calc(var(--terrazzo-my, 0) * -36px);
-  transition: background-position 500ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .frontpage-hero {
-    background-position: 0 0;
-    transition: none;
-  }
 }
 
 .knglmrt-eyebrow {
@@ -199,9 +314,8 @@
 }
 
 /*
- * Terrazzo-Flächen: eine Klasse pro Muster, jeweils Bild + passende Grundfarbe.
- * Zum Wechseln einfach die Klasse tauschen. Optional kombinierbar mit
- * .knglmrt-terrazzo-parallax (größere Kacheln, folgt der Maus).
+ * Die Grundfarben unten stammen aus dem SVG-Artwork, nicht aus der
+ * Palette — deshalb stehen sie als Hex hier und nicht als Token.
  */
 .knglmrt-terrazzo-fein-rosa,
 .knglmrt-terrazzo-grob-rosa,
@@ -219,7 +333,7 @@
 .knglmrt-terrazzo-fein-rosa {
   /* fein, zartrosa – Standard-Hintergrund */
   background-image: url("/branding/backgrounds/KNGLMRT_HG_fein_01.svg");
-  background-color: #f7e1e9;
+  background-color: var(--knglmrt-tint-avatar);
 }
 .knglmrt-terrazzo-grob-rosa {
   /* grob, zartrosa */
@@ -249,17 +363,17 @@
 .knglmrt-terrazzo-kraeftig-gelb {
   /* grob, kräftiges Gelb – für Akzentflächen */
   background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_03.svg");
-  background-color: #ffe88b;
+  background-color: var(--knglmrt-yellow-60);
 }
 .knglmrt-terrazzo-kraeftig-blau {
   /* grob, kräftiges Blau – für Akzentflächen */
   background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_01.svg");
-  background-color: #aacadd;
+  background-color: var(--knglmrt-blue-60);
 }
 .knglmrt-terrazzo-kraeftig-pink {
   /* grob, kräftiges Pink – für Akzentflächen */
   background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_02.svg");
-  background-color: #de86a5;
+  background-color: var(--knglmrt-pink-60);
 }
 /* Im Dark Mode tragen die Muster nicht – überall die neutrale Kartenfläche. */
 .dark .knglmrt-terrazzo-fein-rosa,
@@ -295,10 +409,6 @@
 .knglmrt-terrazzo-hover:focus-visible::before {
   opacity: 1;
 }
-.dark {
-  --primary-hairline: var(--border);
-}
-
 .dark .knglmrt-terrazzo-hover::before {
   background-image: none;
   background-color: var(--muted);
@@ -323,10 +433,9 @@
   .knglmrt-border-y { border-block: var(--hairline); }
 }
 
-.knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 #000; }
+.knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 var(--knglmrt-ink); }
 
-.knglmrt-panel { background: #fff; box-shadow: inset 0 0 0 3px #faecf1; }
-.dark .knglmrt-panel { background: var(--card); box-shadow: inset 0 0 0 3px var(--border); }
+.knglmrt-panel { background: var(--card); box-shadow: inset 0 0 0 3px var(--frame-color); }
 
 .knglmrt-full-bleed {
   width: 100vw;

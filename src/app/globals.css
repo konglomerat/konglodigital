@@ -4,48 +4,9 @@
 
 :root {
   color-scheme: light;
-  --background: rgb(250, 250, 250);
-  --foreground: rgb(23, 21, 25);
-  --card: rgb(255 255 255);
-  --card-foreground: rgb(36 34 39);
-  --popover: rgb(255 255 255);
-  --popover-foreground: rgb(36 34 39);
-  --primary: rgb(201, 9, 76);
-  --primary-foreground: rgb(243 233 238);
-  --primary-soft: rgb(232 198 210);
-  --primary-border: rgb(212 92 132);
-  --secondary: rgb(218 221 230);
-  --secondary-foreground: rgb(36 34 39);
-  --muted: rgb(236 228 233);
-  --muted-foreground: rgb(86 91 101);
-  --accent: rgb(238 172 70);
-  --accent-foreground: rgb(36 34 39);
-  --destructive: rgb(204 52 108);
-  --destructive-foreground: rgb(243 233 238);
-  --destructive-soft: rgb(241 220 228);
-  --destructive-border: rgb(204 52 108);
-  --success: rgb(82 140 165);
-  --success-foreground: rgb(243 233 238);
-  --success-soft: rgb(217 231 236);
-  --success-border: rgb(82 140 165);
-  --warning: rgb(86, 56, 10);
-  --warning-foreground: rgb(36 34 39);
-  --warning-soft: rgb(243 191 135);
-  --warning-border: rgb(239, 224, 86);
-  --info: rgb(86 102 119);
-  --info-foreground: rgb(243 233 238);
-  --info-soft: rgb(218 221 230);
-  --info-border: rgb(86 102 119);
-  --highlight: rgb(239 199 86);
-  --highlight-foreground: rgb(36 34 39);
-  --border: rgb(217, 217, 217);
-  --input: rgb(165 171 175);
-  --ring: rgb(150 46 83);
-  --chart-1: rgb(150 46 83);
-  --chart-2: rgb(239 199 86);
-  --chart-3: rgb(82 140 165);
-  --chart-4: rgb(243 191 135);
-  --chart-5: rgb(86 102 119);
+  /* Farbwerte stehen NICHT hier, sondern einmalig in knglmrt-theme.css
+     (Palette → App-Tokens → semantische Tokens). Diese Datei hält nur die
+     Tailwind-Verdrahtung und die Aliasse, die es dort nicht gibt. */
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
   --sidebar-primary: var(--primary);
@@ -54,62 +15,8 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --radius: 0.875rem;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.141 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.185 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.627 0.192 259.814);
-  --primary-foreground: oklch(0.145 0 0);
-  --primary-soft: oklch(0.301 0.062 259.814);
-  --primary-border: oklch(0.434 0.104 259.814);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --destructive-soft: oklch(0.293 0.055 22.216);
-  --destructive-border: oklch(0.431 0.084 22.216);
-  --success: oklch(0.74 0.16 154.7);
-  --success-foreground: oklch(0.145 0 0);
-  --success-soft: oklch(0.292 0.05 154.7);
-  --success-border: oklch(0.425 0.078 154.7);
-  --warning: oklch(0.79 0.153 82.4);
-  --warning-foreground: oklch(0.205 0 0);
-  --warning-soft: oklch(0.298 0.045 82.4);
-  --warning-border: oklch(0.452 0.074 82.4);
-  --info: oklch(0.742 0.116 232.8);
-  --info-foreground: oklch(0.145 0 0);
-  --info-soft: oklch(0.294 0.045 232.8);
-  --info-border: oklch(0.44 0.074 232.8);
-  --highlight: oklch(0.808 0.147 95.8);
-  --highlight-foreground: oklch(0.205 0 0);
-  --border: oklch(0.272 0 0);
-  --input: oklch(0.272 0 0);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: var(--card);
-  --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-}
 
 @theme inline {
   --color-background: var(--background);
@@ -163,6 +70,56 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Palette des Design-Systems (Rampe 100/60/30, nicht Tailwinds 50–900).
+     Eigener Namensraum, damit Tailwinds pink/blue/yellow intakt bleiben. */
+  --color-knglmrt-pink-100: var(--knglmrt-pink-100);
+  --color-knglmrt-pink-60: var(--knglmrt-pink-60);
+  --color-knglmrt-pink-30: var(--knglmrt-pink-30);
+  --color-knglmrt-pink-15: var(--knglmrt-pink-15);
+  --color-knglmrt-yellow-120: var(--knglmrt-yellow-120);
+  --color-knglmrt-yellow-100: var(--knglmrt-yellow-100);
+  --color-knglmrt-yellow-60: var(--knglmrt-yellow-60);
+  --color-knglmrt-yellow-30: var(--knglmrt-yellow-30);
+  --color-knglmrt-blue-100: var(--knglmrt-blue-100);
+  --color-knglmrt-blue-60: var(--knglmrt-blue-60);
+  --color-knglmrt-blue-30: var(--knglmrt-blue-30);
+  --color-knglmrt-brown-100: var(--knglmrt-brown-100);
+  --color-knglmrt-brown-60: var(--knglmrt-brown-60);
+  --color-knglmrt-brown-30: var(--knglmrt-brown-30);
+  --color-knglmrt-dark-100: var(--knglmrt-dark-100);
+  --color-knglmrt-dark-60: var(--knglmrt-dark-60);
+  --color-knglmrt-dark-30: var(--knglmrt-dark-30);
+  --color-knglmrt-ink: var(--knglmrt-ink);
+  --color-knglmrt-ink-soft: var(--knglmrt-ink-soft);
+  --color-knglmrt-paper: var(--knglmrt-paper);
+  --color-knglmrt-paper-pink: var(--knglmrt-paper-pink);
+  --color-knglmrt-paper-grey: var(--knglmrt-paper-grey);
+  --color-knglmrt-vhc-primary: var(--knglmrt-vhc-primary);
+  --color-knglmrt-vhc-secondary: var(--knglmrt-vhc-secondary);
+
+  /* Semantische Tokens: sagen, wofür die Farbe da ist. */
+  --color-text-body: var(--text-body);
+  --color-text-muted: var(--text-muted);
+  --color-text-accent: var(--text-accent);
+  --color-text-on-dark: var(--text-on-dark);
+  --color-surface-page: var(--surface-page);
+  --color-surface-tint: var(--surface-tint);
+  --color-surface-quiet: var(--surface-quiet);
+  --color-surface-invert: var(--surface-invert);
+  --color-frame: var(--frame-color);
+  --color-link: var(--link-color);
+  --color-link-hover: var(--link-color-hover);
+  --color-ui-action: var(--ui-action);
+  --color-ui-action-hover: var(--ui-action-hover);
+  --color-ui-attention: var(--ui-attention);
+  --color-ui-remember: var(--ui-remember);
+  --color-ui-announce: var(--ui-announce);
+  --color-ui-disabled-ink: var(--ui-disabled-ink);
+  --color-ui-disabled-edge: var(--ui-disabled-edge);
+  --color-ui-quiet-hover: var(--ui-quiet-hover);
+  --color-ui-tint-avatar: var(--ui-tint-avatar);
+  --color-ui-tint-zebra: var(--ui-tint-zebra);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -181,6 +138,24 @@
   --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
     var(--font-geist-sans), system-ui, sans-serif;
   --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
+}
+
+/*
+ * Startseite: der Terrazzo-Hero folgt der Maus.
+ * --terrazzo-mx / --terrazzo-my setzt TerrazzoParallax.tsx auf <html>.
+ */
+.frontpage-hero {
+  background-size: 800px 800px;
+  background-position: calc(var(--terrazzo-mx, 0) * -36px)
+    calc(var(--terrazzo-my, 0) * -36px);
+  transition: background-position 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frontpage-hero {
+    background-position: 0 0;
+    transition: none;
+  }
 }
 
 [data-page="batch-upload"] .mapboxgl-map,

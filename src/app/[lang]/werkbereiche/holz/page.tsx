@@ -250,7 +250,7 @@ export default function HolzwerkstattPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-start gap-4 bg-[#fff4c5] px-[18px] py-3.5">
+            <div className="flex flex-wrap items-start gap-4 bg-ui-remember px-[18px] py-3.5">
               <div className="min-w-0 flex-1">
                 <div className="knglmrt-caption mb-1">Einweisung nötig</div>
                 <div>

@@ -62,7 +62,7 @@ export function Tr({
   interactive?: boolean;
 }) {
   return (
-    <tr className={interactive ? "transition hover:bg-[#f8f8f8]" : undefined}>
+    <tr className={interactive ? "transition hover:bg-ui-tint-zebra" : undefined}>
       {children}
     </tr>
   );
