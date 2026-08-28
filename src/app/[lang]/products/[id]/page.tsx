@@ -145,7 +145,7 @@ export default function CampaiProductDetailPage({
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           {loading ? (
             <p className="text-sm text-muted-foreground">
               Produkt wird geladen ...

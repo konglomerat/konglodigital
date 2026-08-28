@@ -359,10 +359,14 @@ const loadShowcasesFromDb = async (limit = 60) => {
   return rows.map((row) => toShowcaseRecord(row, [], workshopById, null));
 };
 
-const getCachedShowcases = unstable_cache(loadShowcasesFromDb, ["showcases-list-v1"], {
-  revalidate: 60 * 60 * 24 * 7,
-  tags: [SHOWCASES_CACHE_TAG],
-});
+const getCachedShowcases = unstable_cache(
+  loadShowcasesFromDb,
+  ["showcases-list-v1"],
+  {
+    revalidate: 60 * 60 * 24 * 7,
+    tags: [SHOWCASES_CACHE_TAG],
+  },
+);
 
 export const loadShowcases = async (limit = 60) => getCachedShowcases(limit);
 

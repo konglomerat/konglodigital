@@ -47,7 +47,7 @@ const TILES = [
 export default function DreiDDruckPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)]">
-      <WerkbereichSideNav/>
+      <WerkbereichSideNav />
       <div className="flex min-w-0 flex-col">
         <PageTitle
           backLink={{
@@ -73,7 +73,6 @@ export default function DreiDDruckPage() {
             Angemeldete Mitglieder erledigen das hier selbst — ohne Umweg über
             das Team.
           </p>
-
 
           <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2">
             {TILES.map((tile) => (

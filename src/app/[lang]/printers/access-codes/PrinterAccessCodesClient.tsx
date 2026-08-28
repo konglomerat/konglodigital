@@ -75,7 +75,7 @@ export default function PrinterAccessCodesClient() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-success-border bg-success-soft p-4 shadow-sm md:p-5">
+      <section className="rounded-lg border border-success-border bg-success-soft p-4 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="mx-auto w-full max-w-[320px] md:mx-0 md:max-w-[320px]">
             <Image
@@ -131,19 +131,19 @@ export default function PrinterAccessCodesClient() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="knglmrt-border-section bg-card px-4 py-6 text-sm text-muted-foreground">
           Lade E-Mails...
         </div>
       ) : null}
 
       {!loading && !errorMessage && entries.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="knglmrt-border-section bg-card px-4 py-6 text-sm text-muted-foreground">
           Noch keine weitergeleiteten E-Mails gefunden.
         </div>
       ) : null}
 
       {entries.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <div className="knglmrt-border-section overflow-hidden bg-card">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">

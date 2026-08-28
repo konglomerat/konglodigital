@@ -53,7 +53,7 @@ const SELF_SERVICE_TILES = [
 export default function HolzwerkstattPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)] xl:grid-cols-[212px_minmax(0,1fr)_300px]">
-      <WerkbereichSideNav/>
+      <WerkbereichSideNav />
       <div className="flex min-w-0 flex-col">
         <PageTitle
           backLink={{

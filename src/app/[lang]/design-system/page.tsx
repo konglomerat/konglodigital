@@ -5,7 +5,7 @@
 // zuerst.
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   faArrowRight,
   faPlus,
@@ -27,6 +27,9 @@ import Button, {
 import Divider from "@/components/knglmrt/Divider";
 import Face from "@/components/knglmrt/Face";
 import Field, { type FieldKind } from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Hand from "@/components/knglmrt/Hand";
 import Notice from "@/components/knglmrt/Notice";
 import SearchField from "@/components/knglmrt/SearchField";
@@ -45,6 +48,40 @@ import {
   Th,
   Tr,
 } from "@/components/knglmrt/Table";
+
+// Die Palette aus knglmrt-theme.css — Ebene 1, die einzige Stelle mit
+// Hex-Werten. Die Rampe läuft 100 / 60 / 30 (Prozent-Tints).
+type ColorToken = { name: string; note?: string };
+
+const PALETTE_TOKENS: ColorToken[] = [
+  { name: "--knglmrt-pink-100", note: "Markenfarbe, nur Akzent" },
+  { name: "--knglmrt-pink-60" },
+  { name: "--knglmrt-pink-30" },
+  { name: "--knglmrt-pink-15", note: "zarte Kachelkontur" },
+  { name: "--knglmrt-yellow-100", note: "Erinnerung, Konfetti" },
+  { name: "--knglmrt-yellow-60" },
+  { name: "--knglmrt-yellow-30" },
+  { name: "--knglmrt-yellow-120", note: "Hover, trägt weiße Schrift" },
+  { name: "--knglmrt-blue-100", note: "kühle Tints, Konfetti" },
+  { name: "--knglmrt-blue-60" },
+  { name: "--knglmrt-blue-30" },
+  { name: "--knglmrt-brown-100", note: "Handschrift, Link-Hover" },
+  { name: "--knglmrt-brown-60" },
+  { name: "--knglmrt-brown-30" },
+  { name: "--knglmrt-dark-100", note: "invertierte Flächen, Fließtext" },
+  { name: "--knglmrt-dark-60", note: "stille Schrift" },
+  { name: "--knglmrt-dark-30", note: "Haarlinien" },
+  { name: "--knglmrt-ink", note: "Artwork und Kontur" },
+  { name: "--knglmrt-ink-soft", note: "nur Werkbereich-Marken" },
+  { name: "--knglmrt-paper", note: "das Blatt" },
+  { name: "--knglmrt-paper-pink", note: "Tint-Band" },
+  { name: "--knglmrt-paper-grey", note: "Summenzeilen" },
+  { name: "--knglmrt-vhc-primary", note: "Sub-Marke Volkshaus" },
+  { name: "--knglmrt-vhc-secondary", note: "Sub-Marke Volkshaus" },
+  { name: "--knglmrt-tint-avatar", note: "unter dem Gesicht im Avatar" },
+  { name: "--knglmrt-tint-zebra", note: "Zebra-Zeile in DataTable" },
+  { name: "--knglmrt-tint-quiet-hover", note: "leise Taste, gehovert" },
+];
 
 const BUTTON_KINDS: ButtonKind[] = [
   "primary",
@@ -184,6 +221,47 @@ function Sample({
   );
 }
 
+/**
+ * Liest die aufgelösten Werte der Palette vom <html>-Element — einmal beim
+ * Mount, damit unter jedem Feld der tatsächliche Hex-Wert steht.
+ */
+function useResolvedColors(names: string[]) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const key = names.join(",");
+
+  useEffect(() => {
+    const style = getComputedStyle(document.documentElement);
+    const next: Record<string, string> = {};
+    for (const name of key.split(",")) {
+      next[name] = style.getPropertyValue(name).trim();
+    }
+    setValues(next);
+  }, [key]);
+
+  return values;
+}
+
+/** Ein Farbfeld: Fläche, Token-Name, Hex-Wert, Verwendung. */
+function Swatch({ token, value }: { token: ColorToken; value?: string }) {
+  return (
+    <div>
+      <div
+        className="knglmrt-border mb-1 h-10 w-full"
+        style={{ background: `var(${token.name})` }}
+      />
+      <code className="knglmrt-num block break-all">
+        {token.name.replace("--knglmrt-", "")}
+      </code>
+      <code className="knglmrt-num block text-muted-foreground">
+        {value || "\u00a0"}
+      </code>
+      {token.note ? (
+        <p className="knglmrt-tag text-muted-foreground">{token.note}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function DesignSystemPage() {
   const [segment, setSegment] = useState<"liste" | "karte">("liste");
   const [bereich, setBereich] = useState("");
@@ -196,6 +274,7 @@ export default function DesignSystemPage() {
   const [erinnerung, setErinnerung] = useState(false);
   const [dialogOffen, setDialogOffen] = useState(false);
   const [dangerOffen, setDangerOffen] = useState(false);
+  const values = useResolvedColors(PALETTE_TOKENS.map((t) => t.name));
 
   return (
     <div>
@@ -205,6 +284,18 @@ export default function DesignSystemPage() {
         subTitle="Jede Komponente aus src/components/knglmrt/ mit allen Varianten, die sie kennt. Wer etwas Neues baut, nimmt es von hier — und trägt es hier nach."
         className="mb-10"
       />
+
+      <Section
+        title="Palette"
+        source="src/app/knglmrt-theme.css"
+        hint="Die Markenfarben — die einzige Stelle im Projekt mit Hex-Werten. Alles andere sind Rollen, die hierauf zeigen. Im Dark Mode unverändert."
+      >
+        <div className="grid grid-cols-3 gap-x-4 gap-y-5 sm:grid-cols-5 lg:grid-cols-7">
+          {PALETTE_TOKENS.map((token) => (
+            <Swatch key={token.name} token={token} value={values[token.name]} />
+          ))}
+        </div>
+      </Section>
 
       <Section
         title="Button"
@@ -349,7 +440,7 @@ export default function DesignSystemPage() {
           <Textarea
             label="Anmerkung"
             value={notiz}
-            max={140}
+            counter={140}
             onChange={(event) => setNotiz(event.target.value)}
             hint="Steht später in der Werkstatt am Gerät."
           />
@@ -387,6 +478,82 @@ export default function DesignSystemPage() {
             value="siebdruck"
             options={WERKBEREICHE}
           />
+        </div>
+      </Section>
+
+      <Section
+        title="NativeSelect"
+        source="components/knglmrt/NativeSelect.tsx"
+        hint="Die Auswahl mit <option>-Kindern — für lange Kontenpläne und alles, was der Browser selbst besser scrollt. Gleicher Rahmen wie Field, das Dreieck des Browsers weicht dem Caret des Systems."
+      >
+        <div className="grid max-w-[840px] gap-6 sm:grid-cols-2">
+          <NativeSelect label="Werkbereich" defaultValue="holz">
+            {WERKBEREICHE.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            label="error"
+            error="Bitte einen Werkbereich wählen."
+            defaultValue=""
+          >
+            <option value="">Bitte auswählen…</option>
+          </NativeSelect>
+        </div>
+      </Section>
+
+      <Section
+        title="FieldShell"
+        source="components/knglmrt/FieldShell.tsx"
+        hint="Der Rahmen ohne Steuerelement: Beschriftung oben, Hinweis oder Fehler unten. Für alles, was kein natives Feld ist — Autocomplete, Mehrfachauswahl, Segmented Control."
+      >
+        <div className="grid max-w-[840px] gap-6 sm:grid-cols-2">
+          <FieldShell
+            as="div"
+            label="Ansicht"
+            hint="Hier sitzt ein fremdes Steuerelement im Rahmen des Systems."
+          >
+            <SegmentedControl
+              value={segment}
+              onChange={setSegment}
+              options={[
+                { value: "liste" as const, label: "Liste" },
+                { value: "karte" as const, label: "Karte" },
+              ]}
+            />
+          </FieldShell>
+        </div>
+      </Section>
+
+      <Section
+        title="FormSection"
+        source="components/knglmrt/FormSection.tsx"
+        hint="Der Abschnitt im Formular: Überschrift, Einordnung, darunter die Felder. Die Kontur hält ihn zusammen — kein Schatten, keine Rundung. Ohne title bleibt der Kopf weg, die Kontur bleibt."
+      >
+        <div className="max-w-[840px]">
+          <FormSection
+            title="Belegangaben"
+            icon={faPlus}
+            description="Alles, was auf dem Beleg steht."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Belegnummer"
+                kind="mono"
+                defaultValue="RE-2026-014"
+              />
+              <Field label="Betrag" kind="mono" defaultValue="120,50" />
+            </div>
+          </FormSection>
+
+          <FormSection className="mt-4">
+            <p className="text-muted-foreground">
+              Ohne <code>title</code>: derselbe Rahmen, kein Kopf — für
+              Abschnitte, die ihre Überschrift selbst mitbringen.
+            </p>
+          </FormSection>
         </div>
       </Section>
 

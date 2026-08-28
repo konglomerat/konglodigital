@@ -12,6 +12,8 @@ import {
   setCartProducts,
   type CartProduct,
 } from "@/lib/cart";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
 
 const statusStyles: Record<PrinterStatus, string> = {
   idle: "bg-success-soft text-success ring-success-border",
@@ -476,7 +478,7 @@ export default function Home() {
             ? Array.from({ length: 2 }).map((_, index) => (
                 <article
                   key={`printer-skeleton-${index}`}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm"
+                  className="knglmrt-border-section flex flex-col gap-4 bg-card p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
@@ -507,7 +509,7 @@ export default function Home() {
             : printers.map((printer) => (
                 <article
                   key={printer.id}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm"
+                  className="knglmrt-border-section flex flex-col gap-4 bg-card p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
@@ -562,7 +564,7 @@ export default function Home() {
               ))}
         </section>
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-foreground">
@@ -667,15 +669,11 @@ export default function Home() {
                           </div>
                           <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
                             <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleToggleJob(job.id)}
-                                  className="h-4 w-4 rounded-md border-input"
-                                />
-                                Select
-                              </label>
+                              <Choice
+                                label="Select"
+                                checked={isSelected}
+                                onChange={() => handleToggleJob(job.id)}
+                              />
                               <div>
                                 <p className="text-sm font-semibold text-foreground">
                                   {job.title}
@@ -731,12 +729,12 @@ export default function Home() {
                                   </p>
                                 )}
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <input
+                                  <Field
+                                    className="flex-1"
                                     name="description"
                                     defaultValue={description}
                                     placeholder="Add a short description"
                                     maxLength={160}
-                                    className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground/80 shadow-sm"
                                     disabled={!canEdit}
                                   />
                                   <Button

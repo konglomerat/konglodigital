@@ -18,6 +18,9 @@ import { type InvoicePayload } from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
 import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../components/PasswordInput";
+import Field from "@/components/knglmrt/Field";
+import Textarea from "@/components/knglmrt/Textarea";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 
 type AccountUser = {
   email: string;
@@ -523,66 +526,46 @@ export default function AccountClient({
             Beiträgen. Der Name kommt direkt aus Campai.
           </p>
           <form onSubmit={handleProfileSubmit} className="flex flex-col gap-4">
+            <Field
+              id="account-campai-name"
+              label="Name in Campai"
+              type="text"
+              value={campaiName}
+              readOnly
+              placeholder="Kein Campai-Kontakt verknüpft"
+              hint="Soll der Name sich ändern, ändere ihn bitte direkt in Campai."
+            />
+            <Field
+              label="E-Mail"
+              id="account-email"
+              type="email"
+              value={user?.email ?? ""}
+              disabled
+            />
             <div>
-              <label className={labelClassName} htmlFor="account-campai-name">
-                Name in Campai
-              </label>
-              <input
-                id="account-campai-name"
-                type="text"
-                value={campaiName}
-                readOnly
-                placeholder="Kein Campai-Kontakt verknüpft"
-                className={`mt-1 ${readOnlyFieldClassName}`}
-              />
-              <p className="mt-1 text-muted-foreground">
-                Soll der Name sich ändern, ändere ihn bitte direkt in Campai.
-              </p>
-            </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-email">
-                E-Mail
-              </label>
-              <input
-                id="account-email"
-                type="email"
-                value={user?.email ?? ""}
-                disabled
-                className={`mt-1 ${readOnlyFieldClassName}`}
-              />
-            </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-avatar-url">
-                Profilbild-URL
-              </label>
-              <input
+              <Field
                 id="account-avatar-url"
+                label="Profilbild-URL"
                 name="avatarUrl"
                 type="url"
                 value={avatarUrl}
                 onChange={(event) => setAvatarUrl(event.target.value)}
                 placeholder="https://…"
-                className={`mt-1 ${fieldClassName}`}
               />
               <p className="mt-1 text-muted-foreground">
                 Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
                 Gravatar anhand deiner E-Mail-Adresse.
               </p>
             </div>
-            <div>
-              <label className={labelClassName} htmlFor="account-short-bio">
-                Kurzbiografie
-              </label>
-              <textarea
-                id="account-short-bio"
-                name="shortBio"
-                value={shortBio}
-                onChange={(event) => setShortBio(event.target.value)}
-                rows={4}
-                placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
-                className={`mt-1 ${fieldClassName}`}
-              />
-            </div>
+            <Textarea
+              label="Kurzbiografie"
+              id="account-short-bio"
+              name="shortBio"
+              value={shortBio}
+              onChange={(event) => setShortBio(event.target.value)}
+              rows={4}
+              placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
+            />
             <Button size="small" type="submit" kind="primary">
               Profil speichern
             </Button>
@@ -673,24 +656,18 @@ export default function AccountClient({
           </div>
 
           <div className="mb-4">
-            <label
-              className={labelClassName}
-              htmlFor="account-zugangskarte-tarif"
-            >
-              Tarif wechseln
-            </label>
-            <select
+            <NativeSelect
               id="account-zugangskarte-tarif"
+              label="Tarif wechseln"
               value={accessCardPlan}
               onChange={(event) => setAccessCardPlan(event.target.value)}
-              className={`mt-1 ${fieldClassName}`}
             >
               {ACCESS_CARD_PLANS.map((plan) => (
                 <option key={plan.id} value={plan.id}>
                   {plan.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
             <p className="mt-1 text-muted-foreground">
               Ein Wechsel gilt ab dem nächsten Abrechnungsmonat.
             </p>

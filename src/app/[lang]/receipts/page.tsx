@@ -22,6 +22,9 @@ import type {
 import type { MemberProfilePreferences } from "@/lib/member-profiles";
 
 import ReceiptDetailDrawer from "./receipt-detail-drawer";
+import Choice from "@/components/knglmrt/Choice";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import Select from "@/components/knglmrt/Select";
 
 type CostCenterOption = {
   value: string;
@@ -280,22 +283,22 @@ const getPaymentStatusLabel = (status: string | null): string | null => {
 
 const getTypeChipClassName = (type: string | null): string => {
   if (type && INCOME_TYPES.has(type)) {
-    return "border-l-4 border-l-emerald-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-emerald-400 dark:bg-zinc-900 dark:text-zinc-100";
+    return "border-l-4 border-l-emerald-500 border-border bg-muted text-foreground dark:border-zinc-700 dark:border-l-emerald-400 dark:bg-zinc-900 dark:text-zinc-100";
   }
   if (type && EXPENSE_TYPES.has(type)) {
-    return "border-l-4 border-l-rose-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-rose-400 dark:bg-zinc-900 dark:text-zinc-100";
+    return "border-l-4 border-l-rose-500 border-border bg-muted text-foreground dark:border-zinc-700 dark:border-l-rose-400 dark:bg-zinc-900 dark:text-zinc-100";
   }
   if (type === "refund") {
-    return "border-l-4 border-l-amber-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-amber-400 dark:bg-zinc-900 dark:text-zinc-100";
+    return "border-l-4 border-l-amber-500 border-border bg-muted text-foreground dark:border-zinc-700 dark:border-l-amber-400 dark:bg-zinc-900 dark:text-zinc-100";
   }
-  return "border-l-4 border-l-sky-500 border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:border-l-sky-400 dark:bg-zinc-900 dark:text-zinc-100";
+  return "border-l-4 border-l-sky-500 border-border bg-muted text-foreground dark:border-zinc-700 dark:border-l-sky-400 dark:bg-zinc-900 dark:text-zinc-100";
 };
 
 const getPaymentStatusChipClassName = (status: string | null): string => {
   const tone = normalizePaymentStatusTone(status);
 
   if (tone === "paid") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "border-success-border bg-success-soft text-foreground dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300";
   }
   if (tone === "unpaid") {
     return "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300";
@@ -303,7 +306,7 @@ const getPaymentStatusChipClassName = (status: string | null): string => {
   if (tone === "partial") {
     return "border-orange-300 bg-orange-100 text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300";
   }
-  return "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+  return "border-border bg-muted text-foreground dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 };
 
 const CELL_TEXT_CLASS_NAME =
@@ -1361,7 +1364,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1394,7 +1397,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1408,7 +1411,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1426,7 +1429,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="w-[260px] max-w-[260px] whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`}
@@ -1440,7 +1443,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1454,7 +1457,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-emerald-700 dark:text-emerald-400"
+              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-foreground dark:text-emerald-400"
             >
               <span className={CELL_TEXT_CLASS_NAME} title={incomeCell || "—"}>
                 {incomeCell || "—"}
@@ -1465,7 +1468,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-rose-700 dark:text-rose-400"
+              className="whitespace-nowrap px-2 py-2 text-right text-sm font-medium text-destructive dark:text-rose-400"
             >
               <span className={CELL_TEXT_CLASS_NAME} title={expenseCell || "—"}>
                 {expenseCell || "—"}
@@ -1476,7 +1479,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1490,7 +1493,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="w-[180px] max-w-[180px] whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               {receipt.positions.length > 0 ? (
                 <div
@@ -1509,7 +1512,7 @@ export default function ReceiptsPage() {
                         className={`h-2.5 w-2.5 shrink-0 rounded-full ${getSplitDotClassName(getPositionCostCenter2Key(position))}`}
                         aria-hidden="true"
                       />
-                      <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                      <span className="text-xs font-medium text-foreground dark:text-zinc-300">
                         {position.amount !== null
                           ? formatCents(position.amount)
                           : "—"}
@@ -1527,7 +1530,7 @@ export default function ReceiptsPage() {
             <td key={cellKey} className="whitespace-nowrap px-2 py-2 text-sm">
               {receipt.type ? (
                 <span
-                  className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                  className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                   title={
                     TABLE_COLUMN_MAP.get("type")?.title ??
                     TYPE_LABELS[receipt.type] ??
@@ -1545,7 +1548,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1559,7 +1562,7 @@ export default function ReceiptsPage() {
           return (
             <td
               key={cellKey}
-              className="whitespace-nowrap px-2 py-2 text-sm text-zinc-800 dark:text-zinc-100"
+              className="whitespace-nowrap px-2 py-2 text-sm text-foreground dark:text-zinc-100"
             >
               <span
                 className={CELL_TEXT_CLASS_NAME}
@@ -1580,7 +1583,7 @@ export default function ReceiptsPage() {
                   {receipt.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      className="inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                     >
                       {tag}
                     </span>
@@ -1596,7 +1599,7 @@ export default function ReceiptsPage() {
             <td key={cellKey} className="px-2 py-2 text-center">
               <a
                 href={`/api/campai/balance/receipts/${receipt.id}/download`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-sm text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-sm text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-muted-foreground dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
                 aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
                 title="PDF herunterladen"
               >
@@ -1634,15 +1637,14 @@ export default function ReceiptsPage() {
       </div>
 
       <div className="mb-3 flex flex-wrap items-end gap-2 sm:mb-4 sm:gap-3">
-        <div className="w-full min-w-[260px] sm:w-[360px] lg:w-[420px] lg:flex-none">
-          <label
-            htmlFor="cost-center-2-filter"
-            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
-          >
-            Werkbereich/Projekt
-          </label>
+        <FieldShell
+          as="div"
+          label="Werkbereich/Projekt"
+          error={costCentersError ?? undefined}
+          className="w-full min-w-[260px] sm:w-[360px] lg:w-[420px] lg:flex-none"
+        >
           {loadingCostCenters ? (
-            <div className="flex min-h-10 items-center gap-2 py-2 text-sm text-muted-foreground">
+            <div className="flex min-h-10 items-center gap-2 py-2 text-muted-foreground">
               <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
               Werkbereiche werden geladen…
             </div>
@@ -1656,111 +1658,51 @@ export default function ReceiptsPage() {
               onChange={handleSelectedChange}
               placeholder="Werkbereich(e) auswählen…"
               noOptionsMessage={() => "Keine Werkbereiche gefunden."}
-              styles={{
-                control: (base, state) => ({
-                  ...base,
-                  backgroundColor: "transparent",
-                  boxShadow: state.isFocused
-                    ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
-                    : "none",
-                }),
-              }}
             />
           )}
-          {costCentersError ? (
-            <p className="mt-2 text-sm text-destructive">{costCentersError}</p>
-          ) : null}
-        </div>
+        </FieldShell>
 
-        <div className="min-w-[150px] sm:w-[150px]">
-          <label
-            htmlFor="balance-year-filter"
-            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
-          >
-            Zahlungsdatum
-          </label>
-          <ReactSelect<FilterOption>
-            inputId="balance-year-filter"
-            options={yearOptions}
-            value={selectedYear}
-            onChange={(value) => setSelectedYear(value)}
-            placeholder="Jahr"
-            noOptionsMessage={() => "Keine Jahre gefunden."}
-            styles={{
-              control: (base, state) => ({
-                ...base,
-                backgroundColor: "transparent",
-                boxShadow: state.isFocused
-                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
-                  : "none",
-              }),
-            }}
-          />
-        </div>
+        <Select
+          id="balance-year-filter"
+          label="Zahlungsdatum"
+          className="min-w-[150px] sm:w-[150px]"
+          options={yearOptions}
+          value={selectedYear?.value ?? ""}
+          onChange={(_value, option) => setSelectedYear(option)}
+          placeholder="Jahr"
+        />
 
-        <div className="min-w-[170px] sm:w-[170px]">
-          <label
-            htmlFor="balance-status-filter"
-            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
-          >
-            Status
-          </label>
-          <ReactSelect<FilterOption>
-            inputId="balance-status-filter"
-            options={statusOptions}
-            value={selectedStatus}
-            onChange={(value) => setSelectedStatus(value)}
-            placeholder="Status"
-            noOptionsMessage={() => "Keine Status gefunden."}
-            styles={{
-              control: (base, state) => ({
-                ...base,
-                backgroundColor: "transparent",
-                boxShadow: state.isFocused
-                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
-                  : "none",
-              }),
-            }}
-          />
-        </div>
+        <Select
+          id="balance-status-filter"
+          label="Status"
+          className="min-w-[170px] sm:w-[170px]"
+          options={statusOptions}
+          value={selectedStatus?.value ?? ""}
+          onChange={(_value, option) => setSelectedStatus(option)}
+          placeholder="Status"
+        />
 
-        <div className="min-w-[170px] sm:w-[170px]">
-          <label
-            htmlFor="balance-type-filter"
-            className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300"
-          >
-            Typ
-          </label>
-          <ReactSelect<FilterOption>
-            inputId="balance-type-filter"
-            options={typeOptions}
-            value={selectedType}
-            onChange={(value) => setSelectedType(value)}
-            placeholder="Typ"
-            noOptionsMessage={() => "Keine Typen gefunden."}
-            styles={{
-              control: (base, state) => ({
-                ...base,
-                backgroundColor: "transparent",
-                boxShadow: state.isFocused
-                  ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
-                  : "none",
-              }),
-            }}
-          />
-        </div>
+        <Select
+          id="balance-type-filter"
+          label="Typ"
+          className="min-w-[170px] sm:w-[170px]"
+          options={typeOptions}
+          value={selectedType?.value ?? ""}
+          onChange={(_value, option) => setSelectedType(option)}
+          placeholder="Typ"
+        />
       </div>
 
       {hasSelection && !isSaldoHidden ? (
         <div className="mb-4 flex items-start gap-2 overflow-hidden sm:gap-3">
-          <div className="shrink-0 rounded-lg border border-border bg-card p-3 text-right shadow-sm sm:p-4">
-            <p className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="knglmrt-border-section shrink-0 bg-card p-3 text-right sm:p-4">
+            <p className="knglmrt-caption text-left text-muted-foreground">
               Saldo
             </p>
             <p
               className={`mt-1 text-3xl font-semibold ${
                 saldo < 0
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-destructive dark:text-rose-400"
                   : "text-foreground"
               }`}
             >
@@ -1773,7 +1715,7 @@ export default function ReceiptsPage() {
               <span className="text-muted-foreground" aria-hidden="true">
                 &middot;
               </span>
-              <span className="text-rose-600 dark:text-rose-400">
+              <span className="text-destructive dark:text-rose-400">
                 -{formatCents(totalExpense)}
               </span>
             </div>
@@ -1789,14 +1731,14 @@ export default function ReceiptsPage() {
                   aria-pressed={
                     selectedAccountSummaryKey === accountSummary.key
                   }
-                  className={`shrink-0 rounded-lg border p-3 text-right shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 sm:p-4 ${
+                  className={`shrink-0 rounded-lg border p-3 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-950 sm:p-4 ${
                     selectedAccountSummaryKey === accountSummary.key
-                      ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800/80"
+                      ? "border-zinc-900 bg-muted dark:border-zinc-100 dark:bg-zinc-800/80"
                       : "border-zinc-200/70 bg-zinc-50/75 hover:border-zinc-300 hover:bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
                   }`}
                 >
                   <p
-                    className="flex max-w-[220px] items-center gap-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground/90"
+                    className="knglmrt-caption flex max-w-[220px] items-center gap-2 text-left text-muted-foreground"
                     title={accountSummary.label}
                   >
                     <span
@@ -1870,7 +1812,7 @@ export default function ReceiptsPage() {
 
           {isColumnPanelOpen ? (
             <div
-              className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg"
+              className="absolute right-0 top-full z-20 mt-2 w-[320px] knglmrt-border bg-popover p-3 text-popover-foreground"
               role="dialog"
               aria-label="Spalten verwalten"
             >
@@ -1897,16 +1839,13 @@ export default function ReceiptsPage() {
                       key={column.key}
                       className="flex items-center gap-2 rounded-lg border border-border px-2 py-2"
                     >
-                      <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={isVisible}
-                          onChange={() => toggleColumnVisibility(column.key)}
-                          disabled={disableHide}
-                          className="h-4 w-4 rounded border-border text-foreground focus:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-60"
-                        />
-                        <span className="truncate">{column.label}</span>
-                      </label>
+                      <Choice
+                        className="min-w-0 flex-1"
+                        label={<span className="truncate">{column.label}</span>}
+                        checked={isVisible}
+                        disabled={disableHide}
+                        onChange={() => toggleColumnVisibility(column.key)}
+                      />
                       <div className="flex items-center gap-1">
                         <Button
                           kind="ghost"
@@ -1944,9 +1883,9 @@ export default function ReceiptsPage() {
         }}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="min-w-full table-fixed divide-y divide-zinc-200 dark:divide-zinc-800">
-          <thead className="bg-zinc-50 dark:bg-zinc-900/80">
+      <div className="knglmrt-border-section overflow-x-auto bg-card dark:bg-zinc-900">
+        <table className="min-w-full table-fixed divide-y divide-border dark:divide-zinc-800">
+          <thead className="bg-muted dark:bg-zinc-900/80">
             <tr>
               {visibleColumns.map((column) => {
                 const sortableKey = column.sortableKey;
@@ -1963,7 +1902,7 @@ export default function ReceiptsPage() {
                 return (
                   <th
                     key={column.key}
-                    className={`whitespace-nowrap px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 ${column.headerWidthClassName ?? ""} ${getHeaderAlignmentClassName(
+                    className={`whitespace-nowrap px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300 ${column.headerWidthClassName ?? ""} ${getHeaderAlignmentClassName(
                       column.align,
                     )}`}
                     title={column.title ?? column.label}
@@ -1987,7 +1926,7 @@ export default function ReceiptsPage() {
                           column.align,
                         )} ${
                           isActiveSort
-                            ? "font-bold text-zinc-900 dark:text-zinc-50"
+                            ? "font-bold text-foreground dark:text-zinc-50"
                             : ""
                         }`}
                         aria-label={`${column.label} sortieren${
@@ -2004,7 +1943,7 @@ export default function ReceiptsPage() {
                             aria-hidden="true"
                             className={`text-[11px] leading-none ${
                               isActiveSort
-                                ? "opacity-100 text-zinc-700 dark:text-zinc-200"
+                                ? "opacity-100 text-foreground dark:text-zinc-200"
                                 : "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
                             }`}
                           />
@@ -2019,12 +1958,12 @@ export default function ReceiptsPage() {
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <tbody className="divide-y divide-border dark:divide-zinc-800">
             {!hasSelection ? (
               <tr>
                 <td
                   colSpan={visibleColumnCount}
-                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-muted-foreground dark:text-zinc-300"
                 >
                   Bitte einen oder mehrere Werkbereiche auswählen, um Belege
                   anzuzeigen.
@@ -2034,7 +1973,7 @@ export default function ReceiptsPage() {
               <tr>
                 <td
                   colSpan={visibleColumnCount}
-                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-muted-foreground dark:text-zinc-300"
                 >
                   <span className="inline-flex items-center gap-2">
                     <FontAwesomeIcon
@@ -2050,7 +1989,7 @@ export default function ReceiptsPage() {
               <tr>
                 <td
                   colSpan={visibleColumnCount}
-                  className="px-2 py-6 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-2 py-6 text-sm text-muted-foreground dark:text-zinc-300"
                 >
                   Keine Belege gefunden.
                 </td>
@@ -2067,7 +2006,7 @@ export default function ReceiptsPage() {
                       }
                       setSelectedReceiptId(receipt.id);
                     }}
-                    className="cursor-pointer transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                    className="cursor-pointer transition hover:bg-muted dark:hover:bg-zinc-800/60"
                   >
                     {visibleColumns.map((column) =>
                       renderReceiptCell(column.key, receipt),
@@ -2078,14 +2017,14 @@ export default function ReceiptsPage() {
             )}
           </tbody>
           {hasSelection && !loadingReceipts && sortedReceipts.length > 0 ? (
-            <tfoot className="bg-zinc-50 dark:bg-zinc-900/80">
+            <tfoot className="bg-muted dark:bg-zinc-900/80">
               <tr>
                 {visibleColumns.map((column, index) => {
                   if (column.key === "Einnahmen") {
                     return (
                       <td
                         key={column.key}
-                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-foreground dark:text-emerald-400"
                       >
                         <span
                           className={CELL_TEXT_CLASS_NAME}
@@ -2101,7 +2040,7 @@ export default function ReceiptsPage() {
                     return (
                       <td
                         key={column.key}
-                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-rose-700 dark:text-rose-400"
+                        className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold text-destructive dark:text-rose-400"
                       >
                         <span
                           className={CELL_TEXT_CLASS_NAME}
@@ -2116,7 +2055,7 @@ export default function ReceiptsPage() {
                   return (
                     <td
                       key={column.key}
-                      className="whitespace-nowrap px-2 py-2 text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                      className="whitespace-nowrap px-2 py-2 text-sm font-semibold text-foreground dark:text-zinc-100"
                     >
                       {index === 0 ? "Total" : ""}
                     </td>

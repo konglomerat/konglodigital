@@ -6,6 +6,8 @@ import { Suspense, useState } from "react";
 
 import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../components/PasswordInput";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
 
 export const dynamic = "force-dynamic";
 
@@ -60,35 +62,21 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-md knglmrt-border bg-card p-8">
         <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Melde dich mit deinen Zugangsdaten an.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              required
-              className="w-full rounded-md border border-input bg-card px-4 py-2 text-sm text-foreground"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Passwort
-            </label>
+          <Field label="Email" name="email" type="email" required />
+          <FieldShell as="div" label="Passwort">
             <PasswordInput
               name="password"
               required
               showLabel="Anzeigen"
               hideLabel="Ausblenden"
-              className="w-full rounded-md border border-input bg-card px-4 py-2 text-sm text-foreground"
             />
-          </div>
+          </FieldShell>
           <p className="text-right text-sm text-muted-foreground">
             <Link
               className="font-semibold text-primary hover:text-primary/80"
@@ -98,7 +86,7 @@ function LoginForm() {
             </Link>
           </p>
           {error ? (
-            <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <p className="bg-destructive-soft px-4 py-3 text-foreground">
               {error}
             </p>
           ) : null}
@@ -122,7 +110,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-background px-6">
-          <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+          <div className="knglmrt-border-section w-full max-w-md bg-card p-8">
             <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
             <p className="mt-2 text-sm text-muted-foreground">Lädt ...</p>
           </div>

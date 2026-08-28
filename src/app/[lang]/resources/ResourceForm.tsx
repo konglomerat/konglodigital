@@ -31,6 +31,8 @@ import {
   getResourceMediaKindFromUrl,
   type ResourceMediaKind,
 } from "@/lib/resource-media";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 
 type ResourceFormTheme = "dark" | "light";
 
@@ -178,31 +180,25 @@ export default function ResourceForm({
 
   return (
     <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-      <div className="flex flex-col gap-2">
-        <label className={themeStyles.label}>{tx("Name")}</label>
-        <input
-          type="text"
-          {...register("name", {
-            required: requireName ? tx("Name is required.") : false,
-          })}
-          className={themeStyles.input}
-          placeholder={tx("Resource name")}
-        />
-      </div>
+      <Field
+        label={tx("Name")}
+        type="text"
+        {...register("name", {
+          required: requireName ? tx("Name is required.") : false,
+        })}
+        placeholder={tx("Resource name")}
+      />
 
-      <div className="flex flex-col gap-2">
-        <label className={themeStyles.label}>{tx("Type")}</label>
-        <select
-          {...register("type", { required: tx("Type is required.") })}
-          className={themeStyles.select}
-        >
-          {Object.entries(RESOURCE_TYPES).map(([value, config]) => (
-            <option key={value} value={value}>
-              {config.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <NativeSelect
+        label={tx("Type")}
+        {...register("type", { required: tx("Type is required.") })}
+      >
+        {Object.entries(RESOURCE_TYPES).map(([value, config]) => (
+          <option key={value} value={value}>
+            {config.label}
+          </option>
+        ))}
+      </NativeSelect>
 
       <div className="flex flex-col gap-2">
         <label className={themeStyles.label}>{tx("Priority")}</label>
@@ -248,18 +244,17 @@ export default function ResourceForm({
             </p>
           </>
         ) : (
-          <select
+          <NativeSelect
             {...register("priority", {
               required: tx("Priority is required."),
             })}
-            className={themeStyles.select}
           >
             <option value="1">{tx("1 (Lowest)")}</option>
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
             <option value="5">{tx("5 (Highest)")}</option>
-          </select>
+          </NativeSelect>
         )}
       </div>
 
@@ -286,15 +281,13 @@ export default function ResourceForm({
         />
       </div>
 
-      <div className="flex flex-col gap-2 md:col-span-2">
-        <label className={themeStyles.label}>{tx("Tags")}</label>
-        <input
-          type="text"
-          {...register("tags")}
-          className={themeStyles.input}
-          placeholder={tx("tag1, tag2")}
-        />
-      </div>
+      <Field
+        label={tx("Tags")}
+        className="md:col-span-2"
+        type="text"
+        {...register("tags")}
+        placeholder={tx("tag1, tag2")}
+      />
 
       <div className="flex flex-col gap-2 md:col-span-2">
         <label className={themeStyles.label}>{tx("Related resources")}</label>
@@ -364,25 +357,11 @@ export default function ResourceForm({
         </div>
       ) : null}
 
-      {/* <div className="flex flex-col gap-2">
-        <label className={themeStyles.label}>Categories</label>
-        <input
-          type="text"
-          {...register("categories")}
-          className={themeStyles.input}
-          placeholder="category1, category2"
-        />
-      </div> */}
+      {/* <Field label="Categories" type="text"
+          {...register("categories")} placeholder="category1, category2" /> */}
 
-      {/* <div className="flex flex-col gap-2">
-        <label className={themeStyles.label}>Category IDs</label>
-        <input
-          type="text"
-          {...register("categoryIds")}
-          className={themeStyles.input}
-          placeholder="id1, id2"
-        />
-      </div> */}
+      {/* <Field label="Category IDs" type="text"
+          {...register("categoryIds")} placeholder="id1, id2" /> */}
 
       <div className="flex flex-col gap-2 md:col-span-2">
         <div className="flex items-center justify-between">

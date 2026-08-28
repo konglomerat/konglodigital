@@ -32,7 +32,8 @@ import {
 import Button from "@/components/knglmrt/Button";
 import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import PageTitle from "../components/PageTitle";
-import { Input, Select } from "../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +48,7 @@ import {
   getResourcePreviewUrl,
 } from "@/lib/resource-media";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import Choice from "@/components/knglmrt/Choice";
 
 type Resource = ResourcePayload;
 
@@ -1154,7 +1156,7 @@ export default function ResourcesPageClient({
                 icon={faMagnifyingGlass}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
               />
-              <Input
+              <Field
                 id="resource-search"
                 type="search"
                 value={searchTerm}
@@ -1167,7 +1169,7 @@ export default function ResourcesPageClient({
                 }}
                 aria-label={tx("Search resources")}
                 placeholder={tx("Search by name, tag, or category")}
-                className="pl-9 pr-10 py-3 text-base"
+                inputClassName="pl-9 pr-10 py-3 text-base"
               />
               {searchTerm.trim().length > 0 ? (
                 <Button
@@ -1184,13 +1186,13 @@ export default function ResourcesPageClient({
             <TooltipProvider delayDuration={200}>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="w-full sm:w-auto sm:min-w-30">
-                  <Select
+                  <NativeSelect
                     value={selectedResourceType}
                     onChange={(event) =>
                       handleResourceTypeChange(event.target.value)
                     }
                     aria-label={tx("Filter by resource type")}
-                    className="py-2 text-xs font-semibold text-foreground"
+                    selectClassName="py-2 text-xs font-semibold text-foreground"
                   >
                     <option value="">{tx("All types")}</option>
                     {resourceTypeOptions.map((resourceType) => (
@@ -1201,12 +1203,24 @@ export default function ResourcesPageClient({
                         {resourceType.label}
                       </option>
                     ))}
-                  </Select>
+                  </NativeSelect>
                 </div>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
+                <span className="inline-flex">
+                  <Choice
+                    className="items-center"
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{tx("Filter by map viewport")}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {tx(
+                            "Only show resources that are currently visible in the map area.",
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    }
                     checked={filterByMapView}
                     onChange={(event) => {
                       const nextValue = event.target.checked;
@@ -1218,23 +1232,24 @@ export default function ResourcesPageClient({
                         includeWithinPolygons,
                       );
                     }}
-                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{tx("Filter by map viewport")}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {tx(
-                        "Only show resources that are currently visible in the map area.",
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </label>
+                </span>
 
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
+                <span className="inline-flex">
+                  <Choice
+                    className="items-center"
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{tx("Show resources in rooms")}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {tx(
+                            "Also include resources that are placed inside mapped room areas when searching for rooms.",
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    }
                     checked={includeWithinPolygons}
                     onChange={(event) => {
                       const nextValue = event.target.checked;
@@ -1247,19 +1262,8 @@ export default function ResourcesPageClient({
                       );
                     }}
                     disabled={normalizedSearchTerm.length === 0}
-                    className="h-4 w-4 rounded border-input bg-card text-primary shadow-xs shadow-black/10 transition focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{tx("Show resources in rooms")}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {tx(
-                        "Also include resources that are placed inside mapped room areas when searching for rooms.",
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </label>
+                </span>
 
                 <div className="ml-auto hidden text-right md:block">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1323,7 +1327,7 @@ export default function ResourcesPageClient({
               </>
             )}
             {loading ? (
-              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground ">
                 {tx("Loading...")}
               </div>
             ) : null}

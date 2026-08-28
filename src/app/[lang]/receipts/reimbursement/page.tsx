@@ -20,12 +20,10 @@ import {
   AutocompleteInput,
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -254,7 +252,7 @@ export default function ReimbursementPage() {
       />
 
       {costCentersError ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
           {costCentersError}
         </div>
       ) : null}
@@ -270,7 +268,8 @@ export default function ReimbursementPage() {
         {/* 2. Wer erhält die Rückerstattung? */}
         <FormSection title="Wer erhält die Rückerstattung?" icon={faUser}>
           <div className="space-y-4">
-            <FormField
+            <FieldShell
+              as="div"
               label="Empfänger auswählen oder neu anlegen"
               required
               error={errors.empfaengerName?.message}
@@ -284,7 +283,7 @@ export default function ReimbursementPage() {
                   required: "Empfängername ist erforderlich.",
                 })}
               />
-            </FormField>
+            </FieldShell>
 
             {/* Creditor selected badge */}
             {creditorAccount ? (
@@ -314,37 +313,31 @@ export default function ReimbursementPage() {
         <FormSection title="Belegangaben" icon={faFolderOpen}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Field
                 label="Anlass"
                 required
                 hint="Wofür war die Ausgabe?"
                 error={errors.betreff?.message}
-              >
-                <Input
-                  placeholder="z. B. Material für Werkstatt"
-                  {...register("betreff", {
-                    required: "Anlass ist erforderlich.",
-                  })}
-                />
-              </FormField>
+                placeholder="z. B. Material für Werkstatt"
+                {...register("betreff", {
+                  required: "Anlass ist erforderlich.",
+                })}
+              />
 
-              <FormField
+              <Field
                 label="Datum der Transaktion"
                 required
                 hint="Wann fand die Transaktion statt?"
                 error={errors.belegdatum?.message}
-              >
-                <Input
-                  type="date"
-                  {...register("belegdatum", {
-                    required: "Das Transaktionsdatum ist erforderlich.",
-                  })}
-                />
-              </FormField>
+                type="date"
+                {...register("belegdatum", {
+                  required: "Das Transaktionsdatum ist erforderlich.",
+                })}
+              />
             </div>
 
             {/* Einzelne Positionen */}
-            <div className="space-y-4 border-t border-zinc-200 pt-5">
+            <div className="space-y-4 border-t border-border pt-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-foreground">
                   Einzelne Positionen
@@ -356,74 +349,54 @@ export default function ReimbursementPage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-lg border border-zinc-200 p-2 sm:p-3"
+                  className="space-y-3 rounded-lg border border-border p-2 sm:p-3"
                 >
                   <div className="grid gap-3 md:grid-cols-3">
-                    <FormField
+                    <Field
                       label="Betrag in Euro"
                       required
                       error={errors.positions?.[index]?.betragEuro?.message}
-                    >
-                      <Input
-                        inputMode="decimal"
-                        placeholder="z. B. 12,90"
-                        {...register(`positions.${index}.betragEuro` as const, {
-                          required: "Betrag ist erforderlich.",
-                          pattern: {
-                            value: euroAmountPattern,
-                            message: euroAmountValidationMessage,
-                          },
-                        })}
-                      />
-                    </FormField>
+                      inputMode="decimal"
+                      placeholder="z. B. 12,90"
+                      {...register(`positions.${index}.betragEuro` as const, {
+                        required: "Betrag ist erforderlich.",
+                        pattern: {
+                          value: euroAmountPattern,
+                          message: euroAmountValidationMessage,
+                        },
+                      })}
+                    />
 
-                    <FormField
+                    <Field
                       label="Beschreibung"
                       required
                       error={errors.positions?.[index]?.beschreibung?.message}
-                    >
-                      <Input
-                        placeholder="z. B. Material"
-                        {...register(
-                          `positions.${index}.beschreibung` as const,
-                          {
-                            required: "Beschreibung ist erforderlich.",
-                          },
-                        )}
-                      />
-                    </FormField>
+                      placeholder="z. B. Material"
+                      {...register(`positions.${index}.beschreibung` as const, {
+                        required: "Beschreibung ist erforderlich.",
+                      })}
+                    />
 
-                    <FormField
+                    <NativeSelect
                       label="Kostenstelle"
                       required
                       error={errors.positions?.[index]?.kostenstelle?.message}
+                      disabled={costCentersLoading || costCenters.length === 0}
+                      {...register(`positions.${index}.kostenstelle` as const, {
+                        required: "Bitte eine Kostenstelle auswählen.",
+                      })}
                     >
-                      <Select
-                        disabled={
-                          costCentersLoading || costCenters.length === 0
-                        }
-                        {...register(
-                          `positions.${index}.kostenstelle` as const,
-                          {
-                            required: "Bitte eine Kostenstelle auswählen.",
-                          },
-                        )}
-                      >
-                        <option value="">
-                          {costCentersLoading
-                            ? "Kostenstellen werden geladen..."
-                            : "Kostenstelle auswählen"}
+                      <option value="">
+                        {costCentersLoading
+                          ? "Kostenstellen werden geladen..."
+                          : "Kostenstelle auswählen"}
+                      </option>
+                      {costCenters.map((costCenter) => (
+                        <option key={costCenter.value} value={costCenter.value}>
+                          {costCenter.label}
                         </option>
-                        {costCenters.map((costCenter) => (
-                          <option
-                            key={costCenter.value}
-                            value={costCenter.value}
-                          >
-                            {costCenter.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      ))}
+                    </NativeSelect>
                   </div>
 
                   {fields.length > 1 ? (
@@ -460,17 +433,17 @@ export default function ReimbursementPage() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="mr-auto flex flex-wrap items-center gap-3">
             {result?.id ? (
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-foreground">
                 In Campai gespeichert: {result.id}
               </p>
             ) : null}
 
             {result?.uploadWarning ? (
-              <p className="text-sm text-amber-700">{result.uploadWarning}</p>
+              <p className="text-sm text-foreground">{result.uploadWarning}</p>
             ) : null}
 
             {result?.error ? (
-              <p className="text-sm text-rose-700">{result.error}</p>
+              <p className="text-sm text-destructive">{result.error}</p>
             ) : null}
           </div>
 

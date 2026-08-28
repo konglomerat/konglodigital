@@ -12,6 +12,9 @@ import {
   setCartProducts,
   type CartProduct,
 } from "@/lib/cart";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 
 type Job = {
   id: string;
@@ -406,7 +409,7 @@ export default function CheckoutPage() {
         <p className="text-sm text-destructive">{descriptionsError}</p>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground">Cart summary</h2>
         <p className="mt-2 text-xs text-muted-foreground">
           {cartJobs.length} print(s) • {cartProducts.length} product(s)
@@ -422,111 +425,77 @@ export default function CheckoutPage() {
           Products: €{(cartSummary.productsTotalCents / 100).toFixed(2)}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Offer title
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.title}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  title: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Contact email
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.email}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  email: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Intro
-            </label>
-            <textarea
-              className="min-h-[96px] w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.intro}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  intro: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Recipient name
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.details1}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  details1: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Address line
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.addressLine}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  addressLine: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              ZIP
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.zip}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  zip: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              City
-            </label>
-            <input
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={invoiceForm.city}
-              onChange={(event) =>
-                setInvoiceForm((prev) => ({
-                  ...prev,
-                  city: event.target.value,
-                }))
-              }
-            />
-          </div>
+          <Field
+            label="Offer title"
+            value={invoiceForm.title}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                title: event.target.value,
+              }))
+            }
+          />
+          <Field
+            label="Contact email"
+            value={invoiceForm.email}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                email: event.target.value,
+              }))
+            }
+          />
+          <Textarea
+            label="Intro"
+            className="md:col-span-2"
+            value={invoiceForm.intro}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                intro: event.target.value,
+              }))
+            }
+          />
+          <Field
+            label="Recipient name"
+            value={invoiceForm.details1}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                details1: event.target.value,
+              }))
+            }
+          />
+          <Field
+            label="Address line"
+            value={invoiceForm.addressLine}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                addressLine: event.target.value,
+              }))
+            }
+          />
+          <Field
+            label="ZIP"
+            value={invoiceForm.zip}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                zip: event.target.value,
+              }))
+            }
+          />
+          <Field
+            label="City"
+            value={invoiceForm.city}
+            onChange={(event) =>
+              setInvoiceForm((prev) => ({
+                ...prev,
+                city: event.target.value,
+              }))
+            }
+          />
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
               Country
@@ -535,20 +504,15 @@ export default function CheckoutPage() {
               DE
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-              Price rate €/100g
-            </label>
-            <select
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-              value={priceRate}
-              onChange={(event) => setPriceRate(Number(event.target.value))}
-            >
-              <option value={3}>3 €/100g</option>
-              <option value={4}>4 €/100g</option>
-              <option value={5}>5 €/100g</option>
-            </select>
-          </div>
+          <NativeSelect
+            label="Price rate €/100g"
+            value={priceRate}
+            onChange={(event) => setPriceRate(Number(event.target.value))}
+          >
+            <option value={3}>3 €/100g</option>
+            <option value={4}>4 €/100g</option>
+            <option value={5}>5 €/100g</option>
+          </NativeSelect>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button
@@ -569,7 +533,7 @@ export default function CheckoutPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground">Cart items</h2>
         <div className="mt-4 space-y-3">
           {cartJobs.length === 0 && cartProducts.length === 0 ? (

@@ -50,7 +50,7 @@ export default async function CalendarEventDetailPage({
         eyebrow="Kalender"
         title="Termin-Details"
         subTitle="Informationen zu einem ausgewählten Termin."
-        className="rounded-lg border border-border bg-card p-6 shadow-sm"
+        className="knglmrt-border-section bg-card p-6"
         backLink={{ href: "/calendar", label: "Zurück zur Übersicht" }}
         links={[
           {
@@ -72,13 +72,13 @@ export default async function CalendarEventDetailPage({
       ) : null}
 
       {!errorMessage && !event ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <div className="knglmrt-border-section bg-card p-6 text-sm text-muted-foreground">
           Dieser Termin ist nicht mehr in den nächsten 7 Tagen verfügbar.
         </div>
       ) : null}
 
       {event ? (
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold text-foreground">

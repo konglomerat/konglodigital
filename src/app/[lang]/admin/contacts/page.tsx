@@ -10,6 +10,10 @@ import { useCallback, useMemo, useState } from "react";
 
 import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
+import SearchField from "@/components/knglmrt/SearchField";
+import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
+import Notice from "@/components/knglmrt/Notice";
+import { Table, TBody, Td, THead, Th, Tr } from "@/components/knglmrt/Table";
 
 type InviteStatus = "idle" | "loading" | "sent" | "error";
 
@@ -76,31 +80,16 @@ const formatInvitedAt = (value: string | null) => {
 
 const STATUS_STYLES: Record<
   ContactInviteStatus,
-  { label: string; className: string }
+  { label: string; tone: BadgeTone }
 > = {
-  pending: {
-    label: "Pending",
-    className: "bg-muted text-muted-foreground",
-  },
-  invited: {
-    label: "Invited",
-    className: "bg-accent text-foreground/80",
-  },
-  active: {
-    label: "Active",
-    className: "bg-primary-soft text-primary",
-  },
+  pending: { label: "Pending", tone: "neutral" },
+  invited: { label: "Invited", tone: "wartet" },
+  active: { label: "Active", tone: "gebucht" },
 };
 
 const StatusBadge = ({ status }: { status: ContactInviteStatus }) => {
   const config = STATUS_STYLES[status];
-  return (
-    <span
-      className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${config.className}`}
-    >
-      {config.label}
-    </span>
-  );
+  return <Badge tone={config.tone}>{config.label}</Badge>;
 };
 
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
@@ -195,12 +184,12 @@ const ContactSection = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {rows ? (
-            <input
-              type="search"
+            <SearchField
+              className="min-w-64"
               value={searchTerm}
               placeholder="Suche nach Name, Nummer oder Tag"
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="min-w-64 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
+              onClear={() => setSearchTerm("")}
             />
           ) : null}
           <Button
@@ -226,14 +215,10 @@ const ContactSection = ({
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
-          {error}
-        </div>
-      ) : null}
+      {error ? <Notice tone="rosa">{error}</Notice> : null}
 
       {isLoading && !rows ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm">
+        <div className="flex items-center justify-center gap-2 knglmrt-border bg-card p-10 text-muted-foreground">
           <FontAwesomeIcon
             icon={faSpinner}
             className="animate-spin text-base"
@@ -244,7 +229,7 @@ const ContactSection = ({
 
       {filteredRows ? (
         filteredRows.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="knglmrt-border bg-card p-6 text-muted-foreground">
             {emptyText}
           </div>
         ) : (
@@ -328,87 +313,68 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
 };
 
 const ContactTable = ({ rows }: { rows: CampaiContactRow[] }) => (
-  <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-border text-sm">
-        <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2">Mitglied</th>
-            <th className="px-3 py-2">Name</th>
-            <th className="px-3 py-2">E-Mail</th>
-            <th className="px-3 py-2 text-right">Balance</th>
-            <th className="px-3 py-2">Tags</th>
-            <th className="px-3 py-2">Beigetreten</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Einladung</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/60 bg-card">
-          {rows.map((contact) => {
-            const joined = formatJoinedDate(contact.entryAt);
-            const balance = formatBalance(contact.balance);
+  <Table>
+    <THead>
+      <Th>Mitglied</Th>
+      <Th>Name</Th>
+      <Th>E-Mail</Th>
+      <Th className="text-right">Balance</Th>
+      <Th>Tags</Th>
+      <Th>Beigetreten</Th>
+      <Th>Status</Th>
+      <Th>Einladung</Th>
+    </THead>
+    <TBody>
+      {rows.map((contact) => {
+        const joined = formatJoinedDate(contact.entryAt);
+        const balance = formatBalance(contact.balance);
+        const isNegative = contact.balance !== null && contact.balance < 0;
 
-            return (
-              <tr key={contact.id} className="align-middle">
-                <td className="px-3 py-1.5 font-mono text-foreground/80">
-                  {contact.memberNumber ?? "—"}
-                </td>
-                <td className="px-3 py-1.5 font-semibold text-foreground">
-                  {contact.name}
-                </td>
-                <td className="px-3 py-1.5 text-foreground/80">
-                  {contact.email ? (
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="hover:underline"
-                    >
-                      {contact.email}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td
-                  className={`px-3 py-1.5 text-right font-mono tabular-nums ${
-                    contact.balance !== null && contact.balance < 0
-                      ? "text-destructive"
-                      : "text-foreground/80"
-                  }`}
-                >
-                  {balance ?? "—"}
-                </td>
-                <td className="px-3 py-1.5">
-                  {contact.tags.length === 0 ? (
-                    <span className="text-muted-foreground">—</span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {contact.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-foreground/80"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-1.5 text-foreground/80">
-                  {joined ?? "—"}
-                </td>
-                <td className="px-3 py-1.5 whitespace-nowrap">
-                  <StatusBadge status={contact.inviteStatus} />
-                </td>
-                <td className="px-3 py-1.5 whitespace-nowrap">
-                  <InviteCell contact={contact} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  </div>
+        return (
+          <Tr key={contact.id} interactive>
+            <Td className="knglmrt-num">{contact.memberNumber ?? "—"}</Td>
+            <Td className="font-semibold">{contact.name}</Td>
+            <Td>
+              {contact.email ? (
+                <a href={`mailto:${contact.email}`} className="hover:underline">
+                  {contact.email}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </Td>
+            <Td
+              className={`knglmrt-num text-right${
+                isNegative ? " text-destructive" : ""
+              }`}
+            >
+              {balance ?? "—"}
+            </Td>
+            <Td>
+              {contact.tags.length === 0 ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {contact.tags.map((tag) => (
+                    <Badge key={tag} tone="neutral">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </Td>
+            <Td className="knglmrt-num">{joined ?? "—"}</Td>
+            <Td className="whitespace-nowrap">
+              <StatusBadge status={contact.inviteStatus} />
+            </Td>
+            <Td className="whitespace-nowrap">
+              <InviteCell contact={contact} />
+            </Td>
+          </Tr>
+        );
+      })}
+    </TBody>
+  </Table>
 );
 
 const isNonMember = (contact: CampaiContactRow) => !isMember(contact);

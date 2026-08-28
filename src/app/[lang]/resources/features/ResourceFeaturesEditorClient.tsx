@@ -54,6 +54,9 @@ import {
   getResourceMediaKindFromUrl,
   isImageUrl,
 } from "@/lib/resource-media";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 
 type ResourceSummary = {
   id: string;
@@ -2148,10 +2151,10 @@ export default function ResourceFeaturesEditorClient({
       const target = event.target as HTMLElement | null;
       const isTypingTarget = Boolean(
         target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable),
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable),
       );
       const key = event.key.toLowerCase();
 
@@ -2325,7 +2328,7 @@ export default function ResourceFeaturesEditorClient({
       ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
-        <aside className="space-y-4 rounded-lg border border-border bg-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+        <aside className="knglmrt-border-section space-y-4 bg-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
           <div className="rounded-lg border border-border bg-muted/50 p-3">
             <p className="text-xs text-muted-foreground">
               {tx("Fast actions:")}{" "}
@@ -2389,18 +2392,18 @@ export default function ResourceFeaturesEditorClient({
                   ? tx("Draw point")
                   : tx("Draw polygon")}
             </Button>
-            <select
+            <NativeSelect
+              aria-label={tx("Geometry type")}
               value={drawingGeometryType}
               onChange={(event) =>
                 setDrawingGeometryType(
                   event.target.value === "Point" ? "Point" : "Polygon",
                 )
               }
-              className="rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground/80"
             >
               <option value="Polygon">{tx("Polygon")}</option>
               <option value="Point">{tx("Point")}</option>
-            </select>
+            </NativeSelect>
             <Button
               type="button"
               kind="secondary"
@@ -2411,21 +2414,13 @@ export default function ResourceFeaturesEditorClient({
             </Button>
           </div>
 
-          <div>
-            <label
-              htmlFor="draft-layer"
-              className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
-            >
-              {tx("Layer")}
-            </label>
-            <input
-              id="draft-layer"
-              value={featureLayer}
-              onChange={(event) => setFeatureLayer(event.target.value)}
-              placeholder={tx("default")}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
-            />
-          </div>
+          <Field
+            label={tx("Layer")}
+            id="draft-layer"
+            value={featureLayer}
+            onChange={(event) => setFeatureLayer(event.target.value)}
+            placeholder={tx("default")}
+          />
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -2482,39 +2477,25 @@ export default function ResourceFeaturesEditorClient({
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {tx("Edit selected feature")}
               </p>
-              <div>
-                <label
-                  htmlFor="selected-layer"
-                  className="mb-1 block text-xs text-muted-foreground"
-                >
-                  {tx("Layer")}
-                </label>
-                <input
-                  id="selected-layer"
-                  value={featureLayer}
-                  onChange={(event) => setFeatureLayer(event.target.value)}
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="selected-coordinates"
-                  className="mb-1 block text-xs text-muted-foreground"
-                >
-                  {activeFeature.geometryType === "Point"
+              <Field
+                label={tx("Layer")}
+                id="selected-layer"
+                value={featureLayer}
+                onChange={(event) => setFeatureLayer(event.target.value)}
+              />
+              <Textarea
+                label={
+                  activeFeature.geometryType === "Point"
                     ? tx("Point JSON")
-                    : tx("Coordinates JSON")}
-                </label>
-                <textarea
-                  id="selected-coordinates"
-                  value={featureCoordinatesJson}
-                  onChange={(event) =>
-                    setFeatureCoordinatesJson(event.target.value)
-                  }
-                  rows={8}
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-xs text-foreground"
-                />
-              </div>
+                    : tx("Coordinates JSON")
+                }
+                id="selected-coordinates"
+                value={featureCoordinatesJson}
+                onChange={(event) =>
+                  setFeatureCoordinatesJson(event.target.value)
+                }
+                rows={8}
+              />
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
                   {tx("Description")}
@@ -2574,7 +2555,7 @@ export default function ResourceFeaturesEditorClient({
           ) : null}
         </aside>
 
-        <section className="relative overflow-hidden rounded-lg border border-border bg-card lg:min-h-[70vh]">
+        <section className="knglmrt-border-section relative overflow-hidden bg-card lg:min-h-[70vh]">
           {mapboxError ? (
             <div className="flex h-[70vh] items-center justify-center p-6 text-sm text-muted-foreground">
               {mapboxError}
@@ -2634,7 +2615,7 @@ export default function ResourceFeaturesEditorClient({
         </section>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-3 sm:p-4">
+      <section className="knglmrt-border-section bg-card p-3 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
@@ -2726,7 +2707,7 @@ export default function ResourceFeaturesEditorClient({
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-4">
+      <section className="knglmrt-border-section bg-card p-4">
         <h2 className="text-lg font-semibold text-foreground">
           {tx("Generate cover image")}
         </h2>
@@ -2738,38 +2719,32 @@ export default function ResourceFeaturesEditorClient({
         </p>
 
         <div className="mt-4 grid gap-3">
-          <div className="grid gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {tx("Source image")}
-            </label>
-            <select
-              value={String(coverSourceIndex)}
-              onChange={(event) =>
-                setCoverSourceIndex(Number.parseInt(event.target.value, 10))
-              }
-              disabled={coverSourceImages.length === 0}
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
-            >
-              {coverSourceImages.length === 0 ? (
-                <option value="0">{tx("No existing images")}</option>
-              ) : (
-                coverSourceImages.map((_, imageIndex) => (
-                  <option
-                    key={`cover-source-${imageIndex}`}
-                    value={String(imageIndex)}
-                  >
-                    {tx("Image")} {imageIndex + 1}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+          <NativeSelect
+            label={tx("Source image")}
+            value={String(coverSourceIndex)}
+            onChange={(event) =>
+              setCoverSourceIndex(Number.parseInt(event.target.value, 10))
+            }
+            disabled={coverSourceImages.length === 0}
+          >
+            {coverSourceImages.length === 0 ? (
+              <option value="0">{tx("No existing images")}</option>
+            ) : (
+              coverSourceImages.map((_, imageIndex) => (
+                <option
+                  key={`cover-source-${imageIndex}`}
+                  value={String(imageIndex)}
+                >
+                  {tx("Image")} {imageIndex + 1}
+                </option>
+              ))
+            )}
+          </NativeSelect>
 
-          <textarea
+          <Textarea
             value={coverPrompt}
             onChange={(event) => setCoverPrompt(event.target.value)}
             rows={6}
-            className="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80"
             placeholder={tx("Cover prompt")}
           />
 

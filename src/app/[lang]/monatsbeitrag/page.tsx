@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
 import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
+import Choice from "@/components/knglmrt/Choice";
 
 type AccessCardPlanId = "none" | "quarter" | "full";
 
@@ -243,11 +244,13 @@ export default function MonatsbeitragPage() {
             : (currentPlanInfo?.title ?? "—")}
         </p>
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           <div className="grid gap-4 md:grid-cols-3">
             {accessCardOptions.map((option) => (
-              <label
+              <div
                 key={option.id}
+                role="presentation"
+                onClick={() => handleSelectOption(option.id)}
                 className={`flex cursor-pointer flex-col justify-between gap-4 rounded-lg border p-4 text-sm transition ${
                   selectedOption === option.id
                     ? "border-primary bg-primary-soft"
@@ -266,22 +269,22 @@ export default function MonatsbeitragPage() {
                   <span className="text-xs text-muted-foreground">
                     {selectedOption === option.id ? "Ausgewählt" : "Auswählen"}
                   </span>
-                  <input
-                    type="radio"
+                  <Choice
+                    kind="radio"
                     name="access-card-option"
+                    aria-label={option.title}
                     value={option.id}
                     checked={selectedOption === option.id}
                     onChange={() => handleSelectOption(option.id)}
-                    className="h-4 w-4 rounded-md accent-blue-600"
                   />
                 </div>
-              </label>
+              </div>
             ))}
           </div>
         </section>
 
         {selectedOption === "subscription" ? (
-          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          <section className="knglmrt-border-section bg-card p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
@@ -300,8 +303,15 @@ export default function MonatsbeitragPage() {
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               {accessCardPlans.map((plan) => (
-                <label
+                <div
                   key={plan.id}
+                  role="presentation"
+                  onClick={() => {
+                    setSubscriptionPlanDraft(plan.id);
+                    setSelectedOption("subscription");
+                    setDraftPlan(plan.id);
+                    setSaveStatus(null);
+                  }}
                   className={`flex h-full cursor-pointer flex-col justify-between gap-4 rounded-lg border p-4 text-sm transition ${
                     draftPlan === plan.id
                       ? "border-primary bg-primary-soft"
@@ -329,9 +339,10 @@ export default function MonatsbeitragPage() {
                         ? "Zur Bestätigung markiert"
                         : "Auswählen"}
                     </span>
-                    <input
-                      type="radio"
+                    <Choice
+                      kind="radio"
                       name="access-card-plan"
+                      aria-label={plan.title}
                       value={plan.id}
                       checked={draftPlan === plan.id}
                       onChange={() => {
@@ -340,10 +351,9 @@ export default function MonatsbeitragPage() {
                         setDraftPlan(plan.id);
                         setSaveStatus(null);
                       }}
-                      className="h-4 w-4 rounded-md accent-blue-600"
                     />
                   </div>
-                </label>
+                </div>
               ))}
             </div>
 
@@ -373,7 +383,7 @@ export default function MonatsbeitragPage() {
         ) : null}
 
         {selectedOption === "ten-visit" ? (
-          <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          <section className="knglmrt-border-section bg-card p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">

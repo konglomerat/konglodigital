@@ -35,6 +35,8 @@ import {
   type VolkshausPriceSnapshot,
   type VolkshausSignature,
 } from "@/lib/volkshaus-booking";
+import Field from "@/components/knglmrt/Field";
+import Choice from "@/components/knglmrt/Choice";
 
 type CustomerBooking = Pick<
   VolkshausBooking,
@@ -94,7 +96,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
 });
 
 const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 const WORKFLOW_STEPS = [
   {
@@ -250,7 +252,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
   if (loadError || !booking) {
     return (
-      <section className="mx-auto max-w-2xl rounded-lg border border-destructive-border bg-destructive-soft p-8 text-center shadow-sm">
+      <section className="mx-auto max-w-2xl rounded-lg border border-destructive-border bg-destructive-soft p-8 text-center ">
         <FontAwesomeIcon
           icon={faTriangleExclamation}
           className="h-8 w-8 text-destructive"
@@ -278,7 +280,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
   return (
     <div className="space-y-6 py-3 md:py-8">
-      <header className="rounded-lg border border-border bg-card p-6 shadow-sm md:p-8">
+      <header className="knglmrt-border-section bg-card p-6 md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-primary">
@@ -306,7 +308,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
       </header>
 
       {!isCancelled ? (
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
+        <section className="knglmrt-border-section bg-card p-5 md:p-6">
           <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
             <FontAwesomeIcon
               icon={faListCheck}
@@ -355,7 +357,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
           </ol>
         </section>
       ) : (
-        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-5 text-sm text-destructive shadow-sm">
+        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-5 text-sm text-destructive ">
           Diese Anfrage ist nicht mehr aktiv. Bei Rückfragen antworte bitte auf
           die Korrespondenz des Volkshaus-Teams.
         </section>
@@ -363,7 +365,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
-          <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
+          <section className="knglmrt-border-section bg-card p-5 md:p-6">
             <h2 className="flex items-center gap-2 text-xl font-black text-foreground">
               <FontAwesomeIcon
                 icon={faCalendarCheck}
@@ -455,7 +457,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
               contractUrl={contractUrl}
             />
           ) : (
-            <section className="rounded-lg border border-info-border bg-info-soft p-5 text-sm text-info shadow-sm md:p-6">
+            <section className="rounded-lg border border-info-border bg-info-soft p-5 text-sm text-info md:p-6">
               <div className="flex gap-3">
                 <FontAwesomeIcon
                   icon={faCircleInfo}
@@ -474,7 +476,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
-          <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <section className="knglmrt-border-section bg-card p-5">
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <FontAwesomeIcon
                 icon={faEuroSign}
@@ -513,7 +515,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
             </dl>
           </section>
 
-          <section className="rounded-lg border border-border bg-card p-5 text-sm shadow-sm">
+          <section className="knglmrt-border-section bg-card p-5 text-sm">
             <h2 className="flex items-center gap-2 font-bold text-foreground">
               <FontAwesomeIcon
                 icon={faReceipt}
@@ -572,7 +574,7 @@ function ContractSection({
   const snapshot = booking.contractSnapshot!;
   const canSign = booking.contractStatus === "sent";
   return (
-    <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
+    <section className="knglmrt-border-section bg-card p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
@@ -627,28 +629,18 @@ function ContractSection({
             Deine Unterschrift wird zusammen mit Zeitpunkt, Vertragsprüfsumme
             und einem pseudonymisierten technischen Nachweis gespeichert.
           </p>
-          <label className="mt-5 block">
-            <span className="mb-1.5 block text-sm font-semibold text-foreground">
-              Vollständiger Name
-            </span>
-            <input
-              className={inputClassName}
-              value={signerName}
-              onChange={(event) => setSignerName(event.target.value)}
-            />
-          </label>
-          <label className="mt-4 flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-input accent-primary"
-              checked={accepted}
-              onChange={(event) => setAccepted(event.target.checked)}
-            />
-            <span className="text-sm leading-relaxed text-foreground">
-              Ich habe die Nutzungsvereinbarung vollständig gelesen, bestätige
-              die Richtigkeit der Angaben und unterschreibe verbindlich.
-            </span>
-          </label>
+          <Field
+            label="Vollständiger Name"
+            className="mt-5"
+            value={signerName}
+            onChange={(event) => setSignerName(event.target.value)}
+          />
+          <Choice
+            className="mt-4"
+            label="Ich habe die Nutzungsvereinbarung vollständig gelesen, bestätige die Richtigkeit der Angaben und unterschreibe verbindlich."
+            checked={accepted}
+            onChange={(event) => setAccepted(event.target.checked)}
+          />
           {signError ? (
             <p className="mt-4 text-sm text-destructive">{signError}</p>
           ) : null}

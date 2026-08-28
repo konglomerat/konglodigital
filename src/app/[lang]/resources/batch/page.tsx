@@ -21,6 +21,7 @@ import { RESOURCE_TYPES, type ResourceType } from "../resource-types";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import Choice from "@/components/knglmrt/Choice";
 
 const MAX_IMAGE_EDGE = 1500;
 const MAX_CAMERA_EDGE = 1920;
@@ -780,15 +781,12 @@ export default function BatchResourcePage() {
       ) : null}
 
       <section className="flex flex-[4] flex-col gap-2 max-h-[50vh] relative">
-        <label className="flex items-center gap-2 px-3 py-2 text-xs text-black absolute bottom-1 right-1 z-10">
-          <input
-            type="checkbox"
-            checked={autoGenerateCover}
-            onChange={(event) => setAutoGenerateCover(event.target.checked)}
-            className="h-4 w-4"
-          />
-          {tx("AI cover")}
-        </label>
+        <Choice
+          className="absolute bottom-1 right-1 z-10 px-3 py-2 text-black"
+          label={tx("AI cover")}
+          checked={autoGenerateCover}
+          onChange={(event) => setAutoGenerateCover(event.target.checked)}
+        />
 
         <div className="absolute top-0 left-0 right-0 z-10 flex flex-wrap items-start gap-2 px-2 py-2 pt-2">
           <Button

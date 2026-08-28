@@ -42,7 +42,7 @@ export default function ShowcaseOfTheMonthCard({
       <div className="relative flex flex-1 flex-col gap-4 p-6 md:p-7">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/70">
-            <span className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background shadow-sm">
+            <span className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background ">
               {copy.showcaseOfTheMonthLabel}
             </span>
           </div>

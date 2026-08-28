@@ -10,6 +10,8 @@ import {
 
 import Button from "@/components/knglmrt/Button";
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
+import Field from "@/components/knglmrt/Field";
+import Textarea from "@/components/knglmrt/Textarea";
 
 type CostCenterOption = {
   value: string;
@@ -614,11 +616,11 @@ export default function ReceiptDetailDrawer({
         aria-label="Schließen"
       />
       <aside
-        className={`relative flex h-full w-full max-w-[640px] flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-100 ease-out dark:bg-zinc-900 ${drawerEntered ? "translate-x-0" : "translate-x-6"}`}
+        className={`relative flex h-full w-full max-w-[640px] flex-col overflow-hidden bg-card shadow-2xl transition-transform duration-100 ease-out dark:bg-zinc-900 ${drawerEntered ? "translate-x-0" : "translate-x-6"}`}
       >
         <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="knglmrt-caption text-muted-foreground">
               {detail?.type
                 ? (TYPE_LABELS[detail.type] ?? detail.type)
                 : "Beleg"}
@@ -721,7 +723,7 @@ export default function ReceiptDetailDrawer({
               </section>
 
               {detail.isCashLinked ? (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                <div className="rounded-lg border border-amber-300 bg-warning-soft px-3 py-2 text-xs text-foreground dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
                   Dieser Beleg ist mit einer Zahlung verknüpft und kann nicht
                   über die Übersicht bearbeitet werden. Bitte direkt in Campai
                   anpassen.
@@ -731,12 +733,11 @@ export default function ReceiptDetailDrawer({
               <section>
                 <SectionTitle>Beschreibung</SectionTitle>
                 {editable ? (
-                  <textarea
+                  <Textarea
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     maxLength={140}
                     rows={2}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                     placeholder="Beschreibung"
                   />
                 ) : (
@@ -809,11 +810,11 @@ export default function ReceiptDetailDrawer({
                           ) : null}
                         </div>
                         <div className="mt-3 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <label className="knglmrt-label block text-foreground">
                             Beschreibung
                           </label>
                           {editable ? (
-                            <textarea
+                            <Textarea
                               value={edit.description}
                               onChange={(event) => {
                                 const value = event.target.value;
@@ -838,7 +839,7 @@ export default function ReceiptDetailDrawer({
                           )}
                         </div>
                         <div className="mt-3 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <label className="knglmrt-label block text-foreground">
                             Werkbereich/Projekt
                           </label>
                           {editable ? (
@@ -886,7 +887,7 @@ export default function ReceiptDetailDrawer({
                               {creatingCostCenterForIndex === index ? (
                                 <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-2 sm:p-3">
                                   <div className="grid gap-2 sm:grid-cols-2">
-                                    <input
+                                    <Field
                                       type="number"
                                       min={1}
                                       step={1}
@@ -896,10 +897,9 @@ export default function ReceiptDetailDrawer({
                                           event.target.value,
                                         )
                                       }
-                                      className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                                       placeholder="Nummer"
                                     />
-                                    <input
+                                    <Field
                                       type="text"
                                       value={newCostCenterLabel}
                                       onChange={(event) =>
@@ -908,7 +908,6 @@ export default function ReceiptDetailDrawer({
                                         )
                                       }
                                       maxLength={32}
-                                      className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                                       placeholder="Name"
                                     />
                                   </div>
@@ -980,14 +979,11 @@ export default function ReceiptDetailDrawer({
               <section>
                 <SectionTitle>Interne Notizen</SectionTitle>
                 <div className="mb-3 space-y-2 rounded-lg border border-border bg-card p-2 sm:p-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Neue Notiz
-                  </label>
-                  <textarea
+                  <Textarea
+                    label="Neue Notiz"
                     value={newNote}
                     onChange={(event) => setNewNote(event.target.value)}
                     rows={3}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                     placeholder="Interne Notiz hinzufügen"
                   />
                   {createNoteError ? (
@@ -1063,18 +1059,14 @@ export default function ReceiptDetailDrawer({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h3>
+    <h3 className="knglmrt-caption mb-2 text-muted-foreground">{children}</h3>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="knglmrt-caption text-muted-foreground">{label}</p>
       <p className="mt-0.5 truncate text-sm text-foreground" title={value}>
         {value}
       </p>

@@ -21,14 +21,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Button from "@/components/knglmrt/Button";
 import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
-import {
-  Checkbox,
-  FormField,
-  FormSection,
-  Input,
-  Select,
-  Textarea,
-} from "@/app/[lang]/components/ui/form";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 import { getSupabaseRenderedImageUrl } from "@/lib/resource-media";
 
 type NewsletterShowcase = {
@@ -793,7 +790,7 @@ export default function GenerateNewsletterClient({
       />
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <div className="knglmrt-border-section bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Verfügbare Beiträge
           </p>
@@ -801,7 +798,7 @@ export default function GenerateNewsletterClient({
             {showcases.length}
           </p>
         </div>
-        <div className="rounded-lg border border-primary-border bg-primary-soft p-4 shadow-sm">
+        <div className="rounded-lg border border-primary-border bg-primary-soft p-4 ">
           <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
             Im Newsletter
           </p>
@@ -809,7 +806,7 @@ export default function GenerateNewsletterClient({
             {selectedShowcaseCount}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <div className="knglmrt-border-section bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Inhaltsblöcke
           </p>
@@ -826,38 +823,32 @@ export default function GenerateNewsletterClient({
             description="Titel und Einstieg erscheinen im Newsletter. Die Betreffzeile wird an Rapidmail übergeben."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Field
                 label="Ausgabe / Titel"
                 required
                 error={!title.trim() ? "Titel fehlt." : undefined}
-              >
-                <Input
-                  value={title}
-                  maxLength={140}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </FormField>
-              <FormField
+                value={title}
+                maxLength={140}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <Field
                 label="Betreffzeile"
                 required
                 error={!subject.trim() ? "Betreffzeile fehlt." : undefined}
-              >
-                <Input
-                  value={subject}
-                  maxLength={200}
-                  onChange={(event) => setSubject(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Einstieg" className="md:col-span-2">
-                <Textarea
-                  value={intro}
-                  rows={6}
-                  maxLength={4000}
-                  onChange={(event) => setIntro(event.target.value)}
-                />
-              </FormField>
+                value={subject}
+                maxLength={200}
+                onChange={(event) => setSubject(event.target.value)}
+              />
+              <Textarea
+                label="Einstieg"
+                className="md:col-span-2"
+                value={intro}
+                rows={6}
+                maxLength={4000}
+                onChange={(event) => setIntro(event.target.value)}
+              />
               <div className="md:col-span-2">
-                <Checkbox
+                <Choice
                   label="Überschrift „Was so abgeht“ anzeigen"
                   checked={showShowcasesHeading}
                   onChange={(event) =>
@@ -941,7 +932,7 @@ export default function GenerateNewsletterClient({
                         draggedItemId.current = null;
                       }}
                       className={cn(
-                        "rounded-lg border p-4 shadow-sm",
+                        "rounded-lg border p-4 ",
                         item.type === "banner"
                           ? "border-primary-border bg-primary-soft"
                           : "border-border bg-card",
@@ -1032,74 +1023,71 @@ export default function GenerateNewsletterClient({
 
                       {item.type === "showcase" && showcase ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
-                          <FormField label="Layout">
-                            <Select
-                              value={item.options.layout}
-                              onChange={(event) =>
-                                updateShowcaseOptions(item.id, {
-                                  layout: event.target.value as
-                                    "split" | "stacked",
-                                })
-                              }
-                            >
-                              <option value="split">Bild und Text</option>
-                              <option value="stacked">Bild über Text</option>
-                            </Select>
-                          </FormField>
-                          <FormField label="Bildformat">
-                            <Select
-                              value={item.options.aspect}
-                              disabled={!item.options.imageUrl}
-                              onChange={(event) =>
-                                updateShowcaseOptions(item.id, {
-                                  aspect: event.target.value as AspectRatio,
-                                })
-                              }
-                            >
-                              <option value="original">Original</option>
-                              {ASPECT_RATIOS.filter(
-                                (aspect) => aspect !== "original",
-                              ).map((aspect) => (
-                                <option key={aspect} value={aspect}>
-                                  {aspect}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
-                          <FormField label="Beitragsbild">
-                            <Select
-                              value={item.options.imageUrl ?? ""}
-                              disabled={showcase.images.length === 0}
-                              onChange={(event) =>
-                                updateShowcaseOptions(item.id, {
-                                  imageUrl: event.target.value || null,
-                                })
-                              }
-                            >
-                              {showcase.images.length === 0 ? (
-                                <option value="">Kein Bild vorhanden</option>
-                              ) : null}
-                              {showcase.images.map((image, imageIndex) => (
-                                <option key={image} value={image}>
-                                  Bild {imageIndex + 1}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormField>
-                          <FormField label="Linktext">
-                            <Input
-                              value={item.options.linkText}
-                              disabled={!item.options.showLink}
-                              maxLength={80}
-                              onChange={(event) =>
-                                updateShowcaseOptions(item.id, {
-                                  linkText: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
+                          <NativeSelect
+                            label="Layout"
+                            value={item.options.layout}
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                layout: event.target.value as
+                                  | "split"
+                                  | "stacked",
+                              })
+                            }
+                          >
+                            <option value="split">Bild und Text</option>
+                            <option value="stacked">Bild über Text</option>
+                          </NativeSelect>
+                          <NativeSelect
+                            label="Bildformat"
+                            value={item.options.aspect}
+                            disabled={!item.options.imageUrl}
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                aspect: event.target.value as AspectRatio,
+                              })
+                            }
+                          >
+                            <option value="original">Original</option>
+                            {ASPECT_RATIOS.filter(
+                              (aspect) => aspect !== "original",
+                            ).map((aspect) => (
+                              <option key={aspect} value={aspect}>
+                                {aspect}
+                              </option>
+                            ))}
+                          </NativeSelect>
+                          <NativeSelect
+                            label="Beitragsbild"
+                            value={item.options.imageUrl ?? ""}
+                            disabled={showcase.images.length === 0}
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                imageUrl: event.target.value || null,
+                              })
+                            }
+                          >
+                            {showcase.images.length === 0 ? (
+                              <option value="">Kein Bild vorhanden</option>
+                            ) : null}
+                            {showcase.images.map((image, imageIndex) => (
+                              <option key={image} value={image}>
+                                Bild {imageIndex + 1}
+                              </option>
+                            ))}
+                          </NativeSelect>
+                          <Field
+                            label="Linktext"
+                            value={item.options.linkText}
+                            disabled={!item.options.showLink}
+                            maxLength={80}
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                linkText: event.target.value,
+                              })
+                            }
+                          />
                           <div className="sm:col-span-2 xl:col-span-4">
-                            <Checkbox
+                            <Choice
                               label="Link zum Beitrag anzeigen"
                               checked={item.options.showLink}
                               onChange={(event) =>
@@ -1114,58 +1102,54 @@ export default function GenerateNewsletterClient({
 
                       {item.type === "button" ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-                          <FormField label="Buttontext">
-                            <Input
-                              value={item.title}
-                              maxLength={80}
-                              onChange={(event) =>
-                                updateButton(item.id, {
-                                  title: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
-                          <FormField label="Ziel-URL">
-                            <Input
-                              type="url"
-                              value={item.href}
-                              maxLength={1000}
-                              placeholder="https://…"
-                              onChange={(event) =>
-                                updateButton(item.id, {
-                                  href: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
+                          <Field
+                            label="Buttontext"
+                            value={item.title}
+                            maxLength={80}
+                            onChange={(event) =>
+                              updateButton(item.id, {
+                                title: event.target.value,
+                              })
+                            }
+                          />
+                          <Field
+                            label="Ziel-URL"
+                            type="url"
+                            value={item.href}
+                            maxLength={1000}
+                            placeholder="https://…"
+                            onChange={(event) =>
+                              updateButton(item.id, {
+                                href: event.target.value,
+                              })
+                            }
+                          />
                         </div>
                       ) : null}
 
                       {item.type === "banner" ? (
                         <div className="mt-4 grid gap-4 border-t border-primary-border pt-4 sm:grid-cols-2">
-                          <FormField label="Bannertitel">
-                            <Input
-                              value={item.title}
-                              maxLength={100}
-                              onChange={(event) =>
-                                updateBanner(item.id, {
-                                  title: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
-                          <FormField label="Bannertext">
-                            <Textarea
-                              value={item.content}
-                              rows={3}
-                              maxLength={1000}
-                              onChange={(event) =>
-                                updateBanner(item.id, {
-                                  content: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
+                          <Field
+                            label="Bannertitel"
+                            value={item.title}
+                            maxLength={100}
+                            onChange={(event) =>
+                              updateBanner(item.id, {
+                                title: event.target.value,
+                              })
+                            }
+                          />
+                          <Textarea
+                            label="Bannertext"
+                            value={item.content}
+                            rows={3}
+                            maxLength={1000}
+                            onChange={(event) =>
+                              updateBanner(item.id, {
+                                content: event.target.value,
+                              })
+                            }
+                          />
                         </div>
                       ) : null}
                     </article>
@@ -1180,14 +1164,14 @@ export default function GenerateNewsletterClient({
             description="Die Beiträge werden direkt aus KongloDigital geladen. Ein Klick fügt sie am Ende des Newsletters hinzu oder entfernt sie wieder."
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <FormField label="Beiträge durchsuchen" className="flex-1">
-                <Input
-                  type="search"
-                  value={query}
-                  placeholder="Name oder Beschreibung"
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-              </FormField>
+              <Field
+                label="Beiträge durchsuchen"
+                className="flex-1"
+                type="search"
+                value={query}
+                placeholder="Name oder Beschreibung"
+                onChange={(event) => setQuery(event.target.value)}
+              />
               <Button
                 type="button"
                 kind="secondary"
@@ -1234,12 +1218,12 @@ export default function GenerateNewsletterClient({
                       disabled={limitReached}
                       aria-pressed={selected}
                       className={cn(
-                        "overflow-hidden rounded-lg border text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-ring/30",
+                        "overflow-hidden rounded-lg border text-left transition focus:outline-none focus:ring-2 focus:ring-ring/30",
                         selected
                           ? "border-primary bg-primary-soft"
                           : "border-border bg-card hover:border-input hover:-translate-y-0.5 hover:shadow-md",
                         limitReached &&
-                          "cursor-not-allowed opacity-55 hover:translate-y-0 hover:border-border hover:shadow-sm",
+                          "cursor-not-allowed opacity-55 hover:translate-y-0 hover:border-border ",
                       )}
                     >
                       {imageUrl ? (
@@ -1299,13 +1283,13 @@ export default function GenerateNewsletterClient({
             description="Diese Angaben werden nur beim Anlegen des Entwurfs benötigt. Versand und Terminierung bleiben in Rapidmail."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Absendername" required>
-                <Input
-                  value={fromName}
-                  onChange={(event) => setFromName(event.target.value)}
-                />
-              </FormField>
-              <FormField
+              <Field
+                label="Absendername"
+                required
+                value={fromName}
+                onChange={(event) => setFromName(event.target.value)}
+              />
+              <Field
                 label="Absender-E-Mail"
                 required
                 error={
@@ -1313,31 +1297,25 @@ export default function GenerateNewsletterClient({
                     ? "Bitte eine gültige E-Mail-Adresse eingeben."
                     : undefined
                 }
-              >
-                <Input
-                  type="email"
-                  value={fromEmail}
-                  onChange={(event) => setFromEmail(event.target.value)}
-                />
-              </FormField>
-              <FormField
+                type="email"
+                value={fromEmail}
+                onChange={(event) => setFromEmail(event.target.value)}
+              />
+              <NativeSelect
                 label="Empfängerliste"
                 required
                 className="md:col-span-2"
+                value={recipientListId}
+                disabled={recipientLists.length === 0}
+                onChange={(event) => setRecipientListId(event.target.value)}
               >
-                <Select
-                  value={recipientListId}
-                  disabled={recipientLists.length === 0}
-                  onChange={(event) => setRecipientListId(event.target.value)}
-                >
-                  <option value="">Empfängerliste wählen</option>
-                  {recipientLists.map((list) => (
-                    <option key={list.id} value={list.id}>
-                      {list.name}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                <option value="">Empfängerliste wählen</option>
+                {recipientLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
 
             {rapidmailError ? (
@@ -1348,7 +1326,7 @@ export default function GenerateNewsletterClient({
             ) : null}
           </FormSection>
 
-          <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <section className="knglmrt-border-section bg-card p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="font-semibold text-foreground">
@@ -1400,7 +1378,7 @@ export default function GenerateNewsletterClient({
         </div>
 
         <aside className="min-w-0 xl:sticky xl:top-6">
-          <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <section className="knglmrt-border-section overflow-hidden bg-card">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
                 <h2 className="font-semibold text-foreground">

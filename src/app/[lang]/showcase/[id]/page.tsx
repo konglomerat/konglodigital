@@ -85,7 +85,9 @@ const getShowcaseOgImage = (
       (media): media is string =>
         typeof media === "string" && isImageMediaUrl(media),
     ) ??
-    (showcase?.image && isImageMediaUrl(showcase.image) ? showcase.image : null);
+    (showcase?.image && isImageMediaUrl(showcase.image)
+      ? showcase.image
+      : null);
 
   if (showcaseImage) {
     return getSupabaseRenderedImageUrl(showcaseImage, { width: 1600 });
@@ -120,7 +122,9 @@ export async function generateMetadata({
     title,
     description,
     keywords: showcase.tags ?? undefined,
-    authors: showcase.author?.name ? [{ name: showcase.author.name }] : undefined,
+    authors: showcase.author?.name
+      ? [{ name: showcase.author.name }]
+      : undefined,
     alternates: {
       canonical: canonicalPath,
       languages: alternateLanguagePaths,

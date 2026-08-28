@@ -5,6 +5,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import type { UserRole } from "@/lib/roles";
+import Choice from "@/components/knglmrt/Choice";
+import SearchField from "@/components/knglmrt/SearchField";
+import Badge from "@/components/knglmrt/Badge";
+import Dialog from "@/components/knglmrt/Dialog";
+import Notice from "@/components/knglmrt/Notice";
+import { Table, TBody, Td, THead, Th, Tr } from "@/components/knglmrt/Table";
 
 type ActiveProfile = {
   id: string;
@@ -372,21 +378,15 @@ export default function AdminUsersClient() {
         ]}
       />
 
-      {testEmailError ? (
-        <div className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive shadow-sm">
-          {testEmailError}
-        </div>
-      ) : null}
+      {testEmailError ? <Notice tone="rosa">{testEmailError}</Notice> : null}
       {testEmailSuccess ? (
-        <div className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success shadow-sm">
-          {testEmailSuccess}
-        </div>
+        <Notice tone="blau">{testEmailSuccess}</Notice>
       ) : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">
+            <h2 className="knglmrt-card-title text-foreground">
               Aktive Profile
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -407,318 +407,270 @@ export default function AdminUsersClient() {
         </div>
 
         {profileListError ? (
-          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
-            {profileListError}
-          </div>
+          <Notice tone="rosa">{profileListError}</Notice>
         ) : null}
 
-        {roleError ? (
-          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
-            {roleError}
-          </div>
-        ) : null}
+        {roleError ? <Notice tone="rosa">{roleError}</Notice> : null}
 
         {campaiLinkError && editingCampaiForId === null ? (
-          <div className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive shadow-sm">
-            {campaiLinkError}
-          </div>
+          <Notice tone="rosa">{campaiLinkError}</Notice>
         ) : null}
 
         {!profileListError && profiles.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="knglmrt-border bg-card p-6 text-muted-foreground">
             Noch keine aktiven Profile gefunden.
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border text-sm whitespace-nowrap">
-                <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3">Profil</th>
-                    <th className="px-4 py-3">E-Mail</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Rollen</th>
-                    <th className="px-4 py-3">Erstellt</th>
-                    <th className="px-4 py-3">Letzte Anmeldung</th>
-                    <th className="px-4 py-3">Mail bestaetigt</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60 bg-card">
-                  {profiles.map((profile) => {
-                    const fallbackName = [profile.firstName, profile.lastName]
-                      .filter(Boolean)
-                      .join(" ");
-                    const displayName =
-                      profile.campaiName || fallbackName || profile.email;
-                    const hasCampaiLink = Boolean(profile.campaiContactId);
-                    const isEditingCampai = editingCampaiForId === profile.id;
-                    const isSavingRoles = savingRoleForId === profile.id;
+          <Table className="whitespace-nowrap">
+            <THead>
+              <Th>Profil</Th>
+              <Th>E-Mail</Th>
+              <Th>Status</Th>
+              <Th>Rollen</Th>
+              <Th>Erstellt</Th>
+              <Th>Letzte Anmeldung</Th>
+              <Th>Mail bestaetigt</Th>
+            </THead>
+            <TBody>
+              {profiles.map((profile) => {
+                const fallbackName = [profile.firstName, profile.lastName]
+                  .filter(Boolean)
+                  .join(" ");
+                const displayName =
+                  profile.campaiName || fallbackName || profile.email;
+                const hasCampaiLink = Boolean(profile.campaiContactId);
+                const isEditingCampai = editingCampaiForId === profile.id;
+                const isSavingRoles = savingRoleForId === profile.id;
 
-                    return (
-                      <tr key={profile.id}>
-                        <td className="px-4 py-3 align-middle font-semibold text-foreground">
-                          {displayName}
-                        </td>
-                        <td className="px-4 py-3 align-middle text-muted-foreground">
-                          {profile.email}
-                        </td>
-                        <td className="px-4 py-3 align-middle whitespace-nowrap">
-                          <div className="flex items-center gap-2 whitespace-nowrap">
-                            {hasCampaiLink ? (
-                              <span className="inline-flex whitespace-nowrap rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
-                                Mit Campai verknuepft
-                              </span>
-                            ) : (
-                              <Button
-                                kind="quiet"
-                                size="chip"
-                                className="whitespace-nowrap"
-                                disabled={savingCampaiForId === profile.id}
-                                onClick={() => {
-                                  if (isEditingCampai) {
-                                    cancelCampaiLink();
-                                    return;
-                                  }
-                                  void startCampaiLink(profile);
-                                }}
-                              >
-                                {isEditingCampai
-                                  ? "Campai-Auswahl schliessen"
-                                  : "Mit Campai verknuepfen"}
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-foreground/80">
-                          <fieldset
-                            className="flex min-w-72 flex-wrap gap-1.5"
-                            disabled={isSavingRoles}
-                          >
-                            <legend className="sr-only">
-                              Rollen fuer {displayName}
-                            </legend>
-                            {ROLE_OPTIONS.map((roleOption) => {
-                              const isChecked = profile.roles.includes(
-                                roleOption.value,
-                              );
-                              const isOnlyRole =
-                                isChecked && profile.roles.length === 1;
-                              return (
-                                <label
-                                  key={roleOption.value}
-                                  title={
-                                    isOnlyRole
-                                      ? "Mindestens eine Rolle muss ausgewählt bleiben."
-                                      : undefined
-                                  }
-                                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
-                                    isChecked
-                                      ? "border-primary bg-primary-soft text-primary"
-                                      : "border-border bg-card text-muted-foreground hover:text-foreground"
-                                  } ${
-                                    isSavingRoles
-                                      ? "cursor-wait opacity-60"
-                                      : isOnlyRole
-                                        ? "cursor-not-allowed opacity-60"
-                                        : "cursor-pointer"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="h-3.5 w-3.5 accent-primary"
-                                    checked={isChecked}
-                                    disabled={isOnlyRole}
-                                    onChange={(event) => {
-                                      const nextRoles = event.target.checked
-                                        ? [...profile.roles, roleOption.value]
-                                        : profile.roles.filter(
-                                            (role) => role !== roleOption.value,
-                                          );
-                                      void handleRolesChange(
-                                        profile.id,
-                                        nextRoles,
+                return (
+                  <Tr key={profile.id}>
+                    <Td className="align-middle font-semibold">
+                      {displayName}
+                    </Td>
+                    <Td className="align-middle text-muted-foreground">
+                      {profile.email}
+                    </Td>
+                    <Td className="align-middle whitespace-nowrap">
+                      {hasCampaiLink ? (
+                        <Badge tone="gebucht">Mit Campai verknuepft</Badge>
+                      ) : (
+                        <Button
+                          kind="quiet"
+                          size="chip"
+                          className="whitespace-nowrap"
+                          disabled={savingCampaiForId === profile.id}
+                          onClick={() => {
+                            if (isEditingCampai) {
+                              cancelCampaiLink();
+                              return;
+                            }
+                            void startCampaiLink(profile);
+                          }}
+                        >
+                          {isEditingCampai
+                            ? "Campai-Auswahl schliessen"
+                            : "Mit Campai verknuepfen"}
+                        </Button>
+                      )}
+                    </Td>
+                    <Td className="align-middle">
+                      <fieldset
+                        className="flex min-w-72 flex-wrap gap-1.5"
+                        disabled={isSavingRoles}
+                      >
+                        <legend className="sr-only">
+                          Rollen fuer {displayName}
+                        </legend>
+                        {ROLE_OPTIONS.map((roleOption) => {
+                          const isChecked = profile.roles.includes(
+                            roleOption.value,
+                          );
+                          const isOnlyRole =
+                            isChecked && profile.roles.length === 1;
+                          return (
+                            <span
+                              key={roleOption.value}
+                              title={
+                                isOnlyRole
+                                  ? "Mindestens eine Rolle muss ausgewählt bleiben."
+                                  : undefined
+                              }
+                              className={`knglmrt-tag inline-flex items-center knglmrt-border px-2.5 py-1 transition ${
+                                isChecked
+                                  ? "border-primary bg-primary-soft text-primary"
+                                  : "bg-card text-muted-foreground hover:text-foreground"
+                              } ${
+                                isSavingRoles
+                                  ? "cursor-wait opacity-60"
+                                  : isOnlyRole
+                                    ? "cursor-not-allowed opacity-60"
+                                    : "cursor-pointer"
+                              }`}
+                            >
+                              <Choice
+                                className="items-center gap-1.5"
+                                label={roleOption.label}
+                                checked={isChecked}
+                                disabled={isOnlyRole}
+                                onChange={(event) => {
+                                  const nextRoles = event.target.checked
+                                    ? [...profile.roles, roleOption.value]
+                                    : profile.roles.filter(
+                                        (role) => role !== roleOption.value,
                                       );
-                                    }}
-                                  />
-                                  {roleOption.label}
-                                </label>
-                              );
-                            })}
-                          </fieldset>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-foreground/80">
-                          {formatDateTime(profile.createdAt) ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 align-middle text-foreground/80">
-                          {formatDateTime(profile.lastSignInAt) ?? "Noch nie"}
-                        </td>
-                        <td className="px-4 py-3 align-middle text-foreground/80">
-                          {formatDateTime(profile.emailConfirmedAt) ?? "Nein"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                                  void handleRolesChange(profile.id, nextRoles);
+                                }}
+                              />
+                            </span>
+                          );
+                        })}
+                      </fieldset>
+                    </Td>
+                    <Td className="knglmrt-num align-middle">
+                      {formatDateTime(profile.createdAt) ?? "—"}
+                    </Td>
+                    <Td className="knglmrt-num align-middle">
+                      {formatDateTime(profile.lastSignInAt) ?? "Noch nie"}
+                    </Td>
+                    <Td className="knglmrt-num align-middle">
+                      {formatDateTime(profile.emailConfirmedAt) ?? "Nein"}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </Table>
         )}
       </section>
 
-      {editingCampaiProfile ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 p-6 pt-20">
-          <div
-            className="absolute inset-0"
-            onClick={cancelCampaiLink}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-2xl rounded-lg border border-border bg-card p-5 shadow-2xl">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Campai-Konto verknuepfen
-                  </p>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {editingCampaiProfile.campaiName ||
-                      [
-                        editingCampaiProfile.firstName,
-                        editingCampaiProfile.lastName,
-                      ]
-                        .filter(Boolean)
-                        .join(" ") ||
-                      editingCampaiProfile.email}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {editingCampaiProfile.email}
-                  </p>
-                </div>
-                <Button
-                  size="chip"
-                  type="button"
-                  kind="secondary"
-                  disabled={savingCampaiForId === editingCampaiProfile.id}
-                  onClick={cancelCampaiLink}
-                >
-                  Schliessen
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">
-                  {filteredCampaiContacts.length} Treffer
-                </span>
-                {selectedCampaiContact ? (
-                  <span className="text-sm text-muted-foreground">
-                    Ausgewaehlt: {selectedCampaiContact.name}
-                  </span>
-                ) : null}
-              </div>
-
-              <input
-                type="search"
-                value={campaiSearchTerm}
-                placeholder="Suche nach Name, Mail oder Mitgliedsnummer"
-                onChange={(event) => {
-                  setCampaiSearchTerm(event.target.value);
-                }}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-border"
-              />
-
-              {campaiLinkError ? (
-                <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-sm text-destructive">
-                  {campaiLinkError}
-                </div>
-              ) : null}
-
-              {isLoadingCampaiContacts ? (
-                <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
-                  Lade Campai-Konten ...
-                </div>
-              ) : visibleCampaiContacts.length === 0 ? (
-                <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
-                  Keine passenden Campai-Konten gefunden.
-                </div>
-              ) : (
-                <div className="max-h-[28rem] overflow-y-auto rounded-lg border border-border bg-background shadow-sm">
-                  <div className="divide-y divide-border/60">
-                    {visibleCampaiContacts.map((contact) => {
-                      const isSelected = selectedCampaiContactId === contact.id;
-
-                      return (
-                        <button
-                          key={contact.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCampaiContactId(contact.id);
-                          }}
-                          className={`flex w-full items-start justify-between gap-4 px-4 py-3 text-left transition hover:bg-muted/50 ${
-                            isSelected ? "bg-primary/10" : "bg-transparent"
-                          }`}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium text-foreground">
-                              {contact.name}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {contact.email ?? "Keine Mail"}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {contact.memberNumber
-                                ? `Mitgliedsnummer ${contact.memberNumber}`
-                                : "Keine Mitgliedsnummer"}
-                            </span>
-                          </span>
-                          {isSelected ? (
-                            <span className="text-xs font-semibold text-primary">
-                              Ausgewaehlt
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {filteredCampaiContacts.length > MAX_CAMPAI_RESULTS ? (
-                <p className="text-xs text-muted-foreground">
-                  Zeige die ersten {MAX_CAMPAI_RESULTS} Treffer. Suche weiter
-                  ein, um genauer zu filtern.
-                </p>
-              ) : null}
-
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  size="chip"
-                  type="button"
-                  kind="secondary"
-                  disabled={savingCampaiForId === editingCampaiProfile.id}
-                  onClick={cancelCampaiLink}
-                >
-                  Abbrechen
-                </Button>
-                <Button
-                  size="chip"
-                  type="button"
-                  kind="secondary"
-                  disabled={
-                    !selectedCampaiContactId ||
-                    savingCampaiForId === editingCampaiProfile.id
-                  }
-                  onClick={() => {
-                    void handleCampaiLink(editingCampaiProfile.id);
-                  }}
-                >
-                  {savingCampaiForId === editingCampaiProfile.id
-                    ? "Speichert ..."
-                    : "Verknuepfen"}
-                </Button>
-              </div>
+      <Dialog
+        open={Boolean(editingCampaiProfile)}
+        title="Campai-Konto verknuepfen"
+        width={672}
+        onCancel={cancelCampaiLink}
+        actions={
+          <>
+            <Button
+              type="button"
+              kind="secondary"
+              disabled={savingCampaiForId === editingCampaiProfile?.id}
+              onClick={cancelCampaiLink}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              kind="primary"
+              disabled={
+                !selectedCampaiContactId ||
+                savingCampaiForId === editingCampaiProfile?.id
+              }
+              onClick={() => {
+                if (editingCampaiProfile) {
+                  void handleCampaiLink(editingCampaiProfile.id);
+                }
+              }}
+            >
+              {savingCampaiForId === editingCampaiProfile?.id
+                ? "Speichert ..."
+                : "Verknuepfen"}
+            </Button>
+          </>
+        }
+      >
+        {editingCampaiProfile ? (
+          <>
+            <div>
+              <h3 className="knglmrt-card-title text-foreground">
+                {editingCampaiProfile.campaiName ||
+                  [
+                    editingCampaiProfile.firstName,
+                    editingCampaiProfile.lastName,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") ||
+                  editingCampaiProfile.email}
+              </h3>
+              <p className="text-muted-foreground">
+                {editingCampaiProfile.email}
+              </p>
             </div>
-          </div>
-        </div>
-      ) : null}
+
+            <SearchField
+              value={campaiSearchTerm}
+              count={`${filteredCampaiContacts.length} Treffer`}
+              placeholder="Suche nach Name, Mail oder Mitgliedsnummer"
+              onChange={(event) => {
+                setCampaiSearchTerm(event.target.value);
+              }}
+              onClear={() => setCampaiSearchTerm("")}
+            />
+
+            {selectedCampaiContact ? (
+              <p className="text-muted-foreground">
+                Ausgewaehlt: {selectedCampaiContact.name}
+              </p>
+            ) : null}
+
+            {campaiLinkError ? (
+              <Notice tone="rosa">{campaiLinkError}</Notice>
+            ) : null}
+
+            {isLoadingCampaiContacts ? (
+              <div className="knglmrt-border bg-muted px-4 py-6 text-muted-foreground">
+                Lade Campai-Konten ...
+              </div>
+            ) : visibleCampaiContacts.length === 0 ? (
+              <div className="knglmrt-border bg-muted px-4 py-6 text-muted-foreground">
+                Keine passenden Campai-Konten gefunden.
+              </div>
+            ) : (
+              <div className="max-h-[28rem] overflow-y-auto knglmrt-border bg-card">
+                {visibleCampaiContacts.map((contact, index) => {
+                  const isSelected = selectedCampaiContactId === contact.id;
+
+                  return (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCampaiContactId(contact.id);
+                      }}
+                      className={`flex w-full cursor-pointer items-start justify-between gap-4 px-4 py-3 text-left transition hover:bg-ui-tint-zebra ${
+                        index > 0 ? "border-t border-border" : ""
+                      } ${isSelected ? "bg-primary-soft" : "bg-transparent"}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-foreground">
+                          {contact.name}
+                        </span>
+                        <span className="block truncate text-[13px] leading-[18px] text-muted-foreground">
+                          {contact.email ?? "Keine Mail"}
+                        </span>
+                        <span className="knglmrt-num block truncate text-muted-foreground">
+                          {contact.memberNumber
+                            ? `Mitgliedsnummer ${contact.memberNumber}`
+                            : "Keine Mitgliedsnummer"}
+                        </span>
+                      </span>
+                      {isSelected ? (
+                        <Badge tone="offen">Ausgewaehlt</Badge>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {filteredCampaiContacts.length > MAX_CAMPAI_RESULTS ? (
+              <p className="text-[13px] leading-[18px] text-muted-foreground">
+                Zeige die ersten {MAX_CAMPAI_RESULTS} Treffer. Suche weiter ein,
+                um genauer zu filtern.
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

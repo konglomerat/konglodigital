@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js";
 import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../../components/PasswordInput";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import Field from "@/components/knglmrt/Field";
 
 const supabase = createSupabaseBrowserClient();
 
@@ -193,7 +194,7 @@ export default function RegisterCompletePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="knglmrt-border-section w-full max-w-md bg-card p-8">
         <h1 className="text-2xl font-semibold text-foreground">
           Registrierung abschliessen
         </h1>
@@ -211,54 +212,30 @@ export default function RegisterCompletePage() {
         {profile ? (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  htmlFor="register-complete-first-name"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-                >
-                  Vorname
-                </label>
-                <input
-                  id="register-complete-first-name"
-                  value={profile.firstName}
-                  disabled
-                  autoComplete="off"
-                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="register-complete-last-name"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-                >
-                  Nachname
-                </label>
-                <input
-                  id="register-complete-last-name"
-                  value={profile.lastName}
-                  disabled
-                  autoComplete="off"
-                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-                />
-              </div>
+              <Field
+                label="Vorname"
+                id="register-complete-first-name"
+                value={profile.firstName}
+                disabled
+                autoComplete="off"
+              />
+              <Field
+                label="Nachname"
+                id="register-complete-last-name"
+                value={profile.lastName}
+                disabled
+                autoComplete="off"
+              />
             </div>
 
             {profile.memberNumber ? (
-              <div className="space-y-2">
-                <label
-                  htmlFor="register-complete-member-number"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-                >
-                  Mitgliedsnummer
-                </label>
-                <input
-                  id="register-complete-member-number"
-                  value={profile.memberNumber}
-                  disabled
-                  autoComplete="off"
-                  className="w-full rounded-md border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-                />
-              </div>
+              <Field
+                label="Mitgliedsnummer"
+                id="register-complete-member-number"
+                value={profile.memberNumber}
+                disabled
+                autoComplete="off"
+              />
             ) : null}
 
             <div className="space-y-2">

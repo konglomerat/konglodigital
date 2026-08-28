@@ -27,6 +27,8 @@ import type {
 } from "@/lib/campai-kofi";
 import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "../admin/SubPageTitle";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 
 type ViewMode = "month" | "quarter" | "year";
 
@@ -167,7 +169,7 @@ const SummaryCard = ({
   value: string;
   accent: string;
 }) => (
-  <div className="min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm">
+  <div className="knglmrt-border-section min-w-0 bg-card p-4">
     <p className="break-words text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
       {label}
     </p>
@@ -223,7 +225,7 @@ const CostDistributionChart = ({ groups }: { groups: KoFiGroupRow[] }) => {
     .stops.join(", ");
 
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm">
+    <div className="knglmrt-border-section min-w-0 bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faChartPie}
@@ -305,7 +307,7 @@ const CashflowChart = ({
   const endX = n > 1 ? ((n - 0.5) * 100) / n : 100;
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm">
+    <div className="knglmrt-border-section min-w-0 overflow-hidden bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
         <FontAwesomeIcon
           icon={faTableCellsLarge}
@@ -474,7 +476,7 @@ const MonthlyOverviewTable = ({
   const hasForecast = rows.some((entry) => entry.isForecast);
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+    <div className="knglmrt-border-section min-w-0 max-w-full overflow-hidden bg-card">
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Monatsverlauf
@@ -512,7 +514,7 @@ const MonthlyOverviewTable = ({
             {rows.map((entry, index) => {
               const baseRow = index % 2 === 0 ? "bg-card" : "bg-muted";
               const rowClass = entry.isCarryover
-                ? "bg-amber-50"
+                ? "bg-warning-soft"
                 : entry.isForecast
                   ? `${baseRow} italic text-muted-foreground/90`
                   : baseRow;
@@ -525,7 +527,7 @@ const MonthlyOverviewTable = ({
                     <span className="inline-flex items-center gap-2">
                       {entry.label}
                       {entry.isCarryover ? (
-                        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                        <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
                           Überhang
                         </span>
                       ) : null}
@@ -617,7 +619,7 @@ const KoFiTable = ({
 
   return (
     <section
-      className={`min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br ${sectionTint} shadow-sm`}
+      className={`min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br ${sectionTint} `}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -796,7 +798,7 @@ const KoFiTable = ({
                                       {child.transactions.map((transaction) => (
                                         <div
                                           key={transaction.id}
-                                          className="grid min-w-0 gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
+                                          className="knglmrt-border-section grid min-w-0 gap-3 bg-card px-4 py-3 md:grid-cols-[110px_minmax(220px,1.2fr)_minmax(240px,1fr)_130px]"
                                         >
                                           <div className="text-xs text-muted-foreground">
                                             <div className="font-medium text-foreground/80">
@@ -842,7 +844,7 @@ const KoFiTable = ({
                                                 </a>
                                               )}
                                               {transaction.receiptless ? (
-                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                                                <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
                                                   ohne Beleg
                                                 </span>
                                               ) : null}
@@ -970,7 +972,9 @@ export default function KoFiPage() {
           cache: "no-store",
         });
         const payload = (await response.json().catch(() => null)) as
-          KoFiResponse | { error?: string } | null;
+          | KoFiResponse
+          | { error?: string }
+          | null;
 
         if (!response.ok) {
           throw new Error(
@@ -1026,7 +1030,7 @@ export default function KoFiPage() {
         subTitle="Liquiditätsansicht mit Monats-, Quartals- und Jahresperspektive direkt aus dem Campai-Buchungsjournal und den tatsächlichen Geldkontobewegungen."
       />
 
-      <section className="mt-6 min-w-0 rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="knglmrt-border-section mt-6 min-w-0 bg-card p-4 sm:p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
           <FontAwesomeIcon
             icon={faFilter}
@@ -1035,91 +1039,71 @@ export default function KoFiPage() {
           Filter
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
-          <label className="block min-w-0 text-sm text-foreground/80">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Jahr
-            </span>
-            <select
-              value={year}
-              onChange={(event) => setYear(Number(event.target.value))}
-              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
-            >
-              {Array.from({ length: 6 }, (_, index) => currentYear - index).map(
-                (optionYear) => (
-                  <option key={optionYear} value={optionYear}>
-                    {optionYear}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-
-          <label className="block min-w-0 text-sm text-foreground/80">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Kostenstelle 1 (Sphäre)
-            </span>
-            <select
-              value={costCenter1}
-              onChange={(event) => setCostCenter1(event.target.value)}
-              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
-            >
-              <option value="">Alle Kostenstellen 1</option>
-              {data?.filters.costCenters1.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+          <NativeSelect
+            label="Jahr"
+            className="min-w-0"
+            value={year}
+            onChange={(event) => setYear(Number(event.target.value))}
+          >
+            {Array.from({ length: 6 }, (_, index) => currentYear - index).map(
+              (optionYear) => (
+                <option key={optionYear} value={optionYear}>
+                  {optionYear}
                 </option>
-              ))}
-            </select>
-          </label>
+              ),
+            )}
+          </NativeSelect>
 
-          <label className="block min-w-0 text-sm text-foreground/80">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Kostenstelle 2 (Werkbereiche/Projekte)
-            </span>
-            <select
-              value={costCenter2}
-              onChange={(event) => setCostCenter2(event.target.value)}
-              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
-            >
-              <option value="">Alle Kostenstellen 2</option>
-              {data?.filters.costCenters.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <NativeSelect
+            label="Kostenstelle 1 (Sphäre)"
+            className="min-w-0"
+            value={costCenter1}
+            onChange={(event) => setCostCenter1(event.target.value)}
+          >
+            <option value="">Alle Kostenstellen 1</option>
+            {data?.filters.costCenters1.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </NativeSelect>
 
-          <label className="block min-w-0 text-sm text-foreground/80">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              SKR-42-Konto
-            </span>
-            <select
-              value={account}
-              onChange={(event) => setAccount(event.target.value)}
-              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-ring"
-            >
-              <option value="">Alle Konten</option>
-              {data?.filters.accounts.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <NativeSelect
+            label="Kostenstelle 2 (Werkbereiche/Projekte)"
+            className="min-w-0"
+            value={costCenter2}
+            onChange={(event) => setCostCenter2(event.target.value)}
+          >
+            <option value="">Alle Kostenstellen 2</option>
+            {data?.filters.costCenters.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </NativeSelect>
 
-          <label className="block min-w-0 text-sm text-foreground/80">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Buchungstext oder Kategorie
-            </span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="z. B. Miete, Fördermittel, Kulturamt"
-              className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/80 focus:border-ring"
-            />
-          </label>
+          <NativeSelect
+            label="SKR-42-Konto"
+            className="min-w-0"
+            value={account}
+            onChange={(event) => setAccount(event.target.value)}
+          >
+            <option value="">Alle Konten</option>
+            {data?.filters.accounts.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </NativeSelect>
+
+          <Field
+            label="Buchungstext oder Kategorie"
+            className="min-w-0"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="z. B. Miete, Fördermittel, Kulturamt"
+          />
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
@@ -1146,7 +1130,7 @@ export default function KoFiPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="mt-8 flex items-center justify-center gap-3 rounded-lg border border-border bg-card px-6 py-16 text-muted-foreground shadow-sm">
+        <div className="knglmrt-border-section mt-8 flex items-center justify-center gap-3 bg-card px-6 py-16 text-muted-foreground">
           <FontAwesomeIcon icon={faSpinner} spin className="h-5 w-5" />
           KoFi-Daten werden geladen…
         </div>
@@ -1183,7 +1167,7 @@ export default function KoFiPage() {
               />
             </div>
 
-            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <div className="knglmrt-border-section bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 basis-[420px]">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">

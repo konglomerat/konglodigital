@@ -89,7 +89,7 @@ export default function MaterialbestellungListPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 md:px-0 md:py-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+        <h1 className="text-2xl font-semibold text-foreground dark:text-zinc-100">
           Materialbestellungen
         </h1>
         <Button
@@ -102,46 +102,46 @@ export default function MaterialbestellungListPage() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-          <thead className="bg-zinc-50 dark:bg-zinc-900/80">
+      <div className="knglmrt-border-section overflow-x-auto bg-card dark:bg-zinc-900">
+        <table className="min-w-full divide-y divide-border dark:divide-zinc-800">
+          <thead className="bg-muted dark:bg-zinc-900/80">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Rechnungsnummer
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Bestelldatum
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Gesamtbetrag
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Mitbesteller
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Lieferant
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Zuletzt gespeichert
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-zinc-300">
                 Aktionen
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <tbody className="divide-y divide-border dark:divide-zinc-800">
             {loading ? (
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-8 text-center text-sm text-zinc-500"
+                  className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   Wird geladen…
                 </td>
               </tr>
             ) : errorMessage ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-sm text-rose-600">
+                <td colSpan={7} className="px-4 py-8 text-sm text-destructive">
                   <div className="flex flex-col items-center justify-center gap-4 text-center">
                     <span>{errorMessage}</span>
                     <Button
@@ -159,7 +159,7 @@ export default function MaterialbestellungListPage() {
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-5 text-sm text-zinc-600 dark:text-zinc-300"
+                  className="px-4 py-5 text-sm text-muted-foreground dark:text-zinc-300"
                 >
                   Noch keine Materialbestellungen vorhanden.
                 </td>
@@ -167,22 +167,22 @@ export default function MaterialbestellungListPage() {
             ) : (
               orders.map((order) => (
                 <tr key={order.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {order.supplierInvoiceNumber || "-"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {formatDate(order.supplierInvoiceDate)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {euroFormatter.format(order.totalAmountEuro)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {order.participantCount}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {order.supplierName || "-"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800 dark:text-zinc-100">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground dark:text-zinc-100">
                     {formatDate(order.updatedAt)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">

@@ -434,7 +434,7 @@ export default function FabricStorySlideEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-muted/50 ">
       <div
         ref={canvasHostRef}
         className="relative aspect-[9/16] w-full overflow-hidden bg-accent"

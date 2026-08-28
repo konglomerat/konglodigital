@@ -22,6 +22,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
 import Button from "@/components/knglmrt/Button";
+import FormSection from "@/components/knglmrt/FormSection";
 import PageTitle from "../components/PageTitle";
 import ShowcaseDeleteButton from "./ShowcaseDeleteButton";
 import ReactSelect from "../components/ui/react-select";
@@ -38,6 +39,8 @@ import {
 } from "@/lib/resource-media";
 import { fetchJson, resizeImage } from "../resources/resource-form-utils";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import Field from "@/components/knglmrt/Field";
+import Choice from "@/components/knglmrt/Choice";
 
 type InitialShowcase = ResourcePayload & {
   createdAt?: string | null;
@@ -666,21 +669,16 @@ export default function ShowcaseEditorClient({
         className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]"
         onSubmit={handleSubmit(onSubmit)}
       >
-        <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {tx("Titel", "de")}
-            </label>
-            <input
-              type="text"
-              {...register("title", { required: true })}
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
-              placeholder={tx(
-                "z. B. Modulares Regal für die Holzwerkstatt",
-                "de",
-              )}
-            />
-          </div>
+        <FormSection className="space-y-5">
+          <Field
+            label={tx("Titel", "de")}
+            type="text"
+            {...register("title", { required: true })}
+            placeholder={tx(
+              "z. B. Modulares Regal für die Holzwerkstatt",
+              "de",
+            )}
+          />
 
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -868,16 +866,14 @@ export default function ShowcaseEditorClient({
                   key={field.id}
                   className="grid gap-3 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
                 >
-                  <input
+                  <Field
                     type="text"
                     {...register(`links.${index}.label`)}
-                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
                     placeholder={tx("Linktitel", "de")}
                   />
-                  <input
+                  <Field
                     type="text"
                     {...register(`links.${index}.url`)}
-                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
                     placeholder="https://…"
                   />
                   <Button
@@ -899,17 +895,14 @@ export default function ShowcaseEditorClient({
               ))}
             </div>
           </div>
-        </section>
+        </FormSection>
 
-        <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
+        <FormSection className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {tx("Autor", "de")}
-            </label>
-            <input
+            <Field
+              label={tx("Autor", "de")}
               type="text"
               {...register("authorName")}
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
               placeholder={tx("z. B. Anna Beispiel", "de")}
             />
             <p className="text-xs text-muted-foreground">
@@ -923,13 +916,10 @@ export default function ShowcaseEditorClient({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {tx("Veröffentlichungsdatum", "de")}
-            </label>
-            <input
+            <Field
+              label={tx("Veröffentlichungsdatum", "de")}
               type="date"
               {...register("publishDate")}
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
             />
             <p className="text-xs text-muted-foreground">
               {tx(
@@ -995,7 +985,7 @@ export default function ShowcaseEditorClient({
               {tx("Tags", "de")}
             </label>
             <input type="hidden" {...register("tags")} />
-            <div className="rounded-lg border border-border bg-card px-4 py-3 focus-within:border-ring/80">
+            <div className="knglmrt-border bg-card px-4 py-3 focus-within:border-ring/80">
               <div className="flex flex-wrap items-center gap-2">
                 {showcaseTags.map((tag) => (
                   <span
@@ -1036,19 +1026,14 @@ export default function ShowcaseEditorClient({
             </p>
           </div>
 
-          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
-            <input
-              type="checkbox"
-              {...register("socialMediaConsent")}
-              className="mt-1 h-4 w-4 rounded border-input"
-            />
-            <span>
-              {tx(
-                "Darf für Social Media auf den Accounts des Konglomerat e.V. verwendet werden.",
-                "de",
-              )}
-            </span>
-          </label>
+          <Choice
+            className="knglmrt-border bg-muted px-4 py-3"
+            label={tx(
+              "Darf für Social Media auf den Accounts des Konglomerat e.V. verwendet werden.",
+              "de",
+            )}
+            {...register("socialMediaConsent")}
+          />
 
           <div className="pt-2">
             <p className="mb-3 text-sm text-muted-foreground">
@@ -1073,7 +1058,7 @@ export default function ShowcaseEditorClient({
               </Button>
             </div>
           </div>
-        </section>
+        </FormSection>
       </form>
 
       {cropSession ? (

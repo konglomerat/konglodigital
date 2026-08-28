@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "@/components/knglmrt/Button";
+import Field from "@/components/knglmrt/Field";
 
 type RentalStatusItem = {
   id: string;
@@ -165,7 +166,7 @@ export default function CampaiRentalPanel({
   };
 
   return (
-    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+    <section className="knglmrt-border-section bg-card p-5">
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-bold text-foreground">
           {tx("Rent resource", "en")}
@@ -275,26 +276,20 @@ export default function CampaiRentalPanel({
               </p>
             ) : null}
             <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm text-foreground">
-                <span>{tx("Start", "en")}</span>
-                <input
-                  type="datetime-local"
-                  value={start}
-                  onChange={(event) => setStart(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2"
-                  disabled={!canRent || saving}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-foreground">
-                <span>{tx("End", "en")}</span>
-                <input
-                  type="datetime-local"
-                  value={end}
-                  onChange={(event) => setEnd(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2"
-                  disabled={!canRent || saving}
-                />
-              </label>
+              <Field
+                label={tx("Start", "en")}
+                type="datetime-local"
+                value={start}
+                onChange={(event) => setStart(event.target.value)}
+                disabled={!canRent || saving}
+              />
+              <Field
+                label={tx("End", "en")}
+                type="datetime-local"
+                value={end}
+                onChange={(event) => setEnd(event.target.value)}
+                disabled={!canRent || saving}
+              />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <Button

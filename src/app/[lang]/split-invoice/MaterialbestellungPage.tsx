@@ -22,7 +22,9 @@ import {
 
 import Button from "@/components/knglmrt/Button";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
-import { FormField, FormSection, Input, Select } from "../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   type MaterialOrderDraft,
   type MaterialOrderDueDays,
@@ -538,11 +540,13 @@ export default function MaterialInvoicesPage({
   const handleEditorBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
     const target = event.target;
 
-    if (!(
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLSelectElement ||
-      target instanceof HTMLTextAreaElement
-    )) {
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+      )
+    ) {
       return;
     }
 
@@ -964,7 +968,7 @@ export default function MaterialInvoicesPage({
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-28 md:px-0 md:py-0 md:pb-28">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+        <h1 className="text-2xl font-semibold text-foreground dark:text-zinc-100">
           Materialbestellung
         </h1>
       </div>
@@ -982,13 +986,12 @@ export default function MaterialInvoicesPage({
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-60 flex-1">
-            <FormField label="PDF-Rechnung">
-              <Input
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-            </FormField>
+            <Field
+              label="PDF-Rechnung"
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
           </div>
           <Button
             kind="primary"
@@ -1011,10 +1014,10 @@ export default function MaterialInvoicesPage({
           />
         </div>
         {parseError ? (
-          <p className="mt-3 text-sm text-rose-600">{parseError}</p>
+          <p className="mt-3 text-sm text-destructive">{parseError}</p>
         ) : null}
         {issues.length > 0 ? (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mt-3 rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
             {issues.map((issue, index) => (
               <p key={`${issue}-${index}`}>{issue}</p>
             ))}
@@ -1024,15 +1027,15 @@ export default function MaterialInvoicesPage({
 
       <div className="space-y-6" onBlurCapture={handleEditorBlurCapture}>
         {participants.length > 0 && (
-          <dl className="grid gap-x-6 gap-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm sm:grid-cols-2 xl:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+          <dl className="grid gap-x-6 gap-y-3 rounded-lg border border-border bg-muted p-4 text-sm sm:grid-cols-2 xl:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900/50">
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Lieferant
               </dt>
               <dd className="mt-0.5 font-medium">{supplierName || "—"}</dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Rechnungsnummer
               </dt>
               <dd className="mt-0.5 font-medium">
@@ -1040,7 +1043,7 @@ export default function MaterialInvoicesPage({
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Rechnungsdatum
               </dt>
               <dd className="mt-0.5 font-medium">
@@ -1050,7 +1053,7 @@ export default function MaterialInvoicesPage({
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Umsatzsteuer
               </dt>
               <dd className="mt-0.5 font-medium">
@@ -1065,13 +1068,13 @@ export default function MaterialInvoicesPage({
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Lieferkosten
               </dt>
               <dd className="mt-0.5 font-medium">{shippingAmountEuro} EUR</dd>
             </div>
             <div className="xl:text-right">
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Gesamtbetrag
               </dt>
               <dd className="mt-0.5 font-medium">
@@ -1086,80 +1089,77 @@ export default function MaterialInvoicesPage({
           description="Diese Einstellungen gelten für alle Teilrechnungen dieser Bestellung."
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <FormField label="Fälligkeit (ab Erstellung)">
-              <Select
-                value={dueDays}
-                onChange={(event) =>
-                  setDueDays(event.target.value as MaterialOrderDueDays)
-                }
-              >
-                <option value="7">7 Tage</option>
-                <option value="10">10 Tage</option>
-                <option value="14">14 Tage</option>
-                <option value="30">30 Tage</option>
-              </Select>
-            </FormField>
-            <FormField label="Rechnungsversand">
-              <Select
-                value={invoiceSendMode}
-                onChange={(event) =>
-                  setInvoiceSendMode(
-                    event.target.value as MaterialOrderInvoiceSendMode,
-                  )
-                }
-              >
-                <option value="none">Kein Versand</option>
-                <option value="email">Versand per Mail</option>
-              </Select>
-            </FormField>
-            <FormField label="Lieferkosten gesamt in EUR">
-              <Input value={shippingAmountEuro} disabled />
-            </FormField>
-            <FormField label="Werkbereich">
-              <Select
-                value={selectedCostCenter2}
-                onChange={(event) => setSelectedCostCenter2(event.target.value)}
-                disabled={costCenter2Options.length === 0}
-              >
-                {costCenter2Options.length === 0 ? (
-                  <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
-                ) : (
-                  costCenter2Options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))
-                )}
-              </Select>
-            </FormField>
-            <FormField label="Lieferkosten verteilen">
-              <Select
-                value={shippingMode}
-                onChange={(event) =>
-                  setShippingMode(event.target.value as ShippingMode)
-                }
-              >
-                <option value="equal">Gleichmäßig pro Person</option>
-                <option value="byValue">Nach Positionswert</option>
-                <option value="manual">Manuell</option>
-              </Select>
-            </FormField>
-            <FormField label="MwSt">
-              <Select
-                value={globalTaxRate}
-                onChange={(event) =>
-                  setGlobalTaxRate(event.target.value as TaxRate)
-                }
-              >
-                <option value="0">0%</option>
-                <option value="7">7%</option>
-                <option value="19">19%</option>
-              </Select>
-            </FormField>
+            <NativeSelect
+              label="Fälligkeit (ab Erstellung)"
+              value={dueDays}
+              onChange={(event) =>
+                setDueDays(event.target.value as MaterialOrderDueDays)
+              }
+            >
+              <option value="7">7 Tage</option>
+              <option value="10">10 Tage</option>
+              <option value="14">14 Tage</option>
+              <option value="30">30 Tage</option>
+            </NativeSelect>
+            <NativeSelect
+              label="Rechnungsversand"
+              value={invoiceSendMode}
+              onChange={(event) =>
+                setInvoiceSendMode(
+                  event.target.value as MaterialOrderInvoiceSendMode,
+                )
+              }
+            >
+              <option value="none">Kein Versand</option>
+              <option value="email">Versand per Mail</option>
+            </NativeSelect>
+            <Field
+              label="Lieferkosten gesamt in EUR"
+              value={shippingAmountEuro}
+              disabled
+            />
+            <NativeSelect
+              label="Werkbereich"
+              value={selectedCostCenter2}
+              onChange={(event) => setSelectedCostCenter2(event.target.value)}
+              disabled={costCenter2Options.length === 0}
+            >
+              {costCenter2Options.length === 0 ? (
+                <option value={HOLZ_COST_CENTER2}>Wird geladen…</option>
+              ) : (
+                costCenter2Options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))
+              )}
+            </NativeSelect>
+            <NativeSelect
+              label="Lieferkosten verteilen"
+              value={shippingMode}
+              onChange={(event) =>
+                setShippingMode(event.target.value as ShippingMode)
+              }
+            >
+              <option value="equal">Gleichmäßig pro Person</option>
+              <option value="byValue">Nach Positionswert</option>
+              <option value="manual">Manuell</option>
+            </NativeSelect>
+            <NativeSelect
+              label="MwSt"
+              value={globalTaxRate}
+              onChange={(event) =>
+                setGlobalTaxRate(event.target.value as TaxRate)
+              }
+            >
+              <option value="0">0%</option>
+              <option value="7">7%</option>
+              <option value="19">19%</option>
+            </NativeSelect>
           </div>
 
           {bankConnectionsError ? (
-            <p className="text-sm text-rose-600">{bankConnectionsError}</p>
+            <p className="text-sm text-destructive">{bankConnectionsError}</p>
           ) : null}
         </FormSection>
 
@@ -1168,34 +1168,34 @@ export default function MaterialInvoicesPage({
             title={`Nicht Zugeordnet (${unassignedPositions.length})`}
             description="Weise jede Position einem Mitbesteller zu."
           >
-            <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-                <thead className="bg-zinc-50 dark:bg-zinc-900/70">
+            <div className="overflow-x-auto rounded-lg border border-border dark:border-zinc-800">
+              <table className="min-w-full divide-y divide-border text-sm dark:divide-zinc-800">
+                <thead className="bg-muted dark:bg-zinc-900/70">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground dark:text-zinc-300">
                       Artikelbezeichnung
                     </th>
-                    <th className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground dark:text-zinc-300">
                       Artikelbeschreibung
                     </th>
-                    <th className="w-52 px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-300">
+                    <th className="w-52 px-3 py-2 text-left font-medium text-muted-foreground dark:text-zinc-300">
                       Zuweisen an
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <tbody className="divide-y divide-border dark:divide-zinc-800">
                   {unassignedPositions.map((position) => (
                     <tr key={position.id}>
                       <td className="px-3 py-2 font-medium">
                         {position.description}
                       </td>
-                      <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">
+                      <td className="px-3 py-2 text-muted-foreground dark:text-muted-foreground">
                         {position.articleDescription || (
                           <span className="italic">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <Select
+                        <NativeSelect
                           value=""
                           disabled={participants.length === 0}
                           onChange={(event) => {
@@ -1216,7 +1216,7 @@ export default function MaterialInvoicesPage({
                               {participant.name}
                             </option>
                           ))}
-                        </Select>
+                        </NativeSelect>
                       </td>
                     </tr>
                   ))}
@@ -1226,13 +1226,13 @@ export default function MaterialInvoicesPage({
           </FormSection>
         )}
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <section className="knglmrt-border-section bg-card p-6 dark:bg-zinc-900">
           <header className="mb-4 flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              <h2 className="text-lg font-semibold text-foreground dark:text-zinc-100">
                 {`Mitbesteller${participants.length > 0 ? ` (${participants.length})` : ""}`}
               </h2>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm leading-relaxed text-muted-foreground dark:text-muted-foreground">
                 Pro Person werden Positionen und Lieferkostenanteil aufgeteilt.
               </p>
             </div>
@@ -1260,7 +1260,7 @@ export default function MaterialInvoicesPage({
               return (
                 <section
                   key={participant.id}
-                  className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  className="knglmrt-border-section space-y-4 bg-card p-5 dark:bg-zinc-900"
                 >
                   <div className="flex w-full flex-wrap items-center gap-3">
                     <div className="max-w-sm flex-none">
@@ -1294,8 +1294,8 @@ export default function MaterialInvoicesPage({
                       />
                     </div>
                     {participant.debtorAccount ? (
-                      <div className="min-w-0 text-sm text-zinc-500 dark:text-zinc-400">
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                      <div className="min-w-0 text-sm text-muted-foreground dark:text-muted-foreground">
+                        <span className="font-medium text-foreground dark:text-zinc-300">
                           #{participant.debtorAccount}
                         </span>
                         {participant.debtorAddress ? (
@@ -1312,21 +1312,21 @@ export default function MaterialInvoicesPage({
                         ) : null}
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-400 dark:text-zinc-500">
+                      <span className="text-sm text-muted-foreground dark:text-muted-foreground">
                         Kein Debitor zugeordnet
                       </span>
                     )}
                     {participant.invoiceId ? (
-                      <p className="ml-auto whitespace-nowrap text-sm text-emerald-700 dark:text-emerald-300">
+                      <p className="ml-auto whitespace-nowrap text-sm text-foreground dark:text-emerald-300">
                         In Campai erstellt ✓
                       </p>
                     ) : null}
                   </div>
 
                   <div className="space-y-2">
-                    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-                      <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-                        <thead className="bg-zinc-50 dark:bg-zinc-900/70">
+                    <div className="overflow-x-auto rounded-lg border border-border dark:border-zinc-800">
+                      <table className="min-w-full divide-y divide-border text-sm dark:divide-zinc-800">
+                        <thead className="bg-muted dark:bg-zinc-900/70">
                           <tr>
                             <th className="px-3 py-2 text-left">Posten</th>
                             <th className="w-16 px-3 py-2 text-left">Menge</th>
@@ -1344,15 +1344,15 @@ export default function MaterialInvoicesPage({
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        <tbody className="divide-y divide-border dark:divide-zinc-800">
                           {participant.positions.map((position) => (
                             <Fragment key={position.id}>
                               <tr className="align-top position-row">
                                 <td className="px-3 py-2">
                                   <div className="flex flex-col gap-1">
-                                    <Input
+                                    <Field
                                       value={position.description}
-                                      className="min-w-0 whitespace-nowrap"
+                                      inputClassName="min-w-0 whitespace-nowrap"
                                       onChange={(event) =>
                                         updateParticipant(
                                           participant.id,
@@ -1372,9 +1372,9 @@ export default function MaterialInvoicesPage({
                                         )
                                       }
                                     />
-                                    <Input
+                                    <Field
                                       placeholder="Details"
-                                      className="min-w-0 whitespace-nowrap text-xs text-zinc-500 placeholder:text-zinc-400 dark:text-zinc-400"
+                                      inputClassName="min-w-0 whitespace-nowrap text-xs text-muted-foreground placeholder:text-muted-foreground dark:text-muted-foreground"
                                       value={position.articleDescription}
                                       onChange={(event) =>
                                         updateParticipant(
@@ -1398,7 +1398,7 @@ export default function MaterialInvoicesPage({
                                   </div>
                                 </td>
                                 <td className="px-3 py-2">
-                                  <Input
+                                  <Field
                                     value={position.quantity}
                                     onChange={(event) =>
                                       updateParticipant(
@@ -1421,7 +1421,7 @@ export default function MaterialInvoicesPage({
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <Input
+                                  <Field
                                     value={position.unit}
                                     onChange={(event) =>
                                       updateParticipant(
@@ -1443,7 +1443,7 @@ export default function MaterialInvoicesPage({
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <Input
+                                  <Field
                                     value={position.unitAmountEuro}
                                     inputMode="decimal"
                                     title={euroAmountValidationMessage}
@@ -1468,7 +1468,7 @@ export default function MaterialInvoicesPage({
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <Input
+                                  <Field
                                     value={toInputEuro(
                                       calculatePositionTotal(position),
                                     )}
@@ -1537,7 +1537,7 @@ export default function MaterialInvoicesPage({
                           ))}
                           <tr className="position-row align-top">
                             <td className="px-3 py-2">
-                              <Input
+                              <Field
                                 value={participant.shippingDescription}
                                 onChange={(event) =>
                                   updateParticipant(
@@ -1551,13 +1551,13 @@ export default function MaterialInvoicesPage({
                               />
                             </td>
                             <td className="px-3 py-2">
-                              <Input value="1" disabled />
+                              <Field value="1" disabled />
                             </td>
                             <td className="px-3 py-2">
-                              <Input value={SHIPPING_UNIT} disabled />
+                              <Field value={SHIPPING_UNIT} disabled />
                             </td>
                             <td className="px-3 py-2">
-                              <Input
+                              <Field
                                 value={
                                   shippingMode === "manual"
                                     ? participant.manualShippingShareEuro
@@ -1567,7 +1567,7 @@ export default function MaterialInvoicesPage({
                               />
                             </td>
                             <td className="px-3 py-2">
-                              <Input
+                              <Field
                                 value={
                                   shippingMode === "manual"
                                     ? participant.manualShippingShareEuro
@@ -1599,11 +1599,11 @@ export default function MaterialInvoicesPage({
                         Neue Position
                       </Button>
                       <div className="text-sm">
-                        <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                        <div className="flex justify-between gap-8 py-0.5 text-muted-foreground dark:text-muted-foreground">
                           <span>Summe netto</span>
                           <span>{euroFormatter.format(total)}</span>
                         </div>
-                        <div className="flex justify-between gap-8 py-0.5 text-zinc-500 dark:text-zinc-400">
+                        <div className="flex justify-between gap-8 py-0.5 text-muted-foreground dark:text-muted-foreground">
                           <span>MwSt ({globalTaxRate}%)</span>
                           <span>
                             {euroFormatter.format(
@@ -1611,7 +1611,7 @@ export default function MaterialInvoicesPage({
                             )}
                           </span>
                         </div>
-                        <div className="mt-0.5 flex justify-between gap-8 border-t border-zinc-200 pt-1 font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
+                        <div className="mt-0.5 flex justify-between gap-8 border-t border-border pt-1 font-semibold text-foreground dark:border-zinc-700 dark:text-zinc-100">
                           <span>Summe brutto</span>
                           <span>
                             {euroFormatter.format(
@@ -1643,7 +1643,7 @@ export default function MaterialInvoicesPage({
                     </Button>
                     <div className="flex items-center gap-3">
                       {participant.createError ? (
-                        <p className="text-sm text-rose-600">
+                        <p className="text-sm text-destructive">
                           {participant.createError}
                         </p>
                       ) : null}
@@ -1692,23 +1692,23 @@ export default function MaterialInvoicesPage({
         </section>
       </div>
 
-      <div className="sticky bottom-4 z-20 rounded-lg border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
+      <div className="sticky bottom-4 z-20 rounded-lg border border-border bg-white/95 p-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
         <div className="flex flex-wrap items-center gap-4">
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-foreground dark:text-zinc-300">
             Netto:{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="font-semibold text-foreground dark:text-zinc-100">
               {euroFormatter.format(nettoTotal)}
             </span>
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-foreground dark:text-zinc-300">
             MwSt. ({globalTaxRate}%):{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="font-semibold text-foreground dark:text-zinc-100">
               {euroFormatter.format(mwstTotal)}
             </span>
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-foreground dark:text-zinc-300">
             Brutto gesamt:{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="font-semibold text-foreground dark:text-zinc-100">
               {euroFormatter.format(bruttoTotal)}
             </span>
           </p>
@@ -1716,12 +1716,12 @@ export default function MaterialInvoicesPage({
             <p
               className={`ml-auto text-sm ${
                 saveError
-                  ? "text-rose-600"
+                  ? "text-destructive"
                   : savingDraft
-                    ? "text-amber-700 dark:text-amber-400"
+                    ? "text-foreground dark:text-amber-400"
                     : hasUnsavedChanges
-                      ? "text-zinc-600 dark:text-zinc-300"
-                      : "text-emerald-700"
+                      ? "text-muted-foreground dark:text-zinc-300"
+                      : "text-foreground"
               }`}
               aria-live="polite"
             >

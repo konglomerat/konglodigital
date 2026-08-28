@@ -23,12 +23,10 @@ import {
   AutocompleteInput,
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -229,7 +227,7 @@ export default function AusgabePage() {
       />
 
       {costCentersError ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
           {costCentersError}
         </div>
       ) : null}
@@ -245,7 +243,8 @@ export default function AusgabePage() {
         {/* 2. Zahlungsempfänger */}
         <FormSection title="Zahlungsempfänger" icon={faUser}>
           <div className="space-y-4">
-            <FormField
+            <FieldShell
+              as="div"
               label="Empfänger auswählen oder neu anlegen"
               required
               error={errors.kreditorName?.message}
@@ -259,14 +258,13 @@ export default function AusgabePage() {
                   required: "Bitte einen Zahlungsempfänger auswählen.",
                 })}
               />
-            </FormField>
+            </FieldShell>
 
             {creditorAccount ? (
               <SelectedCreditorBadge
                 account={creditorAccount}
                 entityLabel="Empfänger"
                 fallbackName={creditorName}
-                tone="emerald"
                 onClear={resetCreditor}
                 onEdit={() => setShowUpdatePanel((current) => !current)}
               />
@@ -303,83 +301,72 @@ export default function AusgabePage() {
         {/* 3. Belegangaben */}
         <FormSection title="Belegangaben" icon={faFolderOpen}>
           <div className="space-y-4">
-            <FormField
+            <FieldShell
+              as="div"
               label="Buchungstext"
               required
               error={errors.beschreibung?.message}
             >
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Kurze Beschreibung wofür die Ausgabe getätigt wurde
               </p>
-              <Input
+              <Field
                 placeholder="z. B. Materialkosten Werkstatt"
                 {...register("beschreibung", {
                   required: "Buchungstext ist erforderlich.",
                 })}
               />
-            </FormField>
+            </FieldShell>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Field
                 label="Belegdatum"
                 required
                 error={errors.belegdatum?.message}
-              >
-                <Input
-                  type="date"
-                  {...register("belegdatum", {
-                    required: "Belegdatum ist erforderlich.",
-                  })}
-                />
-              </FormField>
-              <FormField
+                type="date"
+                {...register("belegdatum", {
+                  required: "Belegdatum ist erforderlich.",
+                })}
+              />
+              <Field
                 label="Belegnummer"
                 hint="Optional – wird automatisch vergeben wenn leer."
                 error={errors.belegnummer?.message}
-              >
-                <Input
-                  placeholder="z. B. RE-2024-001"
-                  {...register("belegnummer")}
-                />
-              </FormField>
-              <FormField
+                placeholder="z. B. RE-2024-001"
+                {...register("belegnummer")}
+              />
+              <Field
                 label="Betrag (€)"
                 required
                 hint="Format: 12,50"
                 error={errors.betragEuro?.message}
-              >
-                <Input
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  {...register("betragEuro", {
-                    required: "Betrag ist erforderlich.",
-                    pattern: {
-                      value: euroAmountPattern,
-                      message: euroAmountValidationMessage,
-                    },
-                  })}
-                />
-              </FormField>
-              <FormField
+                inputMode="decimal"
+                placeholder="0,00"
+                {...register("betragEuro", {
+                  required: "Betrag ist erforderlich.",
+                  pattern: {
+                    value: euroAmountPattern,
+                    message: euroAmountValidationMessage,
+                  },
+                })}
+              />
+              <NativeSelect
                 label="Werkbereich/Projekt"
                 required
                 error={errors.costCenter2?.message}
+                disabled={costCentersLoading}
+                {...register("costCenter2", {
+                  required: "Bitte einen Werkbereich/Projekt auswählen.",
+                })}
               >
-                <Select
-                  disabled={costCentersLoading}
-                  {...register("costCenter2", {
-                    required: "Bitte einen Werkbereich/Projekt auswählen.",
-                  })}
-                >
-                  <option value="">
-                    {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
+                <option value="">
+                  {costCentersLoading ? "Wird geladen…" : "Bitte auswählen…"}
+                </option>
+                {costCenters.map((cc) => (
+                  <option key={cc.value} value={cc.value}>
+                    {cc.label}
                   </option>
-                  {costCenters.map((cc) => (
-                    <option key={cc.value} value={cc.value}>
-                      {cc.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                ))}
+              </NativeSelect>
             </div>
           </div>
         </FormSection>
@@ -388,17 +375,17 @@ export default function AusgabePage() {
         <InternalNoteSection textareaProps={register("notes")} />
 
         {result?.id ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-foreground">
             <p className="font-medium">Ausgabe gespeichert!</p>
-            <p className="text-emerald-700">Campai Beleg-ID: {result.id}</p>
+            <p className="text-foreground">Campai Beleg-ID: {result.id}</p>
             {result.uploadWarning ? (
-              <p className="mt-1 text-amber-700">{result.uploadWarning}</p>
+              <p className="mt-1 text-foreground">{result.uploadWarning}</p>
             ) : null}
           </div>
         ) : null}
 
         {result?.error ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
             {result.error}
           </div>
         ) : null}

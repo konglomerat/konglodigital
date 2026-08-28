@@ -24,11 +24,14 @@ export default async function ShowcasesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const showcaseOfTheMonth =
-    showcases.find((showcase) => hasShowcaseOfTheMonthTag(showcase.tags)) ?? null;
+    showcases.find((showcase) => hasShowcaseOfTheMonthTag(showcase.tags)) ??
+    null;
   const orderedShowcases = showcaseOfTheMonth
     ? [
         showcaseOfTheMonth,
-        ...showcases.filter((showcase) => showcase.id !== showcaseOfTheMonth.id),
+        ...showcases.filter(
+          (showcase) => showcase.id !== showcaseOfTheMonth.id,
+        ),
       ]
     : showcases;
   const copy = {
@@ -70,7 +73,10 @@ export default async function ShowcasesPage() {
       );
 
       return index === promptInsertIndex
-        ? [showcaseCard, <ShowcaseUploadPromptCard key="showcase-upload-prompt" />]
+        ? [
+            showcaseCard,
+            <ShowcaseUploadPromptCard key="showcase-upload-prompt" />,
+          ]
         : [showcaseCard];
     },
   );
@@ -98,7 +104,7 @@ export default async function ShowcasesPage() {
       />
 
       {showcases.length === 0 ? (
-        <section className="rounded-lg border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground shadow-sm   ">
+        <section className="rounded-lg border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground ">
           {tx("Es gibt noch keine Beiträge.", "de")}
         </section>
       ) : (

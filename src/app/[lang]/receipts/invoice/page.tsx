@@ -25,13 +25,10 @@ import {
   ProductAutocompleteInput,
   type ProductSuggestion,
 } from "../../components/ui/product-autocomplete-input";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-  Textarea,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import {
   CAMPAI_PAYMENT_METHOD_TYPES,
@@ -39,6 +36,7 @@ import {
 } from "@/lib/campai-payment-methods";
 import { euroAmountValidationMessage } from "@/lib/euro-input";
 import ReceiptsPageHeader from "../create/header";
+import Choice from "@/components/knglmrt/Choice";
 
 type InvoicePosition = {
   id: string;
@@ -732,7 +730,11 @@ export default function NewSimpleInvoicePage() {
         >
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Rechnungsempfänger (Debitor)" required>
+              <FieldShell
+                as="div"
+                label="Rechnungsempfänger (Debitor)"
+                required
+              >
                 <AutocompleteInput
                   apiPath="/api/campai/debtors"
                   entityLabelSingular="Debitor"
@@ -750,19 +752,16 @@ export default function NewSimpleInvoicePage() {
                   onSelect={handleDebtorSelect}
                   onCreateNew={handleCreateDebtor}
                 />
-              </FormField>
+              </FieldShell>
 
-              <FormField
+              <Field
                 label="E-Mail-Empfänger"
                 hint="Für Versand und Neuanlage des Debitors."
-              >
-                <Input
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(event) => setRecipientEmail(event.target.value)}
-                  placeholder="kunde@beispiel.de"
-                />
-              </FormField>
+                type="email"
+                value={recipientEmail}
+                onChange={(event) => setRecipientEmail(event.target.value)}
+                placeholder="kunde@beispiel.de"
+              />
             </div>
 
             {debtorAccount ? (
@@ -770,7 +769,6 @@ export default function NewSimpleInvoicePage() {
                 account={debtorAccount}
                 entityLabel="Debitor"
                 fallbackName={debtorName}
-                tone="success"
                 onClear={resetDebtor}
                 onEdit={() => setShowUpdateDebtorPanel((current) => !current)}
               />
@@ -845,66 +843,56 @@ export default function NewSimpleInvoicePage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2 rounded-lg border border-border p-2 sm:p-3">
-                <label className="inline-flex items-center gap-2 text-sm text-foreground/80">
-                  <input
-                    type="checkbox"
-                    checked={sendByMail}
-                    onChange={(event) => setSendByMail(event.target.checked)}
-                  />
-                  Automatisch per E-Mail versenden
-                </label>
+                <Choice
+                  label="Automatisch per E-Mail versenden"
+                  checked={sendByMail}
+                  onChange={(event) => setSendByMail(event.target.checked)}
+                />
               </div>
 
               {sendByMail ? (
                 <div className="md:col-span-2">
-                  <FormField label="Automatischer Versand per E-Mail" required>
-                    <Input
-                      type="email"
-                      value={recipientEmail}
-                      onChange={(event) =>
-                        setRecipientEmail(event.target.value)
-                      }
-                      placeholder="kunde@beispiel.de"
-                    />
-                  </FormField>
+                  <Field
+                    label="Automatischer Versand per E-Mail"
+                    required
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(event) => setRecipientEmail(event.target.value)}
+                    placeholder="kunde@beispiel.de"
+                  />
                 </div>
               ) : null}
 
               <div className="md:col-span-2">
-                <FormField label="Straße / Adresse" required>
-                  <Input
-                    value={addressLine}
-                    onChange={(event) => setAddressLine(event.target.value)}
-                    required
-                  />
-                </FormField>
+                <Field
+                  label="Straße / Adresse"
+                  required
+                  value={addressLine}
+                  onChange={(event) => setAddressLine(event.target.value)}
+                />
               </div>
-              <FormField label="PLZ" required>
-                <Input
-                  value={zip}
-                  onChange={(event) => setZip(event.target.value)}
-                  required
-                />
-              </FormField>
-              <FormField label="Stadt" required>
-                <Input
-                  value={city}
-                  onChange={(event) => setCity(event.target.value)}
-                  required
-                />
-              </FormField>
-              <FormField label="Adresszusatz 1">
-                <Input
-                  value={details1}
-                  onChange={(event) => setDetails1(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Adresszusatz 2">
-                <Input
-                  value={details2}
-                  onChange={(event) => setDetails2(event.target.value)}
-                />
-              </FormField>
+              <Field
+                label="PLZ"
+                required
+                value={zip}
+                onChange={(event) => setZip(event.target.value)}
+              />
+              <Field
+                label="Stadt"
+                required
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+              />
+              <Field
+                label="Adresszusatz 1"
+                value={details1}
+                onChange={(event) => setDetails1(event.target.value)}
+              />
+              <Field
+                label="Adresszusatz 2"
+                value={details2}
+                onChange={(event) => setDetails2(event.target.value)}
+              />
             </div>
           </div>
         </FormSection>
@@ -915,17 +903,17 @@ export default function NewSimpleInvoicePage() {
           description="Leistungspositionen inkl. Steuern, Rabatt und Bereich/Projekt."
         >
           <div className="mb-4">
-            <FormField label="Rechnungsgegenstand" required>
+            <FieldShell as="div" label="Rechnungsgegenstand" required>
               <p className="mb-2 text-xs text-muted-foreground">
                 Kurze Beschreibung der gelieferten Produkte bzw. Art und Umfang
                 der Dienstleistung
               </p>
-              <Input
+              <Field
                 value={intro}
                 onChange={(event) => setIntro(event.target.value)}
                 placeholder={invoiceSubjectPrefill}
               />
-            </FormField>
+            </FieldShell>
           </div>
 
           {showCostCenterWarning ? (
@@ -978,7 +966,7 @@ export default function NewSimpleInvoicePage() {
                     onBlur={() => setShowTaxHint(false)}
                   />
                   <span
-                    className={`pointer-events-none absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-foreground/80 shadow-sm transition ${
+                    className={`pointer-events-none absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-foreground/80 transition ${
                       showTaxHint
                         ? "visible opacity-100"
                         : "invisible opacity-0 group-hover:visible group-hover:opacity-100"
@@ -1015,7 +1003,8 @@ export default function NewSimpleInvoicePage() {
                       key={position.id}
                       className="grid gap-3 rounded-lg border border-border p-2 md:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_86px_55px_100px_65px_110px_130px_40px] xl:items-end sm:p-3"
                     >
-                      <FormField
+                      <FieldShell
+                        as="div"
                         label="Name"
                         required
                         className="md:col-span-2 xl:col-span-1"
@@ -1036,89 +1025,78 @@ export default function NewSimpleInvoicePage() {
                           }
                           placeholder="Name oder Produkt"
                         />
-                      </FormField>
+                      </FieldShell>
 
-                      <FormField
+                      <Field
                         label="Einheit"
                         labelClassName="whitespace-nowrap xl:hidden"
-                      >
-                        <Input
-                          aria-label="Einheit"
-                          value={position.unit}
-                          onChange={(event) =>
-                            updatePosition(
-                              position.id,
-                              "unit",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Stk"
-                        />
-                      </FormField>
+                        aria-label="Einheit"
+                        value={position.unit}
+                        onChange={(event) =>
+                          updatePosition(
+                            position.id,
+                            "unit",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Stk"
+                      />
 
-                      <FormField
+                      <Field
                         label="Menge"
                         required
                         labelClassName="whitespace-nowrap xl:hidden"
-                      >
-                        <Input
-                          aria-label="Menge"
-                          value={position.quantity}
-                          inputMode="decimal"
-                          onChange={(event) =>
-                            updatePosition(
-                              position.id,
-                              "quantity",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="1"
-                        />
-                      </FormField>
+                        aria-label="Menge"
+                        value={position.quantity}
+                        inputMode="decimal"
+                        onChange={(event) =>
+                          updatePosition(
+                            position.id,
+                            "quantity",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="1"
+                      />
 
-                      <FormField
+                      <Field
                         label="Einzelbetrag €"
                         required
                         labelClassName="whitespace-nowrap xl:hidden"
-                      >
-                        <Input
-                          aria-label="Einzelbetrag in Euro"
-                          value={position.unitAmountEuro}
-                          inputMode="decimal"
-                          title={euroAmountValidationMessage}
-                          onChange={(event) =>
-                            updatePosition(
-                              position.id,
-                              "unitAmountEuro",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="12,50"
-                        />
-                      </FormField>
+                        aria-label="Einzelbetrag in Euro"
+                        value={position.unitAmountEuro}
+                        inputMode="decimal"
+                        title={euroAmountValidationMessage}
+                        onChange={(event) =>
+                          updatePosition(
+                            position.id,
+                            "unitAmountEuro",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="12,50"
+                      />
 
-                      <FormField
+                      <NativeSelect
                         label="Steuer"
                         labelClassName="whitespace-nowrap xl:hidden"
+                        aria-label="Steuer"
+                        value={position.taxCode}
+                        onChange={(event) =>
+                          updatePosition(
+                            position.id,
+                            "taxCode",
+                            event.target.value,
+                          )
+                        }
                       >
-                        <Select
-                          aria-label="Steuer"
-                          value={position.taxCode}
-                          onChange={(event) =>
-                            updatePosition(
-                              position.id,
-                              "taxCode",
-                              event.target.value,
-                            )
-                          }
-                        >
-                          <option value="0">0%</option>
-                          <option value="7">7%</option>
-                          <option value="19">19%</option>
-                        </Select>
-                      </FormField>
+                        <option value="0">0%</option>
+                        <option value="7">7%</option>
+                        <option value="19">19%</option>
+                      </NativeSelect>
 
-                      <FormField
+                      <FieldShell
+                        as="div"
                         label="Gesamtbetrag"
                         labelClassName="whitespace-nowrap xl:hidden"
                       >
@@ -1127,39 +1105,36 @@ export default function NewSimpleInvoicePage() {
                             ? "-"
                             : `€${(rowEnteredTotal / 100).toFixed(2)}`}
                         </div>
-                      </FormField>
+                      </FieldShell>
 
-                      <FormField
+                      <NativeSelect
                         label="Bereich/Projekt"
                         className="md:col-span-2 xl:col-span-1"
                         labelClassName="whitespace-nowrap xl:hidden"
+                        aria-label="Bereich/Projekt"
+                        value={position.costCenter2}
+                        onChange={(event) =>
+                          updatePosition(
+                            position.id,
+                            "costCenter2",
+                            event.target.value,
+                          )
+                        }
+                        disabled={
+                          costCentersLoading || costCenters.length === 0
+                        }
                       >
-                        <Select
-                          aria-label="Bereich/Projekt"
-                          value={position.costCenter2}
-                          onChange={(event) =>
-                            updatePosition(
-                              position.id,
-                              "costCenter2",
-                              event.target.value,
-                            )
-                          }
-                          disabled={
-                            costCentersLoading || costCenters.length === 0
-                          }
-                        >
-                          {costCenters.length === 0 ? (
-                            <option value="">
-                              Keine Kostenstellen verfügbar
-                            </option>
-                          ) : null}
-                          {costCenters.map((center) => (
-                            <option key={center.value} value={center.value}>
-                              {center.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
+                        {costCenters.length === 0 ? (
+                          <option value="">
+                            Keine Kostenstellen verfügbar
+                          </option>
+                        ) : null}
+                        {costCenters.map((center) => (
+                          <option key={center.value} value={center.value}>
+                            {center.label}
+                          </option>
+                        ))}
+                      </NativeSelect>
 
                       <div className="space-y-2 xl:space-y-0">
                         <p className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground xl:hidden">
@@ -1214,7 +1189,7 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           <div className="mt-4">
-            <FormField label="Rechnungsart" required>
+            <FieldShell as="div" label="Rechnungsart" required>
               <SegmentedControl
                 value={isNet ? "net" : "gross"}
                 options={[
@@ -1223,7 +1198,7 @@ export default function NewSimpleInvoicePage() {
                 ]}
                 onChange={(next) => setIsNet(next === "net")}
               />
-            </FormField>
+            </FieldShell>
           </div>
         </FormSection>
 
@@ -1233,7 +1208,7 @@ export default function NewSimpleInvoicePage() {
           description="Grunddaten, Datumsfelder und Zahlungsinformationen."
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField
+            <NativeSelect
               label="Zahlungsart"
               hint={
                 paymentMethodsError
@@ -1243,31 +1218,28 @@ export default function NewSimpleInvoicePage() {
                     : undefined
               }
               error={paymentMethodsError ?? undefined}
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as PaymentMethod)
+              }
+              disabled={paymentMethodsLoading || paymentMethods.length === 0}
             >
-              <Select
-                value={paymentMethod}
-                onChange={(event) =>
-                  setPaymentMethod(event.target.value as PaymentMethod)
-                }
-                disabled={paymentMethodsLoading || paymentMethods.length === 0}
-              >
-                <option value="">
-                  {paymentMethodsLoading
-                    ? "Zahlungsarten werden geladen"
-                    : paymentMethods.length === 0
-                      ? "Keine Zahlungsarten verfügbar"
-                      : "Bitte wählen"}
+              <option value="">
+                {paymentMethodsLoading
+                  ? "Zahlungsarten werden geladen"
+                  : paymentMethods.length === 0
+                    ? "Keine Zahlungsarten verfügbar"
+                    : "Bitte wählen"}
+              </option>
+              {paymentMethods.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
                 </option>
-                {paymentMethods.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+              ))}
+            </NativeSelect>
 
             {paymentMethod === "sepaCreditTransfer" ? (
-              <FormField
+              <NativeSelect
                 label="Konto"
                 required
                 hint={
@@ -1278,67 +1250,59 @@ export default function NewSimpleInvoicePage() {
                       : undefined
                 }
                 error={bankConnectionsError ?? undefined}
+                value={selectedCashAccountId}
+                onChange={(event) =>
+                  setSelectedCashAccountId(event.target.value)
+                }
+                disabled={
+                  bankConnectionsLoading || bankConnections.length === 0
+                }
               >
-                <Select
-                  value={selectedCashAccountId}
-                  onChange={(event) =>
-                    setSelectedCashAccountId(event.target.value)
-                  }
-                  disabled={
-                    bankConnectionsLoading || bankConnections.length === 0
-                  }
-                >
-                  <option value="">
-                    {bankConnectionsLoading
-                      ? "Konten werden geladen"
-                      : bankConnections.length === 0
-                        ? "Keine Konten verfügbar"
-                        : "Bitte Konto wählen"}
+                <option value="">
+                  {bankConnectionsLoading
+                    ? "Konten werden geladen"
+                    : bankConnections.length === 0
+                      ? "Keine Konten verfügbar"
+                      : "Bitte Konto wählen"}
+                </option>
+                {bankConnections.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
                   </option>
-                  {bankConnections.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                ))}
+              </NativeSelect>
             ) : (
               <div className="hidden md:block" />
             )}
 
-            <FormField label="Rechnungsdatum" required>
-              <Input
-                type="date"
-                required
-                value={invoiceDate}
-                onChange={(event) => setInvoiceDate(event.target.value)}
-              />
-            </FormField>
-            <FormField label="Fälligkeitsdatum">
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(event) => setDueDate(event.target.value)}
-              />
-            </FormField>
+            <Field
+              label="Rechnungsdatum"
+              required
+              type="date"
+              value={invoiceDate}
+              onChange={(event) => setInvoiceDate(event.target.value)}
+            />
+            <Field
+              label="Fälligkeitsdatum"
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+            />
 
-            <FormField label="Lieferdatum">
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(event) => setDeliveryDate(event.target.value)}
+            <Field
+              label="Lieferdatum"
+              type="date"
+              value={deliveryDate}
+              onChange={(event) => setDeliveryDate(event.target.value)}
+            />
+            <FieldShell as="div" label="Status">
+              <Choice
+                label="Bezahlt"
+                className="h-11 items-center"
+                checked={paid}
+                onChange={(event) => setPaid(event.target.checked)}
               />
-            </FormField>
-            <FormField label="Status">
-              <label className="inline-flex h-10 items-center gap-2 text-sm text-foreground/80">
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  onChange={(event) => setPaid(event.target.checked)}
-                />
-                Bezahlt
-              </label>
-            </FormField>
+            </FieldShell>
           </div>
         </FormSection>
 

@@ -42,6 +42,10 @@ import {
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
 import type { UserRole } from "@/lib/roles";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
+import SearchField from "@/components/knglmrt/SearchField";
 
 type AdminBooking = VolkshausBooking & { accessUrl: string };
 type AssignablePerson = {
@@ -97,7 +101,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
 });
 
 const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 const getPersonName = (person: AssignablePerson) => {
   if (person.campaiName?.trim()) return person.campaiName.trim();
@@ -436,21 +440,14 @@ export default function VolkshausAdminClient() {
           ]}
         />
 
-        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <div className="relative">
-              <FontAwesomeIcon
-                icon={faMagnifyingGlass}
-                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                className={`${inputClassName} pl-9`}
-                type="search"
-                value={search}
-                placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
+            <SearchField
+              value={search}
+              placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
+              onChange={(event) => setSearch(event.target.value)}
+              onClear={() => setSearch("")}
+            />
             <div className="flex flex-wrap gap-2">
               {FILTERS.map(({ value, label, icon }) => (
                 <Button
@@ -482,7 +479,7 @@ export default function VolkshausAdminClient() {
         ) : null}
 
         <div className="grid min-h-[620px] items-start gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
-          <aside className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <aside className="knglmrt-border-section overflow-hidden bg-card">
             <div className="border-b border-border px-5 py-4">
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <FontAwesomeIcon
@@ -615,7 +612,7 @@ export default function VolkshausAdminClient() {
               copyLink={copyLink}
             />
           ) : (
-            <section className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+            <section className="knglmrt-border-section bg-card p-8 text-center text-sm text-muted-foreground">
               <FontAwesomeIcon
                 icon={faListCheck}
                 className="mx-auto mb-3 h-6 w-6 text-primary"
@@ -909,7 +906,7 @@ function BookingDetail({
 
   return (
     <main className="space-y-5">
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
+      <section className="knglmrt-border-section bg-card p-5 md:p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1010,7 +1007,7 @@ function BookingDetail({
                   {equipment.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground shadow-sm"
+                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground "
                     >
                       <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-warning-soft px-2 font-mono text-sm font-black text-warning">
                         {Number(booking.equipment[item.id] ?? 0)} ×
@@ -1065,19 +1062,16 @@ function BookingDetail({
                 </div>
               ) : null}
 
-              <label className="mt-4 block">
-                <span className="mb-1.5 block text-sm font-bold text-foreground">
-                  Interne Absprachen ergänzen
-                </span>
-                <textarea
-                  className={`${inputClassName} min-h-28 resize-y bg-card/90`}
-                  value={internalNotes}
-                  maxLength={10_000}
-                  disabled={isBusy}
-                  onChange={(event) => setInternalNotes(event.target.value)}
-                  placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
-                />
-              </label>
+              <Textarea
+                label="Interne Absprachen ergänzen"
+                className="mt-4"
+                textareaClassName="min-h-28 resize-y bg-card/90"
+                value={internalNotes}
+                maxLength={10_000}
+                disabled={isBusy}
+                onChange={(event) => setInternalNotes(event.target.value)}
+                placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
+              />
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
                   Nur im internen Bereich sichtbar.
@@ -1178,7 +1172,7 @@ function BookingDetail({
         </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-5">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-primary" />
           Zuständigkeit
@@ -1187,64 +1181,54 @@ function BookingDetail({
           Verantwortliche Person und Vertretung für diese Buchung festlegen.
         </p>
         <div className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]">
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Verantwortliche Person
-            </span>
-            <select
-              className={inputClassName}
-              value={assignedUserId}
-              disabled={isBusy}
-              onChange={(event) => {
-                const userId = event.target.value;
-                setAssignedUserId(userId);
-                if (!userId) setBackupAssignedUserId("");
-              }}
-            >
-              <option value="">Nicht zugewiesen</option>
-              {missingAssignedPersonIds.includes(assignedUserId) ? (
-                <option value={assignedUserId}>
-                  Nicht mehr verfügbares Konto
-                </option>
-              ) : null}
-              {assignablePeople.map((person) => (
-                <option
-                  key={person.id}
-                  value={person.id}
-                  disabled={person.id === backupAssignedUserId}
-                >
-                  {getPersonOptionLabel(person)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Ersatz / Vertretung
-            </span>
-            <select
-              className={inputClassName}
-              value={backupAssignedUserId}
-              disabled={isBusy || !assignedUserId}
-              onChange={(event) => setBackupAssignedUserId(event.target.value)}
-            >
-              <option value="">Kein Ersatz</option>
-              {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
-                <option value={backupAssignedUserId}>
-                  Nicht mehr verfügbares Konto
-                </option>
-              ) : null}
-              {assignablePeople.map((person) => (
-                <option
-                  key={person.id}
-                  value={person.id}
-                  disabled={person.id === assignedUserId}
-                >
-                  {getPersonOptionLabel(person)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <NativeSelect
+            label="Verantwortliche Person"
+            value={assignedUserId}
+            disabled={isBusy}
+            onChange={(event) => {
+              const userId = event.target.value;
+              setAssignedUserId(userId);
+              if (!userId) setBackupAssignedUserId("");
+            }}
+          >
+            <option value="">Nicht zugewiesen</option>
+            {missingAssignedPersonIds.includes(assignedUserId) ? (
+              <option value={assignedUserId}>
+                Nicht mehr verfügbares Konto
+              </option>
+            ) : null}
+            {assignablePeople.map((person) => (
+              <option
+                key={person.id}
+                value={person.id}
+                disabled={person.id === backupAssignedUserId}
+              >
+                {getPersonOptionLabel(person)}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            label="Ersatz / Vertretung"
+            value={backupAssignedUserId}
+            disabled={isBusy || !assignedUserId}
+            onChange={(event) => setBackupAssignedUserId(event.target.value)}
+          >
+            <option value="">Kein Ersatz</option>
+            {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
+              <option value={backupAssignedUserId}>
+                Nicht mehr verfügbares Konto
+              </option>
+            ) : null}
+            {assignablePeople.map((person) => (
+              <option
+                key={person.id}
+                value={person.id}
+                disabled={person.id === assignedUserId}
+              >
+                {getPersonOptionLabel(person)}
+              </option>
+            ))}
+          </NativeSelect>
           <Button
             kind="secondary"
             icon={faSave}
@@ -1294,7 +1278,7 @@ function BookingDetail({
         </div>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-5">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4 text-primary" />
           Preisprüfung
@@ -1333,31 +1317,21 @@ function BookingDetail({
           </div>
         </dl>
         <div className="mt-5 grid gap-3">
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Anpassung netto in Euro
-            </span>
-            <input
-              className={inputClassName}
-              type="number"
-              step="0.01"
-              value={adjustmentEuro}
-              disabled={booking.contractStatus !== "draft"}
-              onChange={(event) => setAdjustmentEuro(event.target.value)}
-            />
-          </label>
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Begründung
-            </span>
-            <input
-              className={inputClassName}
-              value={adjustmentReason}
-              disabled={booking.contractStatus !== "draft"}
-              placeholder="z. B. Kulanz oder Sondervereinbarung"
-              onChange={(event) => setAdjustmentReason(event.target.value)}
-            />
-          </label>
+          <Field
+            label="Anpassung netto in Euro"
+            type="number"
+            step="0.01"
+            value={adjustmentEuro}
+            disabled={booking.contractStatus !== "draft"}
+            onChange={(event) => setAdjustmentEuro(event.target.value)}
+          />
+          <Field
+            label="Begründung"
+            value={adjustmentReason}
+            disabled={booking.contractStatus !== "draft"}
+            placeholder="z. B. Kulanz oder Sondervereinbarung"
+            onChange={(event) => setAdjustmentReason(event.target.value)}
+          />
           <Button
             kind="secondary"
             icon={faSave}
@@ -1374,7 +1348,7 @@ function BookingDetail({
         </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-5">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon
             icon={faFileCircleCheck}
@@ -1444,7 +1418,7 @@ function WorkflowActions({
     activeAction === action ? "Wird ausgeführt …" : fallback;
 
   return (
-    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+    <section className="knglmrt-border-section bg-card p-5">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
         Nächste Schritte
