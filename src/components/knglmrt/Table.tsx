@@ -54,15 +54,43 @@ export function TBody({ children }: { children: ReactNode }) {
   );
 }
 
+/** Die Fläche einer Zeile. `rosa` markiert die eigene Zeile, nie eine fremde. */
+export type TrTone = "weiss" | "zebra" | "rosa";
+
+const TR_TONE_CLASSNAME: Record<TrTone, string> = {
+  weiss: "",
+  zebra: "bg-ui-tint-zebra",
+  rosa: "bg-primary-soft",
+};
+
 export function Tr({
   children,
   interactive = false,
+  tone = "weiss",
+  /** Stumme Zeile — storniert, vergangen, inaktiv. */
+  muted = false,
+  onClick,
 }: {
   children: ReactNode;
   interactive?: boolean;
+  tone?: TrTone;
+  muted?: boolean;
+  onClick?: () => void;
 }) {
+  // Der Zeiger nur da, wo wirklich etwas passiert: `interactive` ist die
+  // Hover-Fläche, `onClick` erst die Handlung.
   return (
-    <tr className={interactive ? "transition hover:bg-ui-tint-zebra" : undefined}>
+    <tr
+      onClick={onClick}
+      className={[
+        TR_TONE_CLASSNAME[tone],
+        muted ? "text-muted-foreground" : "",
+        interactive || onClick ? "transition hover:bg-ui-tint-zebra" : "",
+        onClick ? "cursor-pointer" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {children}
     </tr>
   );

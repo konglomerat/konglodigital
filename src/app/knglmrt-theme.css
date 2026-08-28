@@ -119,9 +119,13 @@
 
   /* Die durchgehende Kontur um Buttons, Karten, Sektionen und Felder.
      Breite und Farbe an einer Stelle. */
-  --hairline-width: 2px;
+  --hairline-width: 1px;
   --hairline-color: var(--foreground);
   --hairline: var(--hairline-width) solid var(--hairline-color);
+  /* Die Kontur um einen Formularabschnitt — braun statt schwarz, damit ein
+     Abschnitt eine Gruppe rahmt und nicht wie ein Bedienelement wirkt. */
+  --hairline-section-color: var(--knglmrt-pink-30);
+  --hairline-section: var(--hairline-width) solid var(--hairline-section-color);
   --frame-color: var(--primary-soft);
 
   --link-color: var(--primary);
@@ -144,9 +148,18 @@
   --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
     var(--font-geist-sans), system-ui, sans-serif;
   --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
+  /* Handschrift — nur für das handschriftliche Feld (Field kind="hand"). */
+  --font-hand: var(--font-knglmrt-hand), "Permanent Marker", cursive;
 
   --ui-size-body: 18px;
   --ui-line-body: 25px;
+  /* Formularfelder sitzen eine Stufe unter dem Fließtext: 16/19 statt 18/25,
+     Innenabstand ein Viertel schmaler als der Rest des Systems (12/8 → 9/6).
+     Ein Feld wird dadurch 35px hoch statt 45px. */
+  --ui-size-field: 16px;
+  --ui-line-field: 19px;
+  --ui-field-pad-x: 9px;
+  --ui-field-pad-y: 6px;
   --ui-size-label: 14px;   /* uppercase, tracked .04em — Feldbeschriftungen */
   --ui-size-caption: 18px; /* uppercase, tracked .13em — Karten- und Tile-Label */
   --ui-size-tag: 12px;     /* Statusmarke — bleibt klein, sitzt in Badges */
@@ -220,6 +233,7 @@
 
   /* Ebene 3, wo sie im Dunkeln nicht aus der Palette kommen kann. */
   --primary-hairline: var(--border);
+  --hairline-section-color: var(--knglmrt-brown-60);
   --frame-color: var(--border);
   --ui-remember: var(--muted);
   --ui-quiet-hover: var(--muted);
@@ -277,6 +291,15 @@
   font-weight: 700;
   font-size: var(--ui-size-card);
   line-height: var(--ui-line-card);
+}
+/* Feldbeschriftung: uppercase, .04em — enger getrackt als die Caption */
+.knglmrt-label {
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: var(--ui-size-label);
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 /* Karten- und Tile-Label: 10px, uppercase, .13em */
 .knglmrt-caption {
@@ -425,6 +448,7 @@
  */
 @layer components {
   .knglmrt-border   { border: var(--hairline); }
+  .knglmrt-border-section { border: var(--hairline-section); }
   .knglmrt-border-t { border-top: var(--hairline); }
   .knglmrt-border-b { border-bottom: var(--hairline); }
   .knglmrt-border-l { border-left: var(--hairline); }

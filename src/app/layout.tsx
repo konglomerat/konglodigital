@@ -7,6 +7,7 @@ import {
   Fira_Sans_Condensed,
   Fira_Sans_Extra_Condensed,
   Fira_Mono,
+  Permanent_Marker,
 } from "next/font/google";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -77,6 +78,14 @@ const knglmrtNarrow = Fira_Sans_Extra_Condensed({
   variable: "--font-knglmrt-narrow",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
+});
+
+// Die Handschrift des DS. Trägt genau eine Rolle: das handschriftliche
+// Formularfeld (Field kind="hand"), sonst nichts.
+const knglmrtHand = Permanent_Marker({
+  variable: "--font-knglmrt-hand",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 const siteTitle = "Konglomerat Digitale Werkstätten";
@@ -180,7 +189,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${knglmrtWide.variable} ${knglmrtNarrow.variable} ${storyOpenSans.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${knglmrtWide.variable} ${knglmrtNarrow.variable} ${knglmrtHand.variable} ${storyOpenSans.variable}`}
     >
       <head>
         {/* Fengardo trägt Topnav und Seitentitel — früh laden, damit der

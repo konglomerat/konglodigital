@@ -8,7 +8,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "@/components/knglmrt/Button";
-import { FormField, FormSection } from "./form";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
 
 type ReceiptUploadSectionProps = {
   files: File[];
@@ -45,7 +46,7 @@ export default function ReceiptUploadSection({
 
   return (
     <FormSection title="Beleg hochladen" icon={faFolderOpen}>
-      <FormField label="Belegdatei" required={required} hint={hint}>
+      <FieldShell as="div" label="Belegdatei" required={required} hint={hint}>
         <input
           ref={inputRef}
           type="file"
@@ -60,7 +61,7 @@ export default function ReceiptUploadSection({
             {files.map((file, index) => (
               <li
                 key={`${file.name}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+                className="flex items-center justify-between gap-2 border border-border bg-card px-3 py-2 text-foreground"
               >
                 <span className="truncate">
                   {files.length > 1 ? `${index + 1}. ` : ""}
@@ -92,11 +93,11 @@ export default function ReceiptUploadSection({
         </div>
 
         {files.length > 1 ? (
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className="mt-2 text-[13px] leading-[18px] text-muted-foreground">
             {files.length} Dateien werden zu einer PDF zusammengefügt.
           </p>
         ) : null}
-      </FormField>
+      </FieldShell>
     </FormSection>
   );
 }

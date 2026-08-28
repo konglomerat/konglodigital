@@ -21,36 +21,10 @@ type DebtorInfo = {
   } | null;
 };
 
-type Tone = "emerald" | "success";
-
-const toneClasses: Record<
-  Tone,
-  {
-    container: string;
-    secondary: string;
-    edit: string;
-    clear: string;
-  }
-> = {
-  emerald: {
-    container: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    secondary: "text-emerald-700/80",
-    edit: "text-emerald-700 hover:bg-emerald-100",
-    clear: "text-emerald-600 hover:bg-emerald-100",
-  },
-  success: {
-    container: "border-success-border bg-success-soft text-success",
-    secondary: "text-success/80",
-    edit: "text-success hover:bg-success-soft",
-    clear: "text-success hover:bg-success-soft",
-  },
-};
-
 type SelectedDebtorBadgeProps = {
   account: number;
   entityLabel?: string;
   fallbackName?: string;
-  tone?: Tone;
   onClear: () => void;
   onEdit?: () => void;
 };
@@ -59,7 +33,6 @@ export default function SelectedDebtorBadge({
   account,
   entityLabel = "Debitor",
   fallbackName,
-  tone = "emerald",
   onClear,
   onEdit,
 }: SelectedDebtorBadgeProps) {
@@ -112,7 +85,6 @@ export default function SelectedDebtorBadge({
     };
   }, [account]);
 
-  const styles = toneClasses[tone];
   const displayName = info?.name || fallbackName || "";
 
   const addressLine = info?.address
@@ -128,13 +100,11 @@ export default function SelectedDebtorBadge({
   const showSecondary = Boolean(info?.email || addressLine);
 
   return (
-    <div
-      className={`flex flex-col gap-1 rounded-lg border px-3 py-2 text-sm ${styles.container}`}
-    >
+    <div className="flex flex-col gap-1 knglmrt-border bg-success-soft px-3 py-2 text-foreground">
       <div className="flex items-center gap-2">
         <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
         <span>
-          {entityLabel} <strong>#{account}</strong>
+          {entityLabel} <strong className="knglmrt-num">#{account}</strong>
           {displayName ? ` (${displayName})` : ""} ausgewählt
         </span>
         {onEdit ? (
@@ -142,7 +112,7 @@ export default function SelectedDebtorBadge({
             kind="ghost"
             size="chip"
             icon={faPenToSquare}
-            className={`ml-auto ${styles.edit}`}
+            className="ml-auto"
             onClick={onEdit}
           >
             Bearbeiten
@@ -154,14 +124,12 @@ export default function SelectedDebtorBadge({
           iconOnly
           icon={faXmark}
           aria-label="Auswahl entfernen"
-          className={`${onEdit ? "" : "ml-auto"} ${styles.clear}`}
+          className={onEdit ? undefined : "ml-auto"}
           onClick={onClear}
         />
       </div>
       {showSecondary ? (
-        <div
-          className={`flex flex-wrap gap-x-3 gap-y-0.5 pl-6 text-xs ${styles.secondary}`}
-        >
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-6 text-[13px] leading-[18px] text-muted-foreground">
           {info?.email ? <span>{info.email}</span> : null}
           {addressLine ? <span>{addressLine}</span> : null}
         </div>

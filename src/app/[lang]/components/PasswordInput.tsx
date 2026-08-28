@@ -3,6 +3,7 @@
 import { useState, type InputHTMLAttributes } from "react";
 
 import Button from "@/components/knglmrt/Button";
+import Field from "@/components/knglmrt/Field";
 
 type PasswordInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -23,14 +24,10 @@ export default function PasswordInput({
 
   return (
     <div className="relative">
-      <input
+      <Field
         {...props}
         type={isVisible ? "text" : "password"}
-        className={
-          className
-            ? `${className} pr-16`
-            : "w-full rounded-md border border-input bg-card px-4 py-2 pr-16 text-sm text-foreground"
-        }
+        inputClassName={className ? `${className} pr-16` : "pr-16"}
       />
       <Button
         kind="ghost"

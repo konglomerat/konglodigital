@@ -138,6 +138,7 @@
   --font-narrow: var(--font-knglmrt-narrow), "Fira Sans Extra Condensed",
     var(--font-geist-sans), system-ui, sans-serif;
   --font-num: var(--font-geist-mono), "Fira Mono", ui-monospace, monospace;
+  --font-hand: var(--font-knglmrt-hand), "Permanent Marker", cursive;
 }
 
 /*
