@@ -9,7 +9,6 @@ import Badge from "@/components/knglmrt/Badge";
 import Divider from "@/components/knglmrt/Divider";
 import Face from "@/components/knglmrt/Face";
 import Hand from "@/components/knglmrt/Hand";
-import Notice from "@/components/knglmrt/Notice";
 import {
   Table,
   TBody,
@@ -21,6 +20,42 @@ import {
 import Button from "../../components/Button";
 import PageTitle from "../../components/PageTitle";
 import WerkbereichSideNav from "../WerkbereichSideNav";
+
+const OFFENE_WERKSTATT = [
+  { date: "Mi 02.09.2026", time: "18–22 Uhr" },
+  { date: "Mi 16.09.2026", time: "18–22 Uhr" },
+  { date: "Mi 30.09.2026", time: "18–22 Uhr" },
+];
+
+const SELF_SERVICE_TILES = [
+  {
+    href: "/login",
+    title: "Lagerplatz buchen",
+    description:
+      "Fach für Werkstücke für vier Wochen reservieren oder verlängern.",
+    style:
+      "bg-primary-soft shadow-[7px_7px_0_var(--primary)] hover:bg-primary focus-visible:bg-primary",
+    rotation: "-rotate-1",
+  },
+  {
+    href: "/login",
+    title: "Werkzeug ausleihen",
+    description:
+      "Handwerkzeug und Messmittel auf deinen Namen buchen und zurückgeben.",
+    style:
+      "bg-warning-soft shadow-[7px_7px_0_var(--warning)] hover:bg-[var(--knglmrt-yellow-120)] focus-visible:bg-[var(--knglmrt-yellow-120)]",
+    rotation: "rotate-1",
+  },
+  {
+    href: "/login",
+    title: "Defekt melden",
+    description:
+      "Maschine sperren, Schaden beschreiben — das Team bekommt die Meldung sofort.",
+    style:
+      "bg-success-soft shadow-[7px_7px_0_var(--success)] hover:bg-success focus-visible:bg-success",
+    rotation: "-rotate-[0.5deg]",
+  },
+];
 
 export default function HolzwerkstattPage() {
   return (
@@ -102,6 +137,33 @@ export default function HolzwerkstattPage() {
               <span className="knglmrt-num text-primary">02.08.2026</span>
               <span>Materialpreise aktualisiert, Sperrholz +8 %.</span>
             </div>
+          </div>
+        </section>
+
+        {/* ---------- Self-Service ---------- */}
+        <section className="border-t border-foreground pt-6 pb-7">
+          <div className="mb-1 flex flex-wrap items-baseline gap-3">
+            <h2>Self-Service</h2>
+            <Badge tone="wartet">nur für Mitglieder</Badge>
+          </div>
+          <p className="mb-6 max-w-[560px] text-muted-foreground">
+            Angemeldete Mitglieder erledigen das hier selbst — ohne Umweg über
+            das Team.
+          </p>
+
+          <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2">
+            {SELF_SERVICE_TILES.map((tile) => (
+              <Link
+                key={tile.title}
+                href={tile.href}
+                className={`group flex min-h-20 flex-col justify-center gap-1 border border-foreground px-5 py-4 transition-[background-color,color,rotate] duration-300 ease-out hover:rotate-0 hover:text-white focus-visible:rotate-0 focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground motion-reduce:transform-none ${tile.style} ${tile.rotation}`}
+              >
+                <span className="knglmrt-card-title">{tile.title}</span>
+                <span className="text-muted-foreground group-hover:text-white group-focus-visible:text-white">
+                  {tile.description}
+                </span>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -260,30 +322,22 @@ export default function HolzwerkstattPage() {
 
       {/* ---------- Rechte Spalte ---------- */}
       <aside className="flex flex-col gap-3.5 md:col-span-2 xl:sticky xl:top-24 xl:col-span-1">
-        <Notice tone="rosa">
-          Material bestellen, Maschinen mieten, Defekte melden und Einweisungen
-          buchen kannst du, sobald du angemeldet bist.
-        </Notice>
-
         <div className="bg-muted px-[18px] py-4">
           <div className="knglmrt-caption mb-2 text-muted-foreground">
-            Öffnungszeiten
+            Offene Werkstatt
           </div>
-          <div className="mb-2 font-bold">Jetzt geöffnet bis 22:00</div>
-          <div className="knglmrt-num flex justify-between border-t border-border py-1.5">
-            <span>Mo–Fr</span>
-            <span className="text-muted-foreground">10–22 Uhr</span>
-          </div>
-          <div className="knglmrt-num flex justify-between border-t border-border py-1.5">
-            <span>Sa</span>
-            <span className="text-muted-foreground">10–18 Uhr</span>
-          </div>
-          <div className="knglmrt-num flex justify-between border-t border-border py-1.5">
-            <span>So</span>
-            <span className="text-muted-foreground">geschlossen</span>
-          </div>
+          <div className="mb-2 font-bold">Nächste Termine</div>
+          {OFFENE_WERKSTATT.map((termin) => (
+            <div
+              key={termin.date}
+              className="knglmrt-num flex justify-between border-t border-border py-1.5"
+            >
+              <span>{termin.date}</span>
+              <span className="text-muted-foreground">{termin.time}</span>
+            </div>
+          ))}
           <div className="mt-2 text-muted-foreground">
-            Samstags nur mit Aufsicht aus dem Team.
+            Mittwochs im Zwei-Wochen-Takt
           </div>
         </div>
 

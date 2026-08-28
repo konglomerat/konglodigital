@@ -159,9 +159,9 @@ export default function VereinPage() {
       </div>
 
       {/* Fläche bis an die Fensterkanten, Inhalt zurück in den Rahmen
-          von <main> (max-w-[1240px], px-3 / md:px-7). */}
+          von <main> (max-w-[1600px], px-3 / md:px-7). */}
       <section className="knglmrt-full-bleed mb-11 bg-primary-soft py-[30px]">
-        <div className="mx-auto w-full max-w-[1240px] px-3 md:px-7">
+        <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
           <div className="grid items-start gap-[26px] sm:grid-cols-[110px_1fr]">
             <Face number={19} size={110} color="var(--primary)" />
             {/* Text links, die Logowand als zweite Spalte rechts daneben. */}
@@ -291,7 +291,7 @@ export default function VereinPage() {
       {/* Schlussbild: Terrazzo-Kachel des DS, darauf das eine weiße Panel
           mit der 3px paper-pink Keyline. */}
       <section className="knglmrt-full-bleed knglmrt-terrazzo-fein-rosa mt-11 py-10 sm:py-14">
-        <div className="mx-auto w-full max-w-[1240px] px-3 md:px-7">
+        <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
           <div className="knglmrt-panel mx-auto max-w-[720px] px-7 py-8 sm:px-10">
             <h2 className="mb-2.5">Praxis für nachhaltige Entwicklung</h2>
             <p className="mb-3 text-pretty">

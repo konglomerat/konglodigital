@@ -21,6 +21,7 @@
   --primary-foreground: #ffffff;
   --primary-soft: #faecf1;          /* paper-pink Tint-Block */
   --primary-border: #de86a5;        /* pink-60 */
+  --primary-hairline: #f4dce5;      /* pink-15 — die zarte Kachelkontur */
 
   --secondary: #f3f3f3;             /* paper-grey */
   --secondary-foreground: #000000;
@@ -197,6 +198,40 @@
 .dark .knglmrt-terrazzo-hellgelb {
   background-image: none;
   background-color: var(--card);
+}
+
+.knglmrt-terrazzo-hover {
+  position: relative;
+  isolation: isolate;
+}
+.knglmrt-terrazzo-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--terrazzo);
+  background-repeat: repeat;
+  background-size: var(--terrazzo-size, 320px 320px);
+  background-position: var(--terrazzo-pos, 0 0);
+  opacity: 0;
+  transition: opacity 320ms ease-out;
+}
+.knglmrt-terrazzo-hover:hover::before,
+.knglmrt-terrazzo-hover:focus-visible::before {
+  opacity: 1;
+}
+.dark {
+  --primary-hairline: var(--border);
+}
+
+.dark .knglmrt-terrazzo-hover::before {
+  background-image: none;
+  background-color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .knglmrt-terrazzo-hover::before {
+    transition: none;
+  }
 }
 
 .knglmrt-emphasis-shadow { box-shadow: 3px 3px 0 #000; }

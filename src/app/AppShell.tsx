@@ -57,7 +57,7 @@ export default function AppShell({
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       {mobileNavigation}
       {desktopNavigation}
-      <main className="mx-auto w-full max-w-[1240px] flex-1 px-3 py-4 md:px-7 md:py-10">
+      <main className="mx-auto w-full max-w-[1600px] flex-1 px-3 py-4 md:px-7 md:py-10">
         {children}
       </main>
       {footer}

@@ -19,11 +19,12 @@ export default function WerkbereichSideNav({
 } = {}) {
   const pathname = usePathname() ?? "/";
   const current = stripLocalePrefix(pathname).pathname.replace(/\/+$/, "");
+  const asideClassName = ["sticky top-24 hidden flex-col gap-4 md:flex", className]
+    .filter(Boolean)
+    .join(" ");
   return (
     <aside
-      className={`sticky top-24 hidden flex-col gap-4 md:flex${
-        className ? ` ${className}` : ""
-      }`}
+      className={asideClassName}
     >
       <div>
         <div className="knglmrt-caption px-3.5 pb-2 text-muted-foreground">

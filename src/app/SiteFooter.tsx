@@ -18,7 +18,7 @@ const linkClassName =
 export default function SiteFooter() {
   return (
     <footer className="mt-auto bg-[var(--knglmrt-dark-100)] text-white">
-      <div className="mx-auto flex w-full max-w-[1240px] items-stretch gap-6 px-3 py-4 md:px-7">
+      <div className="mx-auto flex w-full max-w-[1600px] items-stretch gap-6 px-3 py-4 md:px-7">
         <div className="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2">
           <LanguageSwitcher variant="footer" />
           <p className="max-w-[360px] text-[length:var(--ui-size-body)] leading-[18px] text-[var(--knglmrt-dark-30)]">

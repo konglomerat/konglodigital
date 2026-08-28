@@ -74,7 +74,7 @@ export default async function Home() {
   return (
     <div className="flex w-full flex-col gap-8 md:gap-10">
       <section className="knglmrt-terrazzo-fein-rosa relative left-1/2 -mt-4 w-[100dvw] -translate-x-1/2 border-b border-foreground py-8 md:-mt-10 md:py-11">
-        <div className="mx-auto w-full max-w-[1240px] px-3 md:px-7">
+        <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
           <div className="knglmrt-panel grid h-fit gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
             <div className="order-2 md:order-1">
               <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
