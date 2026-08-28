@@ -51,13 +51,19 @@ export default function AppShell({
     );
   }
 
+  const isHome = normalizedPathname === "/";
+
   return (
-    // Spalte mit mt-auto am Footer: kurze Seiten schieben ihn trotzdem
-    // an den unteren Rand.
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       {mobileNavigation}
       {desktopNavigation}
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-3 py-4 md:px-7 md:py-10">
+      <main
+        className={`mx-auto w-full max-w-[1600px] flex-1 px-3 md:px-7 ${
+          isHome
+            ? "flex flex-col gap-8 pt-4 md:gap-10 md:pt-10"
+            : "py-4 md:py-10"
+        }`}
+      >
         {children}
       </main>
       {footer}

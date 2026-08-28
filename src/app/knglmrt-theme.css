@@ -124,6 +124,19 @@
   a { text-underline-offset: 2px; }
 }
 
+.frontpage-hero {
+  background-size: 800px 800px;
+  background-position: calc(var(--terrazzo-mx, 0) * -36px)
+    calc(var(--terrazzo-my, 0) * -36px);
+  transition: background-position 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .frontpage-hero {
+    background-position: 0 0;
+    transition: none;
+  }
+}
+
 .knglmrt-eyebrow {
   font-family: var(--font-wide);
   font-weight: 400;
@@ -181,21 +194,79 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Terrazzo-Flächen: eine Klasse pro Muster, jeweils Bild + passende Grundfarbe.
+ * Zum Wechseln einfach die Klasse tauschen. Optional kombinierbar mit
+ * .knglmrt-terrazzo-parallax (größere Kacheln, folgt der Maus).
+ */
 .knglmrt-terrazzo-fein-rosa,
-.knglmrt-terrazzo-hellgelb {
+.knglmrt-terrazzo-grob-rosa,
+.knglmrt-terrazzo-grob-blau,
+.knglmrt-terrazzo-grob-grau,
+.knglmrt-terrazzo-grob-hellgrau,
+.knglmrt-terrazzo-hellgelb,
+.knglmrt-terrazzo-kraeftig-gelb,
+.knglmrt-terrazzo-kraeftig-blau,
+.knglmrt-terrazzo-kraeftig-pink {
   background-repeat: repeat;
   background-size: 400px 400px;
 }
+
 .knglmrt-terrazzo-fein-rosa {
+  /* fein, zartrosa – Standard-Hintergrund */
   background-image: url("/branding/backgrounds/KNGLMRT_HG_fein_01.svg");
   background-color: #f7e1e9;
 }
+.knglmrt-terrazzo-grob-rosa {
+  /* grob, zartrosa */
+  background-image: url("/branding/backgrounds/terrazzo-grob-rosa.svg");
+  background-color: #faedf2;
+}
+.knglmrt-terrazzo-grob-blau {
+  /* grob, hellblau */
+  background-image: url("/branding/backgrounds/terrazzo-grob-blau.svg");
+  background-color: #f2f7fa;
+}
+.knglmrt-terrazzo-grob-grau {
+  /* grob, warmgrau */
+  background-image: url("/branding/backgrounds/terrazzo-grob-grau.svg");
+  background-color: #f3efef;
+}
+.knglmrt-terrazzo-grob-hellgrau {
+  /* grob, kühles hellgrau */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_d.svg");
+  background-color: #ecedee;
+}
 .knglmrt-terrazzo-hellgelb {
+  /* grob, cremegelb */
   background-image: url("/branding/backgrounds/terrazzo-hellgelb.svg");
   background-color: #fffcee;
 }
+.knglmrt-terrazzo-kraeftig-gelb {
+  /* grob, kräftiges Gelb – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_03.svg");
+  background-color: #ffe88b;
+}
+.knglmrt-terrazzo-kraeftig-blau {
+  /* grob, kräftiges Blau – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_01.svg");
+  background-color: #aacadd;
+}
+.knglmrt-terrazzo-kraeftig-pink {
+  /* grob, kräftiges Pink – für Akzentflächen */
+  background-image: url("/branding/backgrounds/KNGLMRT_HG_grob_02.svg");
+  background-color: #de86a5;
+}
+/* Im Dark Mode tragen die Muster nicht – überall die neutrale Kartenfläche. */
 .dark .knglmrt-terrazzo-fein-rosa,
-.dark .knglmrt-terrazzo-hellgelb {
+.dark .knglmrt-terrazzo-grob-rosa,
+.dark .knglmrt-terrazzo-grob-blau,
+.dark .knglmrt-terrazzo-grob-grau,
+.dark .knglmrt-terrazzo-grob-hellgrau,
+.dark .knglmrt-terrazzo-hellgelb,
+.dark .knglmrt-terrazzo-kraeftig-gelb,
+.dark .knglmrt-terrazzo-kraeftig-blau,
+.dark .knglmrt-terrazzo-kraeftig-pink {
   background-image: none;
   background-color: var(--card);
 }
@@ -248,15 +319,6 @@ html {
   scrollbar-gutter: stable;
 }
 
-/* ---------------------------------------------------------------------------
-   Gezeichnete Linien (public/branding/lines/Lines_01…06.svg)
-
-   Als CSS-Maske über einer Farbfläche: die Linie nimmt die Farbe des Elements
-   an (background-color, default currentColor). Für React gibt es <Divider />.
-
-   <hr class="knglmrt-line knglmrt-line-2" />
-   <span class="knglmrt-line knglmrt-line-5 knglmrt-line-repeat"></span>
-   --------------------------------------------------------------------------- */
 .knglmrt-line {
   display: block;
   width: 100%;
