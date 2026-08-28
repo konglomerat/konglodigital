@@ -5,6 +5,7 @@ import Link from "next/link";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 import Divider from "@/components/knglmrt/Divider";
+import Badge from "@/components/knglmrt/Badge";
 import { findWerkbereich } from "@/lib/werkbereiche";
 import PageTitle from "../../components/PageTitle";
 import WerkbereichSideNav from "../WerkbereichSideNav";
@@ -46,16 +47,7 @@ const TILES = [
 export default function DreiDDruckPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)]">
-      <WerkbereichSideNav className="knglmrt-border-r">
-        <div className="px-3.5">
-          <Divider number={4} height={9} color="var(--foreground)" />
-        </div>
-        <p className="px-3.5 text-muted-foreground">
-          Jeder Werkbereich ist gleich aufgebaut — Self-Service nur mit
-          Einweisung.
-        </p>
-      </WerkbereichSideNav>
-
+      <WerkbereichSideNav/>
       <div className="flex min-w-0 flex-col">
         <PageTitle
           backLink={{
@@ -64,18 +56,24 @@ export default function DreiDDruckPage() {
             icon: faArrowLeft,
           }}
           title="3D Druck"
-          subTitle={
-            WERKBEREICH?.description ??
-            "FDM- und Resin-Drucker, Abrechnung pro Druckjob im Self-Service."
-          }
+          subTitle="FDM- und Resin-Drucker, Abrechnung pro Druckjob im Self-Service."
         />
 
-        <section className="mt-6 knglmrt-border-t pt-6">
-          <h2 className="mb-1">Drucker-Werkzeuge</h2>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <Badge tone="neutral">Halle 1 Erdgeschoss</Badge>
+          <Badge tone="wartet">Einweisung erforderlich</Badge>
+        </div>
+
+        <section className="mt-6 knglmrt-border-t pt-6 pb-7">
+          <div className="mb-1 flex flex-wrap items-baseline gap-3">
+            <h2>Self-Service</h2>
+            <Badge tone="wartet">nur für Mitglieder</Badge>
+          </div>
           <p className="mb-6 max-w-[560px] text-muted-foreground">
-            Status, Entleerung und Zugangscodes der Drucker. Angemeldet siehst du
-            hier deine eigenen Druckjobs.
+            Angemeldete Mitglieder erledigen das hier selbst — ohne Umweg über
+            das Team.
           </p>
+
 
           <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2">
             {TILES.map((tile) => (

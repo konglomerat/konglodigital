@@ -53,17 +53,7 @@ const SELF_SERVICE_TILES = [
 export default function HolzwerkstattPage() {
   return (
     <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)] xl:grid-cols-[212px_minmax(0,1fr)_300px]">
-      <WerkbereichSideNav className="knglmrt-border-r">
-        <div className="px-3.5">
-          <Divider number={4} height={9} color="var(--foreground)" />
-        </div>
-        <p className="px-3.5 text-muted-foreground">
-          Jeder Werkbereich ist gleich aufgebaut — Self-Service nur mit
-          Einweisung.
-        </p>
-      </WerkbereichSideNav>
-
-      {/* ---------- Hauptspalte ---------- */}
+      <WerkbereichSideNav/>
       <div className="flex min-w-0 flex-col">
         <PageTitle
           backLink={{
@@ -72,13 +62,12 @@ export default function HolzwerkstattPage() {
             icon: faArrowLeft,
           }}
           title="Holzwerkstatt"
-          subTitle="120 m² für Plattenaufteilung, Massivholzbearbeitung und CNC-Fräsen — der größte Werkbereich im Haus. Material bestellst du selbst, abgerechnet wird über die nächste Mitgliedsrechnung."
+          subTitle="80m² für Plattenaufteilung, Massivholzbearbeitung und Handarbeiten. Für die Nutzung der Werkstatt benötigst du nur eine kurze Einweisung, aber für manche Maschinen ist eine separate Einweisung erforderlich. Material kannst du mitbringen oder über unsere Händler bestellen."
         />
 
         <div className="mt-4 flex flex-wrap gap-1.5">
-          <Badge tone="neutral">Raum 4 · Erdgeschoss</Badge>
-          <Badge tone="gebucht">geöffnet bis 22:00</Badge>
-          <Badge tone="wartet">3 Maschinen mit Einweisung</Badge>
+          <Badge tone="neutral">Halle 1 Erdgeschoss</Badge>
+          <Badge tone="wartet">Einweisung erforderlich</Badge>
         </div>
 
         {/* ---------- Projekte & News ---------- */}
