@@ -2,14 +2,18 @@
 // Dunkle Fläche (dark-100), Radius 0, eine einzige flache Zeile:
 // Sprachumschalter, Beschreibung, rechtliche Links und die Wortmarke.
 import Image from "next/image";
+import Link from "next/link";
 import LanguageSwitcher from "./[lang]/components/LanguageSwitcher";
 
-type FooterLink = { href: string; label: string };
+// `internal` unterscheidet die eigenen Seiten von konglomerat.org: die einen
+// laufen über next/link, die anderen öffnen in einem neuen Tab.
+type FooterLink = { href: string; label: string; internal?: boolean };
 
 const legalLinks: FooterLink[] = [
   { href: "https://konglomerat.org/impressum", label: "Impressum" },
   { href: "https://konglomerat.org/datenschutz", label: "Datenschutz" },
   { href: "https://support.konglomerat.org", label: "Support" },
+  { href: "/design-system", label: "Design System", internal: true },
 ];
 
 const linkClassName =
@@ -25,17 +29,27 @@ export default function SiteFooter() {
             Werkstatt, Self-Service und Verwaltung des Konglomerat e.V.
           </p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {legalLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className={linkClassName}
-              >
-                {link.label}
-              </a>
-            ))}
+            {legalLinks.map((link) =>
+              link.internal ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={linkClassName}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={linkClassName}
+                >
+                  {link.label}
+                </a>
+              ),
+            )}
           </div>
         </div>
 

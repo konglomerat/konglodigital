@@ -24,6 +24,7 @@ import { Children, isValidElement } from "react";
 import type {
   AnchorHTMLAttributes,
   ButtonHTMLAttributes,
+  ReactElement,
   ReactNode,
 } from "react";
 import Link from "next/link";
@@ -58,7 +59,7 @@ type ButtonOwnProps = {
   /** Alias für `kind` — beide Namen laufen auf dieselbe Variante. */
   variant?: ButtonKind;
   size?: ButtonSize;
-  icon?: IconProp | null;
+  icon?: IconProp | ReactElement | null;
   iconPosition?: "left" | "right";
   iconReverse?: boolean;
   /**
@@ -160,18 +161,22 @@ export default function Button({
     (child) => isValidElement(child) && child.type === FontAwesomeIcon,
   );
   const resolvedIcon = loading ? faSpinner : (icon ?? null);
+  const iconIsElement = isValidElement(resolvedIcon);
   const resolvedPosition = iconReverse
     ? iconPosition === "left"
       ? "right"
       : "left"
     : iconPosition;
-  const iconElement =
-    resolvedIcon && (loading || !hasIconChild) ? (
-      <FontAwesomeIcon
-        icon={resolvedIcon}
-        className={`${iconPixelSize[size]}${loading ? " animate-spin" : ""}`}
-      />
-    ) : null;
+  const iconElement = !resolvedIcon ? null : iconIsElement ? (
+    <span aria-hidden="true" className="flex flex-none items-center">
+      {resolvedIcon}
+    </span>
+  ) : loading || !hasIconChild ? (
+    <FontAwesomeIcon
+      icon={resolvedIcon as IconProp}
+      className={`${iconPixelSize[size]}${loading ? " animate-spin" : ""}`}
+    />
+  ) : null;
 
   // Icon-Tasten tragen nur das Zeichen; die Beschriftung lebt im aria-label.
   const content = iconOnly ? (

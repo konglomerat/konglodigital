@@ -82,10 +82,11 @@ export default function TopNav({
                   {currentUserDisplayName ?? "Profil"}
                 </span>
               </Link>
-              <Button href={adminAreaHref} kind="secondary">
-                <span aria-hidden="true" className="flex-none">
-                  <Face number={6} size={40} />
-                </span>
+              <Button
+                href={adminAreaHref}
+                kind="secondary"
+                icon={<Face number={6} size={24} />}
+              >
                 Verwaltung
               </Button>
             </div>
