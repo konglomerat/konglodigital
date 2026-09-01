@@ -97,6 +97,9 @@ export const getResourceMediaKindFromUrl = (
 export const isImageUrl = (value?: string | null) =>
   getResourceMediaKindFromUrl(value) === "image";
 
+export const isAnimatedGifUrl = (value?: string | null) =>
+  typeof value === "string" && getExtension(value) === "gif";
+
 export const isImageMediaUrl = (value?: string | null) => {
   if (!value) {
     return false;
@@ -219,6 +222,12 @@ export const getRenderedImageUrl = (
   url: string,
   options: SupabaseRenderImageOptions = {},
 ) => {
+  // Image render endpoints commonly flatten animated GIFs to a static WebP.
+  // Keep the original asset so animation survives in project views and emails.
+  if (isAnimatedGifUrl(url)) {
+    return url;
+  }
+
   try {
     const parsed = new URL(url);
     if (
