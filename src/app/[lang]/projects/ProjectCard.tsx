@@ -29,6 +29,11 @@ export default function ProjectCard({
       <div className="relative flex flex-1 flex-col gap-1 px-1 py-3 pb-2">
         <div className="space-y-0">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {project.isPrivate ? (
+              <span className="rounded-full border border-border bg-muted/50 px-2 py-1 text-[10px] tracking-[0.14em]">
+                {copy.privateProjectLabel}
+              </span>
+            ) : null}
             {project.workshopResource?.name ? (
               <span>{project.workshopResource.name}</span>
             ) : null}

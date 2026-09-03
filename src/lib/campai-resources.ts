@@ -44,6 +44,7 @@ export type ResourcePayload = {
   ownerId?: string | null;
   authorName?: string | null;
   name: string;
+  excerpt?: string;
   description?: string;
   image?: string | null;
   images?: string[] | null;
@@ -62,6 +63,7 @@ export type ResourcePayload = {
   workshopResource?: RelatedResource | null;
   projectLinks?: ProjectLink[];
   socialMediaConsent?: boolean;
+  isPrivate?: boolean;
   mapFeatures?: ResourceMapFeature[];
 };
 
@@ -337,6 +339,9 @@ export const normalizeResource = (
   const description =
     (info.description as string | undefined) ??
     (item.description as string | undefined);
+  const excerpt =
+    (info.excerpt as string | undefined) ??
+    (item.excerpt as string | undefined);
   const image =
     extractImageUrl(info.image) ??
     extractImageUrl(info.imageUrl) ??
@@ -370,6 +375,7 @@ export const normalizeResource = (
       (item.ownerId as string | undefined) ??
       null,
     name,
+    excerpt,
     description,
     image,
     type,
@@ -388,6 +394,14 @@ export const normalizeResource = (
         : typeof item.socialMediaConsent === "boolean"
           ? item.socialMediaConsent
           : undefined,
+    isPrivate:
+      typeof info.isPrivate === "boolean"
+        ? info.isPrivate
+        : typeof item.isPrivate === "boolean"
+          ? item.isPrivate
+          : typeof item.is_private === "boolean"
+            ? item.is_private
+            : undefined,
     mapFeatures,
   } satisfies ResourcePayload;
 };

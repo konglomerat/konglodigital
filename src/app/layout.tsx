@@ -15,8 +15,6 @@ import {
   faChartPie,
   faFolderOpen,
   faLayerGroup,
-  faPrint,
-  faKey,
   faCartShopping,
   faUser,
   faLock,
@@ -133,6 +131,41 @@ function ProtectedNavItem({
   );
 }
 
+type CartNavIconProps = {
+  isAccessible: boolean;
+  tooltip: string;
+};
+
+function CartNavIcon({ isAccessible, tooltip }: CartNavIconProps) {
+  const className =
+    "inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground";
+
+  if (isAccessible) {
+    return (
+      <ActiveNavLink
+        href="/checkout"
+        className={className}
+        activeClassName="text-primary"
+        aria-label="Warenkorb"
+        title="Warenkorb"
+      >
+        <FontAwesomeIcon icon={faCartShopping} className="h-3.5 w-3.5" />
+      </ActiveNavLink>
+    );
+  }
+
+  return (
+    <span
+      className={`${className} cursor-not-allowed select-none text-muted-foreground/50 hover:bg-card hover:text-muted-foreground/50`}
+      aria-disabled="true"
+      aria-label={`Warenkorb. ${tooltip}`}
+      title={tooltip}
+    >
+      <FontAwesomeIcon icon={faCartShopping} className="h-3.5 w-3.5" />
+    </span>
+  );
+}
+
 type ComingSoonNavItemProps = {
   icon: IconProp;
   children: React.ReactNode;
@@ -218,6 +251,10 @@ export default async function RootLayout({
                   <div className="flex items-center gap-3">
                     <LanguageSwitcher />
                     <ThemeToggle />
+                    <CartNavIcon
+                      isAccessible={isAuthenticated}
+                      tooltip={membersOnlyTooltip}
+                    />
                     <AutoCloseMenuDetails
                       className="group"
                       summary={
@@ -242,33 +279,6 @@ export default async function RootLayout({
                             tooltip={membersOnlyTooltip}
                           >
                             3D-Druck
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/printers/emptying"
-                            className={navLinkClassName}
-                            icon={faPrint}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Drucker entleeren
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/printers/access-codes"
-                            className={navLinkClassName}
-                            icon={faKey}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Drucker Zugang
-                          </ProtectedNavItem>
-                          <ProtectedNavItem
-                            href="/checkout"
-                            className={navLinkClassName}
-                            icon={faCartShopping}
-                            isAccessible={isAuthenticated}
-                            tooltip={membersOnlyTooltip}
-                          >
-                            Warenkorb
                           </ProtectedNavItem>
                           <ComingSoonNavItem
                             className={navLinkClassName}
@@ -453,6 +463,10 @@ export default async function RootLayout({
                   <div className="flex items-center gap-2">
                     <LanguageSwitcher />
                     <ThemeToggle />
+                    <CartNavIcon
+                      isAccessible={isAuthenticated}
+                      tooltip={membersOnlyTooltip}
+                    />
                   </div>
                 </div>
                 <nav className="-mx-6 mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -467,33 +481,6 @@ export default async function RootLayout({
                     tooltip={membersOnlyTooltip}
                   >
                     3D-Druck
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/printers/emptying"
-                    className={navItemClassName}
-                    icon={faPrint}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Drucker entleeren
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/printers/access-codes"
-                    className={navItemClassName}
-                    icon={faKey}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Drucker Zugang
-                  </ProtectedNavItem>
-                  <ProtectedNavItem
-                    href="/checkout"
-                    className={navItemClassName}
-                    icon={faCartShopping}
-                    isAccessible={isAuthenticated}
-                    tooltip={membersOnlyTooltip}
-                  >
-                    Warenkorb
                   </ProtectedNavItem>
                   <ComingSoonNavItem
                     className={navItemClassName}

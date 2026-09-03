@@ -20,6 +20,7 @@ export type ProjectCardCopy = {
   openProjectLabel: string;
   projectLabel: string;
   projectOfTheMonthLabel: string;
+  privateProjectLabel: string;
 };
 
 export type ProjectCardProps = {
@@ -50,15 +51,16 @@ export const getProjectArticleLink = (
 ) => localizePathname(buildProjectPath(project), locale);
 
 export const getProjectPreviewText = (
-  project: Pick<ProjectRecord, "description">,
+  project: Pick<ProjectRecord, "excerpt" | "description">,
   maxLength: number,
   fallback: string,
 ) => {
-  if (!project.description) {
+  const previewText = project.excerpt?.trim() || project.description;
+  if (!previewText) {
     return fallback;
   }
 
-  return truncate(stripMarkdown(project.description), maxLength);
+  return truncate(stripMarkdown(previewText), maxLength);
 };
 
 type ProjectCardMediaProps = {

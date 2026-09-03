@@ -112,10 +112,10 @@ export default function PrinterAccessCodesClient() {
         </p>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <Link
-            href="/printers/emptying"
+            href="/printers"
             className="rounded-full border border-border bg-card px-3 py-1.5 font-semibold text-foreground/80 transition hover:bg-muted/50"
           >
-            Zurueck zu Druckerstatus
+            Zurück zum Druckerstatus
           </Link>
           {lastUpdatedAt ? (
             <span>Zuletzt aktualisiert: {formatDateTime(lastUpdatedAt)}</span>

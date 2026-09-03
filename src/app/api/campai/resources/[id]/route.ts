@@ -379,6 +379,7 @@ const readResourcePayload = async (request: NextRequest) => {
     return {
       authorName: String(formData.get("authorName") ?? ""),
       name: String(formData.get("name") ?? ""),
+      excerpt: String(formData.get("excerpt") ?? ""),
       description: String(formData.get("description") ?? ""),
       type: String(formData.get("type") ?? ""),
       priority: toPriority(formData.get("priority")),
@@ -396,6 +397,7 @@ const readResourcePayload = async (request: NextRequest) => {
       ),
       socialMediaConsent:
         String(formData.get("socialMediaConsent") ?? "0") === "1",
+      isPrivate: String(formData.get("isPrivate") ?? "0") === "1",
       imageFiles: images,
       imageUrl: undefined as string | null | undefined,
       imageUrls,
@@ -408,6 +410,7 @@ const readResourcePayload = async (request: NextRequest) => {
   const body = (await request.json()) as {
     authorName?: string | null;
     name?: string;
+    excerpt?: string;
     description?: string;
     type?: string;
     priority?: number | string;
@@ -420,6 +423,7 @@ const readResourcePayload = async (request: NextRequest) => {
     workshopResourceId?: string | null;
     projectLinks?: ProjectLink[] | unknown;
     socialMediaConsent?: boolean;
+    isPrivate?: boolean;
     imageUrl?: string | null;
     imageUrls?: string[] | null;
   };
@@ -432,6 +436,7 @@ const readResourcePayload = async (request: NextRequest) => {
   return {
     authorName: body.authorName ?? "",
     name: body.name ?? "",
+    excerpt: body.excerpt ?? "",
     description: body.description ?? "",
     type: body.type ?? "",
     priority: toPriority(String(body.priority ?? "")),
@@ -450,6 +455,7 @@ const readResourcePayload = async (request: NextRequest) => {
     workshopResourceId: body.workshopResourceId ?? "",
     projectLinks: normalizeProjectLinks(body.projectLinks),
     socialMediaConsent: body.socialMediaConsent ?? false,
+    isPrivate: body.isPrivate ?? false,
     imageFiles: [] as File[],
     imageUrl,
     imageUrls,
@@ -649,6 +655,12 @@ const getResizeOptions = (mimeType: string) => {
 
 const resizeImageBuffer = async (file: File, maxWidth: number) => {
   const buffer = Buffer.from(await file.arrayBuffer());
+  if (file.type.toLowerCase() === "image/gif") {
+    return {
+      data: buffer,
+      contentType: "image/gif",
+    };
+  }
   if (!isImageMimeType(file.type) || maxWidth <= 0) {
     return {
       data: buffer,
@@ -741,6 +753,7 @@ type ResourceRow = {
   owner_id?: string | null;
   author_name?: string | null;
   name: string;
+  excerpt: string | null;
   description: string | null;
   image: string | null;
   images?: string[] | null;
@@ -748,6 +761,7 @@ type ResourceRow = {
   media_posters?: unknown;
   project_links?: StoredProjectLink[] | null;
   social_media_consent?: boolean | null;
+  is_private?: boolean | null;
   workshop_resource_id?: string | null;
   priority?: number | null;
   gps_altitude?: number | null;
@@ -782,6 +796,7 @@ const toResourcePayload = (
   ownerId: row.owner_id ?? null,
   authorName: row.author_name ?? null,
   name: row.name,
+  excerpt: row.excerpt ?? undefined,
   description: row.description ?? undefined,
   image: row.image ?? null,
   images: row.images ?? (row.image ? [row.image] : undefined),
@@ -790,6 +805,7 @@ const toResourcePayload = (
   publishDate: row.publish_date ?? null,
   projectLinks: normalizeProjectLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
+  isPrivate: row.is_private ?? false,
   workshopResource:
     row.workshop_resource_id != null
       ? (workshopById.get(row.workshop_resource_id) ?? {
@@ -954,10 +970,18 @@ export const GET = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const resourceRow = row as ResourceRow;
+  if (
+    resourceRow.is_private &&
+    !(await userHasRole(supabase, data.user, "admin"))
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const workshopById = await getWorkshopResourcesMap(supabase, [
-    (row as ResourceRow).workshop_resource_id ?? null,
+    resourceRow.workshop_resource_id ?? null,
   ]);
-  const resource = toResourcePayload(row as ResourceRow, workshopById);
+  const resource = toResourcePayload(resourceRow, workshopById);
   resource.relatedResources =
     (await getRelatedResourcesMap(supabase, [resource.id])).get(resource.id) ??
     [];
@@ -985,7 +1009,7 @@ export const PUT = async (
     await supabase
       .from("resources")
       .select(
-        "owner_id, map_features, image, images, media_previews, media_posters, workshop_resource_id",
+        "owner_id, map_features, image, images, media_previews, media_posters, workshop_resource_id, is_private",
       )
       .eq("id", params.id)
       .maybeSingle();
@@ -1002,6 +1026,15 @@ export const PUT = async (
   }
 
   const payload = await readResourcePayload(request);
+  if (
+    (payload.isPrivate ?? false) !== (existingResource.is_private ?? false) &&
+    !(await userHasRole(supabase, data.user, "admin"))
+  ) {
+    return NextResponse.json(
+      { error: "Only admins can change project privacy." },
+      { status: 403 },
+    );
+  }
   if (!payload.name.trim() && payload.imageFiles.length === 0) {
     return NextResponse.json({ error: "Name is required." }, { status: 400 });
   }
@@ -1033,6 +1066,7 @@ export const PUT = async (
 
   let imageUrl = payload.imageUrl;
   let imageUrls = payload.imageUrls;
+  const excerpt = normalizeOptionalText(payload.excerpt);
   let description = payload.description?.trim() ?? "";
   let name = payload.name.trim();
   const authorName = normalizeOptionalText(payload.authorName);
@@ -1099,11 +1133,21 @@ export const PUT = async (
     for (const file of payload.imageFiles) {
       const safeName = sanitizeFileName(file.name || "image");
       const path = `resources/${params.id}/${crypto.randomUUID()}-${safeName}`;
-      const publicUrl = await uploadResourceMedia(
-        file,
-        path,
-        maxImageWidth,
-      );
+      let publicUrl: string;
+      try {
+        publicUrl = await uploadResourceMedia(file, path, maxImageWidth);
+      } catch (error) {
+        console.error("Unable to upload resource media:", error);
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to upload resource media.",
+          },
+          { status: 502 },
+        );
+      }
       uploadedUrls.push(publicUrl);
 
       if (isVideoMimeType(file.type)) {
@@ -1195,6 +1239,7 @@ export const PUT = async (
   const updateData: Record<string, unknown> = {
     author_name: authorName,
     name,
+    excerpt,
     description: description ? description : null,
     type: payload.type.trim(),
     priority: payload.priority,
@@ -1204,6 +1249,7 @@ export const PUT = async (
     attachable: payload.attachable,
     project_links: projectLinks.length > 0 ? projectLinks : null,
     social_media_consent: payload.socialMediaConsent ?? false,
+    is_private: payload.isPrivate ?? false,
     workshop_resource_id: workshopResourceId,
     updated_at: new Date().toISOString(),
   };

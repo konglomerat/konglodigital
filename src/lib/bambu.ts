@@ -3,7 +3,10 @@ export type PrinterStatus =
   | "printing"
   | "paused"
   | "offline"
-  | "error";
+  | "error"
+  | "unknown";
+
+export type PrinterStatusSource = "live" | "cloud" | "unavailable";
 
 export interface BambuPrinter {
   id: string;
@@ -13,6 +16,14 @@ export interface BambuPrinter {
   status: PrinterStatus;
   progress: number;
   jobName?: string;
+  statusDetail?: string;
+  rawStatus?: string;
+  remainingMinutes?: number;
+  currentLayer?: number;
+  totalLayers?: number;
+  statusSource?: PrinterStatusSource;
+  statusObservedAt?: string;
+  statusStale?: boolean;
   updatedAt: string;
 }
 

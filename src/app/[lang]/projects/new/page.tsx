@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import ProjectEditorClient from "../ProjectEditorClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { userHasRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,7 @@ export default async function NewProjectPage() {
     redirect("/login?redirectedFrom=/projects/new");
   }
 
-  return <ProjectEditorClient mode="create" />;
+  const isAdmin = await userHasRole(supabase, user, "admin");
+
+  return <ProjectEditorClient mode="create" canManagePrivacy={isAdmin} />;
 }

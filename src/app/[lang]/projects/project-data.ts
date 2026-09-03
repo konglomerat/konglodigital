@@ -34,6 +34,7 @@ type ProjectRow = {
   owner_id?: string | null;
   author_name?: string | null;
   name: string;
+  excerpt: string | null;
   description: string | null;
   image: string | null;
   images?: string[] | null;
@@ -41,6 +42,7 @@ type ProjectRow = {
   media_posters?: unknown;
   project_links?: StoredProjectLink[] | null;
   social_media_consent?: boolean | null;
+  is_private?: boolean | null;
   workshop_resource_id?: string | null;
   tags: string[] | null;
   publish_date?: string | null;
@@ -298,6 +300,7 @@ const toProjectRecord = (
     ownerId: row.owner_id ?? null,
     authorName,
     name: row.name,
+    excerpt: row.excerpt ?? undefined,
     description: row.description ?? undefined,
     image: row.image ?? null,
     images: row.images ?? (row.image ? [row.image] : undefined),
@@ -317,6 +320,7 @@ const toProjectRecord = (
         : null,
     projectLinks: normalizeProjectLinks(row.project_links ?? []),
     socialMediaConsent: row.social_media_consent ?? false,
+    isPrivate: row.is_private ?? false,
     mapFeatures,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
@@ -338,16 +342,21 @@ const resolveProjectId = async (
 
 const loadProjectsFromDb = async (limit = 60) => {
   const supabase = createSupabaseAdminClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("resources")
     .select(
-      "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
+      "id, pretty_title, owner_id, author_name, name, excerpt, description, image, images, media_previews, media_posters, project_links, social_media_consent, is_private, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
     )
     .ilike("type", "project")
+    .eq("is_private", false)
     .order("publish_date", { ascending: false, nullsFirst: false })
     .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false })
     .range(0, Math.max(limit, 1) - 1);
+
+  if (error) {
+    throw new Error(`Projekte konnten nicht geladen werden: ${error.message}`);
+  }
 
   const rows = (data ?? []) as ProjectRow[];
   const workshopById = await getWorkshopResourcesMap(
@@ -358,12 +367,43 @@ const loadProjectsFromDb = async (limit = 60) => {
   return rows.map((row) => toProjectRecord(row, [], workshopById, null));
 };
 
-const getCachedProjects = unstable_cache(loadProjectsFromDb, ["projects-list-v1"], {
-  revalidate: 60 * 60 * 24 * 7,
-  tags: [PROJECTS_CACHE_TAG],
-});
+const getCachedProjects = unstable_cache(
+  loadProjectsFromDb,
+  ["projects-list-v3-excerpt"],
+  {
+    revalidate: 60 * 60 * 24 * 7,
+    tags: [PROJECTS_CACHE_TAG],
+  },
+);
 
 export const loadProjects = async (limit = 60) => getCachedProjects(limit);
+
+export const loadPrivateProjectsForAdmin = async (limit = 60) => {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("resources")
+    .select(
+      "id, pretty_title, owner_id, author_name, name, excerpt, description, image, images, media_previews, media_posters, project_links, social_media_consent, is_private, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features",
+    )
+    .ilike("type", "project")
+    .eq("is_private", true)
+    .order("publish_date", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(0, Math.max(limit, 1) - 1);
+  if (error) {
+    throw new Error(
+      `Private Projekte konnten nicht geladen werden: ${error.message}`,
+    );
+  }
+  const rows = (data ?? []) as ProjectRow[];
+  const workshopById = await getWorkshopResourcesMap(
+    supabase,
+    rows.map((row) => row.workshop_resource_id ?? null),
+  );
+
+  return rows.map((row) => toProjectRecord(row, [], workshopById, null));
+};
 
 const loadProjectByIdentifierFromDb = async (identifier: string) => {
   const supabase = createSupabaseAdminClient();
@@ -372,14 +412,18 @@ const loadProjectByIdentifierFromDb = async (identifier: string) => {
     return null;
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("resources")
     .select(
-      "id, pretty_title, owner_id, author_name, name, description, image, images, media_previews, media_posters, project_links, social_media_consent, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features, type",
+      "id, pretty_title, owner_id, author_name, name, excerpt, description, image, images, media_previews, media_posters, project_links, social_media_consent, is_private, workshop_resource_id, tags, publish_date, created_at, updated_at, map_features, type",
     )
     .eq("id", projectId)
     .ilike("type", "project")
     .maybeSingle();
+
+  if (error) {
+    throw new Error(`Projekt konnte nicht geladen werden: ${error.message}`);
+  }
 
   if (!data) {
     return null;
@@ -402,7 +446,7 @@ const loadProjectByIdentifierFromDb = async (identifier: string) => {
 
 const getCachedProjectByIdentifier = unstable_cache(
   loadProjectByIdentifierFromDb,
-  ["projects-by-identifier-v1"],
+  ["projects-by-identifier-v3-excerpt"],
   {
     revalidate: 60 * 60 * 24 * 7,
     tags: [PROJECTS_CACHE_TAG],

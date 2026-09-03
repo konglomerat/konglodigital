@@ -14,6 +14,7 @@ import {
 import {
   NEWSLETTER_ASPECTS,
   normalizeNewsletterAspect,
+  normalizeNewsletterDesign,
   normalizeNewsletterLayout,
   renderNewsletter,
   type NewsletterAspect,
@@ -24,7 +25,15 @@ import {
 import { buildProjectPath } from "@/lib/project-path";
 import { createHtmlZip, createRapidmailDraft } from "@/lib/rapidmail";
 import {
+  MAX_NEWSLETTER_GIF_FRAMES,
+  createNewsletterGifAsset,
+  createNewsletterImageAsset,
+  normalizeGifFrameDuration,
+  type NewsletterImagePosition,
+} from "@/lib/newsletter-gif";
+import {
   getSupabaseRenderedImageUrl,
+  isAnimatedGifUrl,
   isImageUrl,
 } from "@/lib/resource-media";
 import { userCanAccessModule } from "@/lib/roles";
@@ -37,6 +46,7 @@ type ProjectRow = {
   id: string;
   pretty_title?: string | null;
   name: string;
+  excerpt?: string | null;
   description?: string | null;
   image?: string | null;
   images?: string[] | null;
@@ -48,9 +58,14 @@ type ProjectRow = {
 type RawProjectItem = {
   type: "project";
   projectId: string;
+  excerpt?: unknown;
   layout?: unknown;
   aspect?: unknown;
   imageUrl?: unknown;
+  imagePositions?: unknown;
+  imageMode?: unknown;
+  gifImageUrls?: unknown;
+  gifFrameDurationMs?: unknown;
   showLink?: unknown;
   linkText?: unknown;
 };
@@ -84,6 +99,7 @@ type NewsletterRequestBody = {
   sendAt?: unknown;
   send_at?: unknown;
   status?: unknown;
+  design?: unknown;
 };
 
 const ASPECT_DIMENSIONS: Record<
@@ -147,9 +163,14 @@ const normalizeRawItems = (body: NewsletterRequestBody) => {
       items.push({
         type: "project",
         projectId,
+        excerpt: raw.excerpt,
         layout: raw.layout,
         aspect: raw.aspect,
         imageUrl: raw.imageUrl,
+        imagePositions: raw.imagePositions,
+        imageMode: raw.imageMode,
+        gifImageUrls: raw.gifImageUrls,
+        gifFrameDurationMs: raw.gifFrameDurationMs,
         showLink: raw.showLink,
         linkText: raw.linkText,
       });
@@ -201,16 +222,78 @@ const projectImages = (row: ProjectRow) =>
     ),
   );
 
+const selectedGifImages = (row: ProjectRow, requested: unknown) => {
+  const available = projectImages(row);
+  if (!Array.isArray(requested)) return [];
+
+  return Array.from(
+    new Set(
+      requested.filter(
+        (value): value is string =>
+          typeof value === "string" && available.includes(value),
+      ),
+    ),
+  ).slice(0, MAX_NEWSLETTER_GIF_FRAMES);
+};
+
+const clampImagePosition = (value: number) =>
+  Math.min(1, Math.max(0, value));
+
+const selectedImagePositions = (
+  row: ProjectRow,
+  requested: unknown,
+): Record<string, NewsletterImagePosition> => {
+  if (!requested || typeof requested !== "object" || Array.isArray(requested)) {
+    return {};
+  }
+
+  const available = projectImages(row);
+  const rawPositions = requested as Record<string, unknown>;
+  return Object.fromEntries(
+    available.flatMap((imageUrl) => {
+      const rawPosition = rawPositions[imageUrl];
+      if (
+        !rawPosition ||
+        typeof rawPosition !== "object" ||
+        Array.isArray(rawPosition)
+      ) {
+        return [];
+      }
+
+      const { x, y } = rawPosition as Record<string, unknown>;
+      if (
+        typeof x !== "number" ||
+        !Number.isFinite(x) ||
+        typeof y !== "number" ||
+        !Number.isFinite(y)
+      ) {
+        return [];
+      }
+
+      return [
+        [
+          imageUrl,
+          { x: clampImagePosition(x), y: clampImagePosition(y) },
+        ] as const,
+      ];
+    }),
+  );
+};
+
+const resolveProjectImageSource = (row: ProjectRow, requested: unknown) => {
+  const images = projectImages(row);
+  const requestedImage = textValue(requested, 2_000);
+  return images.includes(requestedImage)
+    ? requestedImage
+    : (images[0] ?? null);
+};
+
 const resolveProjectImage = (
   row: ProjectRow,
   requested: unknown,
   aspect: NewsletterAspect,
 ) => {
-  const images = projectImages(row);
-  const requestedImage = textValue(requested, 2_000);
-  const source = images.includes(requestedImage)
-    ? requestedImage
-    : (images[0] ?? null);
+  const source = resolveProjectImageSource(row, requested);
   if (!source) return null;
 
   const ratio = ASPECT_DIMENSIONS[aspect];
@@ -344,7 +427,7 @@ export const POST = async (request: NextRequest) => {
     const { data: projectRows, error: projectError } = await adminSupabase
       .from("resources")
       .select(
-        "id, pretty_title, name, description, image, images, publish_date, updated_at, created_at, type",
+        "id, pretty_title, name, excerpt, description, image, images, publish_date, updated_at, created_at, type",
       )
       .in(
         "id",
@@ -368,7 +451,20 @@ export const POST = async (request: NextRequest) => {
         ? normalizeLocale(body.locale)
         : DEFAULT_LOCALE;
     const baseUrl = getPublicSiteUrl(request);
-    const projects: NewsletterProject[] = projectItems.map((item) => {
+    for (const item of projectItems) {
+      if (item.imageMode !== "gif") continue;
+      const row = rowById.get(item.projectId)!;
+      if (selectedGifImages(row, item.gifImageUrls).length < 2) {
+        return NextResponse.json(
+          {
+            error: `Wähle für „${row.name}“ mindestens zwei Bilder für das GIF aus.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const projects: NewsletterProject[] = await Promise.all(projectItems.map(async (item) => {
       const row = rowById.get(item.projectId)!;
       const aspect = NEWSLETTER_ASPECTS.includes(
         String(item.aspect) as NewsletterAspect,
@@ -386,20 +482,52 @@ export const POST = async (request: NextRequest) => {
         baseUrl,
       ).toString();
 
+      const gifImages = selectedGifImages(row, item.gifImageUrls);
+      const imagePositions = selectedImagePositions(row, item.imagePositions);
+      const selectedImage = resolveProjectImageSource(row, item.imageUrl);
+      const ratio = ASPECT_DIMENSIONS[aspect];
+      const imageUrl =
+        item.imageMode === "gif"
+          ? await createNewsletterGifAsset({
+              projectId: row.id,
+              imageUrls: gifImages,
+              imagePositions,
+              frameDurationMs: normalizeGifFrameDuration(
+                item.gifFrameDurationMs,
+              ),
+              ratio,
+            })
+          : selectedImage && isAnimatedGifUrl(selectedImage)
+            ? selectedImage
+            : selectedImage && ratio && imagePositions[selectedImage]
+              ? await createNewsletterImageAsset({
+                  projectId: row.id,
+                  imageUrl: selectedImage,
+                  position: imagePositions[selectedImage],
+                  ratio,
+                })
+              : resolveProjectImage(row, item.imageUrl, aspect);
+
       return {
         id: row.id,
         title: row.name,
-        description: createExcerpt(row.description),
+        description: createExcerpt(
+          (typeof item.excerpt === "string"
+            ? item.excerpt.trim().slice(0, 5_000)
+            : "") ||
+            row.excerpt?.trim() ||
+            row.description,
+        ),
         date:
           row.publish_date ?? row.updated_at ?? row.created_at ?? "",
         url: href,
-        imageUrl: resolveProjectImage(row, item.imageUrl, aspect),
+        imageUrl,
         layout: normalizeNewsletterLayout(item.layout),
         aspect,
         showLink: item.showLink !== false,
         linkText: textValue(item.linkText, 80) || "Weiterlesen",
       };
-    });
+    }));
 
     const items: NewsletterItem[] = rawItems.map((item) => {
       if (item.type === "project") {
@@ -425,6 +553,7 @@ export const POST = async (request: NextRequest) => {
       title,
       subject,
       intro,
+      design: normalizeNewsletterDesign(body.design),
       baseUrl,
       calendar: await getCalendar(
         new URL(localizePathname("/calendar", locale), baseUrl).toString(),

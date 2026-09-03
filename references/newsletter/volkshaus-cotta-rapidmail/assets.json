@@ -1,0 +1,72 @@
+{
+  "templateId": 341386,
+  "templateName": "Neues aus dem Volkshaus Cotta",
+  "sourceUrl": "https://my.rapidmail.de/mailing/template/content.html?templateId=341386",
+  "assets": [
+    {
+      "kind": "stylesheet",
+      "name": "css2",
+      "url": "https://c.emailsys1a.net/assets/fonts/standard/css2?display=swap&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Urbanist:ital,wght@0,400;0,700;1,400;1,700"
+    },
+    {
+      "kind": "image",
+      "name": "28c856674cc1e0e30d734e764d353243be0476e5.jpg",
+      "url": "https://c.emailsys1a.net/mailingassets/28c856674cc1e0e30d734e764d353243be0476e5.jpg"
+    },
+    {
+      "kind": "image",
+      "name": "341ec6a7f4808ed334256a66078b3f329722a3ba.png",
+      "url": "https://c.emailsys1a.net/mailingassets/341ec6a7f4808ed334256a66078b3f329722a3ba.png"
+    },
+    {
+      "kind": "image",
+      "name": "5992a9f7ebc10dab72185ff1e8867aa8365ebecb.jpg",
+      "url": "https://c.emailsys1a.net/mailingassets/5992a9f7ebc10dab72185ff1e8867aa8365ebecb.jpg"
+    },
+    {
+      "kind": "image",
+      "name": "9658a5bc7103f811881dccc640ffc241d420fae5.jpg",
+      "url": "https://c.emailsys1a.net/mailingassets/9658a5bc7103f811881dccc640ffc241d420fae5.jpg"
+    },
+    {
+      "kind": "image",
+      "name": "e4687c2d769bd498234ecda5f0cda0ab7b50de0b.png",
+      "url": "https://c.emailsys1a.net/mailingassets/e4687c2d769bd498234ecda5f0cda0ab7b50de0b.png"
+    },
+    {
+      "kind": "image",
+      "name": "79f40516ebcf6d464504827adee7298afb078ba2.jpg",
+      "url": "https://c.emailsys1a.net/mailingassets/79f40516ebcf6d464504827adee7298afb078ba2.jpg"
+    },
+    {
+      "kind": "image",
+      "name": "93c9569868cae4fa46b439fbf7515b88c631b7ba.jpg",
+      "url": "https://c.emailsys1a.net/mailingassets/93c9569868cae4fa46b439fbf7515b88c631b7ba.jpg"
+    },
+    {
+      "kind": "image",
+      "name": "web.png",
+      "url": "https://c.emailsys1a.net/mailingeditor/social/round/semidark/web.png"
+    },
+    {
+      "kind": "image",
+      "name": "youtube.png",
+      "url": "https://c.emailsys1a.net/mailingeditor/social/round/semidark/youtube.png"
+    },
+    {
+      "kind": "image",
+      "name": "instagram.png",
+      "url": "https://c.emailsys1a.net/mailingeditor/social/round/semidark/instagram.png"
+    },
+    {
+      "kind": "image",
+      "name": "map.png",
+      "url": "https://c.emailsys1a.net/mailingeditor/social/round/semidark/map.png"
+    },
+    {
+      "kind": "image",
+      "name": "cc6569909f74e0055e228190a0c47c7be20a85bf.png",
+      "url": "https://c.emailsys1a.net/mailingassets/cc6569909f74e0055e228190a0c47c7be20a85bf.png"
+    }
+  ]
+}

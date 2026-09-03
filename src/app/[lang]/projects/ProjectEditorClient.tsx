@@ -55,11 +55,13 @@ type ResourceOption = {
 type ProjectFormValues = {
   authorName: string;
   title: string;
+  excerpt: string;
   description: string;
   publishDate: string;
   tags: string;
   workshopResourceId: string;
   usedResourceIds: string[];
+  isPrivate: boolean;
   socialMediaConsent: boolean;
   links: Array<{ label: string; url: string }>;
 };
@@ -68,6 +70,7 @@ type ProjectEditorClientProps = {
   mode: "create" | "edit";
   initialProject?: InitialProject | null;
   canDelete?: boolean;
+  canManagePrivacy?: boolean;
 };
 
 type ExistingProjectImageItem = {
@@ -200,6 +203,7 @@ export default function ProjectEditorClient({
   mode,
   initialProject,
   canDelete = false,
+  canManagePrivacy = false,
 }: ProjectEditorClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
   const router = useRouter();
@@ -225,6 +229,7 @@ export default function ProjectEditorClient({
       defaultValues: {
         authorName: initialProject?.authorName ?? "",
         title: initialProject?.name ?? "",
+        excerpt: initialProject?.excerpt ?? "",
         description: initialProject?.description ?? "",
         publishDate: toDateInputValue(initialProject?.publishDate),
         tags: toTagString(initialProject?.tags),
@@ -233,6 +238,7 @@ export default function ProjectEditorClient({
           initialProject?.relatedResources
             ?.map((resource) => resource.id)
             .filter(Boolean) ?? [],
+        isPrivate: initialProject?.isPrivate ?? false,
         socialMediaConsent: initialProject?.socialMediaConsent ?? false,
         links:
           initialProject?.projectLinks && initialProject.projectLinks.length > 0
@@ -549,6 +555,7 @@ export default function ProjectEditorClient({
     const formData = new FormData();
     formData.append("authorName", values.authorName);
     formData.append("name", normalizedTitle);
+    formData.append("excerpt", values.excerpt);
     formData.append("description", values.description);
     formData.append("type", "project");
     formData.append(
@@ -566,6 +573,7 @@ export default function ProjectEditorClient({
     formData.append("categoryIds", "");
     formData.append("attachable", "0");
     formData.append("publishDate", values.publishDate);
+    formData.append("isPrivate", values.isPrivate ? "1" : "0");
     formData.append("workshopResourceId", values.workshopResourceId);
     formData.append("projectLinks", JSON.stringify(normalizedLinks));
     formData.append(
@@ -585,22 +593,22 @@ export default function ProjectEditorClient({
           body: formData,
         },
       );
-      const data = (await response.json()) as {
+      const data = (await response.json().catch(() => null)) as {
         error?: string;
         resource?: ResourcePayload;
         id?: string;
-      };
+      } | null;
 
       if (!response.ok) {
         throw new Error(
-          data.error ?? tx("Projekt konnte nicht gespeichert werden.", "de"),
+          data?.error ?? tx("Projekt konnte nicht gespeichert werden.", "de"),
         );
       }
 
-      const targetProject = data.resource
+      const targetProject = data?.resource
         ? data.resource
         : {
-            id: data.id ?? initialProject?.id ?? "",
+            id: data?.id ?? initialProject?.id ?? "",
             prettyTitle: initialProject?.prettyTitle ?? null,
           };
       setFormMessage(
@@ -675,6 +683,37 @@ export default function ProjectEditorClient({
                 "de",
               )}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tx("Excerpt", "de")}
+              <span className="ml-2 normal-case tracking-normal text-muted-foreground/80">
+                {tx("optional", "de")}
+              </span>
+            </label>
+            <textarea {...register("excerpt")} className="hidden" />
+            <MdxEditorInput
+              value={watch("excerpt") ?? ""}
+              onChange={(nextValue) => {
+                setValue("excerpt", nextValue, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                });
+              }}
+              ariaLabel={tx("Projekt-Excerpt", "de")}
+              placeholder={tx(
+                "Ein kurzer Text für Newsletter und Projektvorschauen.",
+                "de",
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "Unterstützt Markdown. Wenn das Feld leer bleibt, verwendet der Newsletter weiterhin die Beschreibung.",
+                "de",
+              )}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -933,6 +972,27 @@ export default function ProjectEditorClient({
               )}
             </p>
           </div>
+
+          {canManagePrivacy ? (
+            <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground/80">
+              <input
+                type="checkbox"
+                {...register("isPrivate")}
+                className="mt-1 h-4 w-4 rounded border-input"
+              />
+              <span>
+                <span className="block font-semibold text-foreground">
+                  {tx("Privates Projekt", "de")}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {tx(
+                    "Nur Admins können dieses Projekt sehen. Es erscheint nicht in der öffentlichen Projektübersicht.",
+                    "de",
+                  )}
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

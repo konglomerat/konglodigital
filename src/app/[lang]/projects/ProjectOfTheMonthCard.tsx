@@ -45,6 +45,11 @@ export default function ProjectOfTheMonthCard({
             <span className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background shadow-sm">
               {copy.projectOfTheMonthLabel}
             </span>
+            {project.isPrivate ? (
+              <span className="rounded-full border border-foreground/20 bg-card/40 px-2 py-1 text-[10px] text-foreground">
+                {copy.privateProjectLabel}
+              </span>
+            ) : null}
           </div>
           <h2 className="text-2xl text-pretty font-bold tracking-tight text-foreground md:text-3xl">
             <Link href={articleLink}>{project.name}</Link>

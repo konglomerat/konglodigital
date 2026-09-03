@@ -20,6 +20,7 @@ type NewsletterProject = {
   id: string;
   name: string;
   prettyTitle: string | null;
+  excerpt: string | null;
   description: string | null;
   images: string[];
   publishDate: string | null;
@@ -114,6 +115,7 @@ export default async function GenerateNewsletterPage() {
       id: project.id,
       name: project.name,
       prettyTitle: project.prettyTitle ?? null,
+      excerpt: project.excerpt ?? null,
       description: project.description ?? null,
       images,
       publishDate: project.publishDate ?? null,

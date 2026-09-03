@@ -1,0 +1,71 @@
+- generic [active] [ref=f2e1]:
+  - button "Chat" [ref=f2e2] [cursor=pointer]
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - link "Konglo digital" [ref=f2e7] [cursor=pointer]:
+          - /url: /
+          - text: Konglodigital
+        - generic [ref=f2e8]:
+          - generic [ref=f2e9]:
+            - button "DE" [ref=f2e10]
+            - button "EN" [ref=f2e11]
+          - button "Switch to dark mode" [ref=f2e12]:
+            - generic [ref=f2e15]: Dark mode
+          - generic "Warenkorb. Nur für angemeldete Mitglieder verfügbar" [ref=f2e16]
+      - navigation [ref=f2e19]:
+        - paragraph [ref=f2e20]: Digital Fabrication
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e21]: 3D-Druck
+        - generic "Soon" [ref=f2e28]: Laser
+        - paragraph [ref=f2e33]: Self Service
+        - generic "Soon" [ref=f2e34]: Zugangskarte
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e39]: Profil
+        - paragraph [ref=f2e46]: Verein
+        - link "Kalender" [ref=f2e47] [cursor=pointer]:
+          - /url: /calendar
+        - link "Volkshaus buchen" [ref=f2e50] [cursor=pointer]:
+          - /url: /volkshaus/buchen
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e53]: Inventar
+        - link "Projekte" [ref=f2e60] [cursor=pointer]:
+          - /url: /projects
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e63]: Produkte
+        - generic "Soon" [ref=f2e70]: Ehrenamtsbonus
+        - paragraph [ref=f2e75]: Holzwerkstatt
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e76]: Materialbestellung
+        - generic "Soon" [ref=f2e83]: Lagerplatz
+        - paragraph [ref=f2e88]: buchhaltung
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=f2e89]: Übersicht
+      - link "Anmelden" [ref=f2e96] [cursor=pointer]:
+        - /url: /login
+    - main [ref=f2e100]:
+      - main [ref=f2e102]:
+        - generic [ref=f2e104]:
+          - generic [ref=f2e105]:
+            - heading "3D-Druck" [level=1] [ref=f2e106]
+            - paragraph [ref=f2e107]: Druckerstatus, letzte Druckaufträge und Abrechnung auf einen Blick.
+          - generic [ref=f2e108]:
+            - link "Drucker entleeren" [ref=f2e109] [cursor=pointer]:
+              - /url: /printers/emptying
+            - link "Zugangscodes" [ref=f2e110] [cursor=pointer]:
+              - /url: /printers/access-codes
+        - region [ref=f2e111]:
+          - generic [ref=f2e112]:
+            - generic [ref=f2e113]:
+              - heading "Druckerstatus" [level=2] [ref=f2e114]
+              - paragraph [ref=f2e115]: Live-Status wird geladen …
+            - button "Jetzt aktualisieren" [disabled] [ref=f2e116]
+          - generic [ref=f2e117]:
+            - article [ref=f2e118]
+            - article [ref=f2e135]
+            - article [ref=f2e152]
+            - article [ref=f2e169]
+        - region "Betriebsstunden-Statistik wird geladen" [ref=f2e186]
+        - generic [ref=f2e187]:
+          - generic [ref=f2e188]:
+            - generic [ref=f2e189]:
+              - heading "Letzte Druckaufträge" [level=3] [ref=f2e190]
+              - paragraph [ref=f2e191]: Wird geladen …
+            - link "Warenkorb (0)" [ref=f2e193] [cursor=pointer]:
+              - /url: /checkout
+          - generic "Druckaufträge werden geladen" [ref=f2e194]
+  - button "Open Next.js Dev Tools" [ref=f2e203] [cursor=pointer]

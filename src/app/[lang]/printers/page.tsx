@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type PrinterStatus } from "@/lib/bambu";
 import Button from "../components/Button";
 import PageTitle from "../components/PageTitle";
@@ -14,19 +14,71 @@ import {
 } from "@/lib/cart";
 
 const statusStyles: Record<PrinterStatus, string> = {
-  idle: "bg-success-soft text-success ring-success-border",
-  printing: "bg-primary-soft text-primary ring-primary-border",
-  paused: "bg-warning-soft text-warning ring-warning-border",
-  offline: "bg-accent text-muted-foreground ring-ring",
-  error: "bg-destructive-soft text-destructive ring-destructive-border",
+  idle: "bg-success-soft text-success",
+  printing: "bg-primary-soft text-primary",
+  paused: "bg-warning-soft text-warning",
+  offline: "bg-warning-soft text-warning",
+  error: "bg-destructive-soft text-destructive",
+  unknown: "bg-warning-soft text-warning",
 };
 
 const statusLabels: Record<PrinterStatus, string> = {
-  idle: "Idle",
-  printing: "Printing",
-  paused: "Paused",
+  idle: "Bereit",
+  printing: "Druckt",
+  paused: "Pausiert",
   offline: "Offline",
-  error: "Error",
+  error: "Fehler",
+  unknown: "Unbekannt",
+};
+
+const statusDotStyles: Record<PrinterStatus, string> = {
+  idle: "bg-success",
+  printing: "bg-primary animate-pulse",
+  paused: "bg-warning",
+  offline: "bg-warning",
+  error: "bg-destructive",
+  unknown: "bg-warning",
+};
+
+type JobStatusKind = "success" | "printing" | "failed" | "unknown";
+
+const getJobStatusKind = (status: string): JobStatusKind => {
+  const normalized = status.toLowerCase();
+  if (normalized === "2" || normalized === "success") {
+    return "success";
+  }
+  if (normalized === "1" || normalized === "printing") {
+    return "printing";
+  }
+  if (
+    ["3", "4", "failed", "error", "canceled", "cancelled", "aborted"].includes(
+      normalized,
+    )
+  ) {
+    return "failed";
+  }
+  return "unknown";
+};
+
+const jobStatusLabels: Record<JobStatusKind, string> = {
+  success: "Erfolgreich",
+  printing: "Druckt",
+  failed: "Fehlgeschlagen",
+  unknown: "Unbekannt",
+};
+
+const jobStatusStyles: Record<JobStatusKind, string> = {
+  success: "bg-success-soft text-success",
+  printing: "bg-primary-soft text-primary",
+  failed: "bg-destructive-soft text-destructive",
+  unknown: "bg-accent text-muted-foreground",
+};
+
+const jobStatusDotStyles: Record<JobStatusKind, string> = {
+  success: "bg-success",
+  printing: "bg-primary animate-pulse",
+  failed: "bg-destructive",
+  unknown: "bg-muted-foreground",
 };
 
 const formatUpdated = (iso: string) =>
@@ -39,10 +91,34 @@ const formatDuration = (seconds?: number) => {
   if (!seconds || seconds <= 0) {
     return "-";
   }
+  if (seconds < 60) {
+    return "<1m";
+  }
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
+
+const formatOperatingTime = (seconds: number) => {
+  const totalMinutes = Math.max(0, Math.round(seconds / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (totalMinutes === 0) {
+    return "0 h";
+  }
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+  return `${hours.toLocaleString("de-DE")} h${
+    minutes ? ` ${minutes} min` : ""
+  }`;
+};
+
+const formatOneDecimal = (value: number) =>
+  value.toLocaleString("de-DE", {
+    minimumFractionDigits: value < 10 ? 1 : 0,
+    maximumFractionDigits: 1,
+  });
 
 const parseDateMs = (value?: string) => {
   if (!value) {
@@ -52,22 +128,15 @@ const parseDateMs = (value?: string) => {
   return Number.isNaN(time) ? undefined : time;
 };
 
-const getJobStatusLabel = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized === "2" || normalized === "success") {
-    return "Success";
-  }
-  if (normalized === "1" || normalized === "printing") {
-    return "Printing";
-  }
-  if (
-    ["3", "4", "failed", "error", "canceled", "cancelled", "aborted"].includes(
-      normalized,
-    )
-  ) {
-    return "Failed";
-  }
-  return status;
+const getJobStatusLabel = (status: string) =>
+  jobStatusLabels[getJobStatusKind(status)];
+
+const getElapsedSeconds = (startTime?: string, endTime?: string) => {
+  const startMs = parseDateMs(startTime);
+  const endMs = parseDateMs(endTime);
+  return startMs && endMs && endMs > startMs
+    ? Math.max(0, Math.round((endMs - startMs) / 1000))
+    : undefined;
 };
 
 const estimatePrintedWeight = (
@@ -81,26 +150,23 @@ const estimatePrintedWeight = (
     return undefined;
   }
 
-  const statusLabel = status ? getJobStatusLabel(status) : "";
-  const isFailed = statusLabel === "Failed";
+  const isFailed = getJobStatusKind(status ?? "") === "failed";
   if (!isFailed) {
     return weightGrams;
   }
 
-  const startMs = parseDateMs(startTime);
-  const endMs = parseDateMs(endTime);
-  const actualSeconds =
-    startMs && endMs && endMs > startMs
-      ? Math.max(0, Math.round((endMs - startMs) / 1000))
-      : undefined;
+  const actualSeconds = getElapsedSeconds(startTime, endTime);
   const expectedSeconds = durationSeconds ?? undefined;
 
   if (!actualSeconds || !expectedSeconds || expectedSeconds <= 0) {
-    return Math.max(0, Math.round(weightGrams * 0.5));
+    return undefined;
   }
 
   const ratio = Math.min(1, Math.max(0, actualSeconds / expectedSeconds));
-  return Math.max(0, Math.round(weightGrams * ratio));
+  return Math.min(
+    weightGrams,
+    Math.max(0, Math.round(weightGrams * ratio * 100) / 100),
+  );
 };
 
 const formatPriceRange = (weightGrams?: number) => {
@@ -112,6 +178,81 @@ const formatPriceRange = (weightGrams?: number) => {
   const priceHigh = (weightGrams / 100) * 5;
   return `€${priceLow.toFixed(2)}–€${priceHigh.toFixed(2)}`;
 };
+
+const getInactiveStatusMessage = (status: PrinterStatus) => {
+  switch (status) {
+    case "idle":
+      return "Bereit für den nächsten Druck.";
+    case "offline":
+      return "Der Drucker ist in der Bambu Cloud nicht erreichbar.";
+    case "unknown":
+      return "Der aktuelle Betriebszustand konnte nicht eindeutig ermittelt werden.";
+    default:
+      return undefined;
+  }
+};
+
+const getPrinterBadgeDetail = (printer: Printer) => {
+  const details: string[] = [];
+  if (printer.statusDetail) {
+    details.push(printer.statusDetail);
+  }
+  if (printer.rawStatus && ["error", "unknown"].includes(printer.status)) {
+    details.push(`Bambu-Status: ${printer.rawStatus}`);
+  }
+  if (printer.statusStale && printer.statusObservedAt) {
+    details.push(
+      `Letzte Live-Meldung: ${formatUpdated(printer.statusObservedAt)}`,
+    );
+  }
+  return details.join(" · ") || undefined;
+};
+
+const formatJobName = (jobName?: string) => {
+  if (!jobName) {
+    return undefined;
+  }
+  const fileName = jobName.split(/[\\/]/).at(-1) ?? jobName;
+  return fileName.replace(/\.(gcode|3mf)$/i, "");
+};
+
+function StatusBadge({
+  label,
+  className,
+  dotClassName,
+  detail,
+}: {
+  label: string;
+  className: string;
+  dotClassName: string;
+  detail?: string;
+}) {
+  return (
+    <span
+      className={`group relative inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${className} ${
+        detail ? "cursor-help outline-none focus-visible:shadow-md" : ""
+      }`}
+      tabIndex={detail ? 0 : undefined}
+      aria-label={detail ? `${label}. ${detail}` : label}
+    >
+      <span className={`h-2 w-2 rounded-full ${dotClassName}`} />
+      {label}
+      {detail ? (
+        <>
+          <span aria-hidden="true" className="text-[10px] opacity-70">
+            ⓘ
+          </span>
+          <span
+            role="tooltip"
+            className="pointer-events-none invisible absolute right-0 top-full z-30 mt-2 w-72 rounded-lg border border-border bg-popover px-3 py-2 text-left text-xs font-normal leading-relaxed text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100"
+          >
+            {detail}
+          </span>
+        </>
+      ) : null}
+    </span>
+  );
+}
 
 const printerImages: Array<{
   match: (name: string) => boolean;
@@ -151,6 +292,14 @@ type Printer = {
   status: PrinterStatus;
   progress: number;
   jobName?: string;
+  statusDetail?: string;
+  rawStatus?: string;
+  remainingMinutes?: number;
+  currentLayer?: number;
+  totalLayers?: number;
+  statusSource?: "live" | "cloud" | "unavailable";
+  statusObservedAt?: string;
+  statusStale?: boolean;
   updatedAt: string;
 };
 
@@ -165,6 +314,24 @@ type Job = {
   weightGrams?: number;
   mode?: string;
   imageUrl?: string;
+  errorDetail?: string;
+};
+
+type PrinterUsageStats = {
+  deviceId: string;
+  deviceName?: string;
+  seconds: number;
+  timedJobs: number;
+};
+
+type PrintUsageStats = {
+  totalSeconds: number;
+  timedJobs: number;
+  totalJobs: number;
+  reportedTotalJobs: number;
+  historyComplete: boolean;
+  oldestStartTime?: string;
+  byPrinter: PrinterUsageStats[];
 };
 
 type DescriptionEntry = {
@@ -184,7 +351,13 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
 export default function Home() {
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [printersLoading, setPrintersLoading] = useState(true);
+  const [printersRefreshing, setPrintersRefreshing] = useState(false);
+  const [lastPrinterRefreshAt, setLastPrinterRefreshAt] = useState<
+    string | null
+  >(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [usageStats, setUsageStats] = useState<PrintUsageStats | null>(null);
   const [descriptions, setDescriptions] = useState<
     Record<string, DescriptionEntry>
   >({});
@@ -204,6 +377,7 @@ export default function Home() {
   const [cartLoaded, setCartLoaded] = useState(false);
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const printerRequestRef = useRef<Promise<void> | null>(null);
 
   const loadDescriptions = async (jobIds: string[]) => {
     if (jobIds.length === 0) {
@@ -219,40 +393,73 @@ export default function Home() {
     setCurrentUserId(data.currentUserId ?? null);
   };
 
-  useEffect(() => {
-    let active = true;
+  const refreshPrinters = useCallback((initial = false) => {
+    if (printerRequestRef.current) {
+      return printerRequestRef.current;
+    }
 
-    const loadPrinters = async () => {
-      if (active) {
+    const request = (async () => {
+      if (initial) {
         setPrintersLoading(true);
+      } else {
+        setPrintersRefreshing(true);
       }
       try {
         const data = await fetchJson<{ printers: Printer[] }>(
           "/api/bambu/printers",
+          { cache: "no-store" },
         );
-        if (active) {
-          setPrinters(data.printers ?? []);
-        }
+        const nextPrinters = data.printers ?? [];
+        setPrinters(nextPrinters);
+        setLastPrinterRefreshAt(
+          nextPrinters[0]?.updatedAt ?? new Date().toISOString(),
+        );
+        setErrorMessage(null);
       } catch (error) {
-        if (active) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to fetch printers from BambuLab cloud.",
-          );
-        }
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Druckerstatus konnte nicht von Bambu Lab geladen werden.",
+        );
       } finally {
-        if (active) {
-          setPrintersLoading(false);
-        }
+        setPrintersLoading(false);
+        setPrintersRefreshing(false);
       }
-    };
+    })();
 
+    printerRequestRef.current = request;
+    void request.finally(() => {
+      if (printerRequestRef.current === request) {
+        printerRequestRef.current = null;
+      }
+    });
+    return request;
+  }, []);
+
+  useEffect(() => {
+    void refreshPrinters(true);
+    const refreshInterval = window.setInterval(() => {
+      void refreshPrinters();
+    }, 20_000);
+
+    return () => window.clearInterval(refreshInterval);
+  }, [refreshPrinters]);
+
+  useEffect(() => {
+    let active = true;
     const loadJobs = async () => {
+      if (active) {
+        setJobsLoading(true);
+      }
       try {
-        const data = await fetchJson<{ jobs: Job[] }>("/api/bambu/jobs");
+        const data = await fetchJson<{
+          jobs: Job[];
+          usageStats: PrintUsageStats;
+        }>("/api/bambu/jobs?includeUsage=1");
         if (active) {
           setJobs(data.jobs ?? []);
+          setUsageStats(data.usageStats ?? null);
+          setJobsError(null);
         }
       } catch (error) {
         if (active) {
@@ -262,11 +469,14 @@ export default function Home() {
               : "Unable to fetch print jobs from BambuLab cloud.",
           );
         }
+      } finally {
+        if (active) {
+          setJobsLoading(false);
+        }
       }
     };
 
-    loadPrinters();
-    loadJobs();
+    void loadJobs();
 
     return () => {
       active = false;
@@ -443,11 +653,48 @@ export default function Home() {
     }
   };
 
+  const cloudErrors = [errorMessage, jobsError].filter(
+    (message): message is string => Boolean(message),
+  );
+  const hasAuthenticationError = cloudErrors.some((message) =>
+    /\b401\b|unauthorized|verification email|access token|login failed/i.test(
+      message,
+    ),
+  );
+  const showJobsError =
+    Boolean(jobsError) &&
+    !hasAuthenticationError &&
+    jobsError !== errorMessage;
+  const usageByPrinter = new Map(
+    (usageStats?.byPrinter ?? []).map((entry) => [entry.deviceId, entry]),
+  );
+  const currentPrinterIds = new Set(printers.map((printer) => printer.id));
+  const rankedPrinterUsage = [
+    ...printers.map((printer) => ({
+      deviceId: printer.id,
+      name: printer.name,
+      seconds: usageByPrinter.get(printer.id)?.seconds ?? 0,
+      timedJobs: usageByPrinter.get(printer.id)?.timedJobs ?? 0,
+    })),
+    ...(usageStats?.byPrinter ?? [])
+      .filter((entry) => !currentPrinterIds.has(entry.deviceId))
+      .map((entry) => ({
+        deviceId: entry.deviceId,
+        name: entry.deviceName ?? `Drucker …${entry.deviceId.slice(-6)}`,
+        seconds: entry.seconds,
+        timedJobs: entry.timedJobs,
+      })),
+  ].sort((left, right) => right.seconds - left.seconds);
+  const topPrinterSeconds = rankedPrinterUsage[0]?.seconds ?? 0;
+  const marathonDays = (usageStats?.totalSeconds ?? 0) / (60 * 60 * 24);
+  const coffeeBreaks = Math.round((usageStats?.totalSeconds ?? 0) / (15 * 60));
+
   return (
     <div className="min-h-screen text-foreground">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <PageTitle
-          title="3D Printer Dashboard"
+          title="3D-Druck"
+          subTitle="Druckerstatus, letzte Druckaufträge und Abrechnung auf einen Blick."
           links={[
             {
               href: "/printers/emptying",
@@ -460,20 +707,73 @@ export default function Home() {
           ]}
         />
 
-        {errorMessage ? (
+        {hasAuthenticationError ? (
           <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive">
-            <p className="font-semibold">Cloud connection failed</p>
-            <p className="mt-2">{errorMessage}</p>
-            <p className="mt-2">
-              Ensure your BambuLab credentials and access token are configured
-              in .env.local.
+            <p className="font-semibold">
+              Bambu Lab-Verbindung konnte nicht erneuert werden
             </p>
+            <p className="mt-2">
+              Das hinterlegte Cloud-Token ist abgelaufen und Bambu Lab hat noch
+              keine neue Bestätigungs-E-Mail zugestellt. Sobald der Code unter
+              Zugangscodes erscheint, wird das Token beim nächsten Versuch
+              automatisch erneuert und dauerhaft gespeichert.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                kind="secondary"
+                className="w-fit border-destructive-border bg-card text-destructive hover:bg-destructive-soft"
+                onClick={() => window.location.reload()}
+              >
+                Erneut versuchen
+              </Button>
+              <Button
+                href="/printers/access-codes"
+                kind="secondary"
+                className="w-fit border-destructive-border bg-card text-destructive hover:bg-destructive-soft"
+              >
+                Zugangscodes öffnen
+              </Button>
+            </div>
+          </section>
+        ) : errorMessage ? (
+          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 text-sm text-destructive">
+            <p className="font-semibold">Cloud-Verbindung fehlgeschlagen</p>
+            <p className="mt-2">{errorMessage}</p>
           </section>
         ) : null}
 
-        <section className="grid gap-6 md:grid-cols-2">
-          {printersLoading
-            ? Array.from({ length: 2 }).map((_, index) => (
+        <section aria-labelledby="printer-status-heading" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2
+                id="printer-status-heading"
+                className="text-lg font-semibold text-foreground"
+              >
+                Druckerstatus
+              </h2>
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {printersRefreshing
+                  ? "Live-Status wird aktualisiert …"
+                  : lastPrinterRefreshAt
+                    ? `Automatisch alle 20 Sekunden · zuletzt geprüft ${formatUpdated(lastPrinterRefreshAt)}`
+                    : "Live-Status wird geladen …"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              kind="secondary"
+              onClick={() => void refreshPrinters()}
+              disabled={printersLoading || printersRefreshing}
+              className="px-3 py-2 text-xs"
+            >
+              {printersRefreshing ? "Aktualisiert …" : "Jetzt aktualisieren"}
+            </Button>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {printersLoading
+              ? Array.from({ length: 4 }).map((_, index) => (
                 <article
                   key={`printer-skeleton-${index}`}
                   className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm"
@@ -503,105 +803,345 @@ export default function Home() {
                     </div>
                   </div>
                 </article>
-              ))
-            : printers.map((printer) => (
-                <article
-                  key={printer.id}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-4">
-                      {getPrinterImage(printer.name) ? (
-                        <img
-                          src={getPrinterImage(printer.name)?.url}
-                          alt={getPrinterImage(printer.name)?.alt}
-                          className="h-16 w-16 rounded-lg border border-border object-cover"
-                        />
-                      ) : null}
-                      <div>
-                        <h2 className="text-lg font-semibold text-foreground">
-                          {printer.name}
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          {printer.model} • {printer.serial}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                        statusStyles[printer.status]
+                ))
+              : printers.map((printer) => {
+                  const hasActiveJob = ["printing", "paused", "error"].includes(
+                    printer.status,
+                  );
+                  const inactiveMessage = getInactiveStatusMessage(
+                    printer.status,
+                  );
+                  const badgeDetail = getPrinterBadgeDetail(printer);
+                  const displayJobName = formatJobName(printer.jobName);
+                  const sourceLabel = printer.statusStale
+                    ? "Live-Status verzögert"
+                    : printer.statusSource === "live"
+                      ? "Live-Status"
+                      : printer.statusSource === "cloud"
+                        ? "Cloud-Status"
+                        : "Status nicht verfügbar";
+                  const printerUsage = usageByPrinter.get(printer.id);
+
+                  return (
+                    <article
+                      key={printer.id}
+                      className={`flex flex-col gap-4 rounded-lg border bg-card p-6 shadow-sm transition-colors ${
+                        printer.status === "error"
+                          ? "border-destructive-border"
+                          : "border-border"
                       }`}
                     >
-                      {statusLabels[printer.status]}
-                    </span>
-                  </div>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex items-center gap-4">
+                          {getPrinterImage(printer.name) ? (
+                            <img
+                              src={getPrinterImage(printer.name)?.url}
+                              alt={getPrinterImage(printer.name)?.alt}
+                              className="h-24 w-24 rounded-xl border border-border object-cover sm:h-28 sm:w-28"
+                            />
+                          ) : null}
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                              {printer.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {printer.model}
+                            </p>
+                            <p className="text-xs text-muted-foreground/80">
+                              {printer.serial}
+                            </p>
+                          </div>
+                        </div>
+                        <StatusBadge
+                          label={statusLabels[printer.status]}
+                          className={statusStyles[printer.status]}
+                          dotClassName={statusDotStyles[printer.status]}
+                          detail={badgeDetail}
+                        />
+                      </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Job progress</span>
-                      <span className="font-medium text-foreground">
-                        {printer.progress}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-accent">
-                      <div
-                        className="h-full rounded-full bg-primary shadow-[0_0_10px_rgba(37,99,235,0.45)] transition-all"
-                        style={{ width: `${printer.progress}%` }}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                      <span>
-                        Current job: {printer.jobName ?? "No active job"}
-                      </span>
-                      <span>
-                        Last update: {formatUpdated(printer.updatedAt)}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                      {hasActiveJob ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm text-muted-foreground">
+                            <span>Druckfortschritt</span>
+                            <span className="font-semibold tabular-nums text-foreground">
+                              {printer.progress}%
+                            </span>
+                          </div>
+                          <div
+                            className="h-2.5 w-full overflow-hidden rounded-full bg-accent"
+                            role="progressbar"
+                            aria-label={`Druckfortschritt ${printer.name}`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={printer.progress}
+                          >
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                printer.status === "error"
+                                  ? "bg-destructive"
+                                  : printer.status === "paused"
+                                    ? "bg-warning"
+                                    : "bg-primary shadow-[0_0_10px_rgba(37,99,235,0.35)]"
+                              }`}
+                              style={{ width: `${printer.progress}%` }}
+                            />
+                          </div>
+                          <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                            <span className="sm:col-span-2">
+                              <span className="font-medium text-foreground">
+                                Aktueller Auftrag:
+                              </span>{" "}
+                              {displayJobName ?? "Nicht angegeben"}
+                            </span>
+                            {printer.remainingMinutes !== undefined ? (
+                              <span>
+                                Restzeit: ca. {printer.remainingMinutes} Min.
+                              </span>
+                            ) : null}
+                            {printer.currentLayer !== undefined &&
+                            printer.totalLayers !== undefined ? (
+                              <span>
+                                Ebene {printer.currentLayer} von{" "}
+                                {printer.totalLayers}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : inactiveMessage ? (
+                        <div className="rounded-lg bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+                          {inactiveMessage}
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-soft/70 px-4 py-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                            Betriebsstunden · Druckzeit
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {jobsLoading
+                              ? "Kilometerzähler wird abgelesen …"
+                              : jobsError
+                                ? "Zurzeit nicht verfügbar"
+                                : `${printerUsage?.timedJobs ?? 0} ${
+                                    printerUsage?.timedJobs === 1
+                                      ? "Druckmission"
+                                      : "Druckmissionen"
+                                  }`}
+                          </p>
+                        </div>
+                        <strong className="text-lg tabular-nums text-foreground">
+                          {jobsLoading
+                            ? "…"
+                            : jobsError
+                              ? "–"
+                              : formatOperatingTime(printerUsage?.seconds ?? 0)}
+                        </strong>
+                      </div>
+
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                        <span
+                          className={
+                            printer.statusStale ? "text-warning" : undefined
+                          }
+                        >
+                          {sourceLabel}
+                        </span>
+                        <span>Geprüft {formatUpdated(printer.updatedAt)}</span>
+                      </div>
+                    </article>
+                  );
+                })}
+            {!printersLoading && !errorMessage && printers.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground md:col-span-2">
+                Keine Drucker gefunden.
+              </div>
+            ) : null}
+          </div>
         </section>
+
+        {jobsLoading ? (
+          <section
+            className="h-80 animate-pulse rounded-lg border border-border bg-card shadow-sm"
+            aria-label="Betriebsstunden-Statistik wird geladen"
+          />
+        ) : usageStats ? (
+          <section
+            aria-labelledby="printer-usage-heading"
+            className="overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-primary-soft via-card to-warning-soft shadow-sm"
+          >
+            <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="flex flex-col justify-between gap-8 p-6 sm:p-8">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">
+                    Die große Düsen-Olympiade
+                  </p>
+                  <h2
+                    id="printer-usage-heading"
+                    className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl"
+                  >
+                    Gemeinsam schon {formatOperatingTime(usageStats.totalSeconds)}
+                  </h2>
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                    Würden alle Drucker nacheinander laufen, hieße es seit rund{" "}
+                    {formatOneDecimal(marathonDays)} Tagen: „Nur noch schnell
+                    diese eine Datei.“
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="rounded-lg border border-border/70 bg-card/80 p-3">
+                    <p className="text-xl font-bold tabular-nums text-foreground sm:text-2xl">
+                      {formatOneDecimal(marathonDays)}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-tight text-muted-foreground sm:text-xs">
+                      Tage nonstop
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-card/80 p-3">
+                    <p className="text-xl font-bold tabular-nums text-foreground sm:text-2xl">
+                      {coffeeBreaks.toLocaleString("de-DE")}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-tight text-muted-foreground sm:text-xs">
+                      {coffeeBreaks === 1 ? "Kaffeepause" : "Kaffeepausen"} à
+                      15 Min.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-card/80 p-3">
+                    <p className="text-xl font-bold tabular-nums text-foreground sm:text-2xl">
+                      {usageStats.timedJobs.toLocaleString("de-DE")}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-tight text-muted-foreground sm:text-xs">
+                      {usageStats.timedJobs === 1
+                        ? "Druckmission"
+                        : "Druckmissionen"}{" "}
+                      mit Stoppuhr
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/70 bg-card/65 p-6 sm:p-8 lg:border-l lg:border-t-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      Düsen-Liga
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-foreground">
+                      Wer hat die heißeste Ausdauer?
+                    </h3>
+                  </div>
+                  <span className="text-3xl" aria-hidden="true">
+                    🏁
+                  </span>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  {rankedPrinterUsage.map((entry, index) => {
+                    const share =
+                      topPrinterSeconds > 0
+                        ? Math.max(2, (entry.seconds / topPrinterSeconds) * 100)
+                        : 0;
+                    return (
+                      <div key={entry.deviceId}>
+                        <div className="flex items-end justify-between gap-3 text-sm">
+                          <div className="min-w-0">
+                            <span className="font-semibold text-foreground">
+                              {entry.name}
+                            </span>
+                            {index === 0 && entry.seconds > 0 ? (
+                              <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning">
+                                Düsen-Dauerläufer
+                              </span>
+                            ) : null}
+                            <p className="text-xs text-muted-foreground">
+                              {`${entry.timedJobs.toLocaleString("de-DE")} ${
+                                entry.timedJobs === 1 ? "Auftrag" : "Aufträge"
+                              }`}
+                            </p>
+                          </div>
+                          <strong className="shrink-0 tabular-nums text-foreground">
+                            {formatOperatingTime(entry.seconds)}
+                          </strong>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-accent">
+                          <div
+                            className="h-full rounded-full bg-primary transition-[width]"
+                            style={{ width: `${share}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <p
+              className={`border-t border-border/70 px-6 py-3 text-xs sm:px-8 ${
+                usageStats.historyComplete
+                  ? "text-muted-foreground"
+                  : "bg-warning-soft text-warning"
+              }`}
+            >
+              {usageStats.historyComplete
+                ? `Betriebsstunden sind die summierte Druckzeit aus ${usageStats.timedJobs.toLocaleString("de-DE")} ${usageStats.timedJobs === 1 ? "Auftrag" : "Aufträgen"} der Bambu-Cloud-Historie – nicht bloße Einschaltzeit.`
+                : `Mindestwerte: ${usageStats.totalJobs.toLocaleString("de-DE")} von ${usageStats.reportedTotalJobs.toLocaleString("de-DE")} Cloud-Aufträgen konnten geladen werden.`}
+            </p>
+          </section>
+        ) : null}
 
         <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-foreground">
-                Recent print jobs
+                Letzte Druckaufträge
               </h3>
               <p className="text-sm text-muted-foreground">
-                {jobs.length} jobs
+                {jobsLoading
+                  ? "Wird geladen …"
+                  : `${jobs.length} ${jobs.length === 1 ? "Auftrag" : "Aufträge"}`}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={handleToggleAll} kind="secondary">
-                {selectedJobIds.length === jobs.length
-                  ? "Clear selection"
-                  : "Select all"}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleClaimSelected}
-                kind="primary"
-                className="px-3 py-2 text-xs"
-                disabled={selectedJobIds.length === 0}
-              >
-                Claim selected
-              </Button>
-              <Button
-                type="button"
-                onClick={handleAddSelectedToCart}
-                kind="secondary"
-                className="px-3 py-2 text-xs"
-                disabled={selectedJobIds.length === 0}
-              >
-                Add selected to checkout
-              </Button>
+              {jobs.length > 0 ? (
+                <>
+                  <Button
+                    type="button"
+                    onClick={handleToggleAll}
+                    kind="secondary"
+                  >
+                    {selectedJobIds.length === jobs.length
+                      ? "Auswahl aufheben"
+                      : "Alle auswählen"}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleClaimSelected}
+                    kind="primary"
+                    className="px-3 py-2 text-xs"
+                    disabled={selectedJobIds.length === 0}
+                  >
+                    Auswahl übernehmen
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddSelectedToCart}
+                    kind="secondary"
+                    className="px-3 py-2 text-xs"
+                    disabled={selectedJobIds.length === 0}
+                  >
+                    Zum Warenkorb hinzufügen
+                  </Button>
+                </>
+              ) : null}
               <Button
                 href="/checkout"
                 kind="secondary"
                 className="px-3 py-2 text-xs"
               >
-                Checkout ({cartJobIds.length + cartProducts.length})
+                Warenkorb ({cartJobIds.length + cartProducts.length})
               </Button>
             </div>
           </div>
@@ -614,12 +1154,31 @@ export default function Home() {
             <p className="mt-2 text-sm text-muted-foreground">{cartMessage}</p>
           ) : null}
 
-          {jobsError ? (
+          {jobsLoading ? (
+            <div
+              className="mt-4 space-y-3"
+              aria-label="Druckaufträge werden geladen"
+            >
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`job-skeleton-${index}`}
+                  className="h-24 animate-pulse rounded-lg border border-border/60 bg-muted/60"
+                />
+              ))}
+            </div>
+          ) : hasAuthenticationError ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Druckaufträge werden wieder angezeigt, sobald die Bambu
+              Lab-Verbindung erneuert wurde.
+            </p>
+          ) : showJobsError ? (
             <p className="mt-4 text-sm text-destructive">{jobsError}</p>
           ) : descriptionsError ? (
             <p className="mt-4 text-sm text-destructive">{descriptionsError}</p>
           ) : jobs.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">No jobs found.</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Keine Druckaufträge gefunden.
+            </p>
           ) : (
             <div className="mt-4 space-y-3">
               {jobs.map((job) => (
@@ -636,7 +1195,23 @@ export default function Home() {
                       job.status,
                     );
                     const priceRange = formatPriceRange(estimatedWeight);
-                    const statusLabel = getJobStatusLabel(job.status);
+                    const statusKind = getJobStatusKind(job.status);
+                    const actualDuration = getElapsedSeconds(
+                      job.startTime,
+                      job.endTime,
+                    );
+                    const deviceName = printers.find(
+                      (printer) => printer.id === job.deviceId,
+                    )?.name;
+                    const failureDetail =
+                      statusKind === "failed"
+                        ? job.errorDetail ??
+                          `Bambu Lab meldet diesen Auftrag als fehlgeschlagen${
+                            job.endTime
+                              ? ` (beendet ${formatUpdated(job.endTime)})`
+                              : ""
+                          }. Ein genauerer Fehlergrund wurde nicht übermittelt.`
+                        : undefined;
                     const descriptionEntry = descriptions[job.id] ?? null;
                     const description = descriptionEntry?.description ?? "";
                     const ownerId = descriptionEntry?.ownerId ?? null;
@@ -654,7 +1229,7 @@ export default function Home() {
                       <>
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex items-stretch gap-4">
-                            <div className="w-28 shrink-0 self-start aspect-square">
+                            <div className="aspect-[4/3] w-full shrink-0 self-start sm:aspect-square sm:w-40 lg:w-48">
                               {job.imageUrl ? (
                                 <img
                                   src={job.imageUrl}
@@ -664,7 +1239,7 @@ export default function Home() {
                                 />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center rounded-lg border border-dashed border-input bg-card text-[10px] font-semibold uppercase text-muted-foreground/80">
-                                  No image
+                                  Kein Bild
                                 </div>
                               )}
                             </div>
@@ -678,19 +1253,28 @@ export default function Home() {
                                   onChange={() => handleToggleJob(job.id)}
                                   className="h-4 w-4 rounded-md border-input"
                                 />
-                                Select
+                                Auswählen
                               </label>
-                              <div>
+                              <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-sm font-semibold text-foreground">
                                   {job.title}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Status: {statusLabel}
-                                  {job.mode ? ` • ${job.mode}` : ""}
-                                </p>
+                                <StatusBadge
+                                  label={getJobStatusLabel(job.status)}
+                                  className={jobStatusStyles[statusKind]}
+                                  dotClassName={jobStatusDotStyles[statusKind]}
+                                  detail={failureDetail}
+                                />
+                                {job.mode ? (
+                                  <span className="text-xs text-muted-foreground">
+                                    {job.mode}
+                                  </span>
+                                ) : null}
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                <span>Device: {job.deviceId ?? "-"}</span>
+                                <span>
+                                  Drucker: {deviceName ?? job.deviceId ?? "-"}
+                                </span>
                                 <span>
                                   Start:{" "}
                                   {job.startTime
@@ -698,16 +1282,22 @@ export default function Home() {
                                     : "-"}
                                 </span>
                                 <span>
-                                  End:{" "}
+                                  Ende:{" "}
                                   {job.endTime
                                     ? formatUpdated(job.endTime)
                                     : "-"}
                                 </span>
                                 <span>
-                                  Weight:{" "}
-                                  {job.weightGrams
-                                    ? `${job.weightGrams}g`
+                                  {statusKind === "failed"
+                                    ? "Material (geschätzt)"
+                                    : "Material"}
+                                  :{" "}
+                                  {estimatedWeight !== undefined
+                                    ? `${estimatedWeight} g`
                                     : "-"}
+                                  {statusKind === "failed" && job.weightGrams
+                                    ? ` von ${job.weightGrams} g geplant`
+                                    : ""}
                                 </span>
                               </div>
                               <form
@@ -720,25 +1310,26 @@ export default function Home() {
                                   value={job.id}
                                 />
                                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
-                                  Description
+                                  Beschreibung
                                 </label>
                                 {ownerId ? (
                                   <p className="text-xs text-muted-foreground/80">
-                                    Owner:{" "}
+                                    Zugeordnet:{" "}
                                     {ownerId === currentUserId
-                                      ? "You"
+                                      ? "Dir"
                                       : ownerId}
                                   </p>
                                 ) : (
                                   <p className="text-xs text-success">
-                                    Unclaimed — save to claim this print.
+                                    Noch nicht zugeordnet — beim Speichern
+                                    übernimmst du den Auftrag.
                                   </p>
                                 )}
                                 <div className="flex flex-wrap items-center gap-2">
                                   <input
                                     name="description"
                                     defaultValue={description}
-                                    placeholder="Add a short description"
+                                    placeholder="Kurze Beschreibung hinzufügen"
                                     maxLength={160}
                                     className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground/80 shadow-sm"
                                     disabled={!canEdit}
@@ -749,10 +1340,10 @@ export default function Home() {
                                     disabled={!canEdit}
                                   >
                                     {savingJobId === job.id
-                                      ? "Saving..."
+                                      ? "Speichert …"
                                       : ownerId
-                                        ? "Update"
-                                        : "Claim & Save"}
+                                        ? "Speichern"
+                                        : "Übernehmen & speichern"}
                                   </Button>
                                 </div>
                                 {saveError && saveErrorJobId === job.id ? (
@@ -762,8 +1353,8 @@ export default function Home() {
                                 ) : null}
                                 {!canEdit ? (
                                   <p className="text-xs text-destructive">
-                                    You can view this description, but only the
-                                    owner can edit it.
+                                    Nur die zugeordnete Person kann diese
+                                    Beschreibung bearbeiten.
                                   </p>
                                 ) : null}
                               </form>
@@ -771,11 +1362,32 @@ export default function Home() {
                             <div className="flex flex-col items-end gap-2 self-start">
                               <div className="flex items-center gap-3">
                                 <div className="text-xs text-muted-foreground">
-                                  Duration:{" "}
-                                  {formatDuration(job.durationSeconds)}
+                                  {statusKind === "failed"
+                                    ? "Bis Abbruch"
+                                    : "Druckzeit"}
+                                  :{" "}
+                                  {formatDuration(
+                                    statusKind === "failed"
+                                      ? (actualDuration ?? job.durationSeconds)
+                                      : (job.durationSeconds ?? actualDuration),
+                                  )}
+                                  {statusKind === "failed" &&
+                                  actualDuration !== undefined &&
+                                  job.durationSeconds !== undefined
+                                    ? ` · geplant ${formatDuration(job.durationSeconds)}`
+                                    : ""}
                                 </div>
-                                <div className="rounded-full bg-foreground px-3 py-1 text-sm font-semibold text-background">
-                                  {priceRange}
+                                <div
+                                  className="rounded-full bg-foreground px-3 py-1 text-sm font-semibold text-background"
+                                  title={
+                                    statusKind === "failed"
+                                      ? "Geschätzte Materialkosten bis zum Abbruch"
+                                      : "Materialkosten"
+                                  }
+                                >
+                                  {statusKind === "failed" && priceRange !== "-"
+                                    ? `ca. ${priceRange}`
+                                    : priceRange}
                                 </div>
                               </div>
                               {isOwnedByUser ? (
@@ -795,8 +1407,8 @@ export default function Home() {
                                     }
                                   >
                                     {isInCart
-                                      ? "Remove from checkout"
-                                      : "Add to checkout"}
+                                      ? "Aus Warenkorb entfernen"
+                                      : "Zum Warenkorb"}
                                   </Button>
                                   <Button
                                     type="button"
@@ -806,8 +1418,8 @@ export default function Home() {
                                     disabled={unclaimingJobId === job.id}
                                   >
                                     {unclaimingJobId === job.id
-                                      ? "Unclaiming..."
-                                      : "Unclaim"}
+                                      ? "Wird freigegeben …"
+                                      : "Freigeben"}
                                   </Button>
                                 </div>
                               ) : null}

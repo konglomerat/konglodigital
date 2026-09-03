@@ -29,6 +29,11 @@ export default async function EditProjectPage({
     notFound();
   }
 
+  const isAdmin = await userHasRole(supabase, user, "admin");
+  if (project.isPrivate && !isAdmin) {
+    notFound();
+  }
+
   const canEdit =
     project.ownerId === user.id || hasRight(user, "resources:edit");
   if (!canEdit) {
@@ -36,9 +41,6 @@ export default async function EditProjectPage({
   }
 
   const isProjectOwner = project.ownerId === user.id;
-  const isAdmin = isProjectOwner
-    ? false
-    : await userHasRole(supabase, user, "admin");
   const canDelete = isProjectOwner || isAdmin;
 
   return (
@@ -46,6 +48,7 @@ export default async function EditProjectPage({
       mode="edit"
       initialProject={project}
       canDelete={canDelete}
+      canManagePrivacy={isAdmin}
     />
   );
 }

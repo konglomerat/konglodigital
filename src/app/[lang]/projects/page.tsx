@@ -2,10 +2,11 @@ import PageTitle from "../components/PageTitle";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { userHasRole } from "@/lib/roles";
 import ProjectCard from "./ProjectCard";
 import ProjectOfTheMonthCard from "./ProjectOfTheMonthCard";
 import ProjectUploadPromptCard from "./ProjectUploadPromptCard";
-import { loadProjects } from "./project-data";
+import { loadPrivateProjectsForAdmin, loadProjects } from "./project-data";
 
 const PROJECT_OF_THE_MONTH_TAG = "projectofthemonth";
 const PROJECT_UPLOAD_PROMPT_INSERT_AFTER = 5;
@@ -15,14 +16,23 @@ const hasProjectOfTheMonthTag = (tags?: string[] | null) =>
   false;
 
 export default async function ProjectsPage() {
-  const [{ tx, locale }, supabase, projects] = await Promise.all([
+  const [{ tx, locale }, supabase] = await Promise.all([
     getServerI18n(),
     createSupabaseServerClient({ readOnly: true }),
-    loadProjects(),
   ]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const isAdmin = user ? await userHasRole(supabase, user, "admin") : false;
+  const [publicProjects, privateProjects] = await Promise.all([
+    loadProjects(),
+    isAdmin ? loadPrivateProjectsForAdmin() : Promise.resolve([]),
+  ]);
+  const projects = [...publicProjects, ...privateProjects].sort((left, right) =>
+    (right.publishDate ?? right.updatedAt ?? right.createdAt ?? "").localeCompare(
+      left.publishDate ?? left.updatedAt ?? left.createdAt ?? "",
+    ),
+  );
   const projectOfTheMonth =
     projects.find((project) => hasProjectOfTheMonthTag(project.tags)) ?? null;
   const orderedProjects = projectOfTheMonth
@@ -36,6 +46,7 @@ export default async function ProjectsPage() {
     openProjectLabel: tx("Zum Projekt", "de"),
     projectLabel: tx("Projekt", "de"),
     projectOfTheMonthLabel: tx("Projekt des Monats", "de"),
+    privateProjectLabel: tx("Privat", "de"),
   };
   const orderedProjectEntries = orderedProjects.map((project) => ({
     project,

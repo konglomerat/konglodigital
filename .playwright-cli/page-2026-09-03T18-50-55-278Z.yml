@@ -1,0 +1,252 @@
+- generic [ref=e1]:
+  - button "Chat" [ref=e2] [cursor=pointer]
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - link "Konglo digital" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - text: Konglodigital
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - button "DE" [ref=e10]
+            - button "EN" [ref=e11]
+          - button "Switch to light mode" [active] [ref=e350]:
+            - generic [ref=e15]: Light mode
+          - generic "Warenkorb. Nur für angemeldete Mitglieder verfügbar" [ref=e16]
+      - navigation [ref=e19]:
+        - paragraph [ref=e20]: Digital Fabrication
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e21]: 3D-Druck
+        - generic "Soon" [ref=e28]: Laser
+        - paragraph [ref=e33]: Self Service
+        - generic "Soon" [ref=e34]: Zugangskarte
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e39]: Profil
+        - paragraph [ref=e46]: Verein
+        - link "Kalender" [ref=e47] [cursor=pointer]:
+          - /url: /calendar
+        - link "Volkshaus buchen" [ref=e50] [cursor=pointer]:
+          - /url: /volkshaus/buchen
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e53]: Inventar
+        - link "Projekte" [ref=e60] [cursor=pointer]:
+          - /url: /projects
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e63]: Produkte
+        - generic "Soon" [ref=e70]: Ehrenamtsbonus
+        - paragraph [ref=e75]: Holzwerkstatt
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e76]: Materialbestellung
+        - generic "Soon" [ref=e83]: Lagerplatz
+        - paragraph [ref=e88]: buchhaltung
+        - generic "Nur für angemeldete Mitglieder verfügbar" [ref=e89]: Übersicht
+      - link "Anmelden" [ref=e96] [cursor=pointer]:
+        - /url: /login
+    - main [ref=e100]:
+      - main [ref=e102]:
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - heading "3D-Druck" [level=1] [ref=e106]
+            - paragraph [ref=e107]: Druckerstatus, letzte Druckaufträge und Abrechnung auf einen Blick.
+          - generic [ref=e108]:
+            - link "Drucker entleeren" [ref=e109] [cursor=pointer]:
+              - /url: /printers/emptying
+            - link "Zugangscodes" [ref=e110] [cursor=pointer]:
+              - /url: /printers/access-codes
+        - region [ref=e111]:
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - heading "Druckerstatus" [level=2] [ref=e114]
+              - paragraph [ref=e115]: Automatisch alle 20 Sekunden · zuletzt geprüft 03.09.2026, 20:40
+            - button "Jetzt aktualisieren" [ref=e116] [cursor=pointer]
+          - generic [ref=e117]:
+            - article [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]:
+                  - img "Bambu Lab P1S Combo with AMS" [ref=e121]
+                  - generic [ref=e122]:
+                    - heading "P1S mit AMS" [level=3] [ref=e123]
+                    - paragraph [ref=e124]: P1S
+                    - paragraph [ref=e125]: 01P00TEST01
+                - generic "Druckt" [ref=e126]
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - generic [ref=e130]: Druckfortschritt
+                  - generic [ref=e131]: 67%
+                - progressbar "Druckfortschritt P1S mit AMS" [ref=e132]
+                - generic [ref=e134]:
+                  - generic [ref=e135]: "Aktueller Auftrag: Werkstatt-Maskottchen"
+                  - generic [ref=e136]: "Restzeit: ca. 42 Min."
+                  - generic [ref=e137]: Ebene 217 von 324
+              - generic [ref=e138]:
+                - generic [ref=e139]:
+                  - paragraph [ref=e140]: Betriebsstunden · Druckzeit
+                  - paragraph [ref=e141]: 162 Druckmissionen
+                - strong [ref=e142]: 559 h
+              - generic [ref=e143]:
+                - generic [ref=e144]: Live-Status
+                - generic [ref=e145]: Geprüft 03.09.2026, 20:40
+            - article [ref=e146]:
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - img "Bambu Lab P1S" [ref=e149]
+                  - generic [ref=e150]:
+                    - heading "P1S ohne AMS" [level=3] [ref=e151]
+                    - paragraph [ref=e152]: P1S
+                    - paragraph [ref=e153]: 01P00TEST02
+                - generic "Bereit" [ref=e154]
+              - generic [ref=e156]: Bereit für den nächsten Druck.
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - paragraph [ref=e159]: Betriebsstunden · Druckzeit
+                  - paragraph [ref=e160]: 139 Druckmissionen
+                - strong [ref=e161]: 433 h 45 min
+              - generic [ref=e162]:
+                - generic [ref=e163]: Live-Status
+                - generic [ref=e164]: Geprüft 03.09.2026, 20:40
+            - article [ref=e165]:
+              - generic [ref=e166]:
+                - generic [ref=e167]:
+                  - img "Bambu Lab H2D Combo with AMS" [ref=e168]
+                  - generic [ref=e169]:
+                    - heading "H2D mit AMS" [level=3] [ref=e170]
+                    - paragraph [ref=e171]: H2D
+                    - paragraph [ref=e172]: 01H00TEST03
+                - generic "Pausiert" [ref=e173]
+              - generic [ref=e175]:
+                - generic [ref=e176]:
+                  - generic [ref=e177]: Druckfortschritt
+                  - generic [ref=e178]: 38%
+                - progressbar "Druckfortschritt H2D mit AMS" [ref=e179]
+                - generic [ref=e181]:
+                  - generic [ref=e182]: "Aktueller Auftrag: Riesiger Drache"
+                  - generic [ref=e183]: "Restzeit: ca. 118 Min."
+                  - generic [ref=e184]: Ebene 123 von 560
+              - generic [ref=e185]:
+                - generic [ref=e186]:
+                  - paragraph [ref=e187]: Betriebsstunden · Druckzeit
+                  - paragraph [ref=e188]: 111 Druckmissionen
+                - strong [ref=e189]: 357 h
+              - generic [ref=e190]:
+                - generic [ref=e191]: Cloud-Status
+                - generic [ref=e192]: Geprüft 03.09.2026, 20:40
+            - article [ref=e193]:
+              - generic [ref=e194]:
+                - generic [ref=e195]:
+                  - img "Bambu Lab A1 Mini" [ref=e196]
+                  - generic [ref=e197]:
+                    - heading "A1 Mini" [level=3] [ref=e198]
+                    - paragraph [ref=e199]: A1 Mini
+                    - paragraph [ref=e200]: 01A00TEST04
+                - generic "Offline" [ref=e201]
+              - generic [ref=e203]: Der Drucker ist in der Bambu Cloud nicht erreichbar.
+              - generic [ref=e204]:
+                - generic [ref=e205]:
+                  - paragraph [ref=e206]: Betriebsstunden · Druckzeit
+                  - paragraph [ref=e207]: 74 Druckmissionen
+                - strong [ref=e208]: 205 h 30 min
+              - generic [ref=e209]:
+                - generic [ref=e210]: Status nicht verfügbar
+                - generic [ref=e211]: Geprüft 03.09.2026, 20:40
+        - region [ref=e212]:
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - paragraph [ref=e216]: Die große Düsen-Olympiade
+                - heading "Gemeinsam schon 1.555 h 15 min" [level=2] [ref=e217]
+                - paragraph [ref=e218]: "Würden alle Drucker nacheinander laufen, hieße es seit rund 64,8 Tagen: „Nur noch schnell diese eine Datei.“"
+              - generic [ref=e219]:
+                - generic [ref=e220]:
+                  - paragraph [ref=e221]: 64,8
+                  - paragraph [ref=e222]: Tage nonstop
+                - generic [ref=e223]:
+                  - paragraph [ref=e224]: "6.221"
+                  - paragraph [ref=e225]: Kaffeepausen à 15 Min.
+                - generic [ref=e226]:
+                  - paragraph [ref=e227]: "486"
+                  - paragraph [ref=e228]: Druckmissionen mit Stoppuhr
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - generic [ref=e231]:
+                  - paragraph [ref=e232]: Düsen-Liga
+                  - heading "Wer hat die heißeste Ausdauer?" [level=3] [ref=e233]
+                - generic [aria-hidden] [ref=e234]: 🏁
+              - generic [ref=e235]:
+                - generic [ref=e237]:
+                  - generic [ref=e238]:
+                    - text: P1S mit AMSDüsen-Dauerläufer
+                    - paragraph [ref=e239]: 162 Aufträge
+                  - strong [ref=e240]: 559 h
+                - generic [ref=e244]:
+                  - generic [ref=e245]:
+                    - text: P1S ohne AMS
+                    - paragraph [ref=e246]: 139 Aufträge
+                  - strong [ref=e247]: 433 h 45 min
+                - generic [ref=e251]:
+                  - generic [ref=e252]:
+                    - text: H2D mit AMS
+                    - paragraph [ref=e253]: 111 Aufträge
+                  - strong [ref=e254]: 357 h
+                - generic [ref=e258]:
+                  - generic [ref=e259]:
+                    - text: A1 Mini
+                    - paragraph [ref=e260]: 74 Aufträge
+                  - strong [ref=e261]: 205 h 30 min
+          - paragraph [ref=e264]: Betriebsstunden sind die summierte Druckzeit aus 486 Aufträgen der Bambu-Cloud-Historie – nicht bloße Einschaltzeit.
+        - generic [ref=e265]:
+          - generic [ref=e266]:
+            - generic [ref=e267]:
+              - heading "Letzte Druckaufträge" [level=3] [ref=e268]
+              - paragraph [ref=e269]: 2 Aufträge
+            - generic [ref=e270]:
+              - button "Alle auswählen" [ref=e271] [cursor=pointer]
+              - button "Auswahl übernehmen" [disabled] [ref=e272]
+              - button "Zum Warenkorb hinzufügen" [disabled] [ref=e273]
+              - link "Warenkorb (0)" [ref=e274] [cursor=pointer]:
+                - /url: /checkout
+          - generic [ref=e275]:
+            - generic [ref=e277]:
+              - generic [ref=e278]: Kein Bild
+              - generic [ref=e281]:
+                - generic [ref=e282]:
+                  - generic [ref=e283]:
+                    - checkbox "Auswählen" [ref=e284]
+                    - text: Auswählen
+                  - generic [ref=e285]:
+                    - paragraph [ref=e286]: Kabelhalter Deluxe
+                    - generic "Erfolgreich" [ref=e287]
+                  - generic [ref=e289]:
+                    - generic [ref=e290]: "Drucker: P1S mit AMS"
+                    - generic [ref=e291]: "Start: 02.09.2026, 12:00"
+                    - generic [ref=e292]: "Ende: 02.09.2026, 16:00"
+                    - generic [ref=e293]: "Material: 83 g"
+                  - generic [ref=e294]:
+                    - generic [ref=e295]: Beschreibung
+                    - paragraph [ref=e296]: Noch nicht zugeordnet — beim Speichern übernimmst du den Auftrag.
+                    - generic [ref=e297]:
+                      - textbox "Kurze Beschreibung hinzufügen" [ref=e298]
+                      - button "Übernehmen & speichern" [ref=e299] [cursor=pointer]
+                - generic [ref=e302]:
+                  - generic [ref=e303]: "Druckzeit: 4h 0m"
+                  - generic "Materialkosten" [ref=e304]: €2.49–€4.15
+            - generic [ref=e309]:
+              - generic [ref=e310]: Kein Bild
+              - generic [ref=e313]:
+                - generic [ref=e314]:
+                  - generic [ref=e315]:
+                    - checkbox "Auswählen" [ref=e316]
+                    - text: Auswählen
+                  - generic [ref=e317]:
+                    - paragraph [ref=e318]: Der unvermeidliche Benchy
+                    - generic "Erfolgreich" [ref=e319]
+                  - generic [ref=e321]:
+                    - generic [ref=e322]: "Drucker: P1S ohne AMS"
+                    - generic [ref=e323]: "Start: 01.09.2026, 12:00"
+                    - generic [ref=e324]: "Ende: 01.09.2026, 12:48"
+                    - generic [ref=e325]: "Material: 14 g"
+                  - generic [ref=e326]:
+                    - generic [ref=e327]: Beschreibung
+                    - paragraph [ref=e328]: Noch nicht zugeordnet — beim Speichern übernimmst du den Auftrag.
+                    - generic [ref=e329]:
+                      - textbox "Kurze Beschreibung hinzufügen" [ref=e330]
+                      - button "Übernehmen & speichern" [ref=e331] [cursor=pointer]
+                - generic [ref=e334]:
+                  - generic [ref=e335]: "Druckzeit: 48m"
+                  - generic "Materialkosten" [ref=e336]: €0.42–€0.70
+  - button "Open Next.js Dev Tools" [ref=e346] [cursor=pointer]
+  - alert [ref=e340]

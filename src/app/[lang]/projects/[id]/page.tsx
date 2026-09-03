@@ -34,6 +34,11 @@ const loadCachedProject = cache(async (id: string) =>
   loadProjectByIdentifier(id),
 );
 
+const canViewProject = (
+  project: Awaited<ReturnType<typeof loadProjectByIdentifier>>,
+  isAdmin: boolean,
+) => Boolean(project && (!project.isPrivate || isAdmin));
+
 const normalizeLocale = (lang?: string): Locale =>
   lang === "en" ? "en" : "de";
 
@@ -107,6 +112,19 @@ export async function generateMetadata({
     return {};
   }
 
+  if (project.isPrivate) {
+    const supabase = await createSupabaseServerClient({ readOnly: true });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const isAdmin = user
+      ? await userHasRole(supabase, user, "admin")
+      : false;
+    if (!canViewProject(project, isAdmin)) {
+      return { robots: { index: false, follow: false } };
+    }
+  }
+
   const canonicalPath = localizePathname(buildProjectPath(project), locale);
   const alternateLanguagePaths = {
     de: localizePathname(buildProjectPath(project), "de"),
@@ -151,6 +169,9 @@ export async function generateMetadata({
       description,
       images: [ogImage],
     },
+    robots: project.isPrivate
+      ? { index: false, follow: false }
+      : undefined,
   };
 }
 
@@ -203,23 +224,26 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAdmin = user
+    ? await userHasRole(supabase, user, "admin")
+    : false;
+  if (!canViewProject(project, isAdmin)) {
+    notFound();
+  }
+
   const canonicalPath = localizePathname(buildProjectPath(project), locale);
   const currentPath = localizePathname(`/projects/${id}`, locale);
   if (canonicalPath !== currentPath) {
     redirect(canonicalPath);
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const canEdit = Boolean(
     user && (project.ownerId === user.id || hasRight(user, "resources:edit")),
   );
   const isProjectOwner = Boolean(user && project.ownerId === user.id);
-  const isAdmin =
-    user && !isProjectOwner
-      ? await userHasRole(supabase, user, "admin")
-      : false;
   const canDelete = Boolean(user && (isProjectOwner || isAdmin));
   const heroMedia =
     project.images?.filter(
@@ -245,6 +269,26 @@ export default async function ProjectDetailPage({
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      {project.isPrivate ? (
+        <section
+          aria-label={tx("Privates Projekt", "de")}
+          className="mx-6 rounded-xl border-2 border-destructive/60 bg-destructive/10 px-6 py-5 text-destructive shadow-sm md:mx-8"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.22em]">
+            {tx("Nur für Admins sichtbar", "de")}
+          </p>
+          <p className="mt-2 text-2xl font-bold">
+            {tx("Dieses Projekt ist privat", "de")}
+          </p>
+          <p className="mt-2 max-w-3xl text-sm font-medium text-foreground/80">
+            {tx(
+              "Es erscheint nicht im öffentlichen Bereich und kann ausschließlich von Admins geöffnet werden.",
+              "de",
+            )}
+          </p>
+        </section>
+      ) : null}
+
       <header className="space-y-4 px-6 py-2 md:px-8">
         <PageTitle
           backLink={{
@@ -257,10 +301,12 @@ export default async function ProjectDetailPage({
           titleClassName="mt-3 max-w-4xl "
           customActions={
             <>
-              <ShareButton
-                title={project.name}
-                text={tx("Schau dir dieses Projekt an.", "de")}
-              />
+              {!project.isPrivate ? (
+                <ShareButton
+                  title={project.name}
+                  text={tx("Schau dir dieses Projekt an.", "de")}
+                />
+              ) : null}
               {canDelete ? (
                 <ProjectDeleteButton projectId={project.id} />
               ) : null}
@@ -283,6 +329,11 @@ export default async function ProjectDetailPage({
         />
 
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          {project.isPrivate ? (
+            <span className="rounded-full border border-border bg-muted/50 px-3 py-1 font-semibold uppercase tracking-[0.14em]">
+              {tx("Privat", "de")}
+            </span>
+          ) : null}
           {publishedDateLabel ? (
             <span className="rounded-full border border-border bg-muted/50 px-3 py-1">
               {publishedDateLabel}
@@ -414,6 +465,17 @@ export default async function ProjectDetailPage({
                 </p>
                 <p className="mt-1 text-muted-foreground">
                   {updatedDateLabel ?? "-"}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-foreground">
+                  {tx("Sichtbarkeit", "de")}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {project.isPrivate
+                    ? tx("Privat", "de")
+                    : tx("Öffentlich", "de")}
                 </p>
               </div>
             </div>

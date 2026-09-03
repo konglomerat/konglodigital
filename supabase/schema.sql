@@ -96,6 +96,7 @@ create table if not exists public.resources (
   author_name text,
   name text not null,
   pretty_title text,
+  excerpt text,
   description text,
   image text,
   images text[],
@@ -103,6 +104,7 @@ create table if not exists public.resources (
   media_posters jsonb,
   project_links jsonb,
   social_media_consent boolean not null default false,
+  is_private boolean not null default false,
   workshop_resource_id uuid references public.resources (id) on delete set null,
   gps_latitude double precision,
   gps_longitude double precision,
@@ -128,9 +130,11 @@ alter table public.resources add column if not exists media_previews jsonb;
 alter table public.resources add column if not exists media_posters jsonb;
 alter table public.resources add column if not exists project_links jsonb;
 alter table public.resources add column if not exists social_media_consent boolean not null default false;
+alter table public.resources add column if not exists is_private boolean not null default false;
 alter table public.resources add column if not exists workshop_resource_id uuid references public.resources (id) on delete set null;
 alter table public.resources add column if not exists author_name text;
 alter table public.resources add column if not exists publish_date date;
+alter table public.resources add column if not exists excerpt text;
 alter table public.resources add column if not exists campai_resource_id text;
 alter table public.resources add column if not exists campai_offer_id text;
 alter table public.resources add column if not exists campai_default_rate_id text;
@@ -450,6 +454,92 @@ create policy "Users can read own access"
 on public.user_access
 for select
 using (auth.uid() = user_id);
+
+create table if not exists public.newsletter_drafts (
+  id uuid primary key default gen_random_uuid(),
+  created_by uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  design text not null default 'konglomerat'
+    check (design in ('konglomerat', 'volkshaus-cotta')),
+  content jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists newsletter_drafts_created_by_updated_at_idx
+  on public.newsletter_drafts (created_by, updated_at desc);
+
+alter table public.newsletter_drafts enable row level security;
+
+drop policy if exists "Admins can read own newsletter drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Admins can insert own newsletter drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Admins can update own newsletter drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Admins can delete own newsletter drafts"
+  on public.newsletter_drafts;
+
+create policy "Admins can read own newsletter drafts"
+on public.newsletter_drafts
+for select
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and 'admin' = any(user_access.roles)
+  )
+);
+
+create policy "Admins can insert own newsletter drafts"
+on public.newsletter_drafts
+for insert
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and 'admin' = any(user_access.roles)
+  )
+);
+
+create policy "Admins can update own newsletter drafts"
+on public.newsletter_drafts
+for update
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and 'admin' = any(user_access.roles)
+  )
+)
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and 'admin' = any(user_access.roles)
+  )
+);
+
+create policy "Admins can delete own newsletter drafts"
+on public.newsletter_drafts
+for delete
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.user_access
+    where user_access.user_id = auth.uid()
+      and 'admin' = any(user_access.roles)
+  )
+);
 
 drop policy if exists "Admins can read VHC bookings" on public.volkshaus_booking_requests;
 drop policy if exists "Admins can update VHC bookings" on public.volkshaus_booking_requests;
@@ -1006,7 +1096,21 @@ drop policy if exists "Owners can delete resources" on public.resources;
 create policy "Authenticated users can read resources"
 on public.resources
 for select
-using (auth.role() = 'authenticated');
+using (
+  auth.role() = 'authenticated'
+  and (
+    not coalesce(is_private, false)
+    or exists (
+      select 1
+      from public.user_access access
+      where access.user_id = auth.uid()
+        and (
+          access.role = 'admin'
+          or 'admin' = any(coalesce(access.roles, '{}'::text[]))
+        )
+    )
+  )
+);
 
 create policy "Owners can insert resources"
 on public.resources
@@ -1061,7 +1165,43 @@ drop policy if exists "Authorized users can delete resource pretty titles" on pu
 create policy "Authenticated users can read resource links"
 on public.resource_links
 for select
-using (auth.role() = 'authenticated');
+using (
+  auth.role() = 'authenticated'
+  and exists (
+    select 1
+    from public.resources r
+    where r.id = resource_a
+      and (
+        not coalesce(r.is_private, false)
+        or exists (
+          select 1
+          from public.user_access access
+          where access.user_id = auth.uid()
+            and (
+              access.role = 'admin'
+              or 'admin' = any(coalesce(access.roles, '{}'::text[]))
+            )
+        )
+      )
+  )
+  and exists (
+    select 1
+    from public.resources r
+    where r.id = resource_b
+      and (
+        not coalesce(r.is_private, false)
+        or exists (
+          select 1
+          from public.user_access access
+          where access.user_id = auth.uid()
+            and (
+              access.role = 'admin'
+              or 'admin' = any(coalesce(access.roles, '{}'::text[]))
+            )
+        )
+      )
+  )
+);
 
 create policy "Authorized users can insert resource links"
 on public.resource_links
@@ -1092,7 +1232,26 @@ using (
 create policy "Authenticated users can read resource pretty titles"
 on public.resource_pretty_titles
 for select
-using (auth.role() = 'authenticated');
+using (
+  auth.role() = 'authenticated'
+  and exists (
+    select 1
+    from public.resources r
+    where r.id = resource_id
+      and (
+        not coalesce(r.is_private, false)
+        or exists (
+          select 1
+          from public.user_access access
+          where access.user_id = auth.uid()
+            and (
+              access.role = 'admin'
+              or 'admin' = any(coalesce(access.roles, '{}'::text[]))
+            )
+        )
+      )
+  )
+);
 
 create policy "Authorized users can insert resource pretty titles"
 on public.resource_pretty_titles
