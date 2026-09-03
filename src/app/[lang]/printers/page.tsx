@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type PrinterStatus } from "@/lib/bambu";
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../components/PageTitle";
 import {
   getCartJobs,
@@ -12,6 +12,8 @@ import {
   setCartProducts,
   type CartProduct,
 } from "@/lib/cart";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
 
 const statusStyles: Record<PrinterStatus, string> = {
   idle: "bg-success-soft text-success",
@@ -690,8 +692,8 @@ export default function Home() {
   const coffeeBreaks = Math.round((usageStats?.totalSeconds ?? 0) / (15 * 60));
 
   return (
-    <div className="min-h-screen text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <div>
+      <div className="flex flex-col gap-8">
         <PageTitle
           title="3D-Druck"
           subTitle="Druckerstatus, letzte Druckaufträge und Abrechnung auf einen Blick."
@@ -776,7 +778,7 @@ export default function Home() {
               ? Array.from({ length: 4 }).map((_, index) => (
                 <article
                   key={`printer-skeleton-${index}`}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm"
+                  className="knglmrt-border-section flex flex-col gap-4 bg-card p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
@@ -825,7 +827,7 @@ export default function Home() {
                   return (
                     <article
                       key={printer.id}
-                      className={`flex flex-col gap-4 rounded-lg border bg-card p-6 shadow-sm transition-colors ${
+                      className={`knglmrt-border-section flex flex-col gap-4 bg-card p-6 transition-colors ${
                         printer.status === "error"
                           ? "border-destructive-border"
                           : "border-border"
@@ -1092,7 +1094,7 @@ export default function Home() {
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-foreground">
@@ -1108,6 +1110,7 @@ export default function Home() {
               {jobs.length > 0 ? (
                 <>
                   <Button
+                    size="chip"
                     type="button"
                     onClick={handleToggleAll}
                     kind="secondary"
@@ -1117,6 +1120,7 @@ export default function Home() {
                       : "Alle auswählen"}
                   </Button>
                   <Button
+                    size="chip"
                     type="button"
                     onClick={handleClaimSelected}
                     kind="primary"
@@ -1126,6 +1130,7 @@ export default function Home() {
                     Auswahl übernehmen
                   </Button>
                   <Button
+                    size="chip"
                     type="button"
                     onClick={handleAddSelectedToCart}
                     kind="secondary"
@@ -1137,6 +1142,7 @@ export default function Home() {
                 </>
               ) : null}
               <Button
+                size="chip"
                 href="/checkout"
                 kind="secondary"
                 className="px-3 py-2 text-xs"
@@ -1246,15 +1252,11 @@ export default function Home() {
                           </div>
                           <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
                             <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleToggleJob(job.id)}
-                                  className="h-4 w-4 rounded-md border-input"
-                                />
-                                Auswählen
-                              </label>
+                              <Choice
+                                label="Auswählen"
+                                checked={isSelected}
+                                onChange={() => handleToggleJob(job.id)}
+                              />
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-sm font-semibold text-foreground">
                                   {job.title}
@@ -1326,12 +1328,12 @@ export default function Home() {
                                   </p>
                                 )}
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <input
+                                  <Field
+                                    className="flex-1"
                                     name="description"
                                     defaultValue={description}
                                     placeholder="Kurze Beschreibung hinzufügen"
                                     maxLength={160}
-                                    className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground/80 shadow-sm"
                                     disabled={!canEdit}
                                   />
                                   <Button
@@ -1434,7 +1436,7 @@ export default function Home() {
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

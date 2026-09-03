@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
+
+import Button from "@/components/knglmrt/Button";
 
 const getPreferredTheme = () => {
   if (typeof window === "undefined") {
@@ -34,17 +35,14 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button
-      type="button"
+    <Button
+      kind="secondary"
+      size="chip"
+      icon={theme === "dark" ? faSun : faMoon}
       onClick={handleToggle}
-      className="inline-flex items-center gap-2 rounded-full border border-input bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
-      <FontAwesomeIcon
-        icon={theme === "dark" ? faSun : faMoon}
-        className="h-3.5 w-3.5"
-      />
-      <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-    </button>
+      {theme === "dark" ? "Light mode" : "Dark mode"}
+    </Button>
   );
 }

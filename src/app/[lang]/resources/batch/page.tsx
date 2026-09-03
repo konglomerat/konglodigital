@@ -14,13 +14,14 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import ResourceMapCrosshair from "../ResourceMapCrosshair";
 import { fetchJson, type ImageGps } from "../resource-form-utils";
 import { RESOURCE_TYPES, type ResourceType } from "../resource-types";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import Choice from "@/components/knglmrt/Choice";
 
 const MAX_IMAGE_EDGE = 1500;
 const MAX_CAMERA_EDGE = 1920;
@@ -689,9 +690,7 @@ export default function BatchResourcePage() {
                       ? tx(
                           "Resource created without AI analysis · Open resource",
                         )
-                      : tx(
-                          "Resource created without AI analysis (id missing).",
-                        )
+                      : tx("Resource created without AI analysis (id missing).")
                     : createdId
                       ? autoGenerateCover
                         ? tx("AI cover generated · Open resource")
@@ -782,15 +781,12 @@ export default function BatchResourcePage() {
       ) : null}
 
       <section className="flex flex-[4] flex-col gap-2 max-h-[50vh] relative">
-        <label className="flex items-center gap-2 px-3 py-2 text-xs text-black absolute bottom-1 right-1 z-10">
-          <input
-            type="checkbox"
-            checked={autoGenerateCover}
-            onChange={(event) => setAutoGenerateCover(event.target.checked)}
-            className="h-4 w-4"
-          />
-          {tx("AI cover")}
-        </label>
+        <Choice
+          className="absolute bottom-1 right-1 z-10 px-3 py-2 text-black"
+          label={tx("AI cover")}
+          checked={autoGenerateCover}
+          onChange={(event) => setAutoGenerateCover(event.target.checked)}
+        />
 
         <div className="absolute top-0 left-0 right-0 z-10 flex flex-wrap items-start gap-2 px-2 py-2 pt-2">
           <Button
@@ -902,13 +898,15 @@ export default function BatchResourcePage() {
                       alt={tx("Captured preview")}
                       className="h-16 w-16 rounded-lg object-cover border border-white/30"
                     />
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="chip"
+                      iconOnly
+                      icon={faXmark}
+                      aria-label={tx("Remove photo")}
                       onClick={() => handleRemovePhoto(photo.id)}
-                      className="absolute -right-2 -top-2 rounded-full bg-white/30 w-6 h-6 font-semibold text-white shadow text-xs"
-                    >
-                      <FontAwesomeIcon icon={faXmark} />
-                    </button>
+                      className="absolute -right-2 -top-2"
+                    />
                   </div>
                 ))}
                 {isCapturing ? (
@@ -936,21 +934,18 @@ export default function BatchResourcePage() {
                 {zoomPresets.map((preset) => {
                   const isActive = Math.abs(zoomValue - preset) < 0.05;
                   return (
-                    <button
+                    <Button
                       key={preset}
-                      type="button"
+                      kind={isActive ? "primary" : "secondary"}
+                      size="chip"
+                      aria-pressed={isActive}
                       onClick={() => {
                         setZoomValue(preset);
                         void applyZoom(preset);
                       }}
-                      className={`rounded-md border px-2 py-1 text-[11px] leading-none transition ${
-                        isActive
-                          ? "border-white bg-white text-zinc-900"
-                          : "border-white/30 bg-white/10 text-zinc-100"
-                      }`}
                     >
                       {preset}x
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -962,24 +957,26 @@ export default function BatchResourcePage() {
             <p className="max-w-xs">
               {tx("Enable camera access to capture resources.")}
             </p>
-            <button
-              type="button"
+            <Button
+              kind="secondary"
               onClick={() => void startCamera(selectedDeviceId)}
-              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-zinc-900"
             >
               {tx("Allow camera")}
-            </button>
+            </Button>
           </div>
         ) : null}
 
+        {/* Auslöser und Senden bleiben runde Kamerabedienung, keine
+            Formulartasten — die Farben kommen aber aus den Tokens. */}
         <button
           type="button"
           onClick={handleSend}
           disabled={!canSend}
-          className={`absolute bottom-10 left-12 flex h-14 w-14 items-center justify-center gap-2 px-6 py-2 rounded-full border-4 font-semibold transition ${
+          aria-label={tx("Send photos")}
+          className={`absolute bottom-10 left-12 flex h-14 w-14 items-center justify-center rounded-full border-4 font-semibold transition ${
             canSend
-              ? "border-blue-600/80 bg-blue-600/10 text-blue-600 hover:bg-blue-500"
-              : "cursor-not-allowed bg-white/10 text-zinc-400"
+              ? "border-primary bg-primary text-primary-foreground hover:bg-[var(--ui-action-hover)]"
+              : "cursor-not-allowed border-white/30 bg-white/10 text-zinc-400"
           }`}
         >
           <FontAwesomeIcon icon={faPaperPlane} className="text-xl" />
@@ -988,6 +985,7 @@ export default function BatchResourcePage() {
           type="button"
           onClick={handleCapture}
           disabled={!videoReady || isCapturing || needsPermission}
+          aria-label={tx("Capture photo")}
           className={`absolute bottom-10 right-12 flex h-14 w-14 items-center justify-center rounded-full border-4 border-white/80 bg-white/10 text-white shadow ${
             isCapturing ? "opacity-60" : ""
           }`}

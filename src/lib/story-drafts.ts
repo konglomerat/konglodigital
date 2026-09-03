@@ -3,14 +3,18 @@ import {
   localizePathname,
   normalizeLocale,
 } from "@/i18n/config";
-import { buildProjectPath } from "@/lib/project-path";
-import { getProjectAuthorName } from "@/lib/project-authors";
+import { buildShowcasePath } from "@/lib/showcase-path";
+import { getShowcaseAuthorName } from "@/lib/showcase-authors";
 import {
   buildResourcePath,
   slugifyResourceTitle,
 } from "@/lib/resource-pretty-title";
 import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  SHOWCASE_RESOURCE_TYPE,
+  isShowcaseResourceType,
+} from "@/lib/showcase-resource-type";
 
 type StoryResourceRow = {
   id: string;
@@ -54,7 +58,7 @@ export type StorySelectableItem = {
   name: string;
   description: string | null;
   image: string | null;
-  contentKind: "project" | "resource";
+  contentKind: "showcase" | "resource";
   resourceType: string | null;
   socialMediaConsent: boolean;
   updatedAt: string | null;
@@ -81,9 +85,6 @@ export type StoryDraftResult = {
   slides: StoryDraftSlide[];
 };
 
-const isProjectType = (value: string | null | undefined) =>
-  value?.trim().toLowerCase() === "project";
-
 const normalizeStringArray = (value: string[] | null | undefined) =>
   (value ?? []).filter(
     (entry): entry is string => typeof entry === "string" && Boolean(entry),
@@ -108,15 +109,15 @@ export const truncateStoryText = (value: string, maxLength: number) => {
 };
 
 const getContentKind = (row: Pick<StoryResourceRow, "type">) =>
-  isProjectType(row.type) ? "project" : "resource";
+  isShowcaseResourceType(row.type) ? "showcase" : "resource";
 
 const getPathForRow = (
   row: Pick<StoryResourceRow, "id" | "pretty_title" | "type">,
   locale = DEFAULT_LOCALE,
 ) => {
   const normalizedLocale = normalizeLocale(locale);
-  const path = isProjectType(row.type)
-    ? buildProjectPath({
+  const path = isShowcaseResourceType(row.type)
+    ? buildShowcasePath({
         id: row.id,
         prettyTitle: row.pretty_title,
       })
@@ -138,7 +139,7 @@ const getImageUrlsForRow = (row: Pick<StoryResourceRow, "image" | "images">) => 
 };
 
 const getSourceLabel = (contentKind: StorySelectableItem["contentKind"]) =>
-  contentKind === "project" ? "Projekt" : "Ressource";
+  contentKind === "showcase" ? "Beitrag" : "Ressource";
 
 const getFirstName = (value: string | null) => {
   if (!value) {
@@ -159,39 +160,39 @@ const getFirstName = (value: string | null) => {
 
 const STORY_SELECTABLE_COLUMNS =
   "id, pretty_title, owner_id, name, description, image, images, type, social_media_consent, updated_at, created_at";
-const STORY_PROJECT_PAGE_SIZE = 200;
+const STORY_SHOWCASE_PAGE_SIZE = 200;
 
-const loadAllStoryProjectRows = async (
+const loadAllStoryShowcaseRows = async (
   supabase: ReturnType<typeof createSupabaseAdminClient>,
 ) => {
-  const projects: StorySelectableRow[] = [];
+  const showcases: StorySelectableRow[] = [];
   let offset = 0;
 
   while (true) {
     const { data, error, count } = await supabase
       .from("resources")
       .select(STORY_SELECTABLE_COLUMNS, { count: "exact" })
-      .ilike("type", "project")
+      .ilike("type", SHOWCASE_RESOURCE_TYPE)
       .order("updated_at", { ascending: false })
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
-      .range(offset, offset + STORY_PROJECT_PAGE_SIZE - 1);
+      .range(offset, offset + STORY_SHOWCASE_PAGE_SIZE - 1);
 
     if (error) {
       throw error;
     }
 
     const page = (data ?? []) as StorySelectableRow[];
-    projects.push(...page);
+    showcases.push(...page);
     offset += page.length;
 
     if (
       page.length === 0 ||
       (count !== null
         ? offset >= count
-        : page.length < STORY_PROJECT_PAGE_SIZE)
+        : page.length < STORY_SHOWCASE_PAGE_SIZE)
     ) {
-      return projects;
+      return showcases;
     }
   }
 };
@@ -199,7 +200,7 @@ const loadAllStoryProjectRows = async (
 export const loadStorySelectableItems = async (limit = 400) => {
   const supabase = createSupabaseAdminClient();
   const recentItemLimit = Math.max(Math.trunc(limit), 1);
-  const [recentResult, projectRows] = await Promise.all([
+  const [recentResult, showcaseRows] = await Promise.all([
     supabase
       .from("resources")
       .select(STORY_SELECTABLE_COLUMNS)
@@ -207,19 +208,19 @@ export const loadStorySelectableItems = async (limit = 400) => {
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
       .range(0, recentItemLimit - 1),
-    loadAllStoryProjectRows(supabase),
+    loadAllStoryShowcaseRows(supabase),
   ]);
 
   if (recentResult.error) {
     throw recentResult.error;
   }
 
-  // Keep the bounded recent-resource list, but always include every project.
-  // The client applies its project/resource filter only after this data loads.
+  // Keep the bounded recent-resource list, but always include every showcase.
+  // The client applies its showcase/resource filter only after this data loads.
   const rowsById = new Map<string, StorySelectableRow>();
   for (const row of [
     ...((recentResult.data ?? []) as StorySelectableRow[]),
-    ...projectRows,
+    ...showcaseRows,
   ]) {
     if (!rowsById.has(row.id)) {
       rowsById.set(row.id, row);
@@ -266,7 +267,7 @@ export const loadStorySource = async (
 
   let workshopName: string | null = null;
   let authorFirstName: string | null = null;
-  if (contentKind === "project" && workshopId) {
+  if (contentKind === "showcase" && workshopId) {
     const { data: workshopRow } = await supabase
       .from("resources")
       .select("id, name")
@@ -281,7 +282,7 @@ export const loadStorySource = async (
         await supabase.auth.admin.getUserById(row.owner_id);
       if (!userError && userData.user) {
         authorFirstName = getFirstName(
-          getProjectAuthorName(
+          getShowcaseAuthorName(
             userData.user.user_metadata ?? {},
             userData.user.email ?? null,
           ),
@@ -352,16 +353,16 @@ export const createFallbackStoryDraft = (
     headline: truncateStoryText(source.name, 64),
     body:
       summary ||
-      (source.contentKind === "project"
-        ? "Ein Einblick in ein aktuelles Projekt aus den Werkstaetten."
+      (source.contentKind === "showcase"
+        ? "Ein Einblick in einen aktuellen Beitrag aus den Werkstaetten."
         : "Ein Einblick in eine Ressource aus den Werkstaetten."),
   };
 
   const secondSlide: StoryDraftSlide = {
     kicker: truncateStoryText(source.sourceLabel, 26),
     headline:
-      source.contentKind === "project"
-        ? "Mehr zum Projekt"
+      source.contentKind === "showcase"
+        ? "Mehr zum Beitrag"
         : "Mehr zur Ressource",
     body: truncateStoryText(
       source.workshopName

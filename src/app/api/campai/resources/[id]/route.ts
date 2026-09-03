@@ -9,13 +9,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { userHasRole } from "@/lib/roles";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
-import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
+import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
-  normalizeProjectLinks,
-  parseProjectLinksJson,
-  type ProjectLink,
-} from "@/lib/project-links";
+  normalizeShowcaseLinks,
+  parseShowcaseLinksJson,
+  type ShowcaseLink,
+} from "@/lib/showcase-links";
 import {
   isImageMimeType,
   isImageUrl,
@@ -35,6 +35,7 @@ import {
   generateVideoPreviewBuffer,
 } from "@/lib/video-preview";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 const splitList = (value: string) =>
   value
@@ -64,7 +65,6 @@ const toPriority = (value: unknown) => {
 const parseRelatedResourceIds = (value: string) =>
   Array.from(new Set(splitList(value))).slice(0, 30);
 
-const PROJECT_RESOURCE_TYPE = "project";
 
 const resolveRelatedResourceIds = async (
   supabase: ReturnType<typeof createSupabaseRouteClient>["supabase"],
@@ -390,9 +390,9 @@ const readResourcePayload = async (request: NextRequest) => {
       categoryIds: String(formData.get("categoryIds") ?? ""),
       attachable: String(formData.get("attachable") ?? "0") === "1",
       workshopResourceId: String(formData.get("workshopResourceId") ?? ""),
-      projectLinks: parseProjectLinksJson(
-        typeof formData.get("projectLinks") === "string"
-          ? String(formData.get("projectLinks") ?? "")
+      showcaseLinks: parseShowcaseLinksJson(
+        typeof formData.get("showcaseLinks") === "string"
+          ? String(formData.get("showcaseLinks") ?? "")
           : null,
       ),
       socialMediaConsent:
@@ -421,7 +421,7 @@ const readResourcePayload = async (request: NextRequest) => {
     categoryIds?: string[] | string;
     attachable?: boolean;
     workshopResourceId?: string | null;
-    projectLinks?: ProjectLink[] | unknown;
+    showcaseLinks?: ShowcaseLink[] | unknown;
     socialMediaConsent?: boolean;
     isPrivate?: boolean;
     imageUrl?: string | null;
@@ -453,7 +453,7 @@ const readResourcePayload = async (request: NextRequest) => {
       : (body.categoryIds ?? ""),
     attachable: body.attachable ?? false,
     workshopResourceId: body.workshopResourceId ?? "",
-    projectLinks: normalizeProjectLinks(body.projectLinks),
+    showcaseLinks: normalizeShowcaseLinks(body.showcaseLinks),
     socialMediaConsent: body.socialMediaConsent ?? false,
     isPrivate: body.isPrivate ?? false,
     imageFiles: [] as File[],
@@ -742,7 +742,7 @@ type StoredCategory = {
   bookingCategoryId?: string | null;
 };
 
-type StoredProjectLink = {
+type StoredShowcaseLink = {
   label?: string;
   url?: string;
 };
@@ -759,7 +759,7 @@ type ResourceRow = {
   images?: string[] | null;
   media_previews?: unknown;
   media_posters?: unknown;
-  project_links?: StoredProjectLink[] | null;
+  project_links?: StoredShowcaseLink[] | null;
   social_media_consent?: boolean | null;
   is_private?: boolean | null;
   workshop_resource_id?: string | null;
@@ -803,7 +803,7 @@ const toResourcePayload = (
     mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
   mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
   publishDate: row.publish_date ?? null,
-  projectLinks: normalizeProjectLinks(row.project_links ?? []),
+  showcaseLinks: normalizeShowcaseLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
   isPrivate: row.is_private ?? false,
   workshopResource:
@@ -1076,7 +1076,7 @@ export const PUT = async (
     supabase,
     payload.workshopResourceId ?? "",
   );
-  const projectLinks = normalizeProjectLinks(payload.projectLinks ?? []);
+  const showcaseLinks = normalizeShowcaseLinks(payload.showcaseLinks ?? []);
   const existingImageUrl =
     typeof existingResource.image === "string" ? existingResource.image : null;
   const existingImageUrlsRaw = normalizeImageUrls(existingResource.images);
@@ -1247,7 +1247,7 @@ export const PUT = async (
     tags: tags.length > 0 ? tags : null,
     categories: storedCategories,
     attachable: payload.attachable,
-    project_links: projectLinks.length > 0 ? projectLinks : null,
+    project_links: showcaseLinks.length > 0 ? showcaseLinks : null,
     social_media_consent: payload.socialMediaConsent ?? false,
     is_private: payload.isPrivate ?? false,
     workshop_resource_id: workshopResourceId,
@@ -1308,8 +1308,8 @@ export const PUT = async (
     updated as ResourceSyncRecord,
   );
   revalidateTag("resources", { expire: 0 });
-  if (resource.type === PROJECT_RESOURCE_TYPE) {
-    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  if (resource.type === SHOWCASE_RESOURCE_TYPE) {
+    revalidateTag(SHOWCASES_CACHE_TAG, { expire: 0 });
   }
   return NextResponse.json({ resource, campaiSync: syncResult });
 };
@@ -1343,27 +1343,27 @@ export const DELETE = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isProject =
+  const isShowcase =
     typeof row.type === "string" &&
-    row.type.trim().toLowerCase() === PROJECT_RESOURCE_TYPE;
+    row.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
 
-  if (isProject) {
+  if (isShowcase) {
     const isOwner = row.owner_id === data.user.id;
     const isAdmin = isOwner
       ? false
       : await userHasRole(supabase, data.user, "admin");
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: "You can only delete your own projects." },
+        { error: "You can only delete your own showcases." },
         { status: 403 },
       );
     }
   }
 
-  // Project deletion has been authorized above, so the admin client lets an
-  // administrator delete any project even when they do not have a broad
-  // resources:delete right. Non-project resources retain their existing RLS.
-  const deleteClient = isProject ? adminSupabase : supabase;
+  // Showcase deletion has been authorized above, so the admin client lets an
+  // administrator delete any showcase even when they do not have a broad
+  // resources:delete right. Non-showcase resources retain their existing RLS.
+  const deleteClient = isShowcase ? adminSupabase : supabase;
 
   const { error: deleteLinksError } = await deleteClient
     .from("resource_links")
@@ -1414,8 +1414,8 @@ export const DELETE = async (
   }
 
   revalidateTag("resources", { expire: 0 });
-  if (isProject) {
-    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  if (isShowcase) {
+    revalidateTag(SHOWCASES_CACHE_TAG, { expire: 0 });
   }
   return NextResponse.json({ success: true });
 };

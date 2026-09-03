@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 import { useI18n } from "@/i18n/client";
 import { RESOURCES_NAMESPACE } from "@/i18n/config";
 

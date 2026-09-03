@@ -4,13 +4,10 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 
 type PageTitleButtonKind =
-  | "primary"
-  | "secondary"
-  | "danger-primary"
-  | "danger-secondary";
+  "primary" | "secondary" | "danger-primary" | "danger-secondary";
 
 type PageTitleButtonSize = "small" | "medium" | "large";
 
@@ -35,7 +32,7 @@ type PageTitleButtonAction = PageTitleActionBase & {
   disabled?: boolean;
 };
 
-type PageTitleAction = PageTitleLink | PageTitleButtonAction;
+export type PageTitleAction = PageTitleLink | PageTitleButtonAction;
 
 type PageTitleBackLink = {
   href: string;
@@ -46,6 +43,7 @@ type PageTitleBackLink = {
 type PageTitleProps = {
   eyebrow?: ReactNode;
   title: ReactNode;
+  headingLevel?: 1 | 2;
   subTitle?: ReactNode;
   links?: PageTitleAction[];
   customActions?: ReactNode;
@@ -59,6 +57,7 @@ type PageTitleProps = {
 export default function PageTitle({
   eyebrow,
   title,
+  headingLevel = 1,
   subTitle,
   links,
   customActions,
@@ -71,40 +70,54 @@ export default function PageTitle({
   const wrapperClassName = className
     ? `flex flex-col gap-4 ${className}`
     : "flex flex-col gap-4";
+  // Typografie nach Konglomerat-DS: Augenbraue = knglmrt-caption,
+  // Titel = Fengardo Neue Black 32/34, Untertitel = UI-Text.
+  const baseEyebrowClassName = "knglmrt-caption mb-1.5 text-primary";
+  const baseTitleClassName = "text-foreground";
+  const baseSubTitleClassName =
+    "mt-2 max-w-[620px] text-[length:var(--ui-size-body)] leading-[var(--ui-line-body)] text-muted-foreground";
   const resolvedEyebrowClassName = eyebrowClassName
-    ? `text-sm font-semibold uppercase tracking-widest text-primary ${eyebrowClassName}`
-    : "text-sm font-semibold uppercase tracking-widest text-primary";
+    ? `${baseEyebrowClassName} ${eyebrowClassName}`
+    : baseEyebrowClassName;
   const resolvedTitleClassName = titleClassName
-    ? `text-4xl font-extrabold tracking-tight text-foreground md:text-5xl ${titleClassName}`
-    : "text-4xl font-extrabold tracking-tight text-foreground md:text-5xl";
+    ? `${baseTitleClassName} ${titleClassName}`
+    : baseTitleClassName;
   const resolvedSubTitleClassName = subTitleClassName
-    ? `mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground ${subTitleClassName}`
-    : "mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground";
+    ? `${baseSubTitleClassName} ${subTitleClassName}`
+    : baseSubTitleClassName;
+  const Heading = headingLevel === 2 ? "h2" : "h1";
+  const backLinkElement = backLink ? (
+    <Link
+      href={backLink.href}
+      className="inline-flex w-fit shrink-0 items-center gap-2 knglmrt-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft"
+    >
+      <FontAwesomeIcon
+        icon={backLink.icon ?? faArrowLeft}
+        className="h-3.5 w-3.5"
+      />
+      <span>{backLink.label}</span>
+    </Link>
+  ) : null;
 
   return (
     <header className={wrapperClassName}>
-      {backLink ? (
-        <Link
-          href={backLink.href}
-          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-primary transition hover:text-primary/80"
-        >
-          <FontAwesomeIcon
-            icon={backLink.icon ?? faArrowLeft}
-            className="h-3.5 w-3.5"
-          />
-          <span>{backLink.label}</span>
-        </Link>
-      ) : null}
-
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
+          {backLinkElement}
           {eyebrow ? (
-            <p className={resolvedEyebrowClassName}>{eyebrow}</p>
+            <p
+              className={`${resolvedEyebrowClassName} ${backLink ? "mt-4" : ""}`}
+            >
+              {eyebrow}
+            </p>
           ) : null}
-          <h1 className={resolvedTitleClassName}>{title}</h1>
-          {subTitle ? (
-            <p className={resolvedSubTitleClassName}>{subTitle}</p>
-          ) : null}
+          <Heading
+            className={`${resolvedTitleClassName}${
+              backLink && !eyebrow ? " mt-4" : ""
+            }`}
+          >
+            {title}
+          </Heading>
         </div>
 
         {customActions || (links && links.length > 0) ? (
@@ -150,6 +163,10 @@ export default function PageTitle({
           </div>
         ) : null}
       </div>
+
+      {subTitle ? (
+        <p className={resolvedSubTitleClassName}>{subTitle}</p>
+      ) : null}
     </header>
   );
 }

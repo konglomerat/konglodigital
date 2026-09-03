@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
+import Field from "@/components/knglmrt/Field";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="knglmrt-border-section w-full max-w-md bg-card p-8">
         <h1 className="text-2xl font-semibold text-foreground">
           Konto erstellen
         </h1>
@@ -58,26 +59,15 @@ export default function RegisterPage() {
           passt, schicken wir dir einen Link zum Abschliessen der Registrierung.
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="register-email"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-            >
-              Email
-            </label>
-            <input
-              id="register-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Wir gleichen diese Adresse mit Campai ab und senden dir danach den
-              Registrierungslink nur bei einem aktiven Mitgliedskonto.
-            </p>
-          </div>
+          <Field
+            id="register-email"
+            label="Email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            hint="Wir gleichen diese Adresse mit Campai ab und senden dir danach den Registrierungslink nur bei einem aktiven Mitgliedskonto."
+          />
           {error ? (
             <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
@@ -92,9 +82,10 @@ export default function RegisterPage() {
             </div>
           ) : null}
           <Button
+            fullWidth
+            size="small"
             type="submit"
             kind="primary"
-            className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
             {isLoading ? "Prüfung läuft ..." : "Registrierung starten"}

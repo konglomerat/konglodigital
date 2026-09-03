@@ -11,7 +11,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import BookingPageShell from "../../components/ui/BookingPageShell";
 import ReceiptsPageHeader from "../create/header";
 import {
@@ -19,14 +19,13 @@ import {
   type Suggestion,
 } from "../../components/ui/autocomplete-input";
 import DebtorCreatePanel from "../../components/ui/debtor-create-panel";
-import {
-  FormField,
-  FormSection,
-  Input,
-  Select,
-} from "../../components/ui/form";
+import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 
 import type { PretixDocument, PretixEvent, PretixRow } from "./types";
+import Choice from "@/components/knglmrt/Choice";
 
 const STATUS_LABELS: Record<string, string> = {
   p: "Bezahlt",
@@ -537,22 +536,22 @@ export default function PretixImportPage() {
       />
 
       <FormSection title="Pretix-Export hochladen" icon={faFolderOpen}>
-        <FormField label="JSON-Datei">
+        <FieldShell as="div" label="JSON-Datei">
           <input
             type="file"
             accept="application/json,.json"
             onChange={(e) =>
               void handleFileChange(e.target.files?.item(0) ?? null)
             }
-            className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
+            className="block w-full text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
           />
           {fileName ? (
-            <p className="mt-1 text-xs text-zinc-500">{fileName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{fileName}</p>
           ) : null}
           {parseError ? (
-            <p className="mt-1 text-xs text-rose-600">{parseError}</p>
+            <p className="mt-1 text-xs text-destructive">{parseError}</p>
           ) : null}
-        </FormField>
+        </FieldShell>
       </FormSection>
 
       {rows.length > 0 ? (
@@ -562,61 +561,61 @@ export default function PretixImportPage() {
             description="Diese Einstellungen gelten für alle Rechnungen aus diesem Pretix-Import."
           >
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <FormField label="Rechnungsdatum" required>
-                <Input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Servicedatum" required>
-                <Input
-                  type="date"
-                  value={serviceDate}
-                  onChange={(e) => setServiceDate(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Zahlungskonto" required>
-                <Select
-                  value={selectedCashAccountId}
-                  onChange={(e) => setSelectedCashAccountId(e.target.value)}
-                  disabled={bankConnectionOptions.length === 0}
-                >
-                  {bankConnectionOptions.length === 0 ? (
-                    <option value="">Wird geladen…</option>
-                  ) : (
-                    bankConnectionOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))
-                  )}
-                </Select>
-              </FormField>
-              <FormField label="Werkbereich" required>
-                <Select
-                  value={selectedCostCenter2}
-                  onChange={(e) => setSelectedCostCenter2(e.target.value)}
-                  disabled={costCenter2Options.length === 0}
-                >
-                  {costCenter2Options.length === 0 ? (
-                    <option value={DEFAULT_COST_CENTER_2}>Wird geladen…</option>
-                  ) : (
-                    costCenter2Options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))
-                  )}
-                </Select>
-              </FormField>
+              <Field
+                label="Rechnungsdatum"
+                required
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+              <Field
+                label="Servicedatum"
+                required
+                type="date"
+                value={serviceDate}
+                onChange={(e) => setServiceDate(e.target.value)}
+              />
+              <NativeSelect
+                label="Zahlungskonto"
+                required
+                value={selectedCashAccountId}
+                onChange={(e) => setSelectedCashAccountId(e.target.value)}
+                disabled={bankConnectionOptions.length === 0}
+              >
+                {bankConnectionOptions.length === 0 ? (
+                  <option value="">Wird geladen…</option>
+                ) : (
+                  bankConnectionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                )}
+              </NativeSelect>
+              <NativeSelect
+                label="Werkbereich"
+                required
+                value={selectedCostCenter2}
+                onChange={(e) => setSelectedCostCenter2(e.target.value)}
+                disabled={costCenter2Options.length === 0}
+              >
+                {costCenter2Options.length === 0 ? (
+                  <option value={DEFAULT_COST_CENTER_2}>Wird geladen…</option>
+                ) : (
+                  costCenter2Options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                )}
+              </NativeSelect>
             </div>
 
             {invoiceSettingsError ? (
-              <p className="text-sm text-rose-600">{invoiceSettingsError}</p>
+              <p className="text-sm text-destructive">{invoiceSettingsError}</p>
             ) : null}
             {!invoiceSettingsError && invoiceSettingsValidationMessage ? (
-              <p className="text-sm text-rose-600">
+              <p className="text-sm text-destructive">
                 {invoiceSettingsValidationMessage}
               </p>
             ) : null}
@@ -631,83 +630,79 @@ export default function PretixImportPage() {
                 : undefined
             }
           >
-            <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
-              <table className="min-w-full divide-y divide-zinc-200">
-                <thead className="bg-zinc-50">
+            <div className="knglmrt-border-section overflow-x-auto bg-card">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
                     <th className="px-3 py-3 text-left">
-                      <input
-                        type="checkbox"
+                      <Choice
+                        aria-label="Alle auswählen"
                         checked={allSelected}
                         onChange={toggleAll}
-                        aria-label="Alle auswählen"
                       />
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Code
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       E-Mail
                     </th>
-                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Total
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Status
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Debitor
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Ergebnis
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200">
+                <tbody className="divide-y divide-border">
                   {rows.map((row) => {
                     const debtor = debtorByKey.get(row.key);
                     const result = resultByKey.get(row.key);
                     return (
                       <tr key={row.key}>
                         <td className="whitespace-nowrap px-3 py-2">
-                          <input
-                            type="checkbox"
+                          <Choice
+                            aria-label={`${row.orderCode} auswählen`}
                             checked={selectedKeys.has(row.key)}
                             onChange={() => toggleRow(row.key)}
-                            aria-label={`${row.orderCode} auswählen`}
                           />
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 font-mono text-sm text-zinc-800">
+                        <td className="whitespace-nowrap px-3 py-2 font-mono text-sm text-foreground">
                           {row.orderCode}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
+                        <td className="whitespace-nowrap px-3 py-2 text-sm text-foreground">
                           {row.email || "—"}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right text-sm text-zinc-800">
+                        <td className="whitespace-nowrap px-3 py-2 text-right text-sm text-foreground">
                           {row.totalDisplay}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-sm text-zinc-800">
+                        <td className="whitespace-nowrap px-3 py-2 text-sm text-foreground">
                           {row.statusLabel}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-sm">
                           {debtor ? (
-                            <span className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
+                            <span className="inline-flex items-center gap-2 rounded-md border border-success-border bg-success-soft px-2 py-1 text-xs text-foreground">
                               <FontAwesomeIcon
                                 icon={faCheck}
                                 className="h-3 w-3"
                               />
                               #{debtor.account} {debtor.name}
-                              <button
-                                type="button"
-                                className="ml-1 rounded p-0.5 text-emerald-600 hover:bg-emerald-100"
+                              <Button
+                                kind="ghost"
+                                size="chip"
+                                iconOnly
+                                icon={faXmark}
+                                className="ml-1 h-5 w-5"
                                 onClick={() => clearDebtor(row.key)}
                                 aria-label="Debitor entfernen"
-                              >
-                                <FontAwesomeIcon
-                                  icon={faXmark}
-                                  className="h-3 w-3"
-                                />
-                              </button>
+                              />
                             </span>
                           ) : (
                             <div className="min-w-[16rem]">
@@ -733,13 +728,13 @@ export default function PretixImportPage() {
                           {result ? (
                             <span
                               className={
-                                result.ok ? "text-emerald-700" : "text-rose-700"
+                                result.ok ? "text-foreground" : "text-destructive"
                               }
                             >
                               {result.message}
                             </span>
                           ) : (
-                            <span className="text-zinc-400">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                       </tr>
@@ -776,7 +771,7 @@ export default function PretixImportPage() {
             ) : null}
 
             <div className="mt-6 flex items-center justify-between">
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 {selectedKeys.size} ausgewählt
                 {selectedRowsMissingDebtor
                   ? " — nicht alle ausgewählten Buchungen haben einen Debitor."

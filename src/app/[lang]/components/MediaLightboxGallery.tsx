@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 
 type MediaLightboxGalleryProps = {
@@ -26,7 +26,7 @@ type MediaLightboxGalleryProps = {
   noMediaLabel?: string | null;
   documentLabel?: string;
   openDocumentLabel?: string;
-  variant: "project" | "resource";
+  variant: "showcase" | "resource";
 };
 
 const renderMedia = (
@@ -164,7 +164,7 @@ export default function MediaLightboxGallery({
 
   return (
     <>
-      {variant === "project" ? (
+      {variant === "showcase" ? (
         normalizedMedia.length > 0 ? (
           <section className="grid gap-4 px-6 py-2 md:px-8">
             {renderThumbnailButton(

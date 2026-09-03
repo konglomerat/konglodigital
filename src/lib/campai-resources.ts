@@ -18,7 +18,7 @@ export type RelatedResource = {
   image?: string | null;
 };
 
-export type ProjectLink = {
+export type ShowcaseLink = {
   label: string;
   url: string;
 };
@@ -61,7 +61,7 @@ export type ResourcePayload = {
   categories?: ResourceCategory[];
   relatedResources?: RelatedResource[];
   workshopResource?: RelatedResource | null;
-  projectLinks?: ProjectLink[];
+  showcaseLinks?: ShowcaseLink[];
   socialMediaConsent?: boolean;
   isPrivate?: boolean;
   mapFeatures?: ResourceMapFeature[];
@@ -188,13 +188,13 @@ const toRelatedResources = (value: unknown): RelatedResource[] | undefined => {
   return relatedResources.length > 0 ? relatedResources : undefined;
 };
 
-const toProjectLinks = (value: unknown): ProjectLink[] | undefined => {
+const toShowcaseLinks = (value: unknown): ShowcaseLink[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const projectLinks = value
-    .map((entry): ProjectLink | null => {
+  const showcaseLinks = value
+    .map((entry): ShowcaseLink | null => {
       if (!entry || typeof entry !== "object") {
         return null;
       }
@@ -219,9 +219,9 @@ const toProjectLinks = (value: unknown): ProjectLink[] | undefined => {
 
       return { label, url };
     })
-    .filter((entry): entry is ProjectLink => entry !== null);
+    .filter((entry): entry is ShowcaseLink => entry !== null);
 
-  return projectLinks.length > 0 ? projectLinks : undefined;
+  return showcaseLinks.length > 0 ? showcaseLinks : undefined;
 };
 
 const toMapFeatures = (value: unknown): ResourceMapFeature[] | undefined => {
@@ -387,7 +387,7 @@ export const normalizeResource = (
     workshopResource: toRelatedResources(
       info.workshopResource ?? item.workshopResource,
     )?.[0],
-    projectLinks: toProjectLinks(info.projectLinks ?? item.projectLinks),
+    showcaseLinks: toShowcaseLinks(info.showcaseLinks ?? item.showcaseLinks),
     socialMediaConsent:
       typeof info.socialMediaConsent === "boolean"
         ? info.socialMediaConsent

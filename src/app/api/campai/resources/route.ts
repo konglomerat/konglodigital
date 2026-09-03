@@ -9,15 +9,15 @@ import { hasRight } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { userHasRole } from "@/lib/roles";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
-import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
+import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
 import { describeInventoryImages } from "@/lib/openai-vision";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import type { ResourcePayload } from "@/lib/campai-resources";
 import {
-  normalizeProjectLinks,
-  parseProjectLinksJson,
-  type ProjectLink,
-} from "@/lib/project-links";
+  normalizeShowcaseLinks,
+  parseShowcaseLinksJson,
+  type ShowcaseLink,
+} from "@/lib/showcase-links";
 import {
   isImageMimeType,
   isImageUrl,
@@ -37,6 +37,7 @@ import {
   generateVideoPreviewBuffer,
 } from "@/lib/video-preview";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 const splitList = (value: string) =>
   value
@@ -72,7 +73,6 @@ const chunkArray = <T>(items: T[], size: number) => {
   return chunks;
 };
 
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 const resolveRelatedResourceIds = async (
   supabase: ReturnType<typeof createSupabaseRouteClient>["supabase"],
@@ -389,9 +389,9 @@ const readResourcePayload = async (request: NextRequest) => {
       categoryIds: String(formData.get("categoryIds") ?? ""),
       attachable: String(formData.get("attachable") ?? "0") === "1",
       workshopResourceId: String(formData.get("workshopResourceId") ?? ""),
-      projectLinks: parseProjectLinksJson(
-        typeof formData.get("projectLinks") === "string"
-          ? String(formData.get("projectLinks") ?? "")
+      showcaseLinks: parseShowcaseLinksJson(
+        typeof formData.get("showcaseLinks") === "string"
+          ? String(formData.get("showcaseLinks") ?? "")
           : null,
       ),
       socialMediaConsent:
@@ -419,7 +419,7 @@ const readResourcePayload = async (request: NextRequest) => {
     categoryIds?: string[] | string;
     attachable?: boolean;
     workshopResourceId?: string | null;
-    projectLinks?: ProjectLink[] | unknown;
+    showcaseLinks?: ShowcaseLink[] | unknown;
     socialMediaConsent?: boolean;
     isPrivate?: boolean;
     imageUrl?: string | null;
@@ -445,7 +445,7 @@ const readResourcePayload = async (request: NextRequest) => {
       : (body.categoryIds ?? ""),
     attachable: body.attachable ?? false,
     workshopResourceId: body.workshopResourceId ?? "",
-    projectLinks: normalizeProjectLinks(body.projectLinks),
+    showcaseLinks: normalizeShowcaseLinks(body.showcaseLinks),
     socialMediaConsent: body.socialMediaConsent ?? false,
     isPrivate: body.isPrivate ?? false,
     allowNameFallback: body.allowNameFallback ?? false,
@@ -741,7 +741,7 @@ type StoredCategory = {
   bookingCategoryId?: string | null;
 };
 
-type StoredProjectLink = {
+type StoredShowcaseLink = {
   label?: string;
   url?: string;
 };
@@ -757,7 +757,7 @@ type ResourceRow = {
   images?: string[] | null;
   media_previews?: unknown;
   media_posters?: unknown;
-  project_links?: StoredProjectLink[] | null;
+  project_links?: StoredShowcaseLink[] | null;
   social_media_consent?: boolean | null;
   is_private?: boolean | null;
   workshop_resource_id?: string | null;
@@ -798,7 +798,7 @@ const toResourcePayload = (
   images: row.images ?? (row.image ? [row.image] : undefined),
   mediaPreviews: normalizeResourceMediaPreviews(row.media_previews) ?? null,
   mediaPosters: normalizeResourceMediaPosters(row.media_posters) ?? null,
-  projectLinks: normalizeProjectLinks(row.project_links ?? []),
+  showcaseLinks: normalizeShowcaseLinks(row.project_links ?? []),
   socialMediaConsent: row.social_media_consent ?? false,
   isPrivate: row.is_private ?? false,
   workshopResource:
@@ -839,7 +839,7 @@ export const GET = async (request: NextRequest) => {
   let query = supabase
     .from("resources")
     .select("*", { count: "exact" })
-    .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE)
+    .not("type", "ilike", SHOWCASE_RESOURCE_TYPE)
     .order("priority", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(
@@ -868,7 +868,7 @@ export const GET = async (request: NextRequest) => {
       let countQuery = supabase
         .from("resources")
         .select("*", { count: "exact", head: true })
-        .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE);
+        .not("type", "ilike", SHOWCASE_RESOURCE_TYPE);
 
       if (searchTerm.trim()) {
         const term = `%${searchTerm.trim()}%`;
@@ -949,18 +949,18 @@ export const POST = async (request: NextRequest) => {
       { status: 400 },
     );
   }
-  const isProject = payload.type.trim().toLowerCase() === "project";
+  const isShowcase = payload.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
   const canCreateByRight = hasRight(data.user, "resources:create");
   if (
     payload.isPrivate &&
     !(await userHasRole(supabase, data.user, "admin"))
   ) {
     return NextResponse.json(
-      { error: "Only admins can create private projects." },
+      { error: "Only admins can create private showcases." },
       { status: 403 },
     );
   }
-  if (!canCreateByRight && !isProject) {
+  if (!canCreateByRight && !isShowcase) {
     return NextResponse.json(
       { error: "Insufficient permissions." },
       { status: 403 },
@@ -1014,7 +1014,7 @@ export const POST = async (request: NextRequest) => {
     supabase,
     payload.workshopResourceId ?? "",
   );
-  const projectLinks = normalizeProjectLinks(payload.projectLinks ?? []);
+  const showcaseLinks = normalizeShowcaseLinks(payload.showcaseLinks ?? []);
   const gpsData =
     imageFiles.length > 0 ? await extractGpsFromFile(imageFiles[0]) : null;
   const fallbackGpsPointFeature =
@@ -1145,7 +1145,7 @@ export const POST = async (request: NextRequest) => {
       tags: tags.length > 0 ? tags : null,
       categories: storedCategories,
       attachable: payload.attachable,
-      project_links: projectLinks.length > 0 ? projectLinks : null,
+      project_links: showcaseLinks.length > 0 ? showcaseLinks : null,
       social_media_consent: payload.socialMediaConsent ?? false,
       is_private: payload.isPrivate ?? false,
       workshop_resource_id: workshopResourceId,
@@ -1192,8 +1192,8 @@ export const POST = async (request: NextRequest) => {
     created as ResourceSyncRecord,
   );
   revalidateTag("resources", { expire: 0 });
-  if (resource.type === INVENTORY_HIDDEN_RESOURCE_TYPE) {
-    revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  if (resource.type === SHOWCASE_RESOURCE_TYPE) {
+    revalidateTag(SHOWCASES_CACHE_TAG, { expire: 0 });
   }
   return NextResponse.json({
     id: resource.id,

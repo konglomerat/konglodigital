@@ -2,7 +2,7 @@
  * Framework-agnostic Konglomerat newsletter renderer.
  *
  * This module is intentionally pure: it does not read files, access process.env,
- * fetch remote data, or generate image variants. Callers resolve projects,
+ * fetch remote data, or generate image variants. Callers resolve showcases,
  * calendar events, and final public image URLs before calling renderNewsletter().
  */
 
@@ -25,7 +25,7 @@ export type NewsletterAspect = (typeof NEWSLETTER_ASPECTS)[number];
 export type NewsletterLayout = "split" | "stacked";
 export type NewsletterDesign = (typeof NEWSLETTER_DESIGNS)[number];
 
-export interface NewsletterProject {
+export interface NewsletterShowcase {
   id: string;
   title: string;
   description: string;
@@ -39,7 +39,7 @@ export interface NewsletterProject {
   linkText?: string;
 }
 
-export interface NormalizedNewsletterProject {
+export interface NormalizedNewsletterShowcase {
   id: string;
   title: string;
   description: string;
@@ -53,9 +53,9 @@ export interface NormalizedNewsletterProject {
   linkText: string;
 }
 
-export interface NewsletterProjectItem {
-  type: "project";
-  projectId: string;
+export interface NewsletterShowcaseItem {
+  type: "showcase";
+  showcaseId: string;
 }
 
 export interface NewsletterButtonItem {
@@ -71,7 +71,7 @@ export interface NewsletterBannerItem {
 }
 
 export type NewsletterItem =
-  | NewsletterProjectItem
+  | NewsletterShowcaseItem
   | NewsletterButtonItem
   | NewsletterBannerItem;
 
@@ -100,7 +100,7 @@ export interface NewsletterAssets {
 }
 
 export interface RenderNewsletterOptions {
-  projects: readonly NewsletterProject[];
+  showcases: readonly NewsletterShowcase[];
   items?: readonly NewsletterItem[];
   title: string;
   subject?: string;
@@ -108,7 +108,7 @@ export interface RenderNewsletterOptions {
   design?: NewsletterDesign;
   baseUrl?: string;
   calendar?: NewsletterCalendar;
-  showProjectsHeading?: boolean;
+  showShowcasesHeading?: boolean;
   assets?: Partial<NewsletterAssets>;
   membershipUrl?: string;
   webviewHref?: string;
@@ -225,7 +225,7 @@ export function escapeHtml(value: unknown = ""): string {
     .replace(/'/g, "&#039;");
 }
 
-/** Converts Markdown-ish project copy to safe plain text before HTML escaping. */
+/** Converts Markdown-ish showcase copy to safe plain text before HTML escaping. */
 export function stripMarkdown(value: unknown = ""): string {
   return String(value)
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
@@ -357,10 +357,10 @@ function normalizeDate(value: string | Date): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-export function normalizeNewsletterProject(
-  value: NewsletterProject,
+export function normalizeNewsletterShowcase(
+  value: NewsletterShowcase,
   baseUrl: string = DEFAULT_BASE_URL,
-): NormalizedNewsletterProject | null {
+): NormalizedNewsletterShowcase | null {
   const id = cleanText(value?.id, 200);
   const title = cleanText(value?.title, 240);
   if (!id || !title) return null;
@@ -383,19 +383,19 @@ export function normalizeNewsletterProject(
 
 export function normalizeNewsletterItems(
   items: readonly NewsletterItem[] | undefined,
-  projects: readonly NormalizedNewsletterProject[],
+  showcases: readonly NormalizedNewsletterShowcase[],
   baseUrl: string = DEFAULT_BASE_URL,
 ): NewsletterItem[] {
-  const projectsById = new Map(projects.map((project) => [project.id, project]));
-  const includedProjects = new Set<string>();
+  const showcasesById = new Map(showcases.map((showcase) => [showcase.id, showcase]));
+  const includedShowcases = new Set<string>();
   const normalized: NewsletterItem[] = [];
 
   for (const item of items?.slice(0, 200) ?? []) {
-    if (item.type === "project") {
-      const projectId = cleanText(item.projectId, 200);
-      if (projectsById.has(projectId) && !includedProjects.has(projectId)) {
-        normalized.push({ type: "project", projectId });
-        includedProjects.add(projectId);
+    if (item.type === "showcase") {
+      const showcaseId = cleanText(item.showcaseId, 200);
+      if (showcasesById.has(showcaseId) && !includedShowcases.has(showcaseId)) {
+        normalized.push({ type: "showcase", showcaseId });
+        includedShowcases.add(showcaseId);
       }
       continue;
     }
@@ -408,11 +408,11 @@ export function normalizeNewsletterItems(
     if (banner) normalized.push(banner);
   }
 
-  // Preserve the old builder behavior: selected projects omitted from the
+  // Preserve the old builder behavior: selected showcases omitted from the
   // explicit item order are appended instead of silently disappearing.
-  for (const project of projects) {
-    if (!includedProjects.has(project.id)) {
-      normalized.push({ type: "project", projectId: project.id });
+  for (const showcase of showcases) {
+    if (!includedShowcases.has(showcase.id)) {
+      normalized.push({ type: "showcase", showcaseId: showcase.id });
     }
   }
   return normalized;
@@ -436,30 +436,30 @@ function truncate(value: string, maxLength: number): string {
 }
 
 function imageBlock(
-  project: NormalizedNewsletterProject,
+  showcase: NormalizedNewsletterShowcase,
   width: number,
   theme: NewsletterTheme,
 ): string {
-  if (!project.imageUrl) {
+  if (!showcase.imageUrl) {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${theme.light}" style="background:${theme.light}">
       <tr><td align="center" valign="middle" height="188" style="color:${theme.accent};font:bold ${theme.id === "volkshaus-cotta" ? "25px" : "48px"}/1 Arial,Helvetica,sans-serif;height:188px">${theme.id === "volkshaus-cotta" ? "VOLKSHAUS" : "#dit"}</td></tr>
     </table>`;
   }
 
-  return `<img class="project-image" src="${escapeHtml(project.imageUrl)}" width="${width}" alt="${escapeHtml(project.title)}" draggable="false" style="border:0;display:block;height:auto;line-height:100%;max-width:${width}px;outline:none;text-decoration:none;width:100%;-ms-interpolation-mode:bicubic">`;
+  return `<img class="showcase-image" src="${escapeHtml(showcase.imageUrl)}" width="${width}" alt="${escapeHtml(showcase.title)}" draggable="false" style="border:0;display:block;height:auto;line-height:100%;max-width:${width}px;outline:none;text-decoration:none;width:100%;-ms-interpolation-mode:bicubic">`;
 }
 
-function projectCopy(
-  project: NormalizedNewsletterProject,
+function showcaseCopy(
+  showcase: NormalizedNewsletterShowcase,
   theme: NewsletterTheme,
 ): string {
-  const kicker = project.subtitle || germanDate(project.date);
-  const readMore = project.showLink && project.url
-    ? `<a href="${escapeHtml(project.url)}" style="border-bottom:2px solid ${theme.accent};color:${theme.accent};font:bold 14px/1.3 Arial,Helvetica,sans-serif;text-decoration:none;text-transform:uppercase">${escapeHtml(project.linkText)}&nbsp;→</a>`
+  const kicker = showcase.subtitle || germanDate(showcase.date);
+  const readMore = showcase.showLink && showcase.url
+    ? `<a href="${escapeHtml(showcase.url)}" style="border-bottom:2px solid ${theme.accent};color:${theme.accent};font:bold 14px/1.3 Arial,Helvetica,sans-serif;text-decoration:none;text-transform:uppercase">${escapeHtml(showcase.linkText)}&nbsp;→</a>`
     : "";
   return `<p style="color:${theme.accent};font:bold 11px/1.2 Arial,Helvetica,sans-serif;letter-spacing:1.5px;margin:0 0 9px;text-transform:uppercase">${escapeHtml(kicker)}</p>
-    <h2 style="color:${theme.text};font:${theme.id === "volkshaus-cotta" ? "900" : "bold"} 25px/1.08 Arial,Helvetica,sans-serif;margin:0 0 11px;overflow-wrap:anywhere">${escapeHtml(project.title)}</h2>
-    <p style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;margin:0 0 14px">${renderInlineMarkdown(project.description, project.url ?? DEFAULT_BASE_URL, theme)}</p>
+    <h2 style="color:${theme.text};font:${theme.id === "volkshaus-cotta" ? "900" : "bold"} 25px/1.08 Arial,Helvetica,sans-serif;margin:0 0 11px;overflow-wrap:anywhere">${escapeHtml(showcase.title)}</h2>
+    <p style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;margin:0 0 14px">${renderInlineMarkdown(showcase.description, showcase.url ?? DEFAULT_BASE_URL, theme)}</p>
     ${readMore}`;
 }
 
@@ -473,7 +473,7 @@ function divider(assets: NewsletterAssets, theme: NewsletterTheme): string {
   </table>`;
 }
 
-function projectFrame(
+function showcaseFrame(
   content: string,
   assets: NewsletterAssets,
   showDivider: boolean,
@@ -487,18 +487,18 @@ function projectFrame(
   </td></tr>`;
 }
 
-function projectBlock(
-  project: NormalizedNewsletterProject,
+function showcaseBlock(
+  showcase: NormalizedNewsletterShowcase,
   index: number,
   assets: NewsletterAssets,
   showDivider: boolean,
   theme: NewsletterTheme,
 ): string {
-  if (project.layout === "stacked") {
-    return projectFrame(
-      `<table class="project-table project-table--stacked" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td align="left" style="padding:0 0 22px">${imageBlock(project, 540, theme)}</td></tr>
-        <tr><td align="left" style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;padding:0">${projectCopy(project, theme)}</td></tr>
+  if (showcase.layout === "stacked") {
+    return showcaseFrame(
+      `<table class="showcase-table showcase-table--stacked" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td align="left" style="padding:0 0 22px">${imageBlock(showcase, 540, theme)}</td></tr>
+        <tr><td align="left" style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;padding:0">${showcaseCopy(showcase, theme)}</td></tr>
       </table>`,
       assets,
       showDivider,
@@ -507,10 +507,10 @@ function projectBlock(
   }
 
   const reverse = index % 2 === 1;
-  const imageCell = `<th class="stack-column stack-image" dir="ltr" width="46%" valign="top" align="left" style="font-weight:normal;padding:${reverse ? "0 0 0 18px" : "0 18px 0 0"};width:46%">${imageBlock(project, 248, theme)}</th>`;
-  const copyCell = `<th class="stack-column stack-copy" dir="ltr" width="54%" valign="top" align="left" style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;font-weight:normal;padding:${reverse ? "0 18px 0 0" : "0 0 0 18px"};width:54%">${projectCopy(project, theme)}</th>`;
-  return projectFrame(
-    `<table class="project-table" role="presentation"${reverse ? ' dir="rtl"' : ""} width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr>${imageCell}${copyCell}</tr></table>`,
+  const imageCell = `<th class="stack-column stack-image" dir="ltr" width="46%" valign="top" align="left" style="font-weight:normal;padding:${reverse ? "0 0 0 18px" : "0 18px 0 0"};width:46%">${imageBlock(showcase, 248, theme)}</th>`;
+  const copyCell = `<th class="stack-column stack-copy" dir="ltr" width="54%" valign="top" align="left" style="color:${theme.text};font:16px/1.45 Arial,Helvetica,sans-serif;font-weight:normal;padding:${reverse ? "0 18px 0 0" : "0 0 0 18px"};width:54%">${showcaseCopy(showcase, theme)}</th>`;
+  return showcaseFrame(
+    `<table class="showcase-table" role="presentation"${reverse ? ' dir="rtl"' : ""} width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr>${imageCell}${copyCell}</tr></table>`,
     assets,
     showDivider,
     theme,
@@ -544,28 +544,28 @@ function bannerBlock(
 }
 
 function newsletterContent(
-  projects: readonly NormalizedNewsletterProject[],
+  showcases: readonly NormalizedNewsletterShowcase[],
   items: readonly NewsletterItem[],
   assets: NewsletterAssets,
-  showProjectsHeading: boolean,
+  showShowcasesHeading: boolean,
   theme: NewsletterTheme,
 ): string {
-  const projectsById = new Map(projects.map((project) => [project.id, project]));
-  let projectIndex = 0;
+  const showcasesById = new Map(showcases.map((showcase) => [showcase.id, showcase]));
+  let showcaseIndex = 0;
   return items
     .map((item) => {
       if (item.type === "button") return buttonBlock(item, theme);
       if (item.type === "banner") return bannerBlock(item, theme);
-      const project = projectsById.get(item.projectId);
-      if (!project) return "";
-      const markup = projectBlock(
-        project,
-        projectIndex,
+      const showcase = showcasesById.get(item.showcaseId);
+      if (!showcase) return "";
+      const markup = showcaseBlock(
+        showcase,
+        showcaseIndex,
         assets,
-        showProjectsHeading || projectIndex > 0,
+        showShowcasesHeading || showcaseIndex > 0,
         theme,
       );
-      projectIndex += 1;
+      showcaseIndex += 1;
       return markup;
     })
     .join("");
@@ -746,7 +746,7 @@ function volkshausDivider(): string {
 }
 
 function volkshausImageBlock(
-  project: NormalizedNewsletterProject,
+  project: NormalizedNewsletterShowcase,
   width: number,
 ): string {
   if (!project.imageUrl) {
@@ -756,7 +756,7 @@ function volkshausImageBlock(
   return `<img class="project-image" src="${escapeHtml(project.imageUrl)}" width="${width}" alt="${escapeHtml(project.title)}" draggable="false" style="border:0;display:block;height:auto;line-height:100%;max-width:${width}px;outline:none;text-decoration:none;width:100%;-ms-interpolation-mode:bicubic">`;
 }
 
-function volkshausProjectCopy(project: NormalizedNewsletterProject): string {
+function volkshausProjectCopy(project: NormalizedNewsletterShowcase): string {
   const kicker = project.subtitle || germanDate(project.date);
   const readMore =
     project.showLink && project.url
@@ -770,7 +770,7 @@ function volkshausProjectCopy(project: NormalizedNewsletterProject): string {
 }
 
 function volkshausProjectBlock(
-  project: NormalizedNewsletterProject,
+  project: NormalizedNewsletterShowcase,
   showDivider: boolean,
 ): string {
   const dividerMarkup = showDivider ? volkshausDivider() : "";
@@ -809,24 +809,24 @@ function volkshausBannerBlock(item: NewsletterBannerItem): string {
 }
 
 function volkshausNewsletterContent(
-  projects: readonly NormalizedNewsletterProject[],
+  showcases: readonly NormalizedNewsletterShowcase[],
   items: readonly NewsletterItem[],
-  showProjectsHeading: boolean,
+  showShowcasesHeading: boolean,
 ): string {
-  const projectsById = new Map(projects.map((project) => [project.id, project]));
-  let projectIndex = 0;
+  const showcasesById = new Map(showcases.map((showcase) => [showcase.id, showcase]));
+  let showcaseIndex = 0;
 
   return items
     .map((item) => {
       if (item.type === "button") return volkshausButtonBlock(item);
       if (item.type === "banner") return volkshausBannerBlock(item);
-      const project = projectsById.get(item.projectId);
-      if (!project) return "";
+      const showcase = showcasesById.get(item.showcaseId);
+      if (!showcase) return "";
       const markup = volkshausProjectBlock(
-        project,
-        showProjectsHeading || projectIndex > 0,
+        showcase,
+        showShowcasesHeading || showcaseIndex > 0,
       );
-      projectIndex += 1;
+      showcaseIndex += 1;
       return markup;
     })
     .join("");
@@ -884,12 +884,12 @@ function volkshausSocialIcon(
 
 function renderVolkshausCottaNewsletter(options: {
   baseUrl: string;
-  projects: readonly NormalizedNewsletterProject[];
+  showcases: readonly NormalizedNewsletterShowcase[];
   items: readonly NewsletterItem[];
   title: string;
   subject: string;
   intro: string;
-  showProjectsHeading: boolean;
+  showShowcasesHeading: boolean;
   calendar?: NewsletterCalendar;
   roomRequestUrl: string;
   webviewHref: string;
@@ -897,12 +897,12 @@ function renderVolkshausCottaNewsletter(options: {
 }): string {
   const {
     baseUrl,
-    projects,
+    showcases,
     items,
     title,
     subject,
     intro,
-    showProjectsHeading,
+    showShowcasesHeading,
     calendar,
     roomRequestUrl,
     webviewHref,
@@ -952,8 +952,8 @@ function renderVolkshausCottaNewsletter(options: {
       <tr><td class="mobile-pad" align="center" style="padding:8px 20px 14px"><h1 style="color:${VOLKSHAUS_COTTA_COLORS.navy};font:bold 22px/1.45 'Open Sans',Arial,Helvetica,sans-serif;margin:0">Das Neue Volkshaus Cotta</h1><p style="color:${VOLKSHAUS_COTTA_COLORS.navy};font:bold 18px/1.35 'Open Sans',Arial,Helvetica,sans-serif;margin:0">Ihr Kultur- und Nachbarschaftszentrum</p><p style="color:${VOLKSHAUS_COTTA_COLORS.navy};font:14px/1.5 'Open Sans',Arial,Helvetica,sans-serif;margin:0">Hebbelstr. 35 B, 01157 Dresden-Cotta</p></td></tr>
       <tr><td class="mobile-pad" style="padding:0 20px">${volkshausDivider()}</td></tr>
       <tr><td class="mobile-pad" style="padding:18px 20px 5px"><h2 style="color:${VOLKSHAUS_COTTA_COLORS.navy};font:bold 18px/1.35 'Urbanist',Arial,Helvetica,sans-serif;margin:0 0 10px">${escapeHtml(title)}</h2>${introMarkup}</td></tr>
-      ${showProjectsHeading ? `<tr><td class="mobile-pad" style="padding:0 20px 18px">${volkshausDivider()}<h2 style="color:${VOLKSHAUS_COTTA_COLORS.linkYellow};font:bold 18px/1.35 'Urbanist',Arial,Helvetica,sans-serif;margin:18px 0 0">Neues aus dem Haus</h2></td></tr>` : ""}
-      ${volkshausNewsletterContent(projects, items, showProjectsHeading)}
+      ${showShowcasesHeading ? `<tr><td class="mobile-pad" style="padding:0 20px 18px">${volkshausDivider()}<h2 style="color:${VOLKSHAUS_COTTA_COLORS.linkYellow};font:bold 18px/1.35 'Urbanist',Arial,Helvetica,sans-serif;margin:18px 0 0">Neues aus dem Haus</h2></td></tr>` : ""}
+      ${volkshausNewsletterContent(showcases, items, showShowcasesHeading)}
       ${volkshausRoomsSection(roomRequestUrl)}
       ${volkshausCalendarSection(calendar, baseUrl)}
       <tr><td align="center" bgcolor="${VOLKSHAUS_COTTA_COLORS.yellow}" style="background:${VOLKSHAUS_COTTA_COLORS.yellow};color:${VOLKSHAUS_COTTA_COLORS.navy};padding:20px"><p style="font:bold 18px/1.4 'Urbanist',Arial,Helvetica,sans-serif;margin:0 0 4px">Spendenkonto</p><p style="font:12px/1.55 'Urbanist',Arial,Helvetica,sans-serif;margin:0">Konglomerat e. V.<br>Skatbank Altenburg<br>IBAN DE46 8306 5408 0104 7788 12<br>BIC GENODEF1SLR<br><strong>Verwendungszweck: Spende Volkshaus Cotta</strong></p></td></tr>
@@ -978,10 +978,10 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     DEFAULT_BASE_URL;
   const design = normalizeNewsletterDesign(options.design);
   const theme = NEWSLETTER_THEMES[design];
-  const projects = options.projects
-    .map((project) => normalizeNewsletterProject(project, baseUrl))
-    .filter((project): project is NormalizedNewsletterProject => Boolean(project));
-  const items = normalizeNewsletterItems(options.items, projects, baseUrl);
+  const showcases = options.showcases
+    .map((showcase) => normalizeNewsletterShowcase(showcase, baseUrl))
+    .filter((showcase): showcase is NormalizedNewsletterShowcase => Boolean(showcase));
+  const items = normalizeNewsletterItems(options.items, showcases, baseUrl);
   const assets = normalizeAssets(options.assets, baseUrl);
   const title =
     cleanText(options.title, 240) ||
@@ -994,7 +994,7 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     (design === "volkshaus-cotta"
       ? "Hier kommen Neuigkeiten, Projekte und Termine aus dem Neuen Volkshaus Cotta."
       : "Hier kommen die neuesten Machenschaften aus dem Konglomerat.");
-  const showProjectsHeading = options.showProjectsHeading !== false;
+  const showShowcasesHeading = options.showShowcasesHeading !== false;
   const membershipUrl =
     normalizeAbsoluteUrl(options.membershipUrl ?? "/der-verein/mitglied-werden", baseUrl) ??
     baseUrl;
@@ -1008,16 +1008,15 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     "{UNSUBSCRIBE_LINK}",
     baseUrl,
   );
-
   if (design === "volkshaus-cotta") {
     return renderVolkshausCottaNewsletter({
       baseUrl,
-      projects,
+      showcases,
       items,
       title,
       subject,
       intro,
-      showProjectsHeading,
+      showShowcasesHeading,
       calendar: options.calendar,
       roomRequestUrl,
       webviewHref,
@@ -1025,12 +1024,12 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     });
   }
 
-  const newsUrl = normalizeAbsoluteUrl("/projects", baseUrl) ?? baseUrl;
+  const newsUrl = normalizeAbsoluteUrl("/showcase", baseUrl) ?? baseUrl;
   const instagramUrl = "https://www.instagram.com/konglomerat.ev/";
   const headerMarkup = theme.useGraphicAssets
     ? `<tr><td class="mobile-pad" style="padding:20px 20px 13px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><th class="header-column" valign="middle" align="left" style="color:${theme.text};font:bold 12px/1.3 Arial,Helvetica,sans-serif;font-weight:bold;letter-spacing:.2px">${escapeHtml(title.toUpperCase())}</th><th class="header-column header-logo" align="right" valign="middle" style="font-weight:normal"><img src="${escapeHtml(assets.logo)}" width="150" alt="${escapeHtml(theme.brand)}" style="display:block;height:auto;margin-left:auto;max-width:150px;width:150px"></th></tr></table><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="14" style="font-size:0;line-height:0">&nbsp;</td></tr></table>${divider(assets, theme)}</td></tr>`
     : `<tr><td class="mobile-pad" bgcolor="${theme.accent}" style="background:${theme.accent};padding:23px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><th class="header-column" valign="middle" align="left" style="color:#fff;font:bold 12px/1.3 Arial,Helvetica,sans-serif;font-weight:bold;letter-spacing:1px;text-transform:uppercase">${escapeHtml(title)}</th><th class="header-column header-logo" align="right" valign="middle" style="color:#fff;font:900 20px/.92 Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:-.5px;text-transform:uppercase">NEUES<br>VOLKSHAUS<br>COTTA</th></tr></table></td></tr>`;
-  const sectionHeadingMarkup = showProjectsHeading
+  const sectionHeadingMarkup = showShowcasesHeading
     ? theme.useGraphicAssets
       ? `<tr><td class="mobile-pad" align="center" style="padding:18px 20px 30px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td width="80" valign="middle" style="padding:0 12px 0 0;width:80px"><img class="section-arrow" src="${escapeHtml(assets.arrow)}" width="80" alt="" style="border:0;display:block;height:auto;max-width:80px;width:80px;-ms-interpolation-mode:bicubic"></td><td valign="middle"><p class="section-title" style="color:${theme.text};font:900 29px/1.15 Arial,Helvetica,sans-serif;margin:0">${theme.projectsTitle}</p></td></tr></table></td></tr>`
       : `<tr><td class="mobile-pad" align="left" style="padding:18px 20px 30px"><p style="color:${theme.accent};font:bold 11px/1.2 Arial,Helvetica,sans-serif;letter-spacing:1.7px;margin:0 0 7px;text-transform:uppercase">Neues Volkshaus Cotta</p><p class="section-title" style="color:${theme.text};font:900 30px/1.05 Arial,Helvetica,sans-serif;margin:0">${theme.projectsTitle}</p></td></tr>`
@@ -1060,7 +1059,7 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     a[x-apple-data-detectors],u+.email-body a,#MessageViewBody a{color:inherit;font:inherit;text-decoration:none}
     @media only screen and (max-width:620px){
       body.email-body,.email-center,.email-shell{background:#fff!important}.email-shell-cell{padding:0!important}.email-shell{width:100%!important}.email-container{max-width:100%!important;width:100%!important}.mobile-pad{padding-left:20px!important;padding-right:20px!important}
-      .header-column,.stack-column,.footer-column{display:block!important;max-width:100%!important;width:100%!important}.header-logo{padding-top:14px!important;text-align:left!important}.header-logo img{margin-left:0!important}.stack-image{padding:0 0 18px!important}.stack-copy{padding:0!important}.project-image{max-width:100%!important;width:100%!important}.footer-column{padding:0 0 22px!important}.footer-column-last{padding-bottom:0!important}.section-title{font-size:25px!important}.webview{text-align:center!important}
+      .header-column,.stack-column,.footer-column{display:block!important;max-width:100%!important;width:100%!important}.header-logo{padding-top:14px!important;text-align:left!important}.header-logo img{margin-left:0!important}.stack-image{padding:0 0 18px!important}.stack-copy{padding:0!important}.showcase-image{max-width:100%!important;width:100%!important}.footer-column{padding:0 0 22px!important}.footer-column-last{padding-bottom:0!important}.section-title{font-size:25px!important}.webview{text-align:center!important}
     }
   </style>
 </head>
@@ -1072,12 +1071,12 @@ export function renderNewsletter(options: RenderNewsletterOptions): string {
     <!--[if mso]><table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
     <table class="email-container" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background:#fff;max-width:580px;width:100%">
       ${headerMarkup}
-      <tr><td class="mobile-pad intro-section" style="color:${theme.text};font:16px/1.5 Arial,Helvetica,sans-serif;padding:22px 20px ${showProjectsHeading ? "22px" : "16px"}"><h1 style="color:${theme.text};font:bold 31px/1.1 Arial,Helvetica,sans-serif;margin:0 0 14px">${theme.greeting}</h1>${intro.split(/\n{2,}/).map((paragraph) => `<p style="color:${theme.text};font:16px/1.5 Arial,Helvetica,sans-serif;margin:0 0 17px">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}<p class="intro-signoff" style="color:${theme.text};font:bold italic 16px/1.5 Arial,Helvetica,sans-serif;margin:20px 0 ${showProjectsHeading ? "22px" : "0"}">${theme.signoff}</p>${showProjectsHeading ? divider(assets, theme) : ""}</td></tr>
+      <tr><td class="mobile-pad intro-section" style="color:${theme.text};font:16px/1.5 Arial,Helvetica,sans-serif;padding:22px 20px ${showShowcasesHeading ? "22px" : "16px"}"><h1 style="color:${theme.text};font:bold 31px/1.1 Arial,Helvetica,sans-serif;margin:0 0 14px">${theme.greeting}</h1>${intro.split(/\n{2,}/).map((paragraph) => `<p style="color:${theme.text};font:16px/1.5 Arial,Helvetica,sans-serif;margin:0 0 17px">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}<p class="intro-signoff" style="color:${theme.text};font:bold italic 16px/1.5 Arial,Helvetica,sans-serif;margin:20px 0 ${showShowcasesHeading ? "22px" : "0"}">${theme.signoff}</p>${showShowcasesHeading ? divider(assets, theme) : ""}</td></tr>
       ${sectionHeadingMarkup}
-      ${newsletterContent(projects, items, assets, showProjectsHeading, theme)}
+      ${newsletterContent(showcases, items, assets, showShowcasesHeading, theme)}
       ${calendarSection(options.calendar, baseUrl, assets, theme)}
       <tr><td class="mobile-pad" align="center" style="padding:0 20px 20px">${divider(assets, theme)}<p style="color:${theme.text};font:900 22px/1.2 Arial,Helvetica,sans-serif;margin:24px 0 18px">${theme.ctaTitle}</p><!--[if mso]><v:rect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${escapeHtml(primaryCtaUrl)}" style="height:44px;v-text-anchor:middle;width:190px" stroked="f" fillcolor="${theme.accent}"><w:anchorlock/><center style="color:#fff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold">${theme.ctaLabel} →</center></v:rect><![endif]--><!--[if !mso]><!--><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td align="center" bgcolor="${theme.accent}" style="background:${theme.accent}"><a href="${escapeHtml(primaryCtaUrl)}" style="border:1px solid ${theme.accent};color:#fff;display:inline-block;font:bold 14px/1 Arial,Helvetica,sans-serif;padding:14px 22px;text-decoration:none">${theme.ctaLabel}&nbsp;→</a></td></tr></table><!--<![endif]--></td></tr>
-      <tr><td align="center" style="padding:12px 15px 26px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>${socialLink("Instagram", instagramUrl, theme)}${socialLink("Projekte", newsUrl, theme)}</tr></table></td></tr>
+      <tr><td align="center" style="padding:12px 15px 26px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>${socialLink("Instagram", instagramUrl, theme)}${socialLink("Hier entstanden", newsUrl, theme)}</tr></table></td></tr>
       ${footerIllustration}
       <tr><td class="mobile-pad" bgcolor="${theme.text}" style="background:${theme.text};color:#fff;font:11px/1.55 Arial,Helvetica,sans-serif;padding:25px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><th class="footer-column" width="50%" valign="top" align="left" style="color:#fff;font:11px/1.55 Arial,Helvetica,sans-serif;font-weight:normal;padding:0;width:50%"><strong>${escapeHtml(theme.brand)}</strong><br>Konglomerat e.V.<br>Jagdweg 1–3 · 01159 Dresden<br><a href="mailto:vorstand@konglomerat.org" style="color:#fff;text-decoration:none">vorstand@konglomerat.org</a><br><br>SPENDENKONTO<br>IBAN: DE02 8306 5408 0004 7788 12<br>BIC: GENODEF1SLR</th><th class="footer-column footer-column-last" width="50%" valign="top" align="left" style="color:#fff;font:11px/1.55 Arial,Helvetica,sans-serif;font-weight:normal;padding:0 0 0 18px;width:50%">${footerRecipientCopy}<br><br><a href="${escapeHtml(unsubscribeHref)}" style="color:${theme.accent}">Newsletter abbestellen</a><br>CC-BY-SA 4.0 · Konglomerat e.V.</th></tr></table></td></tr>
     </table>

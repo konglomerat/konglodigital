@@ -16,7 +16,7 @@ export default async function ModuleAccessGuard({
 
   if (!(await userCanAccessModule(supabase, data.user, module))) {
     return (
-      <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 shadow-sm">
+      <section className="rounded-lg border border-destructive-border bg-destructive-soft p-6 ">
         <h1 className="text-2xl font-semibold text-destructive">
           Kein Zugriff
         </h1>

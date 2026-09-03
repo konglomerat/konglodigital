@@ -8,7 +8,10 @@ import {
   faDownload,
 } from "@fortawesome/free-solid-svg-icons";
 
+import Button from "@/components/knglmrt/Button";
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
+import Field from "@/components/knglmrt/Field";
+import Textarea from "@/components/knglmrt/Textarea";
 
 type CostCenterOption = {
   value: string;
@@ -136,8 +139,10 @@ const normalizeReceipt = (raw: Record<string, unknown>): ReceiptDetail => {
     (payment) =>
       typeof payment === "object" &&
       payment !== null &&
-      typeof (payment as Record<string, unknown>).cashTransaction === "string" &&
-      ((payment as Record<string, unknown>).cashTransaction as string).length > 0,
+      typeof (payment as Record<string, unknown>).cashTransaction ===
+        "string" &&
+      ((payment as Record<string, unknown>).cashTransaction as string).length >
+        0,
   );
 
   return {
@@ -158,7 +163,10 @@ const normalizeReceipt = (raw: Record<string, unknown>): ReceiptDetail => {
     refund: Boolean(raw.refund),
     tags: tagsRaw.filter((tag): tag is string => typeof tag === "string"),
     notes: notesRaw
-      .filter((note): note is Record<string, unknown> => typeof note === "object" && note !== null)
+      .filter(
+        (note): note is Record<string, unknown> =>
+          typeof note === "object" && note !== null,
+      )
       .map((note) => {
         const writtenBy =
           typeof note.writtenBy === "object" && note.writtenBy !== null
@@ -172,14 +180,18 @@ const normalizeReceipt = (raw: Record<string, unknown>): ReceiptDetail => {
         };
       }),
     positions: positionsRaw
-      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+      .filter(
+        (p): p is Record<string, unknown> =>
+          typeof p === "object" && p !== null,
+      )
       .map((position) => ({
         account: toNumberOrNull(position.account),
         costCenter1: toNumberOrNull(position.costCenter1),
         costCenter2: toNumberOrNull(position.costCenter2),
         amount: toNumberOrNull(position.amount),
         taxCode: toStringOrNull(position.taxCode),
-        description: typeof position.description === "string" ? position.description : "",
+        description:
+          typeof position.description === "string" ? position.description : "",
         details: toStringOrNull(position.details),
         quantity: toNumberOrNull(position.quantity),
         unit: toStringOrNull(position.unit),
@@ -207,14 +219,14 @@ const isCreateCostCenterOption = (
 
 const formatCostCenterOptionLabel = (option: CostCenterOption) => {
   if (isCreateCostCenterOption(option)) {
-    return (
-      <span className="font-medium text-foreground">{option.label}</span>
-    );
+    return <span className="font-medium text-foreground">{option.label}</span>;
   }
 
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="font-mono text-xs text-muted-foreground">{option.value}</span>
+      <span className="font-mono text-xs text-muted-foreground">
+        {option.value}
+      </span>
       <span>{option.label}</span>
     </span>
   );
@@ -239,11 +251,15 @@ export default function ReceiptDetailDrawer({
   >([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [creatingCostCenterForIndex, setCreatingCostCenterForIndex] = useState<number | null>(null);
+  const [creatingCostCenterForIndex, setCreatingCostCenterForIndex] = useState<
+    number | null
+  >(null);
   const [newCostCenterNumber, setNewCostCenterNumber] = useState("");
   const [newCostCenterLabel, setNewCostCenterLabel] = useState("");
   const [creatingCostCenter, setCreatingCostCenter] = useState(false);
-  const [createCostCenterError, setCreateCostCenterError] = useState<string | null>(null);
+  const [createCostCenterError, setCreateCostCenterError] = useState<
+    string | null
+  >(null);
   const [newNote, setNewNote] = useState("");
   const [creatingNote, setCreatingNote] = useState(false);
   const [createNoteError, setCreateNoteError] = useState<string | null>(null);
@@ -444,12 +460,16 @@ export default function ReceiptDetailDrawer({
     const trimmedLabel = newCostCenterLabel.trim();
 
     if (!Number.isFinite(parsedNumber) || parsedNumber <= 0) {
-      setCreateCostCenterError("Bitte eine gueltige Werkbereich-Nummer eingeben.");
+      setCreateCostCenterError(
+        "Bitte eine gueltige Werkbereich-Nummer eingeben.",
+      );
       return;
     }
 
     if (!trimmedLabel) {
-      setCreateCostCenterError("Bitte einen Namen fuer den Werkbereich eingeben.");
+      setCreateCostCenterError(
+        "Bitte einen Namen fuer den Werkbereich eingeben.",
+      );
       return;
     }
 
@@ -473,19 +493,25 @@ export default function ReceiptDetailDrawer({
       };
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Werkbereich konnte nicht angelegt werden.");
+        throw new Error(
+          data.error ?? "Werkbereich konnte nicht angelegt werden.",
+        );
       }
 
       const createdOption = data.costCenter ?? {
         value: String(parsedNumber),
         label: trimmedLabel,
       };
-      const nextOptions = data.costCenters ?? [...drawerCostCenterOptions, createdOption];
+      const nextOptions = data.costCenters ?? [
+        ...drawerCostCenterOptions,
+        createdOption,
+      ];
       setDrawerCostCenterOptions(nextOptions);
       setPositionEdits((current) => {
         const draft = [...current];
         const existing = draft[creatingCostCenterForIndex] ?? {
-          description: detail?.positions[creatingCostCenterForIndex]?.description ?? "",
+          description:
+            detail?.positions[creatingCostCenterForIndex]?.description ?? "",
           costCenter2: null,
         };
         draft[creatingCostCenterForIndex] = {
@@ -539,11 +565,14 @@ export default function ReceiptDetailDrawer({
     setCreateNoteError(null);
 
     try {
-      const response = await fetch(`/api/campai/balance/receipts/${receiptId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
+      const response = await fetch(
+        `/api/campai/balance/receipts/${receiptId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        },
+      );
       const data = (await response.json().catch(() => ({}))) as {
         receipt?: Record<string, unknown>;
         error?: string;
@@ -587,12 +616,14 @@ export default function ReceiptDetailDrawer({
         aria-label="Schließen"
       />
       <aside
-        className={`relative flex h-full w-full max-w-[640px] flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-100 ease-out dark:bg-zinc-900 ${drawerEntered ? "translate-x-0" : "translate-x-6"}`}
+        className={`relative flex h-full w-full max-w-[640px] flex-col overflow-hidden bg-card shadow-2xl transition-transform duration-100 ease-out dark:bg-zinc-900 ${drawerEntered ? "translate-x-0" : "translate-x-6"}`}
       >
         <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {detail?.type ? TYPE_LABELS[detail.type] ?? detail.type : "Beleg"}
+            <p className="knglmrt-caption text-muted-foreground">
+              {detail?.type
+                ? (TYPE_LABELS[detail.type] ?? detail.type)
+                : "Beleg"}
             </p>
             <h2 className="truncate text-lg font-semibold text-foreground">
               {detail?.receiptNumber || "Beleg-Details"}
@@ -605,23 +636,24 @@ export default function ReceiptDetailDrawer({
           </div>
           <div className="flex items-center gap-2">
             {receiptId ? (
-              <a
+              <Button
                 href={`/api/campai/balance/receipts/${receiptId}/download`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground/80 transition hover:bg-accent hover:text-accent-foreground"
+                kind="ghost"
+                size="medium"
+                iconOnly
+                icon={faDownload}
                 title="PDF herunterladen"
                 aria-label="PDF herunterladen"
-              >
-                <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-              </a>
+              />
             ) : null}
-            <button
-              type="button"
+            <Button
               onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground/80 transition hover:bg-accent hover:text-accent-foreground"
+              kind="ghost"
+              size="medium"
+              iconOnly
+              icon={faXmark}
               aria-label="Schließen"
-            >
-              <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-            </button>
+            />
           </div>
         </header>
 
@@ -638,20 +670,36 @@ export default function ReceiptDetailDrawer({
           ) : detail ? (
             <div className="space-y-6">
               <section className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <DetailRow label="Belegnummer" value={detail.receiptNumber ?? "—"} />
+                <DetailRow
+                  label="Belegnummer"
+                  value={detail.receiptNumber ?? "—"}
+                />
                 <DetailRow
                   label="Status"
                   value={
                     detail.paymentStatus
-                      ? PAYMENT_STATUS_LABELS[detail.paymentStatus.toLowerCase()] ??
-                        detail.paymentStatus
+                      ? (PAYMENT_STATUS_LABELS[
+                          detail.paymentStatus.toLowerCase()
+                        ] ?? detail.paymentStatus)
                       : "—"
                   }
                 />
-                <DetailRow label="Beleg-Datum" value={formatDate(detail.receiptDate)} />
-                <DetailRow label="Fälligkeit" value={formatDate(detail.dueDate)} />
-                <DetailRow label="Bezahlt am" value={formatDate(detail.paidAt)} />
-                <DetailRow label="Erstellt" value={formatDateTime(detail.createdAt)} />
+                <DetailRow
+                  label="Beleg-Datum"
+                  value={formatDate(detail.receiptDate)}
+                />
+                <DetailRow
+                  label="Fälligkeit"
+                  value={formatDate(detail.dueDate)}
+                />
+                <DetailRow
+                  label="Bezahlt am"
+                  value={formatDate(detail.paidAt)}
+                />
+                <DetailRow
+                  label="Erstellt"
+                  value={formatDateTime(detail.createdAt)}
+                />
                 <DetailRow
                   label="Brutto"
                   value={formatCents(detail.totalGrossAmount)}
@@ -665,28 +713,31 @@ export default function ReceiptDetailDrawer({
                   value={
                     detail.account !== null
                       ? `${detail.account}${detail.accountName ? ` · ${detail.accountName}` : ""}`
-                      : detail.accountName ?? "—"
+                      : (detail.accountName ?? "—")
                   }
                 />
-                <DetailRow label="Netto/Brutto" value={detail.isNet ? "Netto" : "Brutto"} />
+                <DetailRow
+                  label="Netto/Brutto"
+                  value={detail.isNet ? "Netto" : "Brutto"}
+                />
               </section>
 
               {detail.isCashLinked ? (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
-                  Dieser Beleg ist mit einer Zahlung verknüpft und kann nicht über
-                  die Übersicht bearbeitet werden. Bitte direkt in Campai anpassen.
+                <div className="rounded-lg border border-amber-300 bg-warning-soft px-3 py-2 text-xs text-foreground dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                  Dieser Beleg ist mit einer Zahlung verknüpft und kann nicht
+                  über die Übersicht bearbeitet werden. Bitte direkt in Campai
+                  anpassen.
                 </div>
               ) : null}
 
               <section>
                 <SectionTitle>Beschreibung</SectionTitle>
                 {editable ? (
-                  <textarea
+                  <Textarea
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     maxLength={140}
                     rows={2}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                     placeholder="Beschreibung"
                   />
                 ) : (
@@ -706,10 +757,12 @@ export default function ReceiptDetailDrawer({
                     };
                     const costCenter2Value =
                       edit.costCenter2 !== null
-                        ? costCenterOptionMap.get(String(edit.costCenter2)) ?? {
+                        ? (costCenterOptionMap.get(
+                            String(edit.costCenter2),
+                          ) ?? {
                             value: String(edit.costCenter2),
                             label: String(edit.costCenter2),
-                          }
+                          })
                         : null;
 
                     return (
@@ -727,7 +780,9 @@ export default function ReceiptDetailDrawer({
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground">
                           <div>
-                            <span className="font-medium text-foreground/70">Konto:</span>{" "}
+                            <span className="font-medium text-foreground/70">
+                              Konto:
+                            </span>{" "}
                             {position.account ?? "—"}
                           </div>
                           <div>
@@ -746,24 +801,29 @@ export default function ReceiptDetailDrawer({
                           ) : null}
                           {position.quantity !== null ? (
                             <div>
-                              <span className="font-medium text-foreground/70">Menge:</span>{" "}
+                              <span className="font-medium text-foreground/70">
+                                Menge:
+                              </span>{" "}
                               {position.quantity}
                               {position.unit ? ` ${position.unit}` : ""}
                             </div>
                           ) : null}
                         </div>
                         <div className="mt-3 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <label className="knglmrt-label block text-foreground">
                             Beschreibung
                           </label>
                           {editable ? (
-                            <textarea
+                            <Textarea
                               value={edit.description}
                               onChange={(event) => {
                                 const value = event.target.value;
                                 setPositionEdits((current) => {
                                   const next = [...current];
-                                  next[index] = { ...next[index], description: value };
+                                  next[index] = {
+                                    ...next[index],
+                                    description: value,
+                                  };
                                   return next;
                                 });
                               }}
@@ -779,7 +839,7 @@ export default function ReceiptDetailDrawer({
                           )}
                         </div>
                         <div className="mt-3 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <label className="knglmrt-label block text-foreground">
                             Werkbereich/Projekt
                           </label>
                           {editable ? (
@@ -820,35 +880,46 @@ export default function ReceiptDetailDrawer({
                                 }}
                                 formatOptionLabel={formatCostCenterOptionLabel}
                                 placeholder="Werkbereich auswählen…"
-                                noOptionsMessage={() => "Keine Werkbereiche gefunden."}
+                                noOptionsMessage={() =>
+                                  "Keine Werkbereiche gefunden."
+                                }
                               />
                               {creatingCostCenterForIndex === index ? (
                                 <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-2 sm:p-3">
                                   <div className="grid gap-2 sm:grid-cols-2">
-                                    <input
+                                    <Field
                                       type="number"
                                       min={1}
                                       step={1}
                                       value={newCostCenterNumber}
-                                      onChange={(event) => setNewCostCenterNumber(event.target.value)}
-                                      className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+                                      onChange={(event) =>
+                                        setNewCostCenterNumber(
+                                          event.target.value,
+                                        )
+                                      }
                                       placeholder="Nummer"
                                     />
-                                    <input
+                                    <Field
                                       type="text"
                                       value={newCostCenterLabel}
-                                      onChange={(event) => setNewCostCenterLabel(event.target.value)}
+                                      onChange={(event) =>
+                                        setNewCostCenterLabel(
+                                          event.target.value,
+                                        )
+                                      }
                                       maxLength={32}
-                                      className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                                       placeholder="Name"
                                     />
                                   </div>
                                   {createCostCenterError ? (
-                                    <p className="text-xs text-destructive">{createCostCenterError}</p>
+                                    <p className="text-xs text-destructive">
+                                      {createCostCenterError}
+                                    </p>
                                   ) : null}
                                   <div className="flex items-center justify-end gap-2">
-                                    <button
-                                      type="button"
+                                    <Button
+                                      kind="secondary"
+                                      size="chip"
                                       onClick={() => {
                                         setCreatingCostCenterForIndex(null);
                                         setNewCostCenterNumber("");
@@ -856,21 +927,17 @@ export default function ReceiptDetailDrawer({
                                         setCreateCostCenterError(null);
                                       }}
                                       disabled={creatingCostCenter}
-                                      className="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                       Abbrechen
-                                    </button>
-                                    <button
-                                      type="button"
+                                    </Button>
+                                    <Button
+                                      kind="primary"
+                                      size="chip"
                                       onClick={handleCreateCostCenter}
-                                      disabled={creatingCostCenter}
-                                      className="inline-flex h-8 items-center gap-2 rounded-md bg-foreground px-3 text-xs font-semibold text-background transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
+                                      loading={creatingCostCenter}
                                     >
-                                      {creatingCostCenter ? (
-                                        <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
-                                      ) : null}
                                       Werkbereich speichern
-                                    </button>
+                                    </Button>
                                   </div>
                                 </div>
                               ) : null}
@@ -878,9 +945,9 @@ export default function ReceiptDetailDrawer({
                           ) : (
                             <p className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
                               {position.costCenter2 !== null
-                                ? costCenterOptionMap.get(
+                                ? (costCenterOptionMap.get(
                                     String(position.costCenter2),
-                                  )?.label ?? String(position.costCenter2)
+                                  )?.label ?? String(position.costCenter2))
                                 : "—"}
                             </p>
                           )}
@@ -912,31 +979,28 @@ export default function ReceiptDetailDrawer({
               <section>
                 <SectionTitle>Interne Notizen</SectionTitle>
                 <div className="mb-3 space-y-2 rounded-lg border border-border bg-card p-2 sm:p-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Neue Notiz
-                  </label>
-                  <textarea
+                  <Textarea
+                    label="Neue Notiz"
                     value={newNote}
                     onChange={(event) => setNewNote(event.target.value)}
                     rows={3}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                     placeholder="Interne Notiz hinzufügen"
                   />
                   {createNoteError ? (
-                    <p className="text-xs text-destructive">{createNoteError}</p>
+                    <p className="text-xs text-destructive">
+                      {createNoteError}
+                    </p>
                   ) : null}
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <Button
+                      kind="primary"
+                      size="chip"
                       onClick={handleCreateNote}
-                      disabled={creatingNote || newNote.trim().length === 0}
-                      className="inline-flex h-8 items-center gap-2 rounded-md bg-foreground px-3 text-xs font-semibold text-background transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={newNote.trim().length === 0}
+                      loading={creatingNote}
                     >
-                      {creatingNote ? (
-                        <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
-                      ) : null}
                       Notiz speichern
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {detail.notes.length > 0 ? (
@@ -959,7 +1023,9 @@ export default function ReceiptDetailDrawer({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Keine Notizen.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Keine Notizen.
+                  </p>
                 )}
               </section>
             </div>
@@ -968,27 +1034,21 @@ export default function ReceiptDetailDrawer({
 
         {detail && editable ? (
           <footer className="flex items-center justify-between gap-3 border-t border-border bg-card/50 px-6 py-3">
-            <p className="min-w-0 truncate text-xs text-destructive">{saveError ?? ""}</p>
+            <p className="min-w-0 truncate text-xs text-destructive">
+              {saveError ?? ""}
+            </p>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="inline-flex h-9 items-center rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              <Button kind="secondary" onClick={onClose} disabled={saving}>
                 Schließen
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                kind="primary"
                 onClick={handleSave}
-                disabled={saving || !isDirty}
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background transition hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!isDirty}
+                loading={saving}
               >
-                {saving ? (
-                  <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />
-                ) : null}
                 Speichern
-              </button>
+              </Button>
             </div>
           </footer>
         ) : null}
@@ -999,18 +1059,14 @@ export default function ReceiptDetailDrawer({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h3>
+    <h3 className="knglmrt-caption mb-2 text-muted-foreground">{children}</h3>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="knglmrt-caption text-muted-foreground">{label}</p>
       <p className="mt-0.5 truncate text-sm text-foreground" title={value}>
         {value}
       </p>

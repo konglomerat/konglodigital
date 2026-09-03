@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 
 type Printer = {
@@ -154,7 +154,7 @@ export default function PrinterEmptyingPage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="knglmrt-border-section bg-card px-4 py-6 text-sm text-muted-foreground">
           Loading printers...
         </div>
       ) : null}
@@ -163,7 +163,7 @@ export default function PrinterEmptyingPage() {
         {printers.map((printer) => (
           <div
             key={printer.id}
-            className="rounded-lg border border-border bg-card p-6 shadow-sm"
+            className="knglmrt-border-section bg-card p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -226,7 +226,7 @@ export default function PrinterEmptyingPage() {
       </section>
 
       {!loading && printers.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
+        <div className="knglmrt-border-section bg-card px-4 py-6 text-sm text-muted-foreground">
           No printers found.
         </div>
       ) : null}

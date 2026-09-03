@@ -31,7 +31,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 import {
   STATUS_LABELS,
@@ -42,6 +42,10 @@ import {
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
 import type { UserRole } from "@/lib/roles";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
+import SearchField from "@/components/knglmrt/SearchField";
 
 type AdminBooking = VolkshausBooking & { accessUrl: string };
 type AssignablePerson = {
@@ -97,7 +101,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
 });
 
 const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 const getPersonName = (person: AssignablePerson) => {
   if (person.campaiName?.trim()) return person.campaiName.trim();
@@ -113,9 +117,7 @@ const getPersonOptionLabel = (person: AssignablePerson) => {
   return name === person.email ? name : `${name} · ${person.email}`;
 };
 
-const getBookedEquipment = (
-  booking: Pick<VolkshausBooking, "equipment">,
-) =>
+const getBookedEquipment = (booking: Pick<VolkshausBooking, "equipment">) =>
   VOLKSHAUS_EQUIPMENT.filter(
     (item) => Number(booking.equipment[item.id] ?? 0) > 0,
   );
@@ -425,8 +427,8 @@ export default function VolkshausAdminClient() {
     <>
       <div className="space-y-6">
         <PageTitle
-          eyebrow="Neues Volkshaus Cotta"
           title="Raumbuchungen"
+          headingLevel={2}
           subTitle="Anfragen prüfen, Termine reservieren und unterschriebene Verträge versenden."
           links={[
             {
@@ -438,36 +440,26 @@ export default function VolkshausAdminClient() {
           ]}
         />
 
-        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <div className="relative">
-              <FontAwesomeIcon
-                icon={faMagnifyingGlass}
-                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                className={`${inputClassName} pl-9`}
-                type="search"
-                value={search}
-                placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
+            <SearchField
+              value={search}
+              placeholder="Referenz, Name, E-Mail oder Veranstaltung suchen"
+              onChange={(event) => setSearch(event.target.value)}
+              onClear={() => setSearch("")}
+            />
             <div className="flex flex-wrap gap-2">
               {FILTERS.map(({ value, label, icon }) => (
-                <button
+                <Button
                   key={value}
-                  type="button"
+                  kind={filter === value ? "primary" : "secondary"}
+                  size="chip"
+                  icon={icon}
+                  aria-pressed={filter === value}
                   onClick={() => setFilter(value)}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold transition ${
-                    filter === value
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-background text-muted-foreground hover:text-foreground"
-                  }`}
                 >
-                  <FontAwesomeIcon icon={icon} className="h-3 w-3" />
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -487,7 +479,7 @@ export default function VolkshausAdminClient() {
         ) : null}
 
         <div className="grid min-h-[620px] items-start gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
-          <aside className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <aside className="knglmrt-border-section overflow-hidden bg-card">
             <div className="border-b border-border px-5 py-4">
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <FontAwesomeIcon
@@ -510,88 +502,88 @@ export default function VolkshausAdminClient() {
                 {filtered.map((booking) => {
                   const bookedEquipment = getBookedEquipment(booking);
                   return (
-                  <li key={booking.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(booking.id)}
-                      className={`w-full p-4 text-left transition ${
-                        booking.id === selectedId
-                          ? "bg-primary-soft"
-                          : "hover:bg-muted/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-bold text-foreground">
-                            {booking.eventTitle}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            {booking.customerName}
-                          </p>
+                    <li key={booking.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(booking.id)}
+                        className={`w-full p-4 text-left transition ${
+                          booking.id === selectedId
+                            ? "bg-primary-soft"
+                            : "hover:bg-muted/60"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-foreground">
+                              {booking.eventTitle}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                              {booking.customerName}
+                            </p>
+                          </div>
+                          <StatusDot booking={booking} />
                         </div>
-                        <StatusDot booking={booking} />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <FontAwesomeIcon
-                            icon={faCalendarDays}
-                            className="h-3 w-3"
-                          />
-                          {dateFormatter.format(
-                            new Date(`${booking.bookingDate}T12:00:00Z`),
-                          )}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 font-mono">
-                          <FontAwesomeIcon
-                            icon={faReceipt}
-                            className="h-3 w-3"
-                          />
-                          {booking.referenceCode}
-                        </span>
-                      </div>
-                      {bookedEquipment.length > 0 ||
-                      booking.internalNotes ||
-                      booking.specialRequirements ? (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {bookedEquipment.length > 0 ? (
-                            <span
-                              title={bookedEquipment
-                                .map(
-                                  (item) =>
-                                    `${Number(booking.equipment[item.id] ?? 0)} × ${item.label}`,
-                                )
-                                .join(", ")}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-[0.7rem] font-bold text-warning"
-                            >
-                              <FontAwesomeIcon
-                                icon={faScrewdriverWrench}
-                                className="h-2.5 w-2.5"
-                              />
-                              Technik: {bookedEquipment.length}
-                            </span>
-                          ) : null}
-                          {booking.internalNotes ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-soft px-2 py-1 text-[0.7rem] font-bold text-primary">
-                              <FontAwesomeIcon
-                                icon={faNoteSticky}
-                                className="h-2.5 w-2.5"
-                              />
-                              Interne Absprache
-                            </span>
-                          ) : null}
-                          {booking.specialRequirements ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-card px-2 py-1 text-[0.7rem] font-bold text-primary">
-                              <FontAwesomeIcon
-                                icon={faCircleExclamation}
-                                className="h-2.5 w-2.5"
-                              />
-                              Hinweis
-                            </span>
-                          ) : null}
+                        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <FontAwesomeIcon
+                              icon={faCalendarDays}
+                              className="h-3 w-3"
+                            />
+                            {dateFormatter.format(
+                              new Date(`${booking.bookingDate}T12:00:00Z`),
+                            )}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 font-mono">
+                            <FontAwesomeIcon
+                              icon={faReceipt}
+                              className="h-3 w-3"
+                            />
+                            {booking.referenceCode}
+                          </span>
                         </div>
-                      ) : null}
-                    </button>
-                  </li>
+                        {bookedEquipment.length > 0 ||
+                        booking.internalNotes ||
+                        booking.specialRequirements ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {bookedEquipment.length > 0 ? (
+                              <span
+                                title={bookedEquipment
+                                  .map(
+                                    (item) =>
+                                      `${Number(booking.equipment[item.id] ?? 0)} × ${item.label}`,
+                                  )
+                                  .join(", ")}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-[0.7rem] font-bold text-warning"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faScrewdriverWrench}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Technik: {bookedEquipment.length}
+                              </span>
+                            ) : null}
+                            {booking.internalNotes ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-soft px-2 py-1 text-[0.7rem] font-bold text-primary">
+                                <FontAwesomeIcon
+                                  icon={faNoteSticky}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Interne Absprache
+                              </span>
+                            ) : null}
+                            {booking.specialRequirements ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-card px-2 py-1 text-[0.7rem] font-bold text-primary">
+                                <FontAwesomeIcon
+                                  icon={faCircleExclamation}
+                                  className="h-2.5 w-2.5"
+                                />
+                                Hinweis
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </button>
+                    </li>
                   );
                 })}
               </ul>
@@ -620,7 +612,7 @@ export default function VolkshausAdminClient() {
               copyLink={copyLink}
             />
           ) : (
-            <section className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+            <section className="knglmrt-border-section bg-card p-8 text-center text-sm text-muted-foreground">
               <FontAwesomeIcon
                 icon={faListCheck}
                 className="mx-auto mb-3 h-6 w-6 text-primary"
@@ -760,15 +752,16 @@ function ActionConfirmationModal({
               </h2>
             </div>
           </div>
-          <button
-            type="button"
+          <Button
+            kind="ghost"
+            size="medium"
+            iconOnly
+            icon={faXmark}
             onClick={onCancel}
             disabled={isExecuting}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="shrink-0"
             aria-label="Dialog schließen"
-          >
-            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-          </button>
+          />
         </header>
 
         <div className="min-h-0 space-y-4 overflow-y-auto p-5">
@@ -901,7 +894,10 @@ function BookingDetail({
     backupAssignedUserId !== (booking.backupAssignedUserId ?? "");
   const hasDuplicateAssignees =
     Boolean(assignedUserId) && assignedUserId === backupAssignedUserId;
-  const missingAssignedPersonIds = [assignedUserId, backupAssignedUserId].filter(
+  const missingAssignedPersonIds = [
+    assignedUserId,
+    backupAssignedUserId,
+  ].filter(
     (userId, index, userIds) =>
       Boolean(userId) &&
       userIds.indexOf(userId) === index &&
@@ -910,7 +906,7 @@ function BookingDetail({
 
   return (
     <main className="space-y-5">
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-6">
+      <section className="knglmrt-border-section bg-card p-5 md:p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1011,7 +1007,7 @@ function BookingDetail({
                   {equipment.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground shadow-sm"
+                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground "
                     >
                       <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-warning-soft px-2 font-mono text-sm font-black text-warning">
                         {Number(booking.equipment[item.id] ?? 0)} ×
@@ -1066,19 +1062,16 @@ function BookingDetail({
                 </div>
               ) : null}
 
-              <label className="mt-4 block">
-                <span className="mb-1.5 block text-sm font-bold text-foreground">
-                  Interne Absprachen ergänzen
-                </span>
-                <textarea
-                  className={`${inputClassName} min-h-28 resize-y bg-card/90`}
-                  value={internalNotes}
-                  maxLength={10_000}
-                  disabled={isBusy}
-                  onChange={(event) => setInternalNotes(event.target.value)}
-                  placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
-                />
-              </label>
+              <Textarea
+                label="Interne Absprachen ergänzen"
+                className="mt-4"
+                textareaClassName="min-h-28 resize-y bg-card/90"
+                value={internalNotes}
+                maxLength={10_000}
+                disabled={isBusy}
+                onChange={(event) => setInternalNotes(event.target.value)}
+                placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
+              />
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
                   Nur im internen Bereich sichtbar.
@@ -1177,10 +1170,9 @@ function BookingDetail({
             </address>
           </div>
         </div>
-
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-5">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-primary" />
           Zuständigkeit
@@ -1189,72 +1181,58 @@ function BookingDetail({
           Verantwortliche Person und Vertretung für diese Buchung festlegen.
         </p>
         <div className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]">
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Verantwortliche Person
-            </span>
-            <select
-              className={inputClassName}
-              value={assignedUserId}
-              disabled={isBusy}
-              onChange={(event) => {
-                const userId = event.target.value;
-                setAssignedUserId(userId);
-                if (!userId) setBackupAssignedUserId("");
-              }}
-            >
-              <option value="">Nicht zugewiesen</option>
-              {missingAssignedPersonIds.includes(assignedUserId) ? (
-                <option value={assignedUserId}>
-                  Nicht mehr verfügbares Konto
-                </option>
-              ) : null}
-              {assignablePeople.map((person) => (
-                <option
-                  key={person.id}
-                  value={person.id}
-                  disabled={person.id === backupAssignedUserId}
-                >
-                  {getPersonOptionLabel(person)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="mb-1.5 block text-sm font-semibold">
-              Ersatz / Vertretung
-            </span>
-            <select
-              className={inputClassName}
-              value={backupAssignedUserId}
-              disabled={isBusy || !assignedUserId}
-              onChange={(event) =>
-                setBackupAssignedUserId(event.target.value)
-              }
-            >
-              <option value="">Kein Ersatz</option>
-              {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
-                <option value={backupAssignedUserId}>
-                  Nicht mehr verfügbares Konto
-                </option>
-              ) : null}
-              {assignablePeople.map((person) => (
-                <option
-                  key={person.id}
-                  value={person.id}
-                  disabled={person.id === assignedUserId}
-                >
-                  {getPersonOptionLabel(person)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <NativeSelect
+            label="Verantwortliche Person"
+            value={assignedUserId}
+            disabled={isBusy}
+            onChange={(event) => {
+              const userId = event.target.value;
+              setAssignedUserId(userId);
+              if (!userId) setBackupAssignedUserId("");
+            }}
+          >
+            <option value="">Nicht zugewiesen</option>
+            {missingAssignedPersonIds.includes(assignedUserId) ? (
+              <option value={assignedUserId}>
+                Nicht mehr verfügbares Konto
+              </option>
+            ) : null}
+            {assignablePeople.map((person) => (
+              <option
+                key={person.id}
+                value={person.id}
+                disabled={person.id === backupAssignedUserId}
+              >
+                {getPersonOptionLabel(person)}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            label="Ersatz / Vertretung"
+            value={backupAssignedUserId}
+            disabled={isBusy || !assignedUserId}
+            onChange={(event) => setBackupAssignedUserId(event.target.value)}
+          >
+            <option value="">Kein Ersatz</option>
+            {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
+              <option value={backupAssignedUserId}>
+                Nicht mehr verfügbares Konto
+              </option>
+            ) : null}
+            {assignablePeople.map((person) => (
+              <option
+                key={person.id}
+                value={person.id}
+                disabled={person.id === assignedUserId}
+              >
+                {getPersonOptionLabel(person)}
+              </option>
+            ))}
+          </NativeSelect>
           <Button
             kind="secondary"
             icon={faSave}
-            disabled={
-              isBusy || !hasAssignmentChanges || hasDuplicateAssignees
-            }
+            disabled={isBusy || !hasAssignmentChanges || hasDuplicateAssignees}
             onClick={() =>
               void performAction("save_assignees", {
                 assignedUserId: assignedUserId || null,
@@ -1300,90 +1278,77 @@ function BookingDetail({
         </div>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <FontAwesomeIcon
-              icon={faEuroSign}
-              className="h-4 w-4 text-primary"
-            />
-            Preisprüfung
-          </h3>
-          <div className="mt-4 divide-y divide-border">
-            {effectivePrice.lines.map((line) => (
-              <div
-                key={line.code}
-                className="flex justify-between gap-3 py-2.5 text-sm"
-              >
-                <span className="text-foreground">{line.description}</span>
-                <span
-                  className={`whitespace-nowrap font-semibold ${
-                    line.totalNetCents < 0
-                      ? "text-destructive"
-                      : "text-foreground"
-                  }`}
-                >
-                  {formatEuro(line.totalNetCents)}
-                </span>
-              </div>
-            ))}
-          </div>
-          <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Netto</dt>
-              <dd>{formatEuro(effectivePrice.netCents)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">USt. 19 %</dt>
-              <dd>{formatEuro(effectivePrice.taxCents)}</dd>
-            </div>
-            <div className="flex justify-between text-lg font-black">
-              <dt>Brutto</dt>
-              <dd>{formatEuro(effectivePrice.grossCents)}</dd>
-            </div>
-          </dl>
-          <div className="mt-5 grid gap-3">
-            <label>
-              <span className="mb-1.5 block text-sm font-semibold">
-                Anpassung netto in Euro
-              </span>
-              <input
-                className={inputClassName}
-                type="number"
-                step="0.01"
-                value={adjustmentEuro}
-                disabled={booking.contractStatus !== "draft"}
-                onChange={(event) => setAdjustmentEuro(event.target.value)}
-              />
-            </label>
-            <label>
-              <span className="mb-1.5 block text-sm font-semibold">
-                Begründung
-              </span>
-              <input
-                className={inputClassName}
-                value={adjustmentReason}
-                disabled={booking.contractStatus !== "draft"}
-                placeholder="z. B. Kulanz oder Sondervereinbarung"
-                onChange={(event) => setAdjustmentReason(event.target.value)}
-              />
-            </label>
-            <Button
-              kind="secondary"
-              icon={faSave}
-              disabled={isBusy || booking.contractStatus !== "draft"}
-              onClick={() =>
-                void performAction("save_price_adjustment", {
-                  adjustmentEuro: Number(adjustmentEuro.replace(",", ".")),
-                  reason: adjustmentReason,
-                })
-              }
+      <section className="knglmrt-border-section bg-card p-5">
+        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+          <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4 text-primary" />
+          Preisprüfung
+        </h3>
+        <div className="mt-4 divide-y divide-border">
+          {effectivePrice.lines.map((line) => (
+            <div
+              key={line.code}
+              className="flex justify-between gap-3 py-2.5 text-sm"
             >
-              Preis speichern
-            </Button>
+              <span className="text-foreground">{line.description}</span>
+              <span
+                className={`whitespace-nowrap font-semibold ${
+                  line.totalNetCents < 0
+                    ? "text-destructive"
+                    : "text-foreground"
+                }`}
+              >
+                {formatEuro(line.totalNetCents)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Netto</dt>
+            <dd>{formatEuro(effectivePrice.netCents)}</dd>
           </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">USt. 19 %</dt>
+            <dd>{formatEuro(effectivePrice.taxCents)}</dd>
+          </div>
+          <div className="flex justify-between text-lg font-black">
+            <dt>Brutto</dt>
+            <dd>{formatEuro(effectivePrice.grossCents)}</dd>
+          </div>
+        </dl>
+        <div className="mt-5 grid gap-3">
+          <Field
+            label="Anpassung netto in Euro"
+            type="number"
+            step="0.01"
+            value={adjustmentEuro}
+            disabled={booking.contractStatus !== "draft"}
+            onChange={(event) => setAdjustmentEuro(event.target.value)}
+          />
+          <Field
+            label="Begründung"
+            value={adjustmentReason}
+            disabled={booking.contractStatus !== "draft"}
+            placeholder="z. B. Kulanz oder Sondervereinbarung"
+            onChange={(event) => setAdjustmentReason(event.target.value)}
+          />
+          <Button
+            kind="secondary"
+            icon={faSave}
+            disabled={isBusy || booking.contractStatus !== "draft"}
+            onClick={() =>
+              void performAction("save_price_adjustment", {
+                adjustmentEuro: Number(adjustmentEuro.replace(",", ".")),
+                reason: adjustmentReason,
+              })
+            }
+          >
+            Preis speichern
+          </Button>
+        </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <section className="knglmrt-border-section bg-card p-5">
         <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
           <FontAwesomeIcon
             icon={faFileCircleCheck}
@@ -1453,7 +1418,7 @@ function WorkflowActions({
     activeAction === action ? "Wird ausgeführt …" : fallback;
 
   return (
-    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+    <section className="knglmrt-border-section bg-card p-5">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
         Nächste Schritte
