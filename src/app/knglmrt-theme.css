@@ -43,6 +43,7 @@
   --knglmrt-tint-quiet-hover: #e4e4e4; /* die leise Taste, gehovert */
   /* Ergänzungen außerhalb des Exports — hier begründen, nicht verstreuen. */
   --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb, trägt weiße Schrift */
+  --knglmrt-brown-120: #5a373d;     /* Hover-Ziel für Braun, trägt weiße Schrift */
   --knglmrt-pink-15: #f4dce5;       /* die zarte Kachelkontur */
 
   /* ------------------------------------------------------------------
@@ -139,6 +140,11 @@
   --ui-disabled-ink: var(--muted-foreground);
   --ui-disabled-edge: var(--border);
   --ui-quiet-hover: var(--knglmrt-tint-quiet-hover);
+  /* Der Weg in die Verwaltung — dunkles Braun, damit der interne Bereich sich
+     vom pinken Markenakzent der Mitglieder-Handlungen absetzt. */
+  --ui-admin: var(--knglmrt-brown-100);
+  --ui-admin-hover: var(--knglmrt-brown-120);
+  --ui-admin-ink: var(--knglmrt-paper);
   --ui-tint-avatar: var(--knglmrt-tint-avatar);
   --ui-tint-zebra: var(--knglmrt-tint-zebra);
 
@@ -153,13 +159,16 @@
 
   --ui-size-body: 18px;
   --ui-line-body: 25px;
-  /* Formularfelder sitzen eine Stufe unter dem Fließtext: 16/19 statt 18/25,
-     Innenabstand ein Viertel schmaler als der Rest des Systems (12/8 → 9/6).
-     Ein Feld wird dadurch 35px hoch statt 45px. */
-  --ui-size-field: 16px;
-  --ui-line-field: 19px;
-  --ui-field-pad-x: 9px;
-  --ui-field-pad-y: 6px;
+  /* Formularfelder laufen im Fließtextmaß: 18/24. Der Export saß eine Stufe
+     darunter (16/19), das las sich neben dem 18px-Text wie Kleingedrucktes.
+     Zeilenhöhe und Innenabstand liegen dort, wo native Steuerelemente sie
+     haben — ein Feld wird damit 42px hoch, in der großen Variante 54px. */
+  --ui-size-field: 18px;
+  --ui-line-field: 24px;
+  --ui-field-pad-x: 10px;
+  --ui-field-pad-y: 8px;
+  --ui-field-pad-y-lg: 14px; /* Filterleisten: dieselbe Schrift, mehr Luft */
+  --ui-option-pad-y: 7px;    /* Zeile in der offenen Liste */
   --ui-size-label: 14px;   /* uppercase, tracked .04em — Feldbeschriftungen */
   --ui-size-caption: 18px; /* uppercase, tracked .13em — Karten- und Tile-Label */
   --ui-size-tag: 12px;     /* Statusmarke — bleibt klein, sitzt in Badges */
@@ -240,6 +249,8 @@
   --ui-tint-avatar: var(--muted);
   --link-color-hover: var(--knglmrt-brown-60);
   --ui-action-hover: var(--knglmrt-brown-60);
+  --ui-admin: var(--knglmrt-brown-100);
+  --ui-admin-hover: var(--knglmrt-brown-60);
   --ui-tint-zebra: color-mix(in oklab, var(--card) 92%, var(--foreground));
 }
 

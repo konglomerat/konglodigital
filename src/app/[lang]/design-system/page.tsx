@@ -18,6 +18,7 @@ import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
 import Breadcrumbs from "@/components/knglmrt/Breadcrumbs";
 import Choice, { ChoiceGroup } from "@/components/knglmrt/Choice";
 import Combobox from "@/components/knglmrt/Combobox";
+import MultiSelect from "@/components/knglmrt/MultiSelect";
 import DataTable from "@/components/knglmrt/DataTable";
 import Dialog, { DialogPanel } from "@/components/knglmrt/Dialog";
 import Button, {
@@ -68,6 +69,7 @@ const PALETTE_TOKENS: ColorToken[] = [
   { name: "--knglmrt-brown-100", note: "Handschrift, Link-Hover" },
   { name: "--knglmrt-brown-60" },
   { name: "--knglmrt-brown-30" },
+  { name: "--knglmrt-brown-120", note: "Hover, trägt weiße Schrift" },
   { name: "--knglmrt-dark-100", note: "invertierte Flächen, Fließtext" },
   { name: "--knglmrt-dark-60", note: "stille Schrift" },
   { name: "--knglmrt-dark-30", note: "Haarlinien" },
@@ -90,6 +92,7 @@ const BUTTON_KINDS: ButtonKind[] = [
   "quiet",
   "ghost",
   "tertiary",
+  "admin",
   "danger-primary",
   "danger-secondary",
 ];
@@ -266,6 +269,7 @@ export default function DesignSystemPage() {
   const [segment, setSegment] = useState<"liste" | "karte">("liste");
   const [bereich, setBereich] = useState("");
   const [maschine, setMaschine] = useState("");
+  const [maschinen, setMaschinen] = useState<string[]>(["bandsaege"]);
   const [suche, setSuche] = useState("Siebdruck");
   const [dauer, setDauer] = useState(3);
   const [notiz, setNotiz] = useState("Absaugung läuft unrund.");
@@ -574,6 +578,30 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section
+        title="MultiSelect"
+        source="components/knglmrt/MultiSelect.tsx"
+        hint="Mehrfachauswahl aus denselben Teilen wie Select: Gewähltes steht als eckige Marke im Feld, die Liste bleibt offen. Rückschritt in der leeren Suche nimmt die letzte Marke zurück."
+      >
+        <div className="grid max-w-[840px] gap-6 sm:grid-cols-2">
+          <MultiSelect
+            label="Maschinen"
+            value={maschinen}
+            options={MASCHINEN}
+            onChange={setMaschinen}
+            hint="Mehrfach wählbar."
+          />
+          <MultiSelect
+            label='size="lg"'
+            size="lg"
+            value={maschinen}
+            options={MASCHINEN}
+            onChange={setMaschinen}
+            hint="Höhe für Filterleisten."
+          />
+        </div>
+      </Section>
+
+      <Section
         title="SearchField"
         source="components/knglmrt/SearchField.tsx"
         hint="Lupe links, Trefferzahl und Kreuz rechts. Beide Zeichen sind geometrisch — gezeichnetes Material gibt es erst ab 40px."
@@ -719,6 +747,23 @@ export default function DesignSystemPage() {
             value="62 %"
             percent={62}
             hint="Materialbudget"
+          />
+          <StatTile
+            label="segments={…}"
+            value="124,50 €"
+            segments={[
+              { percent: 70, className: "bg-primary" },
+              { percent: 30, className: "bg-primary/35" },
+            ]}
+            hint="gestapelt statt gefüllt"
+          />
+          <StatTile
+            label="onClick + selected"
+            value="8"
+            tone="grau"
+            onClick={() => {}}
+            hint="Kachel als Schalter"
+            footer="footer={…} — abgesetzte Zeile"
           />
         </div>
       </Section>

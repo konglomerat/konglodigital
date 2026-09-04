@@ -84,7 +84,7 @@ export default function TopNav({
               </Link>
               <Button
                 href={adminAreaHref}
-                kind="secondary"
+                kind="admin"
                 icon={<Face number={6} size={24} />}
               >
                 Verwaltung

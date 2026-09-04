@@ -224,7 +224,7 @@ const formatCostCenterOptionLabel = (option: CostCenterOption) => {
 
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="font-mono text-xs text-muted-foreground">
+      <span className="font-mono text-muted-foreground">
         {option.value}
       </span>
       <span>{option.label}</span>
@@ -629,7 +629,7 @@ export default function ReceiptDetailDrawer({
               {detail?.receiptNumber || "Beleg-Details"}
             </h2>
             {detail?.accountName ? (
-              <p className="truncate text-sm text-muted-foreground">
+              <p className="truncate text-muted-foreground">
                 {detail.accountName}
               </p>
             ) : null}
@@ -659,17 +659,17 @@ export default function ReceiptDetailDrawer({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
-            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 py-8 text-muted-foreground">
               <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
               Beleg wird geladen…
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-destructive">
               {error}
             </div>
           ) : detail ? (
             <div className="space-y-6">
-              <section className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <section className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <DetailRow
                   label="Belegnummer"
                   value={detail.receiptNumber ?? "—"}
@@ -723,7 +723,7 @@ export default function ReceiptDetailDrawer({
               </section>
 
               {detail.isCashLinked ? (
-                <div className="rounded-lg border border-amber-300 bg-warning-soft px-3 py-2 text-xs text-foreground dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                <div className="rounded-lg border border-amber-300 bg-warning-soft px-3 py-2 text-foreground dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
                   Dieser Beleg ist mit einer Zahlung verknüpft und kann nicht
                   über die Übersicht bearbeitet werden. Bitte direkt in Campai
                   anpassen.
@@ -741,7 +741,7 @@ export default function ReceiptDetailDrawer({
                     placeholder="Beschreibung"
                   />
                 ) : (
-                  <p className="whitespace-pre-wrap rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
+                  <p className="whitespace-pre-wrap rounded-md border border-border bg-secondary/30 px-3 py-2 text-foreground">
                     {detail.description || "—"}
                   </p>
                 )}
@@ -770,7 +770,7 @@ export default function ReceiptDetailDrawer({
                         key={`position-${index}`}
                         className="rounded-lg border border-border bg-card p-2 sm:p-3"
                       >
-                        <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
+                        <div className="mb-2 flex items-baseline justify-between gap-3">
                           <span className="font-semibold text-foreground">
                             Position {index + 1}
                           </span>
@@ -778,7 +778,7 @@ export default function ReceiptDetailDrawer({
                             {formatCents(position.amount)}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground">
                           <div>
                             <span className="font-medium text-foreground/70">
                               Konto:
@@ -829,11 +829,11 @@ export default function ReceiptDetailDrawer({
                               }}
                               maxLength={200}
                               rows={2}
-                              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+                              className="w-full rounded-md border border-border bg-card px-3 py-2 text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
                               placeholder="Positionsbeschreibung"
                             />
                           ) : (
-                            <p className="whitespace-pre-wrap rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
+                            <p className="whitespace-pre-wrap rounded-md border border-border bg-secondary/30 px-3 py-2 text-foreground">
                               {position.description || "—"}
                             </p>
                           )}
@@ -912,7 +912,7 @@ export default function ReceiptDetailDrawer({
                                     />
                                   </div>
                                   {createCostCenterError ? (
-                                    <p className="text-xs text-destructive">
+                                    <p className="text-destructive">
                                       {createCostCenterError}
                                     </p>
                                   ) : null}
@@ -943,7 +943,7 @@ export default function ReceiptDetailDrawer({
                               ) : null}
                             </>
                           ) : (
-                            <p className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
+                            <p className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-foreground">
                               {position.costCenter2 !== null
                                 ? (costCenterOptionMap.get(
                                     String(position.costCenter2),
@@ -965,14 +965,14 @@ export default function ReceiptDetailDrawer({
                     {detail.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-block rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium text-foreground"
+                        className="inline-block rounded-md border border-border bg-secondary/40 px-2 py-0.5 knglmrt-tag text-foreground"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Keine Tags.</p>
+                  <p className="text-muted-foreground">Keine Tags.</p>
                 )}
               </section>
 
@@ -987,7 +987,7 @@ export default function ReceiptDetailDrawer({
                     placeholder="Interne Notiz hinzufügen"
                   />
                   {createNoteError ? (
-                    <p className="text-xs text-destructive">
+                    <p className="text-destructive">
                       {createNoteError}
                     </p>
                   ) : null}
@@ -1008,12 +1008,12 @@ export default function ReceiptDetailDrawer({
                     {detail.notes.map((note) => (
                       <li
                         key={note.id}
-                        className="rounded-lg border border-border bg-card p-2 text-sm sm:p-3"
+                        className="rounded-lg border border-border bg-card p-2 sm:p-3"
                       >
                         <p className="whitespace-pre-wrap text-foreground">
                           {note.content}
                         </p>
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <p className="mt-2 text-muted-foreground">
                           {note.writtenByName ?? "Unbekannt"}
                           {note.writtenAt
                             ? ` · ${formatDateTime(note.writtenAt)}`
@@ -1023,7 +1023,7 @@ export default function ReceiptDetailDrawer({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground">
                     Keine Notizen.
                   </p>
                 )}
@@ -1034,7 +1034,7 @@ export default function ReceiptDetailDrawer({
 
         {detail && editable ? (
           <footer className="flex items-center justify-between gap-3 border-t border-border bg-card/50 px-6 py-3">
-            <p className="min-w-0 truncate text-xs text-destructive">
+            <p className="min-w-0 truncate text-destructive">
               {saveError ?? ""}
             </p>
             <div className="flex items-center gap-2">
@@ -1067,7 +1067,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="knglmrt-caption text-muted-foreground">{label}</p>
-      <p className="mt-0.5 truncate text-sm text-foreground" title={value}>
+      <p className="mt-0.5 truncate text-foreground" title={value}>
         {value}
       </p>
     </div>

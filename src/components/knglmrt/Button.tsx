@@ -16,6 +16,9 @@
 //            Schließen-Kreuze, Sortierköpfe: alles, was im Ruhezustand
 //            unsichtbar bleiben soll.
 //   tertiary keine Taste: pinker Fettsatz mit gezeichneter Linie darunter
+//   admin    dunkles Braun (--ui-admin), Schrift weiß — nur der Weg in die
+//            Verwaltung, damit der interne Bereich nicht wie eine
+//            Mitglieder-Handlung aussieht
 //   disabled Kontur --border, Fläche --muted, Schrift --muted-foreground
 //
 // Anders als im Export ist die Größe unabhängig von der Variante: eine kleine
@@ -47,6 +50,8 @@ export type ButtonKind =
   | "ghost"
   /** Keine Taste: pinker Fettsatz mit gezeichneter Linie darunter. */
   | "tertiary"
+  /** Der Weg in die Verwaltung — dunkles Braun statt Markenpink. */
+  | "admin"
   /** Löschen und Verwerfen, gefüllt. */
   | "danger-primary"
   /** Löschen und Verwerfen, als Kontur-Taste. */
@@ -126,6 +131,8 @@ const kindClassName: Record<ButtonKind, string> = {
   ghost:
     "border-0 bg-transparent text-foreground hover:bg-muted disabled:bg-transparent aria-disabled:bg-transparent",
   tertiary: "",
+  admin:
+    "bg-[var(--ui-admin)] text-[var(--ui-admin-ink)] hover:bg-[var(--ui-admin-hover)]",
   "danger-primary":
     "bg-destructive text-destructive-foreground hover:bg-[var(--ui-action-hover)]",
   "danger-secondary": "bg-card text-destructive hover:bg-destructive-soft",

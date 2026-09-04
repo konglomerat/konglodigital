@@ -118,6 +118,9 @@
   --color-ui-disabled-ink: var(--ui-disabled-ink);
   --color-ui-disabled-edge: var(--ui-disabled-edge);
   --color-ui-quiet-hover: var(--ui-quiet-hover);
+  --color-ui-admin: var(--ui-admin);
+  --color-ui-admin-hover: var(--ui-admin-hover);
+  --color-ui-admin-ink: var(--ui-admin-ink);
   --color-ui-tint-avatar: var(--ui-tint-avatar);
   --color-ui-tint-zebra: var(--ui-tint-zebra);
   --radius-sm: calc(var(--radius) * 0.6);
