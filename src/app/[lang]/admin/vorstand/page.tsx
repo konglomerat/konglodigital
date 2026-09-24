@@ -18,9 +18,10 @@ export default function VorstandRessortPage() {
           description: "Kosten und Finanzen nach Monat, Quartal und Jahr.",
         },
         {
-          label: "Anträge",
-          description: "Anträge an den Vorstand einreichen und bearbeiten.",
-          comingSoon: true,
+          href: "/admin/vorstand/ehrenamtsbonus",
+          label: "Anträge Ehrenamtsbonus",
+          description:
+            "Ehrenamtliche Arbeit prüfen und Zugangstage für das Folgequartal gewähren.",
         },
       ]}
     />

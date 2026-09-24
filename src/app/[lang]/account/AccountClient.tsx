@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
@@ -14,6 +15,7 @@ import {
   Td,
   Tr,
 } from "@/components/knglmrt/Table";
+import type { CampaiAccessTariff } from "@/lib/campai-member-tariff";
 import { type InvoicePayload } from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
 import Button from "@/components/knglmrt/Button";
@@ -160,6 +162,36 @@ const ACCESS_CARD_PLANS = [
   { id: "abo-gross", label: "Abo Groß – 30 €/Monat für 24/7-Zugang" },
 ] as const;
 
+// Der gebuchte Tarif kommt aus Campai (Vertragsoption). Die Beschriftungen
+// halten sich an den Ehrenamtsbonus, damit beide Seiten dasselbe sagen.
+const TARIFF_LABELS: Record<CampaiAccessTariff, string> = {
+  abo_gross: "Abo groß",
+  abo_klein: "Abo klein",
+  punktekarte: "Punktekarte",
+  keiner: "Kein Tarif",
+};
+
+const TARIFF_HINTS: Record<CampaiAccessTariff, string> = {
+  abo_gross: "30 € im Monat · 24/7-Zugang",
+  abo_klein: "15 € im Monat",
+  punktekarte: "50 € für 10 Zugänge",
+  keiner: "Kein laufender Zugangskarten-Vertrag",
+};
+
+// Die Kachel zeigt den Tarif auch im Auswahlfeld — dort mit den eigenen IDs.
+const TARIFF_TO_PLAN_ID: Record<CampaiAccessTariff, string | null> = {
+  abo_gross: "abo-gross",
+  abo_klein: "abo-klein",
+  punktekarte: "punktekarte",
+  keiner: null,
+};
+
+const formatEuro = (cents: number) =>
+  new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  }).format(cents / 100);
+
 // Gleiche Marke wie in der Navigation: kein eigener Look für „kommt noch".
 function SoonBadge() {
   return (
@@ -212,6 +244,9 @@ export default function AccountClient({
   const [accessCardPlan, setAccessCardPlan] = useState<string>(
     ACCESS_CARD_PLANS[1].id,
   );
+  const [tarif, setTarif] = useState<CampaiAccessTariff | null>(null);
+  const [offenCents, setOffenCents] = useState<number | null>(null);
+  const [tarifGeladen, setTarifGeladen] = useState(false);
 
   const hasAccount = Boolean(initialUser);
 
@@ -289,6 +324,48 @@ export default function AccountClient({
     };
 
     void refreshCampaiName();
+
+    return () => {
+      active = false;
+    };
+  }, [hasAccount]);
+
+  // Tarif und offener Beitrag kosten zwei Campai-Aufrufe und stehen deshalb
+  // ebenfalls erst nach dem ersten Paint — die Kachel zeigt so lange „…".
+  useEffect(() => {
+    if (!hasAccount) {
+      return;
+    }
+
+    let active = true;
+
+    const ladeTarif = async () => {
+      try {
+        const data = await fetchJson<{
+          tariff: CampaiAccessTariff | null;
+          openBalanceCents: number | null;
+        }>("/api/account/tarif");
+        if (!active) {
+          return;
+        }
+        setTarif(data.tariff);
+        setOffenCents(data.openBalanceCents);
+        if (data.tariff) {
+          const planId = TARIFF_TO_PLAN_ID[data.tariff];
+          if (planId) {
+            setAccessCardPlan(planId);
+          }
+        }
+      } catch {
+        // Ohne Campai bleibt die Kachel bei „nicht abrufbar".
+      } finally {
+        if (active) {
+          setTarifGeladen(true);
+        }
+      }
+    };
+
+    void ladeTarif();
 
     return () => {
       active = false;
@@ -623,10 +700,11 @@ export default function AccountClient({
         </section>
       </div>
 
-      {/* Zugangskarte und Ehrenamtsbonus sind noch nicht angebunden: die
-          Kacheln zeigen Beispielwerte und tote Bedienelemente, damit die
-          Struktur der Seite schon steht. Sobald es echte Daten gibt, fallen
-          nur die Platzhalter-Werte und das SoonBadge weg. */}
+      {/* Tarif und offener Beitrag sind echt und kommen live aus Campai. Die
+          Schließanlage selbst ist noch nicht angebunden — was von dort käme
+          (verbleibende Zugänge, Tarifwechsel, Karte sperren), bleibt bis
+          dahin totes Bedienelement. Der Ehrenamtsbonus daneben führt als
+          Kachel auf seine eigene Unterseite. */}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,460px)]">
         <section id="zugangskarte" className={panelClassName}>
           <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -635,23 +713,49 @@ export default function AccountClient({
           </div>
           <p className="mb-4 text-muted-foreground">
             Deine Karte öffnet die Werkbereiche und bucht dabei Zugänge von
-            deinem Tarif ab. Beispielwerte — die Anbindung an die Schließanlage
-            folgt.
+            deinem Tarif ab. Tarif und offene Beiträge kommen aus der
+            Mitgliederverwaltung; die Anbindung an die Schließanlage folgt.
           </p>
 
           <div className="mb-4 grid gap-3.5 sm:grid-cols-2">
+            {/* „Nicht abrufbar" ist etwas anderes als „Kein Tarif" — das eine
+                heißt, Campai hat nicht geantwortet, das andere, dass dort
+                kein Vertrag läuft. */}
             <StatTile
-              label="Verbleibende Zugänge"
-              value="9"
-              hint="von 15 · Quartal läuft bis 30.09.2026"
-              percent={60}
-              tone="rosa"
+              label="Aktueller Tarif"
+              value={
+                !tarifGeladen ? "…" : tarif ? TARIFF_LABELS[tarif] : "—"
+              }
+              hint={
+                !tarifGeladen
+                  ? "Wird geladen"
+                  : tarif
+                    ? TARIFF_HINTS[tarif]
+                    : "Nicht abrufbar"
+              }
+              tone={tarif && tarif !== "keiner" ? "rosa" : "grau"}
             />
             <StatTile
-              label="Letzte Abbuchung"
-              value="04.08.2026"
-              hint="Werkbereich Holz · 1 Zugang"
-              tone="grau"
+              label="Offene Beiträge"
+              value={
+                !tarifGeladen
+                  ? "…"
+                  : offenCents === null
+                    ? "—"
+                    : offenCents > 0
+                      ? formatEuro(offenCents)
+                      : "Nichts offen"
+              }
+              hint={
+                !tarifGeladen
+                  ? "Wird geladen"
+                  : offenCents === null
+                    ? "Nicht abrufbar"
+                    : offenCents > 0
+                      ? "Bitte beim Vorstand melden, falls das nicht stimmt"
+                      : "Alles beglichen"
+              }
+              tone={offenCents !== null && offenCents > 0 ? "rosa" : "grau"}
             />
           </div>
 
@@ -669,7 +773,8 @@ export default function AccountClient({
               ))}
             </NativeSelect>
             <p className="mt-1 text-muted-foreground">
-              Ein Wechsel gilt ab dem nächsten Abrechnungsmonat.
+              Ein Wechsel gilt ab dem nächsten Abrechnungsmonat. Vorausgewählt
+              ist dein laufender Tarif.
             </p>
           </div>
 
@@ -683,20 +788,21 @@ export default function AccountClient({
           </div>
         </section>
 
-        <section id="ehrenamtsbonus" className={panelClassName}>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h2 className="m-0">Ehrenamtsbonus beantragen</h2>
-            <SoonBadge />
-          </div>
+        {/* Kachel als Deeplink: die ganze Fläche führt auf die Unterseite,
+            die oben ihren eigenen Zurück-Knopf mitbringt. */}
+        <Link
+          id="ehrenamtsbonus"
+          href="/account/ehrenamtsbonus"
+          className={`${panelClassName} block transition hover:bg-primary-soft`}
+        >
+          <h2 className="mb-1">Ehrenamtsbonus beantragen</h2>
           <p className="mb-4 text-muted-foreground">
             Für ehrenamtliche Arbeit im Verein kannst du je nach Umfang
             zusätzliche Zugangstage für das folgende Quartal bekommen oder
             bekommst sogar den 24/7-Zugang erlassen.
           </p>
-          <Button type="button" kind="secondary" disabled>
-            Antrag starten
-          </Button>
-        </section>
+          <span className="font-bold text-primary">Antrag starten →</span>
+        </Link>
       </div>
 
       <section id="rechnungen" className="mt-[38px]">
