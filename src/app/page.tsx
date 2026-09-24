@@ -1,6 +1,8 @@
 import Image from "next/image";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import Divider from "@/components/knglmrt/Divider";
 import Button from "@/components/knglmrt/Button";
+import Face from "@/components/knglmrt/Face";
 import ShowcaseOfTheMonthSection from "./ShowcaseOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import NewsSection from "./NewsSection";
@@ -29,10 +31,10 @@ export default async function Home() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <Button href="/werkbereiche" kind="primary">
+                <Button href="/werkbereiche" kind="primary" size="large">
                   {tx("Werkbereiche ansehen", "de")}
                 </Button>
-                <Button href="/verein" kind="secondary">
+                <Button href="/verein" kind="secondary" size="large">
                   {tx("Über uns", "de")}
                 </Button>
               </div>
@@ -62,7 +64,18 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-primary-soft px-6 py-8 md:px-10 md:py-10">
+      <section className="relative bg-primary-soft px-6 py-8 md:px-10 md:py-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-8 right-5 z-10 -rotate-6 md:-bottom-12 md:right-14 md:rotate-[-8deg]"
+        >
+          <Face
+            number={19}
+            size={96}
+            color="var(--primary)"
+            className="h-auto w-[68px] md:w-[96px]"
+          />
+        </div>
         <h2 className="mb-1.5 text-primary">
           {tx("Neu hier? So wirst du Mitglied", "de")}
         </h2>
@@ -70,45 +83,78 @@ export default async function Home() {
           <Divider number={3} height={14} color="var(--primary)" />
         </div>
 
-        <ol className="grid gap-7 md:grid-cols-3 md:gap-10">
+        <ol className="grid gap-7 sm:grid-cols-2 md:grid-cols-4 md:gap-10">
           {[
             {
               title: tx("Kennenlernen", "de"),
               description: tx(
-                "Komm zum offenen Abend, schau dich um und sprich mit uns.",
+                "Komm zur offenen Werkstatt oder zur Intro-Safari, schau dich um und stell uns alle Fragen, die du hast.",
                 "de",
               ),
+              cta: {
+                href: "/calendar",
+                kind: "tertiary" as const,
+                label: tx("Kalender öffnen", "de"),
+              },
             },
             {
-              title: tx("Antrag stellen", "de"),
+              title: tx("Antrag ausfüllen", "de"),
               description: tx(
-                "Mitgliedsantrag ausfüllen, der Vorstand bestätigt die Aufnahme.",
+                "Füll den Online-Antrag aus und such dir deinen Tarif aus. Für den Werkstattzugang brauchst du zusätzlich zum Jahresbeitrag ein Abo oder die 10er-Karte.",
                 "de",
               ),
+              cta: {
+                href: "/mitglied-werden",
+                kind: "tertiary" as const,
+                label: tx("Online Antrag", "de"),
+              },
             },
             {
-              title: tx("Einweisung erhalten", "de"),
+              title: tx("Beitrag zahlen", "de"),
               description: tx(
-                "Sicherheitseinweisung an den Maschinen, danach hast du Zugang.",
+                "Du bekommst eine Mail mit deiner ersten Beitragsrechnung. Sobald die Zahlung da ist, bekommst du eine Bestätigung und bist offiziell Mitglied.",
                 "de",
               ),
+              cta: null,
+            },
+            {
+              title: tx("Willkommen im Rosenwerk!", "de"),
+              description: tx(
+                "Hol dir deine Zugangskarte ab und frag direkt bei den Werkbereichen deiner Wahl nach, wo du noch eine Einweisung brauchst. Dann kann’s losgehen!",
+                "de",
+              ),
+              cta: null,
             },
           ].map((step, index) => (
-            <li key={step.title} className="flex flex-col gap-1.5">
-              <span className="font-display text-[28px] leading-[28px] text-primary">
-                {index + 1}
+            <li key={step.title} className="flex h-full gap-3">
+              <span className="relative flex h-11 w-11 flex-none items-center justify-center">
+                <span
+                  aria-hidden
+                  className="absolute inset-0 rounded-[50%] bg-[color-mix(in_srgb,var(--primary)_14%,transparent)]"
+                />
+                <span className="relative font-display text-[26px] leading-[26px] text-primary">
+                  {index + 1}
+                </span>
               </span>
-              <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
-                {step.title}
-              </h3>
-              <p>{step.description}</p>
-              {index === 1 ? (
-                <div className="mt-3">
-                  <Button href="/mitglied-werden" kind="emphasis" size="large">
-                    {tx("Online Antrag", "de")}
-                  </Button>
-                </div>
-              ) : null}
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-3">
+                <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
+                  {step.title}
+                </h3>
+                <p>{step.description}</p>
+                {step.cta ? (
+                  <div className="mt-auto pt-3">
+                    <Button
+                      href={step.cta.href}
+                      kind={step.cta.kind}
+                      size="large"
+                      icon={faArrowRight}
+                      iconPosition="right"
+                    >
+                      {step.cta.label}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             </li>
           ))}
         </ol>

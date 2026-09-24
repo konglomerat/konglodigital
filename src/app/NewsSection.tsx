@@ -181,6 +181,7 @@ export default async function NewsSection() {
         <Button
           href="/showcase"
           kind="tertiary"
+          size="large"
           icon={faArrowRight}
           iconPosition="right"
         >

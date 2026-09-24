@@ -159,7 +159,7 @@ export default async function ResourceOfTheMonthSection() {
                 locale,
               )}
               kind="primary"
-              size="medium"
+              size="large"
               icon={faArrowRight}
               iconPosition="right"
             >
