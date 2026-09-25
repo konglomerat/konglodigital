@@ -1,11 +1,3 @@
-// Ehrenamtsbonus — geteilte Sprache zwischen Mitglieder-Antrag und
-// Vorstands-Bearbeitung. Statuswerte, Optionen und vor allem die
-// Entscheidungsmatrix stehen genau einmal hier: Vorschautext im Formular und
-// die Systemaktionen, die der Vorstand vor der Zustimmung sieht, kommen aus
-// derselben Funktion. Sonst zeigen die beiden Seiten irgendwann Verschiedenes.
-//
-// Es wird nicht abgestimmt: ein Vorstandsmitglied entscheidet, festgehalten
-// wird in `decidedBy`, wer es war.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { BadgeTone } from "@/components/knglmrt/Badge";
@@ -22,6 +14,7 @@ export const EHRENAMTSBONUS_STATUSES = [
   "in_review",
   "approved",
   "rejected",
+  "cancelled",
 ] as const;
 
 export type EhrenamtsbonusStatus = (typeof EHRENAMTSBONUS_STATUSES)[number];
@@ -36,9 +29,7 @@ export const isOpenStatus = (status: EhrenamtsbonusStatus) =>
  * eine Regel des Features: jeder Bonus läuft automatisch aus.
  */
 export type EhrenamtsbonusDisplayStatus =
-  | EhrenamtsbonusStatus
-  | "expiring"
-  | "expired";
+  EhrenamtsbonusStatus | "expiring" | "expired";
 
 export const EHRENAMTSBONUS_STATUS_LABELS: Record<
   EhrenamtsbonusDisplayStatus,
@@ -47,12 +38,13 @@ export const EHRENAMTSBONUS_STATUS_LABELS: Record<
   in_review: "In Prüfung",
   approved: "Angenommen",
   rejected: "Abgelehnt",
+  cancelled: "Storniert",
   expiring: "Läuft ab",
   expired: "Abgelaufen",
 };
 
-// Die Tonwerte des DS kennen kein Grün/Rot — angenommen läuft auf der blauen
-// Tint-Stufe („gebucht"), abgelehnt auf der pinken („offen").
+// Angenommen läuft auf der grünen Tint-Stufe („gebucht"), abgelehnt auf der
+// roten („offen").
 export const EHRENAMTSBONUS_STATUS_TONES: Record<
   EhrenamtsbonusDisplayStatus,
   BadgeTone
@@ -60,6 +52,7 @@ export const EHRENAMTSBONUS_STATUS_TONES: Record<
   in_review: "neu",
   approved: "gebucht",
   rejected: "offen",
+  cancelled: "neutral",
   expiring: "wartet",
   expired: "neutral",
 };
@@ -90,6 +83,75 @@ export const resolveDisplayStatus = (
   return "approved";
 };
 
+/** Heutiges Datum als ISO-Tag — ISO-Tage lassen sich direkt vergleichen. */
+const toIsoDate = (date: Date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+/** Läuft der Bonus heute schon, oder beginnt er erst? */
+export const isRunning = (
+  request: Pick<EhrenamtsbonusRequest, "validFrom" | "validUntil">,
+  now = new Date(),
+) => {
+  const today = toIsoDate(now);
+  return request.validFrom <= today && today <= request.validUntil;
+};
+
+/**
+ * Der Bonus, den die Kontoseite zeigt: der laufende, sonst der nächste schon
+ * angenommene.
+ */
+export const findActiveRequest = (
+  requests: readonly EhrenamtsbonusRequest[],
+  now = new Date(),
+): EhrenamtsbonusRequest | null => {
+  const today = toIsoDate(now);
+  const live = requests
+    .filter(
+      (request) => request.status === "approved" && request.validUntil >= today,
+    )
+    .sort((a, b) => a.validFrom.localeCompare(b.validFrom));
+
+  return live.find((request) => request.validFrom <= today) ?? live[0] ?? null;
+};
+
+/**
+ * Der Antrag, der einen neuen verhindert: einer je Mitglied, solange er auf
+ * die Entscheidung des Vorstands wartet oder sein Bonus noch läuft. Was
+ * abgelehnt, storniert oder abgelaufen ist, blockiert nichts — nach einer
+ * Ablehnung darf beliebig oft neu gestellt werden.
+ */
+export const findBlockingRequest = (
+  requests: readonly EhrenamtsbonusRequest[],
+  now = new Date(),
+): EhrenamtsbonusRequest | null => {
+  const today = toIsoDate(now);
+  return (
+    requests.find(
+      (request) =>
+        request.status === "in_review" ||
+        (request.status === "approved" && request.validUntil >= today),
+    ) ?? null
+  );
+};
+
+/** ISO-Tag als deutsches Datum — für Sätze, die Server und Client teilen. */
+const formatGermanDate = (isoDate: string) => {
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  return Number.isNaN(parsed.getTime())
+    ? isoDate
+    : parsed.toLocaleDateString("de-DE");
+};
+
+/**
+ * Warum gerade kein Antrag geht. Steht einmal hier, damit die abgewiesene
+ * Absendung dieselbe Begründung nennt wie der Hinweis, der das Formular
+ * ersetzt.
+ */
+export const blockedMessage = (request: EhrenamtsbonusRequest) =>
+  request.status === "in_review"
+    ? `Dein Antrag für ${quarterLabelForDate(request.validFrom)} wird noch geprüft. Solange darüber nicht entschieden ist, kannst du keinen weiteren stellen.`
+    : `Dein Bonus für ${quarterLabelForDate(request.validFrom)} läuft noch bis zum ${formatGermanDate(request.validUntil)}. Einen neuen Antrag kannst du stellen, sobald er ausgelaufen ist.`;
+
 // ---------------------------------------------------------------------------
 // Zugang und beantragbare Optionen
 // ---------------------------------------------------------------------------
@@ -110,8 +172,29 @@ export type AccessLevel = (typeof ACCESS_LEVELS)[number];
 export const ACCESS_LEVEL_LABELS: Record<AccessLevel, string> = {
   keine_karte: "Kein Tarif",
   punktekarte: "Punktekarte",
-  abo_klein: "Abo klein (15 €)",
-  abo_gross: "Abo groß (30 €)",
+  abo_klein: "Abo klein",
+  abo_gross: "Abo groß",
+};
+
+/**
+ * Dasselbe mit dem Preis dahinter, den Campai heute für die Stufe führt —
+ * überall dort, wo ein Mitglied oder der Vorstand die Stufe abliest.
+ */
+export const accessLevelLabel = (
+  access: AccessLevel,
+  prices: TariffPrices = FALLBACK_TARIFF_PRICES,
+) => {
+  const label = ACCESS_LEVEL_LABELS[access];
+
+  if (access === "abo_klein") {
+    return `${label} (${formatEuroShort(prices.aboKleinMonatCents)})`;
+  }
+
+  if (access === "abo_gross") {
+    return `${label} (${formatEuroShort(prices.aboGrossMonatCents)})`;
+  }
+
+  return label;
 };
 
 /** Die beantragbaren Optionen — die Spalten der Matrix. */
@@ -123,6 +206,13 @@ export const BONUS_OPTION_LABELS: Record<BonusOption, string> = {
   tage_10: "10 Tage pro Quartal",
   unbegrenzt: "Uneingeschränkter Zugang",
   anerkennung: "Nur Anerkennung",
+};
+
+/** Kurzform für Kacheln — so knapp wie die Tarifnamen auf der Kontoseite. */
+export const BONUS_OPTION_SHORT_LABELS: Record<BonusOption, string> = {
+  tage_10: "10 Tage",
+  unbegrenzt: "24/7-Zugang",
+  anerkennung: "Anerkennung",
 };
 
 export const BONUS_OPTION_HINTS: Record<BonusOption, string> = {
@@ -161,18 +251,29 @@ export type BonusOutcome = {
   forgoneCents: number;
 };
 
-// Die Tarife, aus denen sich der entgangene Beitrag rechnet: Punktekarte 5 €
-// je Zugang, Abo klein 15 €/Monat, Abo groß 30 €/Monat. Uneingeschränkter
-// Zugang ist das, was das große Abo kostet. Ändern sich die Tarife, ändert
-// sich hier eine Zahl — nicht acht Stellen in der Matrix.
-const ZUGANG_CENTS = 500;
-const ABO_KLEIN_MONAT_CENTS = 1500;
-const ABO_GROSS_MONAT_CENTS = 3000;
-const MONATE_PRO_QUARTAL = 3;
+// Die Tarife, aus denen sich der entgangene Beitrag rechnet. Sie stehen nicht
+// hier, sondern in Campai: `fetchCampaiTariffPrices` holt sie aus dem
+// Tarifkatalog, die Server-Hülle reicht sie an die Clients weiter.
+// Uneingeschränkter Zugang ist das, was das große Abo kostet.
+export type TariffPrices = {
+  /** Was zehn Zugänge kosten — der Preis einer Punktekarte. */
+  punktekarteCents: number;
+  aboKleinMonatCents: number;
+  aboGrossMonatCents: number;
+};
 
-const ZEHN_ZUGAENGE_CENTS = 10 * ZUGANG_CENTS;
-const QUARTAL_ABO_KLEIN_CENTS = MONATE_PRO_QUARTAL * ABO_KLEIN_MONAT_CENTS;
-const QUARTAL_ABO_GROSS_CENTS = MONATE_PRO_QUARTAL * ABO_GROSS_MONAT_CENTS;
+/**
+ * Wonach gerechnet wird, solange Campai nichts sagt — der Stand bei
+ * Einführung des Features. Ein Antrag bleibt so auch dann stellbar und
+ * entscheidbar, wenn der Tarifabruf ausfällt.
+ */
+export const FALLBACK_TARIFF_PRICES: TariffPrices = {
+  punktekarteCents: 5000,
+  aboKleinMonatCents: 1500,
+  aboGrossMonatCents: 3000,
+};
+
+const MONATE_PRO_QUARTAL = 3;
 
 const roseguarden = (label: string): SystemAction => ({
   target: "roseguarden",
@@ -185,17 +286,25 @@ const campai = (label: string): SystemAction => ({ target: "campai", label });
 // beantragte Option ersetzt — dieselbe Regel für beide Abos und beide
 // Optionen. Entgangen ist dem Verein damit genau der Beitrag des Quartals,
 // unabhängig davon, was das Mitglied stattdessen bekommt.
-const ABO_PAUSE: Partial<
-  Record<AccessLevel, { action: SystemAction; quartalCents: number }>
-> = {
-  abo_klein: {
-    action: campai("Abo klein pausieren"),
-    quartalCents: QUARTAL_ABO_KLEIN_CENTS,
-  },
-  abo_gross: {
-    action: campai("Abo groß pausieren"),
-    quartalCents: QUARTAL_ABO_GROSS_CENTS,
-  },
+const aboPause = (
+  access: AccessLevel,
+  prices: TariffPrices,
+): { action: SystemAction; quartalCents: number } | null => {
+  if (access === "abo_klein") {
+    return {
+      action: campai("Abo klein pausieren"),
+      quartalCents: MONATE_PRO_QUARTAL * prices.aboKleinMonatCents,
+    };
+  }
+
+  if (access === "abo_gross") {
+    return {
+      action: campai("Abo groß pausieren"),
+      quartalCents: MONATE_PRO_QUARTAL * prices.aboGrossMonatCents,
+    };
+  }
+
+  return null;
 };
 
 /** Was das Mitglied bekommt — hängt nur an der Option und an der Karte. */
@@ -224,24 +333,30 @@ const summaryFor = (
   access: AccessLevel,
   option: ChangingBonusOption,
   hasAbo: boolean,
+  periodLabel?: string,
 ): string => {
+  // „Bonuszeitraum Q1/2027" — ohne Quartal bleibt es beim bloßen Wort.
+  const zeitraum = periodLabel
+    ? `Bonuszeitraum ${periodLabel}`
+    : "Bonuszeitraum";
+
   if (hasAbo) {
     return option === "unbegrenzt"
       ? access === "abo_gross"
-        ? "Dein Abo pausiert im Bonuszeitraum, dein 24/7-Zugang bleibt."
-        : "Dein Abo pausiert im Bonuszeitraum — stattdessen hast du uneingeschränkten Zugang."
-      : "Dein Abo pausiert im Bonuszeitraum — stattdessen bekommst du 10 Zugänge.";
+        ? `Dein Abo pausiert im ${zeitraum}, dein 24/7-Zugang bleibt.`
+        : `Dein Abo pausiert im ${zeitraum} — stattdessen hast du uneingeschränkten Zugang.`
+      : `Dein Abo pausiert im ${zeitraum} — stattdessen bekommst du 10 Zugänge.`;
   }
 
   if (option === "unbegrenzt") {
     return access === "keine_karte"
-      ? "Du bekommst eine Zugangskarte mit uneingeschränktem Zugang für den Bonuszeitraum."
-      : "Deine Karte wird für den Bonuszeitraum auf 24/7-Zugang gehoben.";
+      ? `Du bekommst eine Zugangskarte mit uneingeschränktem Zugang für den ${zeitraum}.`
+      : `Deine Karte wird für den ${zeitraum} auf 24/7-Zugang gehoben.`;
   }
 
   return access === "keine_karte"
-    ? "Du bekommst eine Zugangskarte mit 10 Zugängen für den Bonuszeitraum."
-    : "Dir werden 10 Zugänge für den Bonuszeitraum gutgeschrieben.";
+    ? `Du bekommst eine Zugangskarte mit 10 Zugängen für den ${zeitraum}.`
+    : `Dir werden 10 Zugänge für den ${zeitraum} gutgeschrieben.`;
 };
 
 /**
@@ -257,6 +372,9 @@ const summaryFor = (
 export const resolveOutcome = (
   access: AccessLevel,
   option: BonusOption,
+  prices: TariffPrices = FALLBACK_TARIFF_PRICES,
+  /** Das Quartal für die Vorschau, z. B. „Q1/2027". */
+  periodLabel?: string,
 ): BonusOutcome => {
   if (option === "anerkennung") {
     return {
@@ -267,17 +385,17 @@ export const resolveOutcome = (
     };
   }
 
-  const pause = ABO_PAUSE[access];
+  const pause = aboPause(access, prices);
   const grant = grantActions(access, option);
 
   return {
-    summary: summaryFor(access, option, Boolean(pause)),
+    summary: summaryFor(access, option, Boolean(pause), periodLabel),
     actions: pause ? [pause.action, ...grant] : grant,
     forgoneCents: pause
       ? pause.quartalCents
       : option === "unbegrenzt"
-        ? QUARTAL_ABO_GROSS_CENTS
-        : ZEHN_ZUGAENGE_CENTS,
+        ? MONATE_PRO_QUARTAL * prices.aboGrossMonatCents
+        : prices.punktekarteCents,
   };
 };
 
@@ -285,6 +403,18 @@ export const formatEuro = (cents: number) =>
   new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: "EUR",
+  }).format(cents / 100);
+
+/**
+ * Dasselbe ohne „,00" bei glatten Beträgen — in einer Beschriftung wie
+ * „Abo klein (15 €)" lenken die Nachkommastellen nur ab. In Summen, die sich
+ * addieren, stehen sie weiter.
+ */
+export const formatEuroShort = (cents: number) =>
+  new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
 
 // ---------------------------------------------------------------------------
@@ -314,26 +444,19 @@ export const quarterEndDate = (year: number, quarter: number) => {
 const quarterOf = (date: Date) => Math.floor(date.getMonth() / 3) + 1;
 
 /**
- * Die nächsten wählbaren Quartalsanfänge. Das laufende Quartal fehlt bewusst:
- * ein Bonus wirkt nie rückwirkend.
+ * Das einzige Quartal, für das heute beantragt werden kann: das kommende.
  */
-export const listSelectableQuarterStarts = (
-  count = 4,
-  now = new Date(),
-): QuarterStart[] => {
-  const baseQuarter = quarterOf(now);
-  return Array.from({ length: count }, (_, index) => {
-    const offset = baseQuarter + index;
-    const year = now.getFullYear() + Math.floor(offset / 4);
-    const quarter = (offset % 4) + 1;
-    const start = quarterStartDate(year, quarter);
-    return {
-      value: start,
-      label: `Q${quarter}/${year} — ab ${pad((quarter - 1) * 3 + 1)}/${year}`,
-      year,
-      quarter,
-    };
-  });
+export const nextQuarterStart = (now = new Date()): QuarterStart => {
+  // Das laufende Quartal (1..4) ist zugleich der Nullindex des kommenden.
+  const offset = quarterOf(now);
+  const year = now.getFullYear() + Math.floor(offset / 4);
+  const quarter = (offset % 4) + 1;
+  return {
+    value: quarterStartDate(year, quarter),
+    label: `Q${quarter}/${year}`,
+    year,
+    quarter,
+  };
 };
 
 /** Das Quartal, in dem ein ISO-Datum liegt. Für Labels aus gespeicherten Zeilen. */
@@ -362,16 +485,28 @@ export type EhrenamtsbonusRequest = {
   decisionNote: string | null;
   decidedBy: string | null;
   decidedAt: string | null;
+  /** Nur bei `cancelled` gesetzt — die Begründung, die das Mitglied liest. */
+  cancellationNote: string | null;
+  cancelledBy: string | null;
+  cancelledAt: string | null;
   createdAt: string;
 };
 
 /** Annehmen oder ablehnen — mehr Wege aus der Prüfung gibt es nicht. */
 export type EhrenamtsbonusDecision = "approve" | "reject";
 
+/**
+ * Was der Vorstand an einem Antrag tun kann. Stornieren ist keine Entscheidung
+ * über einen offenen Antrag, sondern die Rücknahme einer schon getroffenen:
+ * sie trifft nur angenommene Anträge und braucht immer eine Begründung.
+ */
+export type EhrenamtsbonusAdminAction = EhrenamtsbonusDecision | "cancel";
+
 /** Antrag plus alles, was nur der Vorstand sieht. */
 export type EhrenamtsbonusAdminRequest = EhrenamtsbonusRequest & {
   applicantName: string | null;
   applicantMemberNumber: string | null;
+  cancelledByName: string | null;
   /** Live aus Campai, nie gespeichert. `null` = nicht abrufbar. */
   openBalanceCents: number | null;
   decidedByName: string | null;
@@ -397,6 +532,9 @@ const SELECT_FIELDS = [
   "decision_note",
   "decided_by",
   "decided_at",
+  "cancellation_note",
+  "cancelled_by",
+  "cancelled_at",
   "created_at",
 ].join(", ");
 
@@ -442,6 +580,8 @@ export const parseBonusOption = (value: unknown) =>
   parseFromList(value, BONUS_OPTIONS);
 export const parseDecision = (value: unknown) =>
   parseFromList(value, ["approve", "reject"] as const);
+export const parseAdminAction = (value: unknown) =>
+  parseFromList(value, ["approve", "reject", "cancel"] as const);
 
 export const mapRequestRow = (
   row: Record<string, unknown>,
@@ -469,6 +609,9 @@ export const mapRequestRow = (
     decisionNote: readOptionalText(row.decision_note),
     decidedBy: readOptionalText(row.decided_by),
     decidedAt: readOptionalText(row.decided_at),
+    cancellationNote: readOptionalText(row.cancellation_note),
+    cancelledBy: readOptionalText(row.cancelled_by),
+    cancelledAt: readOptionalText(row.cancelled_at),
     createdAt: readText(row.created_at),
   };
 };
@@ -483,7 +626,7 @@ export class EhrenamtsbonusValidationError extends Error {}
  */
 export const parseEhrenamtsbonusInput = (
   body: Record<string, unknown>,
-  validQuarterStarts: readonly string[],
+  quarterStart: string,
 ): EhrenamtsbonusInput => {
   const fail: (message: string) => never = (message) => {
     throw new EhrenamtsbonusValidationError(message);
@@ -500,9 +643,9 @@ export const parseEhrenamtsbonusInput = (
   }
 
   const validFrom = readText(body.validFrom);
-  if (!isIsoDate(validFrom) || !validQuarterStarts.includes(validFrom)) {
+  if (!isIsoDate(validFrom) || validFrom !== quarterStart) {
     fail(
-      "Bitte einen Quartalsbeginn wählen — der Bonus wirkt nie rückwirkend.",
+      "Der Bonus kann nur für das kommende Quartal beantragt werden — rückwirkend oder auf Vorrat geht es nicht.",
     );
   }
 

@@ -1457,7 +1457,7 @@ create table if not exists public.ehrenamtsbonus_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   status text not null default 'in_review'
-    check (status in ('in_review', 'approved', 'rejected')),
+    check (status in ('in_review', 'approved', 'rejected', 'cancelled')),
   -- Momentaufnahme aus den Systemdaten beim Einreichen; im Formular steht sie
   -- dem Mitglied nur lesend gegenüber.
   current_access text not null
@@ -1477,6 +1477,12 @@ create table if not exists public.ehrenamtsbonus_requests (
   -- selbst bleibt bestehen — deshalb prüft der Constraint unten nur das Datum.
   decided_by uuid references auth.users (id) on delete set null,
   decided_at timestamptz,
+  -- Stornierung eines angenommenen Bonus: immer mit Begründung, die das
+  -- Mitglied in seiner Antragsliste liest. `decided_at` bleibt dabei stehen —
+  -- storniert wird nur, worüber schon entschieden war.
+  cancellation_note text,
+  cancelled_by uuid references auth.users (id) on delete set null,
+  cancelled_at timestamptz,
   created_at timestamptz not null default now(),
   constraint ehrenamtsbonus_validity_order check (valid_until > valid_from),
   constraint ehrenamtsbonus_werkbereiche_present
@@ -1484,6 +1490,12 @@ create table if not exists public.ehrenamtsbonus_requests (
   constraint ehrenamtsbonus_decision_complete check (
     (status = 'in_review' and decided_at is null)
     or (status <> 'in_review' and decided_at is not null)
+  ),
+  constraint ehrenamtsbonus_cancellation_complete check (
+    (status = 'cancelled'
+      and cancelled_at is not null
+      and cancellation_note is not null)
+    or (status <> 'cancelled' and cancelled_at is null)
   )
 );
 

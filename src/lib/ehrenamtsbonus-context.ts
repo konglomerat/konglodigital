@@ -1,26 +1,16 @@
-// Die beiden Werte, die im Antragskopf read-only stehen: der Zugang, über den
-// die Entscheidungsmatrix läuft, und der offene Beitrag als Information für
-// den Vorstand.
-//
-// Nur der Zugang wird beim Einreichen in den Antrag geschrieben — ein Antrag
-// muss auch dann noch zeigen, was er ausgelöst hätte, wenn das Mitglied
-// inzwischen den Tarif gewechselt hat. Der offene Betrag dagegen wird nie
-// gespeichert: er kommt bei jeder Ansicht frisch aus Campai, weil ein
-// gespeicherter Stand schon am nächsten Tag falsch wäre.
-//
-// Beides stammt aus dem CRM-Kontakt (siehe campai-member-tariff). Diese Datei
-// übersetzt nur noch: Campai-Tarif → `AccessLevel` des Features.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CampaiAccessTariff } from "@/lib/campai-member-tariff";
-import { fetchCampaiMemberSnapshot } from "@/lib/campai-member-tariff";
-import type { AccessLevel } from "@/lib/ehrenamtsbonus";
+import { fetchCampaiMembership } from "@/lib/campai-member-tariff";
+import { fetchCampaiTariffPrices } from "@/lib/campai-plans";
+import type { AccessLevel, TariffPrices } from "@/lib/ehrenamtsbonus";
+import { FALLBACK_TARIFF_PRICES } from "@/lib/ehrenamtsbonus";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
 
 export type EhrenamtsbonusContext = {
   access: AccessLevel;
-  /** Offener Beitrag in Cent, positiv = schuldet dem Verein. `null` = unbekannt. */
-  openBalanceCents: number | null;
+  /** Die heutigen Tarifpreise aus Campai, sonst die Rückfallwerte. */
+  prices: TariffPrices;
 };
 
 export const ACCESS_BY_TARIFF: Record<CampaiAccessTariff, AccessLevel> = {
@@ -38,15 +28,20 @@ export const resolveEhrenamtsbonusContext = async (
     () => null,
   );
 
-  // Fällt Campai aus oder fehlt die Mitgliedsnummer, bleibt der Antrag
-  // stellbar: dann steht im Kopf „nicht abrufbar" statt einer erfundenen Null,
-  // und der Zugang fällt auf die unterste Stufe zurück.
-  const snapshot = await fetchCampaiMemberSnapshot(
-    profile?.campaiMemberNumber,
-  ).catch(() => null);
+  // Fällt Campai aus oder fehlt die Verknüpfung, bleibt der Antrag stellbar:
+  // der Zugang fällt dann auf die unterste Stufe zurück, die Preise auf die
+  // Rückfallwerte. Gebraucht wird nur der Tarif — also nur die Verträge,
+  // nicht der Kontakt samt Saldo.
+  const contactId = profile?.campaiContactId?.trim();
+  const [membership, prices] = await Promise.all([
+    contactId
+      ? fetchCampaiMembership(contactId).catch(() => null)
+      : Promise.resolve(null),
+    fetchCampaiTariffPrices().catch(() => null),
+  ]);
 
   return {
-    access: ACCESS_BY_TARIFF[snapshot?.tariff ?? "keiner"],
-    openBalanceCents: snapshot?.openBalanceCents ?? null,
+    access: ACCESS_BY_TARIFF[membership?.tariff ?? "keiner"],
+    prices: prices ?? FALLBACK_TARIFF_PRICES,
   };
 };

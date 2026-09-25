@@ -1,13 +1,13 @@
 "use client";
 
-// Screen 2 — Verwaltung. Die Anträge stehen als aufklappbare Liste, der erste
-// offene Eintrag ist offen: wer hier hereinkommt, will meistens genau den
-// entscheiden. Was eine Annahme auslöst, steht hervorgehoben im Detail und
-// kommt aus derselben Entscheidungsmatrix wie die Vorschau im Antragsformular.
-//
-// Es wird nicht abgestimmt: eine Entscheidung genügt, der Name bleibt am
-// Antrag stehen.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+// Ehrenamtsbonus — Verwaltung
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import Badge from "@/components/knglmrt/Badge";
 import Button from "@/components/knglmrt/Button";
@@ -17,18 +17,19 @@ import StatTile from "@/components/knglmrt/StatTile";
 import Textarea from "@/components/knglmrt/Textarea";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
-  ACCESS_LEVEL_LABELS,
   BONUS_OPTION_LABELS,
   EHRENAMTSBONUS_STATUS_LABELS,
   EHRENAMTSBONUS_STATUS_TONES,
-  SYSTEM_TARGET_LABELS,
+  FALLBACK_TARIFF_PRICES,
+  accessLevelLabel,
   formatEuro,
   isOpenStatus,
   quarterLabelForDate,
   resolveDisplayStatus,
   resolveOutcome,
+  type EhrenamtsbonusAdminAction,
   type EhrenamtsbonusAdminRequest,
-  type EhrenamtsbonusDecision,
+  type TariffPrices,
 } from "@/lib/ehrenamtsbonus";
 import { findWerkbereich } from "@/lib/werkbereiche";
 
@@ -36,6 +37,7 @@ const FILTERS = [
   { value: "open", label: "Offen" },
   { value: "approved", label: "Angenommen" },
   { value: "rejected", label: "Abgelehnt" },
+  { value: "cancelled", label: "Storniert" },
   { value: "expiring", label: "Läuft bald ab" },
 ] as const;
 
@@ -43,9 +45,7 @@ type FilterValue = (typeof FILTERS)[number]["value"];
 
 const formatDate = (value: string | null) => {
   if (!value) return "—";
-  const parsed = new Date(
-    value.length === 10 ? `${value}T00:00:00` : value,
-  );
+  const parsed = new Date(value.length === 10 ? `${value}T00:00:00` : value);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleDateString("de-DE");
 };
@@ -70,7 +70,7 @@ function DetailItem({
 }) {
   return (
     <div>
-      <dt className="knglmrt-caption text-muted-foreground">{label}</dt>
+      <dt className="knglmrt-label text-muted-foreground">{label}</dt>
       <dd className={mono ? "knglmrt-num" : undefined}>{children}</dd>
     </div>
   );
@@ -78,6 +78,7 @@ function DetailItem({
 
 export default function VorstandEhrenamtsbonusClient() {
   const [requests, setRequests] = useState<EhrenamtsbonusAdminRequest[]>([]);
+  const [prices, setPrices] = useState<TariffPrices>(FALLBACK_TARIFF_PRICES);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("open");
@@ -85,6 +86,10 @@ export default function VorstandEhrenamtsbonusClient() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteErrors, setNoteErrors] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Die Begründung einer Stornierung erscheint erst, wenn jemand stornieren
+  // will — ein offenes Pflichtfeld unter jedem laufenden Bonus lädt zum
+  // Versehen ein.
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const loadRequests = useCallback(async () => {
@@ -95,6 +100,7 @@ export default function VorstandEhrenamtsbonusClient() {
       const payload = (await response.json()) as {
         error?: string;
         requests?: EhrenamtsbonusAdminRequest[];
+        prices?: TariffPrices;
       };
       if (!response.ok) {
         throw new Error(
@@ -102,6 +108,7 @@ export default function VorstandEhrenamtsbonusClient() {
         );
       }
       setRequests(payload.requests ?? []);
+      setPrices(payload.prices ?? FALLBACK_TARIFF_PRICES);
     } catch (error) {
       setLoadError(
         error instanceof Error
@@ -159,23 +166,27 @@ export default function VorstandEhrenamtsbonusClient() {
         .reduce(
           (sum, entry) =>
             sum +
-            resolveOutcome(entry.currentAccess, entry.requestedOption)
+            resolveOutcome(entry.currentAccess, entry.requestedOption, prices)
               .forgoneCents,
           0,
         ),
-    [requests],
+    [prices, requests],
   );
 
   const decide = async (
     request: EhrenamtsbonusAdminRequest,
-    decision: EhrenamtsbonusDecision,
+    action: EhrenamtsbonusAdminAction,
   ) => {
     const note = (notes[request.id] ?? "").trim();
 
-    if (decision === "reject" && !note) {
+    // Beides bekommt das Mitglied zu lesen, beides ohne Begründung sinnlos.
+    if (action !== "approve" && !note) {
       setNoteErrors((current) => ({
         ...current,
-        [request.id]: "Eine Ablehnung braucht eine Begründung.",
+        [request.id]:
+          action === "cancel"
+            ? "Eine Stornierung braucht eine Begründung."
+            : "Eine Ablehnung braucht eine Begründung.",
       }));
       return;
     }
@@ -189,18 +200,16 @@ export default function VorstandEhrenamtsbonusClient() {
     setSaveError(null);
 
     try {
-      const response = await fetch(
-        `/api/admin/ehrenamtsbonus/${request.id}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ decision, note: note || null }),
-        },
-      );
+      const response = await fetch(`/api/admin/ehrenamtsbonus/${request.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: action, note: note || null }),
+      });
       const payload = (await response.json()) as {
         error?: string;
         request?: EhrenamtsbonusAdminRequest | null;
         decidedByName?: string | null;
+        cancelledByName?: string | null;
       };
       if (!response.ok || !payload.request) {
         throw new Error(
@@ -220,12 +229,17 @@ export default function VorstandEhrenamtsbonusClient() {
                 applicantName: entry.applicantName,
                 applicantMemberNumber: entry.applicantMemberNumber,
                 openBalanceCents: entry.openBalanceCents,
-                decidedByName: payload.decidedByName ?? null,
+                // Eine Stornierung nennt nur den Stornierenden — wer den
+                // Bonus angenommen hat, steht schon in der Liste.
+                decidedByName:
+                  payload.decidedByName ?? entry.decidedByName ?? null,
+                cancelledByName: payload.cancelledByName ?? null,
               }
             : entry,
         ),
       );
       setNotes((current) => ({ ...current, [request.id]: "" }));
+      if (action === "cancel") setCancellingId(null);
     } catch (error) {
       setSaveError(
         error instanceof Error
@@ -307,12 +321,12 @@ export default function VorstandEhrenamtsbonusClient() {
           {visibleRequests.map((entry) => {
             const expanded = entry.id === effectiveExpandedId;
             const displayStatus = resolveDisplayStatus(entry);
-            const outcome = resolveOutcome(
-              entry.currentAccess,
-              entry.requestedOption,
-            );
             const busy = savingId === entry.id;
             const decidable = isOpenStatus(entry.status);
+            // Stornierbar ist, was läuft oder noch anläuft — ein ausgelaufener
+            // Bonus lässt sich nicht mehr zurücknehmen.
+            const cancellable =
+              entry.status === "approved" && displayStatus !== "expired";
 
             return (
               <li key={entry.id} className="knglmrt-border bg-card">
@@ -364,7 +378,7 @@ export default function VorstandEhrenamtsbonusClient() {
                             : "Nichts offen"}
                       </DetailItem>
                       <DetailItem label="Aktuell gewählter Tarif">
-                        {ACCESS_LEVEL_LABELS[entry.currentAccess]}
+                        {accessLevelLabel(entry.currentAccess, prices)}
                       </DetailItem>
                       <DetailItem label="Beantragt">
                         {BONUS_OPTION_LABELS[entry.requestedOption]}
@@ -377,60 +391,113 @@ export default function VorstandEhrenamtsbonusClient() {
                     </dl>
 
                     <div className="knglmrt-border-section p-3.5">
-                      <p className="knglmrt-caption mb-1 text-muted-foreground">
+                      <p className="knglmrt-label mb-1 text-muted-foreground">
                         Begründung des Mitglieds
                       </p>
                       <p className="whitespace-pre-line">{entry.reason}</p>
                     </div>
 
-                    {/* Aufgelöst aus der Entscheidungsmatrix — dieselbe
-                        Funktion, die dem Mitglied die Vorschau gezeigt hat. */}
-                    <Notice title="Wird bei Annahme ausgelöst" tone="gelb">
-                      {/* „Nur Anerkennung" fasst kein System an — dann steht
-                          hier ein Satz statt einer leeren Liste. */}
-                      {outcome.actions.length === 0 ? (
-                        <p>
-                          Keine Systemaktion — Tarif und Zugang bleiben
-                          unverändert.
-                        </p>
-                      ) : (
-                        <ul className="flex flex-col gap-1.5">
-                          {outcome.actions.map((action) => (
-                            <li
-                              key={`${action.target}-${action.label}`}
-                              className="flex flex-wrap items-center gap-2"
-                            >
-                              <Badge tone="kontur">
-                                {SYSTEM_TARGET_LABELS[action.target]}
-                              </Badge>
-                              <span>{action.label}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <p className="knglmrt-num mt-2.5 font-bold">
-                        Entgangener Beitrag: {formatEuro(outcome.forgoneCents)}
-                      </p>
-                    </Notice>
-
                     {!decidable ? (
                       <p className="text-muted-foreground">
-                        {entry.status === "approved"
-                          ? "Angenommen"
-                          : "Abgelehnt"}{" "}
+                        {entry.status === "rejected"
+                          ? "Abgelehnt"
+                          : "Angenommen"}{" "}
                         von {entry.decidedByName ?? "einem Vorstandsmitglied"}{" "}
                         am {formatDate(entry.decidedAt)}
+                        {entry.status === "cancelled" ? (
+                          <>
+                            <br />
+                            Storniert von{" "}
+                            {entry.cancelledByName ??
+                              "einem Vorstandsmitglied"}{" "}
+                            am {formatDate(entry.cancelledAt)}
+                          </>
+                        ) : null}
                       </p>
                     ) : null}
 
                     {entry.decisionNote && !decidable ? (
                       <p>
-                        <span className="knglmrt-caption text-muted-foreground">
+                        <span className="knglmrt-label text-muted-foreground">
                           Begründung der Entscheidung
                         </span>
                         <br />
                         {entry.decisionNote}
                       </p>
+                    ) : null}
+
+                    {entry.cancellationNote ? (
+                      <p>
+                        <span className="knglmrt-label text-muted-foreground">
+                          Begründung der Stornierung
+                        </span>
+                        <br />
+                        {entry.cancellationNote}
+                      </p>
+                    ) : null}
+
+                    {cancellable && cancellingId !== entry.id ? (
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          type="button"
+                          kind="danger-secondary"
+                          size="small"
+                          onClick={() => setCancellingId(entry.id)}
+                        >
+                          Bonus stornieren
+                        </Button>
+                      </div>
+                    ) : null}
+
+                    {cancellable && cancellingId === entry.id ? (
+                      <>
+                        <Textarea
+                          id={`eab-cancel-note-${entry.id}`}
+                          label="Begründung der Stornierung"
+                          rows={3}
+                          counter={2000}
+                          autoFocus
+                          value={notes[entry.id] ?? ""}
+                          error={noteErrors[entry.id]}
+                          hint="Pflicht — das Mitglied liest sie in seiner Antragsliste."
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setNotes((current) => ({
+                              ...current,
+                              [entry.id]: value,
+                            }));
+                          }}
+                        />
+                        <div className="flex flex-wrap gap-3">
+                          <Button
+                            type="button"
+                            kind="danger-secondary"
+                            size="small"
+                            disabled={busy}
+                            onClick={() => {
+                              void decide(entry, "cancel");
+                            }}
+                          >
+                            {busy ? "Wird gespeichert …" : "Stornierung absenden"}
+                          </Button>
+                          <Button
+                            type="button"
+                            kind="secondary"
+                            size="small"
+                            disabled={busy}
+                            onClick={() => {
+                              setCancellingId(null);
+                              setNoteErrors((current) => {
+                                const next = { ...current };
+                                delete next[entry.id];
+                                return next;
+                              });
+                            }}
+                          >
+                            Abbrechen
+                          </Button>
+                        </div>
+                      </>
                     ) : null}
 
                     {decidable ? (

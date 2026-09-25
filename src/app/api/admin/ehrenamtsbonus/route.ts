@@ -6,17 +6,30 @@
 //
 // Der offene Beitrag wird nicht gespeichert: Campai liefert ihn zusammen mit
 // dem Tarif im CRM-Kontakt, für die ganze Liste in wenigen Aufrufen.
+//
+// Mit der Liste gehen die heutigen Tarifpreise raus — der Vorstand liest
+// daran ab, was ein Bonus den Verein kostet, und das soll der aktuelle Tarif
+// sein und nicht der, der bei Einführung galt.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { fetchCampaiMemberSnapshots } from "@/lib/campai-member-tariff";
-import type { EhrenamtsbonusAdminRequest } from "@/lib/ehrenamtsbonus";
-import { listAllRequests } from "@/lib/ehrenamtsbonus";
+import { fetchCampaiTariffPrices } from "@/lib/campai-plans";
+import type {
+  EhrenamtsbonusAdminRequest,
+  TariffPrices,
+} from "@/lib/ehrenamtsbonus";
+import { FALLBACK_TARIFF_PRICES, listAllRequests } from "@/lib/ehrenamtsbonus";
 import type { MemberProfile } from "@/lib/member-profiles";
 import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
 import { userHasRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+
+export type EhrenamtsbonusAdminResponse = {
+  requests: EhrenamtsbonusAdminRequest[];
+  prices: TariffPrices;
+};
 
 export const GET = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
@@ -33,13 +46,13 @@ export const GET = async (request: NextRequest) => {
   try {
     const requests = await listAllRequests(supabase);
 
-    // Antragsteller und Entscheidende in einem Rutsch — beide Namen kommen aus
-    // derselben Tabelle.
+    // Antragsteller, Entscheidende und Stornierende in einem Rutsch — alle
+    // Namen kommen aus derselben Tabelle.
     const userIds = Array.from(
       new Set([
         ...requests.map((entry) => entry.userId),
         ...requests
-          .map((entry) => entry.decidedBy)
+          .flatMap((entry) => [entry.decidedBy, entry.cancelledBy])
           .filter((value): value is string => Boolean(value)),
       ]),
     );
@@ -58,33 +71,42 @@ export const GET = async (request: NextRequest) => {
     }
 
     // Dasselbe gilt für Campai: fällt der Abruf aus, fehlen die Beträge, die
-    // Anträge bleiben entscheidbar. Verbunden wird über die Mitgliedsnummer —
-    // die CRM-API kennt die Kontakt-IDs der alten API nicht.
-    const memberNumbers = requests
-      .map((entry) => profiles.get(entry.userId)?.campaiMemberNumber)
-      .filter((number): number is string => Boolean(number));
+    // Anträge bleiben entscheidbar. Verbunden wird über die Kontakt-ID aus dem
+    // Profil.
+    const contactIds = requests
+      .map((entry) => profiles.get(entry.userId)?.campaiContactId)
+      .filter((id): id is string => Boolean(id));
 
-    const snapshots = await fetchCampaiMemberSnapshots(memberNumbers).catch(
-      () => new Map<string, { openBalanceCents: number | null }>(),
-    );
+    const [snapshots, prices] = await Promise.all([
+      fetchCampaiMemberSnapshots(contactIds).catch(
+        () => new Map<string, { openBalanceCents: number | null }>(),
+      ),
+      fetchCampaiTariffPrices().catch(() => null),
+    ]);
 
     const enriched: EhrenamtsbonusAdminRequest[] = requests.map((entry) => {
       const profile = profiles.get(entry.userId);
-      const memberNumber = profile?.campaiMemberNumber ?? null;
+      const contactId = profile?.campaiContactId ?? null;
       return {
         ...entry,
         applicantName: profile?.campaiName ?? null,
-        applicantMemberNumber: memberNumber,
-        openBalanceCents: memberNumber
-          ? (snapshots.get(memberNumber)?.openBalanceCents ?? null)
+        applicantMemberNumber: profile?.campaiMemberNumber ?? null,
+        openBalanceCents: contactId
+          ? (snapshots.get(contactId)?.openBalanceCents ?? null)
           : null,
         decidedByName: entry.decidedBy
           ? (profiles.get(entry.decidedBy)?.campaiName ?? null)
           : null,
+        cancelledByName: entry.cancelledBy
+          ? (profiles.get(entry.cancelledBy)?.campaiName ?? null)
+          : null,
       };
     });
 
-    return NextResponse.json({ requests: enriched });
+    return NextResponse.json({
+      requests: enriched,
+      prices: prices ?? FALLBACK_TARIFF_PRICES,
+    } satisfies EhrenamtsbonusAdminResponse);
   } catch (loadError) {
     return NextResponse.json(
       {

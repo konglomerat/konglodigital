@@ -3,6 +3,10 @@
 // war. Eine Ablehnung braucht eine Begründung, weil das Mitglied sie auf
 // seiner Kontoseite zu lesen bekommt.
 //
+// Dieselbe Route nimmt auch die Stornierung entgegen: die Rücknahme eines
+// schon angenommenen Bonus, ebenfalls nur mit Begründung. Ein offener Antrag
+// wird nicht storniert, sondern abgelehnt.
+//
 // „Vorstand" ist heute die Rolle `admin`: der Campai-Tag „vorstand" wird bei
 // der Registrierung auf genau diese Rolle abgebildet (siehe roles.ts).
 import { NextResponse } from "next/server";
@@ -11,7 +15,7 @@ import type { NextRequest } from "next/server";
 import {
   EHRENAMTSBONUS_TABLE,
   mapRequestRow,
-  parseDecision,
+  parseAdminAction,
   parseStatus,
 } from "@/lib/ehrenamtsbonus";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
@@ -39,10 +43,10 @@ export const POST = async (
     unknown
   >;
 
-  const decision = parseDecision(body.decision);
-  if (!decision) {
+  const action = parseAdminAction(body.decision);
+  if (!action) {
     return NextResponse.json(
-      { error: "Bitte den Antrag annehmen oder ablehnen." },
+      { error: "Bitte den Antrag annehmen, ablehnen oder stornieren." },
       { status: 400 },
     );
   }
@@ -50,9 +54,16 @@ export const POST = async (
   const note =
     typeof body.note === "string" && body.note.trim() ? body.note.trim() : null;
 
-  if (decision === "reject" && !note) {
+  if (action === "reject" && !note) {
     return NextResponse.json(
       { error: "Eine Ablehnung braucht eine Begründung." },
+      { status: 400 },
+    );
+  }
+
+  if (action === "cancel" && !note) {
+    return NextResponse.json(
+      { error: "Eine Stornierung braucht eine Begründung." },
       { status: 400 },
     );
   }
@@ -82,27 +93,44 @@ export const POST = async (
     );
   }
 
-  if (currentStatus !== "in_review") {
-    return NextResponse.json(
-      { error: "Über diesen Antrag ist bereits entschieden." },
-      { status: 409 },
-    );
+  // Der Status, aus dem heraus die Aktion zulässig ist — und zugleich die
+  // Bedingung des Schreibvorgangs: greifen zwei gleichzeitig zu, gewinnt der
+  // erste, der zweite bekommt den Konflikt.
+  const requiredStatus = action === "cancel" ? "approved" : "in_review";
+  const conflictMessage =
+    action === "cancel"
+      ? "Nur ein angenommener Bonus lässt sich stornieren."
+      : "Über diesen Antrag ist bereits entschieden.";
+
+  if (currentStatus !== requiredStatus) {
+    return NextResponse.json({ error: conflictMessage }, { status: 409 });
   }
 
-  const decidedAt = new Date().toISOString();
+  const now = new Date().toISOString();
 
-  // `eq("status", "in_review")` ist der eigentliche Schutz: entscheiden zwei
-  // gleichzeitig, greift nur der erste Schreibvorgang.
+  // Eine Stornierung lässt die getroffene Entscheidung stehen — wer wann
+  // zugestimmt hat, bleibt am Antrag ablesbar. Sie schreibt nur den Status um
+  // und legt ihre eigene Begründung daneben.
+  const patch =
+    action === "cancel"
+      ? {
+          status: "cancelled",
+          cancellation_note: note,
+          cancelled_by: data.user.id,
+          cancelled_at: now,
+        }
+      : {
+          status: action === "approve" ? "approved" : "rejected",
+          decision_note: note,
+          decided_by: data.user.id,
+          decided_at: now,
+        };
+
   const { data: updated, error } = await supabase
     .from(EHRENAMTSBONUS_TABLE)
-    .update({
-      status: decision === "approve" ? "approved" : "rejected",
-      decision_note: note,
-      decided_by: data.user.id,
-      decided_at: decidedAt,
-    })
+    .update(patch)
     .eq("id", id)
-    .eq("status", "in_review")
+    .eq("status", requiredStatus)
     .select()
     .maybeSingle();
 
@@ -114,21 +142,20 @@ export const POST = async (
   }
 
   if (!updated) {
-    return NextResponse.json(
-      { error: "Über diesen Antrag ist bereits entschieden." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: conflictMessage }, { status: 409 });
   }
 
   // Den eigenen Namen darf die Session lesen (RLS lässt das eigene Profil zu).
   // Damit steht direkt nach dem Klick „Angenommen von …" in der Liste, ohne
   // sie neu zu laden.
-  const decider = await getMemberProfileByUserId(supabase, data.user.id).catch(
+  const actor = await getMemberProfileByUserId(supabase, data.user.id).catch(
     () => null,
   );
+  const actorName = actor?.campaiName ?? null;
 
   return NextResponse.json({
     request: mapRequestRow(updated as Record<string, unknown>),
-    decidedByName: decider?.campaiName ?? null,
+    decidedByName: action === "cancel" ? null : actorName,
+    cancelledByName: action === "cancel" ? actorName : null,
   });
 };

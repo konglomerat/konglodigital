@@ -8,10 +8,12 @@ import type { NextRequest } from "next/server";
 import {
   EHRENAMTSBONUS_TABLE,
   EhrenamtsbonusValidationError,
+  blockedMessage,
+  findBlockingRequest,
   inputToRow,
   listOwnRequests,
-  listSelectableQuarterStarts,
   mapRequestRow,
+  nextQuarterStart,
   parseEhrenamtsbonusInput,
 } from "@/lib/ehrenamtsbonus";
 import { resolveEhrenamtsbonusContext } from "@/lib/ehrenamtsbonus-context";
@@ -54,15 +56,29 @@ export const POST = async (request: NextRequest) => {
     unknown
   >;
 
-  const context = await resolveEhrenamtsbonusContext(supabase, data.user.id);
-  const quarterStarts = listSelectableQuarterStarts().map(
-    (entry) => entry.value,
+  const quarter = nextQuarterStart();
+
+  // Ein Antrag zur Zeit, und zwar hier geprüft: das Formular blendet sich zwar
+  // aus, solange einer wartet oder läuft, aber die Route ist die Stelle, an
+  // der es auch gilt. Abgelehntes blockiert nicht — danach darf beliebig oft
+  // neu gestellt werden.
+  const existing = await listOwnRequests(supabase, data.user.id).catch(
+    () => null,
   );
+  const blocking = existing ? findBlockingRequest(existing) : null;
+  if (blocking) {
+    return NextResponse.json(
+      { error: blockedMessage(blocking) },
+      { status: 409 },
+    );
+  }
+
+  const context = await resolveEhrenamtsbonusContext(supabase, data.user.id);
 
   let row: ReturnType<typeof inputToRow>;
   try {
     row = inputToRow(
-      parseEhrenamtsbonusInput(body, quarterStarts),
+      parseEhrenamtsbonusInput(body, quarter.value),
       data.user.id,
       context,
     );
