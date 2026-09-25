@@ -66,6 +66,12 @@ const PALETTE_TOKENS: ColorToken[] = [
   { name: "--knglmrt-blue-100", note: "kühle Tints, Konfetti" },
   { name: "--knglmrt-blue-60" },
   { name: "--knglmrt-blue-30" },
+  { name: "--knglmrt-green-100", note: "success" },
+  { name: "--knglmrt-green-60" },
+  { name: "--knglmrt-green-30" },
+  { name: "--knglmrt-red-100", note: "destructive" },
+  { name: "--knglmrt-red-60" },
+  { name: "--knglmrt-red-30" },
   { name: "--knglmrt-brown-100", note: "Handschrift, Link-Hover" },
   { name: "--knglmrt-brown-60" },
   { name: "--knglmrt-brown-30" },
@@ -697,7 +703,7 @@ export default function DesignSystemPage() {
       <Section
         title="Badge"
         source="components/knglmrt/Badge.tsx"
-        hint="Statusmarke, 10px uppercase, nie rund. Die Palette kennt kein Grün und kein Rot — Status läuft über die Tints."
+        hint="Statusmarke, 10px uppercase, nie rund. Status läuft über die Tints: Erfolg grün, Fehler rot, Warten gelb."
       >
         <div className="flex flex-wrap items-end gap-x-8 gap-y-6">
           {BADGE_TONES.map((tone) => (

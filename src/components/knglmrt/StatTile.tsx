@@ -61,7 +61,7 @@ export default function StatTile({
 
   const body = (
     <>
-      <span className={`knglmrt-caption ${mutedText}`}>{label}</span>
+      <span className={`knglmrt-label ${mutedText}`}>{label}</span>
       <span
         className={`knglmrt-value whitespace-nowrap ${
           valueClassName ?? (isRosa ? "text-primary" : "text-foreground")

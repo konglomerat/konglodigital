@@ -45,6 +45,16 @@
   --knglmrt-yellow-120: #6f5200;    /* Hover-Ziel für Gelb, trägt weiße Schrift */
   --knglmrt-brown-120: #5a373d;     /* Hover-Ziel für Braun, trägt weiße Schrift */
   --knglmrt-pink-15: #f4dce5;       /* die zarte Kachelkontur */
+  /* Grün für `success`: blue-100 mit gleicher Sättigung und Helligkeit, nur
+     der Farbton gedreht — die Rampe darunter sind dieselben Weiß-Tints. */
+  --knglmrt-green-100: #71c694;
+  --knglmrt-green-60: #aadcbf;
+  --knglmrt-green-30: #d4eedf;
+  /* Rot für `destructive`: pink-100 mit gleicher Sättigung und Helligkeit,
+     nur der Farbton gedreht — Pink bleibt so allein die Markenfarbe. */
+  --knglmrt-red-100: #c84137;
+  --knglmrt-red-60: #de8d87;
+  --knglmrt-red-30: #eec6c3;
 
   /* ------------------------------------------------------------------
    * 2 — APP-TOKENS (shadcn/Tailwind). Rollen, keine Farben: hier steht
@@ -71,15 +81,14 @@
   --accent: var(--knglmrt-yellow-100);
   --accent-foreground: var(--knglmrt-dark-100);
 
-  /* Die Palette kennt kein Grün/Rot: Status läuft über pink/gelb/blau. */
-  --destructive: var(--knglmrt-pink-100);
+  --destructive: var(--knglmrt-red-100);
   --destructive-foreground: var(--knglmrt-paper);
-  --destructive-soft: var(--knglmrt-pink-30);
-  --destructive-border: var(--knglmrt-pink-100);
-  --success: var(--knglmrt-blue-100);
+  --destructive-soft: var(--knglmrt-red-30);
+  --destructive-border: var(--knglmrt-red-100);
+  --success: var(--knglmrt-green-100);
   --success-foreground: var(--knglmrt-ink);
-  --success-soft: var(--knglmrt-blue-30);
-  --success-border: var(--knglmrt-blue-100);
+  --success-soft: var(--knglmrt-green-30);
+  --success-border: var(--knglmrt-green-100);
   --warning: var(--knglmrt-yellow-100);
   --warning-foreground: var(--knglmrt-ink);
   --warning-soft: var(--knglmrt-yellow-30);
@@ -170,7 +179,7 @@
   --ui-field-pad-y-lg: 14px; /* Filterleisten: dieselbe Schrift, mehr Luft */
   --ui-option-pad-y: 7px;    /* Zeile in der offenen Liste */
   --ui-size-label: 14px;   /* uppercase, tracked .04em — Feldbeschriftungen */
-  --ui-size-caption: 18px; /* uppercase, tracked .13em — Karten- und Tile-Label */
+  --ui-size-caption: 17px; /* uppercase, tracked .13em — Karten-Label */
   --ui-size-tag: 12px;     /* Statusmarke — bleibt klein, sitzt in Badges */
   --ui-size-num: 15px;     /* Fira Mono — Daten, Zeiten, Beträge, IDs */
   --ui-size-value: 31px;   /* Fira Mono Bold — die Zahl auf einer StatTile */
@@ -213,14 +222,14 @@
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: var(--knglmrt-pink-60);
+  --destructive: var(--knglmrt-red-60);
   --destructive-foreground: var(--knglmrt-dark-100);
-  --destructive-soft: color-mix(in oklab, var(--knglmrt-pink-100) 30%, var(--card));
-  --destructive-border: var(--knglmrt-pink-100);
-  --success: var(--knglmrt-blue-60);
+  --destructive-soft: color-mix(in oklab, var(--knglmrt-red-100) 30%, var(--card));
+  --destructive-border: var(--knglmrt-red-100);
+  --success: var(--knglmrt-green-60);
   --success-foreground: var(--knglmrt-dark-100);
-  --success-soft: color-mix(in oklab, var(--knglmrt-blue-100) 30%, var(--card));
-  --success-border: var(--knglmrt-blue-100);
+  --success-soft: color-mix(in oklab, var(--knglmrt-green-100) 30%, var(--card));
+  --success-border: var(--knglmrt-green-100);
   --warning: var(--knglmrt-yellow-100);
   --warning-foreground: var(--knglmrt-dark-100);
   --warning-soft: color-mix(in oklab, var(--knglmrt-yellow-100) 26%, var(--card));
@@ -303,7 +312,7 @@
   font-size: var(--ui-size-card);
   line-height: var(--ui-line-card);
 }
-/* Feldbeschriftung: uppercase, .04em — enger getrackt als die Caption */
+/* Feld- und StatTile-Beschriftung: uppercase, .04em — enger getrackt als die Caption */
 .knglmrt-label {
   font-family: var(--font-core);
   font-weight: 700;
@@ -312,7 +321,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-/* Karten- und Tile-Label: 10px, uppercase, .13em */
+/* Karten-Label: 12px, uppercase, .13em */
 .knglmrt-caption {
   font-family: var(--font-core);
   font-weight: 700;
