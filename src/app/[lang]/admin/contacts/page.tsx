@@ -269,7 +269,7 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
       await fetchJson("/api/admin/contacts/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: contact.email, name: contact.name }),
+        body: JSON.stringify({ contactId: contact.id }),
       });
       setState({ status: "sent" });
     } catch (caught) {

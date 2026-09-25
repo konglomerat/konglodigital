@@ -86,8 +86,8 @@ export default function EhrenamtsbonusClient({
   // Der Vorschautext ist keine zweite Wahrheit: dieselbe Funktion liefert dem
   // Vorstand später die Systemaktionen.
   const outcome = useMemo(
-    () => resolveOutcome(context.access, option, context.prices, quarter.label),
-    [context.access, option, context.prices, quarter.label],
+    () => resolveOutcome(context.access, option, quarter.label),
+    [context.access, option, quarter.label],
   );
 
   // Ein Antrag zur Zeit: wartet einer auf die Entscheidung oder läuft ein

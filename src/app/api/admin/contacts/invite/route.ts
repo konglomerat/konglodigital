@@ -3,9 +3,9 @@ import type { NextRequest } from "next/server";
 
 import {
   buildCampaiProfileData,
-  getCampaiActiveContactByEmail,
+  getCampaiActiveContactById,
   splitCampaiContactName,
-} from "@/lib/campai-contacts";
+} from "@/lib/campai-contact-directory";
 import { upsertMemberProfile } from "@/lib/member-profiles";
 import { getInitialUserRoles, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -61,23 +61,33 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email } = (await request.json()) as { email?: string };
+    const { contactId } = (await request.json()) as { contactId?: string };
 
-    if (!email?.trim()) {
+    if (!contactId?.trim()) {
       return NextResponse.json(
-        { error: "Keine Mailadresse vorhanden." },
+        { error: "Kein Kontakt angegeben." },
         { status: 400 },
       );
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
     const adminClient = createSupabaseAdminClient();
-    const linkedContact = await getCampaiActiveContactByEmail(normalizedEmail);
+    const linkedContact = await getCampaiActiveContactById(contactId.trim());
 
     if (!linkedContact) {
       return NextResponse.json(
         { error: "Kontakt wurde in Campai nicht gefunden." },
         { status: 404 },
+      );
+    }
+
+    // Eingeladen wird an die Adresse, die in Campai am Kontakt steht — sie
+    // kommt aus dem Abruf, nicht aus dem Rumpf der Anfrage.
+    const normalizedEmail = linkedContact.email;
+
+    if (!normalizedEmail) {
+      return NextResponse.json(
+        { error: "Der Kontakt hat in Campai keine Mailadresse." },
+        { status: 400 },
       );
     }
 

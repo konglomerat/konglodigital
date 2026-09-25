@@ -17,19 +17,16 @@ import StatTile from "@/components/knglmrt/StatTile";
 import Textarea from "@/components/knglmrt/Textarea";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
+  ACCESS_LEVEL_LABELS,
   BONUS_OPTION_LABELS,
   EHRENAMTSBONUS_STATUS_LABELS,
   EHRENAMTSBONUS_STATUS_TONES,
-  FALLBACK_TARIFF_PRICES,
-  accessLevelLabel,
   formatEuro,
   isOpenStatus,
   quarterLabelForDate,
   resolveDisplayStatus,
-  resolveOutcome,
   type EhrenamtsbonusAdminAction,
   type EhrenamtsbonusAdminRequest,
-  type TariffPrices,
 } from "@/lib/ehrenamtsbonus";
 import { findWerkbereich } from "@/lib/werkbereiche";
 
@@ -78,7 +75,6 @@ function DetailItem({
 
 export default function VorstandEhrenamtsbonusClient() {
   const [requests, setRequests] = useState<EhrenamtsbonusAdminRequest[]>([]);
-  const [prices, setPrices] = useState<TariffPrices>(FALLBACK_TARIFF_PRICES);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("open");
@@ -100,7 +96,6 @@ export default function VorstandEhrenamtsbonusClient() {
       const payload = (await response.json()) as {
         error?: string;
         requests?: EhrenamtsbonusAdminRequest[];
-        prices?: TariffPrices;
       };
       if (!response.ok) {
         throw new Error(
@@ -108,7 +103,6 @@ export default function VorstandEhrenamtsbonusClient() {
         );
       }
       setRequests(payload.requests ?? []);
-      setPrices(payload.prices ?? FALLBACK_TARIFF_PRICES);
     } catch (error) {
       setLoadError(
         error instanceof Error
@@ -157,20 +151,6 @@ export default function VorstandEhrenamtsbonusClient() {
       requests.filter((entry) => resolveDisplayStatus(entry) === "expiring")
         .length,
     [requests],
-  );
-
-  const forgoneOpenCents = useMemo(
-    () =>
-      requests
-        .filter((entry) => isOpenStatus(entry.status))
-        .reduce(
-          (sum, entry) =>
-            sum +
-            resolveOutcome(entry.currentAccess, entry.requestedOption, prices)
-              .forgoneCents,
-          0,
-        ),
-    [prices, requests],
   );
 
   const decide = async (
@@ -268,18 +248,12 @@ export default function VorstandEhrenamtsbonusClient() {
         ]}
       />
 
-      <div className="grid gap-3.5 sm:grid-cols-3">
+      <div className="grid gap-3.5 sm:grid-cols-2">
         <StatTile
           label="Offene Anträge"
           value={loading ? "…" : String(openCount)}
           hint="Ein Vorstandsmitglied entscheidet"
           tone={openCount > 0 ? "rosa" : "grau"}
-        />
-        <StatTile
-          label="Entgangener Beitrag"
-          value={loading ? "…" : formatEuro(forgoneOpenCents)}
-          hint="Wenn allen offenen Anträgen zugestimmt wird"
-          tone="grau"
         />
         <StatTile
           label="Läuft bald ab"
@@ -378,7 +352,7 @@ export default function VorstandEhrenamtsbonusClient() {
                             : "Nichts offen"}
                       </DetailItem>
                       <DetailItem label="Aktuell gewählter Tarif">
-                        {accessLevelLabel(entry.currentAccess, prices)}
+                        {ACCESS_LEVEL_LABELS[entry.currentAccess]}
                       </DetailItem>
                       <DetailItem label="Beantragt">
                         {BONUS_OPTION_LABELS[entry.requestedOption]}

@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowUpRightFromSquare,
+  faArrowsRotate,
+  faPen,
+} from "@fortawesome/free-solid-svg-icons";
 
 import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
+import Face from "@/components/knglmrt/Face";
+import Notice from "@/components/knglmrt/Notice";
 import StatTile from "@/components/knglmrt/StatTile";
 import {
   Table,
@@ -15,32 +22,39 @@ import {
   Td,
   Tr,
 } from "@/components/knglmrt/Table";
+import type { AccountInvoicesResponse } from "@/app/api/campai/invoices/route";
+import type { CampaiPaymentMethod } from "@/lib/campai-contact-profile";
 import type { CampaiAccessTariff } from "@/lib/campai-member-tariff";
-import { type InvoicePayload } from "@/lib/campai-invoices";
+import {
+  BONUS_OPTION_LABELS,
+  isRunning,
+  nextQuarterStart,
+  type EhrenamtsbonusRequest,
+} from "@/lib/ehrenamtsbonus";
+import {
+  isReceiptOpen,
+  receiptOpenCents,
+  receiptPaymentState,
+  receiptTotalCents,
+  RECEIPT_PAYMENT_LABELS,
+  type InvoicePayload,
+  type ReceiptPaymentState,
+} from "@/lib/campai-invoices";
 import { signOut } from "../../actions";
 import Button from "@/components/knglmrt/Button";
-import PasswordInput from "../components/PasswordInput";
-import Field from "@/components/knglmrt/Field";
-import Textarea from "@/components/knglmrt/Textarea";
-import NativeSelect from "@/components/knglmrt/NativeSelect";
+import AccountDepartmentsEditor from "./AccountDepartmentsEditor";
+import AccountProfileSections from "./AccountProfileSections";
+import { AccountSection, DataField, DataGrid } from "./AccountSection";
+import AccountSideNav, { type AccountNavItem } from "./AccountSideNav";
+import useCampaiProfile from "./useCampaiProfile";
 
 type AccountUser = {
   email: string;
   metadata: Record<string, unknown>;
 };
 
-const readMetadataText = (metadata: Record<string, unknown>, key: string) => {
-  const value = metadata[key];
-  return typeof value === "string" ? value.trim() : "";
-};
-
-const normalizeEmail = (value?: string | null) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim().toLowerCase();
-};
+const text = (value: unknown) =>
+  typeof value === "string" ? value.trim() : "";
 
 const bytesToHex = (value: Uint8Array) => {
   return Array.from(value, (entry) => entry.toString(16).padStart(2, "0")).join(
@@ -49,49 +63,112 @@ const bytesToHex = (value: Uint8Array) => {
 };
 
 const buildGravatarUrl = (hash: string) => {
-  return `https://www.gravatar.com/avatar/${hash}?d=mp&s=160`;
+  // `d=404`: ohne eigenes Gravatar-Bild schlägt das Laden fehl, und statt des
+  // grauen Platzhalters steht das gezeichnete Gesicht.
+  return `https://www.gravatar.com/avatar/${hash}?d=404&s=160`;
 };
 
-const getInitials = (value: string) => {
-  const parts = value
-    .split(/\s+/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "?";
-  }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
-};
-
-const parseDebtorAccount = (value: unknown) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number.parseInt(value.trim(), 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  return null;
-};
-
-const formatDate = (value?: string) => {
+const parseDate = (value?: string | null) => {
   if (!value) {
-    return "—";
+    return null;
   }
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleDateString("de-DE");
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+const formatDate = (value?: string | null) => {
+  if (!value) {
+    return "";
+  }
+  const parsed = parseDate(value);
+  return parsed ? parsed.toLocaleDateString("de-DE") : value;
+};
+
+// Reihenfolge, in der ein Klick die Anzeige der Mitgliedsdauer weiterdreht.
+const MEMBER_SINCE_VIEWS = [
+  "months",
+  "days",
+  "date",
+  "weeks",
+  "years",
+] as const;
+type MemberSinceView = (typeof MEMBER_SINCE_VIEWS)[number];
+
+const MEMBER_SINCE_NEXT_LABELS: Record<MemberSinceView, string> = {
+  months: "In Monaten anzeigen",
+  days: "In Tagen anzeigen",
+  date: "Als Datum anzeigen",
+  weeks: "In Wochen anzeigen",
+  years: "In Jahren anzeigen",
+};
+
+const plural = (value: number, singular: string, many: string) =>
+  `${value.toLocaleString("de-DE")} ${value === 1 ? singular : many}`;
+
+/**
+ * Tage, Wochen und Monate zählen volle Einheiten, Monate nach Kalender.
+ * Jahre stehen mit einer Nachkommastelle.
+ */
+const formatMemberSince = (view: MemberSinceView, since: Date, now: Date) => {
+  const days = Math.max(
+    0,
+    Math.floor((now.getTime() - since.getTime()) / 86_400_000),
+  );
+  switch (view) {
+    case "date":
+      return since.toLocaleDateString("de-DE");
+    case "days":
+      return plural(days, "Tag", "Tage");
+    case "weeks":
+      return plural(Math.floor(days / 7), "Woche", "Wochen");
+    case "months": {
+      let months =
+        (now.getFullYear() - since.getFullYear()) * 12 +
+        (now.getMonth() - since.getMonth());
+      if (now.getDate() < since.getDate()) {
+        months -= 1;
+      }
+      return plural(Math.max(0, months), "Monat", "Monate");
+    }
+    case "years":
+      return `${(days / 365.25).toLocaleString("de-DE", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })} Jahre`;
+  }
+};
+
+/**
+ * Die Mitgliedsdauer statt des Eintrittsdatums. Das kleine Zeichen daneben
+ * dreht die Anzeige weiter: Monate, Tage, Datum, Wochen, Jahre und wieder
+ * von vorn.
+ */
+function MemberSince({ since }: { since: string }) {
+  const [viewIndex, setViewIndex] = useState(0);
+  const date = parseDate(since);
+  if (!date) {
+    return <>{since}</>;
+  }
+  const view = MEMBER_SINCE_VIEWS[viewIndex];
+  const nextView =
+    MEMBER_SINCE_VIEWS[(viewIndex + 1) % MEMBER_SINCE_VIEWS.length];
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {formatMemberSince(view, date, new Date())}
+      <button
+        type="button"
+        onClick={() =>
+          setViewIndex((index) => (index + 1) % MEMBER_SINCE_VIEWS.length)
+        }
+        aria-label={MEMBER_SINCE_NEXT_LABELS[nextView]}
+        className="cursor-pointer text-[13px] text-muted-foreground opacity-50 transition-opacity hover:opacity-100 focus-visible:opacity-100"
+      >
+        <FontAwesomeIcon icon={faArrowsRotate} />
+      </button>
+    </span>
+  );
+}
 
 const formatAmount = (value?: number | null, currency?: string) => {
   if (value === null || value === undefined) {
@@ -112,6 +189,14 @@ const formatAmount = (value?: number | null, currency?: string) => {
   }
 };
 
+/** Positiv heißt: das Mitglied schuldet dem Verein etwas. */
+const formatSaldo = (cents: number) =>
+  cents > 0
+    ? `−${formatAmount(cents)}`
+    : cents < 0
+      ? `+${formatAmount(-cents)}`
+      : formatAmount(0);
+
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
@@ -121,49 +206,40 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   return data;
 };
 
-// Campai liefert die Status als freien Text — nur ein eindeutig offener
-// Beleg zählt als offen, alles Unklare bleibt neutral.
-const isInvoiceOpen = (invoice: InvoicePayload) => {
-  const raw = `${invoice.status ?? ""} ${invoice.paymentStatus ?? ""}`
-    .trim()
-    .toLowerCase();
-  if (!raw) return false;
-  if (/(bezahlt|paid|beglichen|settled|closed)/.test(raw)) return false;
-  return /(offen|open|unpaid|due|f[aä]llig|overdue)/.test(raw);
+// Bezahlt ist grün, offen rot, teilweise gelb, storniert grau.
+const PAYMENT_TONES: Record<ReceiptPaymentState, BadgeTone> = {
+  bezahlt: "gebucht",
+  unbezahlt: "offen",
+  teilweise: "wartet",
+  storniert: "neutral",
+  unbekannt: "neutral",
 };
 
-const invoiceBadgeTone = (invoice: InvoicePayload): BadgeTone => {
-  const raw = `${invoice.status ?? ""} ${invoice.paymentStatus ?? ""}`
-    .trim()
-    .toLowerCase();
-  if (/(bezahlt|paid|beglichen|settled)/.test(raw)) return "gebucht";
-  if (isInvoiceOpen(invoice)) return "offen";
-  return "neutral";
+const PAYMENT_METHOD_LABELS: Record<CampaiPaymentMethod, string> = {
+  sepaCreditTransfer: "Überweisung",
+  sepaDirectDebit: "SEPA-Lastschrift",
+  cash: "Bar",
+  online: "Online",
 };
 
-const invoiceTotal = (invoice: InvoicePayload) =>
-  invoice.totalGross ?? invoice.totalNet ?? null;
+// Reihenfolge des Menüs = Reihenfolge der Rubriken auf der Seite. Als
+// Modulkonstante, damit der Beobachter im Menü nicht bei jedem Rendern neu
+// aufgesetzt wird.
+const ACCOUNT_NAV_ITEMS: AccountNavItem[] = [
+  { id: "mitgliedschaft", label: "Mitgliedschaft" },
+  { id: "zugangskarte", label: "Zugangskarte" },
+  { id: "ehrenamtsbonus", label: "Ehrenamtsbonus" },
+  { id: "profil", label: "Persönliche Daten" },
+  { id: "kommunikation", label: "Kommunikation" },
+  { id: "rechnungen", label: "Belege & Rechnungen" },
+];
 
-const labelClassName = "knglmrt-caption block text-muted-foreground";
+// Das Konto in Roseguarden, der Zugangsplattform des Vereins.
+const ROSEGUARDEN_ACCOUNT_URL = "https://open.konglomerat.org/user/account";
 
-const fieldClassName =
-  "w-full border border-input bg-card px-3.5 py-2 text-[length:var(--ui-size-body)]";
-
-const readOnlyFieldClassName =
-  "w-full border border-border bg-muted px-3.5 py-2 text-[length:var(--ui-size-body)] text-muted-foreground";
-
-const panelClassName = "knglmrt-border bg-card p-[18px]";
-
-// Beispiel-Tarife für die Zugangskarte. Noch nicht angebunden — sobald die
-// Tarife aus Campai kommen, ersetzt diese Liste die Auswahl.
-const ACCESS_CARD_PLANS = [
-  { id: "punktekarte", label: "Punktekarte – 50 € für 10 Zugänge" },
-  { id: "abo-klein", label: "Abo Klein – 15 €/Monat für 15 Zugänge/Quartal" },
-  { id: "abo-gross", label: "Abo Groß – 30 €/Monat für 24/7-Zugang" },
-] as const;
-
-// Der gebuchte Tarif kommt aus Campai (Vertragsoption). Die Beschriftungen
-// halten sich an den Ehrenamtsbonus, damit beide Seiten dasselbe sagen.
+// Der gebuchte Tarif kommt aus Campai (Vertragsoption). Name und Preis nennt
+// Campai selbst — hier steht nur noch, was die App darüber hinaus weiß: die
+// Stufenbezeichnung als Rückfall und der Zugang, den eine Stufe bedeutet.
 const TARIFF_LABELS: Record<CampaiAccessTariff, string> = {
   abo_gross: "Abo groß",
   abo_klein: "Abo klein",
@@ -171,216 +247,115 @@ const TARIFF_LABELS: Record<CampaiAccessTariff, string> = {
   keiner: "Kein Tarif",
 };
 
-const TARIFF_HINTS: Record<CampaiAccessTariff, string> = {
-  abo_gross: "30 € im Monat · 24/7-Zugang",
-  abo_klein: "15 € im Monat",
-  punktekarte: "50 € für 10 Zugänge",
-  keiner: "Kein laufender Zugangskarten-Vertrag",
-};
+// Campai hängt an die Plannamen die Rubrik an — „10er Karte Mensch
+// (Zugangskarte)". In der Kachel steht der Name ohne sie.
+const tarifName = (tariff: CampaiAccessTariff, label: string | null) =>
+  label?.replace(/\s*\([^)]*\)\s*$/, "").trim() || TARIFF_LABELS[tariff];
 
-// Die Kachel zeigt den Tarif auch im Auswahlfeld — dort mit den eigenen IDs.
-const TARIFF_TO_PLAN_ID: Record<CampaiAccessTariff, string | null> = {
-  abo_gross: "abo-gross",
-  abo_klein: "abo-klein",
-  punktekarte: "punktekarte",
-  keiner: null,
-};
-
-const formatEuro = (cents: number) =>
+// Glatte Beträge ohne „,00" — im Hinweis unter dem Tarif zählt der Betrag,
+// nicht die Genauigkeit.
+const formatTarifPreis = (cents: number) =>
   new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: "EUR",
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
 
-// Gleiche Marke wie in der Navigation: kein eigener Look für „kommt noch".
-function SoonBadge() {
-  return (
-    <span className="whitespace-nowrap rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-      Coming soon
-    </span>
-  );
-}
+/** Was Campai für die Stufe verlangt, ergänzt um den Zugang, den sie gibt. */
+const tarifHinweis = (
+  tariff: CampaiAccessTariff,
+  priceCents: number | null,
+) => {
+  const preis = priceCents === null ? null : formatTarifPreis(priceCents);
+
+  switch (tariff) {
+    case "abo_gross":
+      return preis ? `${preis} im Monat · 24/7-Zugang` : "24/7-Zugang";
+    case "abo_klein":
+      return preis ? `${preis} im Monat` : "Monatliches Abo";
+    case "punktekarte":
+      return preis ? `${preis} für 10 Zugänge` : "Zehn Zugänge";
+    case "keiner":
+      return "Kein laufender Zugangskarten-Vertrag";
+  }
+};
+
+// Ab wann ein laufender Bonus als „läuft aus" gilt — früh genug, um den
+// Anschlussantrag noch vor dem Quartalswechsel zu stellen.
+const BONUS_WARNING_DAYS = 60;
+
+/** „Läuft aus" heißt: er läuft noch, endet aber bald. */
+const endsSoon = (validUntil?: string | null) => {
+  const until = parseDate(validUntil);
+  if (!until) {
+    return false;
+  }
+  const days = (until.getTime() - Date.now()) / 86_400_000;
+  return days >= 0 && days <= BONUS_WARNING_DAYS;
+};
 
 type AccountClientProps = {
   roleLabels: string[];
-  // Kommt fertig aus der Server-Hülle. Damit steht der Kopf — Name, E-Mail,
+  // Kommt fertig aus der Server-Hülle. Damit steht der Kopf — Begrüßung,
   // Rollen, Abmelden — schon im ersten Paint, ohne Fetch nach dem Mount.
   initialUser: AccountUser | null;
+  // Der laufende oder schon zugesagte Ehrenamtsbonus, sonst `null`. Ebenfalls
+  // aus der Server-Hülle — die Rubrik soll nicht erst nachladen.
+  activeBonus: EhrenamtsbonusRequest | null;
 };
 
 export default function AccountClient({
   roleLabels,
-  initialUser,
+  initialUser: user,
+  activeBonus,
 }: AccountClientProps) {
-  const searchParams = useSearchParams();
-  const debug = useMemo(
-    () => searchParams.get("debug") === "1",
-    [searchParams],
-  );
-  const status = searchParams.get("status");
-  const message = searchParams.get("message");
-  const error = searchParams.get("error");
-
-  const [user, setUser] = useState<AccountUser | null>(initialUser);
-  const [profileStatus, setProfileStatus] = useState<string | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState(() =>
-    initialUser ? readMetadataText(initialUser.metadata, "avatar_url") : "",
-  );
-  const [shortBio, setShortBio] = useState(() =>
-    initialUser ? readMetadataText(initialUser.metadata, "short_bio") : "",
-  );
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [campaiInvoices, setCampaiInvoices] = useState<InvoicePayload[]>([]);
-  const [invoicesLoading, setInvoicesLoading] = useState(true);
-  const [campaiError, setCampaiError] = useState<string | null>(null);
-  const [campaiDebug, setCampaiDebug] = useState<unknown>(null);
-  const [debtorAccount, setDebtorAccount] = useState<number | null>(null);
   const [gravatarUrl, setGravatarUrl] = useState("");
-  const [avatarCandidateIndex, setAvatarCandidateIndex] = useState(0);
-  const [accessCardPlan, setAccessCardPlan] = useState<string>(
-    ACCESS_CARD_PLANS[1].id,
-  );
-  const [tarif, setTarif] = useState<CampaiAccessTariff | null>(null);
-  const [offenCents, setOffenCents] = useState<number | null>(null);
-  const [tarifGeladen, setTarifGeladen] = useState(false);
+  const [gravatarFailed, setGravatarFailed] = useState(false);
+  // `null`, solange die Belege laden.
+  const [invoices, setInvoices] = useState<InvoicePayload[] | null>(null);
+  const [invoicesError, setInvoicesError] = useState<string | null>(null);
+  const [bonusBlockedHint, setBonusBlockedHint] = useState(false);
+  const [departmentsOpen, setDepartmentsOpen] = useState(false);
+  const [departmentsSaved, setDepartmentsSaved] = useState(false);
 
-  const hasAccount = Boolean(initialUser);
+  // Kontakt und Verträge aus Campai tragen fast alle Rubriken: Mitgliedschaft,
+  // Zugangskarte, Saldo und Debitorenkonto hier, Name, Sprache, Adresse und
+  // Kontaktwege in AccountProfileSections.
+  const campai = useCampaiProfile();
+  const { profile, membership, loading } = campai;
 
-  const fullName = useMemo(() => {
-    const first =
-      typeof user?.metadata.first_name === "string"
-        ? user.metadata.first_name.trim()
-        : "";
-    const last =
-      typeof user?.metadata.last_name === "string"
-        ? user.metadata.last_name.trim()
-        : "";
+  /** Solange Campai lädt, steht „…" statt des Gedankenstrichs. */
+  const pending = <T,>(value: T) => (loading ? "…" : value);
 
-    return [first, last].filter(Boolean).join(" ");
-  }, [user]);
+  // Bis Campai antwortet, trägt der in member_profiles gespeicherte Name den
+  // Kopf — danach gilt, was im Kontakt steht, auch direkt nach dem Speichern.
+  const profileName = profile
+    ? profile.isInstitution
+      ? profile.organizationName
+      : [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+    : "";
+  const storedFirstName = text(user?.metadata.first_name);
+  const displayName =
+    profileName ||
+    text(user?.metadata.campai_name) ||
+    [storedFirstName, text(user?.metadata.last_name)]
+      .filter(Boolean)
+      .join(" ") ||
+    text(user?.email);
 
-  const campaiName = useMemo(() => {
-    const linkedName =
-      typeof user?.metadata.campai_name === "string"
-        ? user.metadata.campai_name.trim()
-        : "";
+  // „Hallo Jana" — die Begrüßung nimmt den Rufnamen, nicht den ganzen Namen.
+  const greetingName =
+    (profile && !profile.isInstitution ? profile.firstName : "") ||
+    storedFirstName ||
+    displayName.split(/\s+/)[0] ||
+    "";
 
-    return linkedName || fullName;
-  }, [fullName, user]);
-
-  const linkedDebtorAccount = useMemo(
-    () => parseDebtorAccount(user?.metadata.campai_debtor_account),
-    [user],
-  );
-
-  const displayName = useMemo(() => {
-    return campaiName || fullName || user?.email?.trim() || "";
-  }, [campaiName, fullName, user?.email]);
-
-  const avatarCandidateUrls = useMemo(() => {
-    return Array.from(new Set([avatarUrl.trim(), gravatarUrl].filter(Boolean)));
-  }, [avatarUrl, gravatarUrl]);
-
-  const activeAvatarUrl = avatarCandidateUrls[avatarCandidateIndex] ?? "";
-  const avatarCandidateKey = avatarCandidateUrls.join("|");
-
-  // Der Live-Name aus Campai kostet Sekunden: die Suche blättert seitenweise
-  // durch alle Kontakte, bis die verknüpfte ID auftaucht. Deshalb rendert die
-  // Seite mit dem in member_profiles gespeicherten Namen und zieht Campai erst
-  // nach dem ersten Paint nach — und nur, wenn dort etwas anderes steht.
-  useEffect(() => {
-    if (!hasAccount) {
-      return;
-    }
-
-    let active = true;
-
-    const refreshCampaiName = async () => {
-      try {
-        const data = await fetchJson<{ name: string | null }>(
-          "/api/account/campai-name",
-        );
-        const liveName = data.name?.trim();
-        if (!active || !liveName) {
-          return;
-        }
-        setUser((current) => {
-          if (!current || current.metadata.campai_name === liveName) {
-            return current;
-          }
-          return {
-            ...current,
-            metadata: { ...current.metadata, campai_name: liveName },
-          };
-        });
-      } catch {
-        // Ohne Campai bleibt der gespeicherte Name stehen — kein Fehlerfall
-        // für die Seite.
-      }
-    };
-
-    void refreshCampaiName();
-
-    return () => {
-      active = false;
-    };
-  }, [hasAccount]);
-
-  // Tarif und offener Beitrag kosten zwei Campai-Aufrufe und stehen deshalb
-  // ebenfalls erst nach dem ersten Paint — die Kachel zeigt so lange „…".
-  useEffect(() => {
-    if (!hasAccount) {
-      return;
-    }
-
-    let active = true;
-
-    const ladeTarif = async () => {
-      try {
-        const data = await fetchJson<{
-          tariff: CampaiAccessTariff | null;
-          openBalanceCents: number | null;
-        }>("/api/account/tarif");
-        if (!active) {
-          return;
-        }
-        setTarif(data.tariff);
-        setOffenCents(data.openBalanceCents);
-        if (data.tariff) {
-          const planId = TARIFF_TO_PLAN_ID[data.tariff];
-          if (planId) {
-            setAccessCardPlan(planId);
-          }
-        }
-      } catch {
-        // Ohne Campai bleibt die Kachel bei „nicht abrufbar".
-      } finally {
-        if (active) {
-          setTarifGeladen(true);
-        }
-      }
-    };
-
-    void ladeTarif();
-
-    return () => {
-      active = false;
-    };
-  }, [hasAccount]);
+  const activeAvatarUrl = gravatarFailed ? "" : gravatarUrl;
 
   useEffect(() => {
-    const normalizedEmail = normalizeEmail(user?.email);
+    const normalizedEmail = text(user?.email).toLowerCase();
 
-    if (
-      !normalizedEmail ||
-      typeof window === "undefined" ||
-      !window.crypto?.subtle
-    ) {
-      setGravatarUrl("");
+    if (!normalizedEmail || !window.crypto?.subtle) {
       return;
     }
 
@@ -396,6 +371,7 @@ export default function AccountClient({
         return;
       }
 
+      setGravatarFailed(false);
       setGravatarUrl(buildGravatarUrl(bytesToHex(new Uint8Array(digest))));
     };
 
@@ -406,131 +382,91 @@ export default function AccountClient({
     };
   }, [user?.email]);
 
+  // Das Debitorenkonto bestimmt die Route selbst aus dem Campai-Kontakt —
+  // deshalb laden die Belege sofort und parallel zum Kontakt.
   useEffect(() => {
-    setAvatarCandidateIndex(0);
-  }, [avatarCandidateKey]);
-
-  useEffect(() => {
-    if (!hasAccount || linkedDebtorAccount === null) {
-      setCampaiInvoices([]);
-      setDebtorAccount(null);
-      setCampaiDebug(null);
-      setInvoicesLoading(false);
-      return;
-    }
-
     let active = true;
-    const loadInvoices = async () => {
-      setCampaiError(null);
-      setInvoicesLoading(true);
-      try {
-        setDebtorAccount(linkedDebtorAccount);
 
-        const data = await fetchJson<{
-          invoices: InvoicePayload[];
-          debug?: unknown;
-        }>("/api/campai/invoices", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sort: { receiptDate: "desc" },
-            limit: 100,
-            offset: 0,
-            account: linkedDebtorAccount,
-            debug,
-          }),
-        });
-        if (!active) {
-          return;
-        }
-        setCampaiInvoices(data.invoices ?? []);
-        setCampaiDebug(data.debug ?? null);
-      } catch (fetchError) {
+    fetchJson<AccountInvoicesResponse>("/api/campai/invoices")
+      .then((data) => {
         if (active) {
-          setDebtorAccount(null);
-          setCampaiInvoices([]);
-          setCampaiError(
+          setInvoices(data.invoices ?? []);
+        }
+      })
+      .catch((fetchError: unknown) => {
+        if (active) {
+          setInvoices([]);
+          setInvoicesError(
             fetchError instanceof Error
               ? fetchError.message
               : "Campai-Belege konnten nicht geladen werden.",
           );
         }
-      } finally {
-        if (active) {
-          setInvoicesLoading(false);
-        }
-      }
-    };
-
-    loadInvoices();
+      });
 
     return () => {
       active = false;
     };
-  }, [hasAccount, linkedDebtorAccount, debug]);
+  }, []);
 
-  const handleProfileSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setProfileStatus(null);
-    setProfileError(null);
-    try {
-      await fetchJson("/api/account/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          avatarUrl,
-          shortBio,
-        }),
-      });
-      setProfileStatus("Profil gespeichert.");
-    } catch (submitError) {
-      setProfileError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Profil konnte nicht gespeichert werden.",
-      );
+  const debtor = profile?.debtor ?? null;
+  const debtorAccount = debtor?.account ?? null;
+  const invoicesLoading = invoices === null;
+  const invoiceList = invoices ?? [];
+
+  // Offen ist, was Campai selbst noch offen führt (`totalAmountLeftToPay`) —
+  // Teilzahlungen zählen mit ihrem Restbetrag, Stornos stehen dort auf 0.
+  const openReceipts = invoiceList.filter(isReceiptOpen);
+
+  // Den Saldo führt Campai am Debitor selbst — dieselbe Zahl, die auch der
+  // Ehrenamtsbonus-Antrag zeigt. Die Belege liefern nur noch den Hinweis.
+  const openBalance = debtor?.openBalanceCents ?? null;
+  const saldoValue = loading
+    ? "…"
+    : openBalance === null
+      ? "—"
+      : formatSaldo(openBalance);
+
+  const saldoHint = (() => {
+    if (!loading && !debtor) {
+      return "Kein Debitorenkonto in Campai";
     }
-  };
-
-  const handlePasswordSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setPasswordStatus(null);
-    setPasswordError(null);
-    try {
-      await fetchJson("/api/account/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, passwordConfirm }),
-      });
-      setPasswordStatus("Passwort aktualisiert.");
-      setPassword("");
-      setPasswordConfirm("");
-    } catch (submitError) {
-      setPasswordError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Passwort konnte nicht aktualisiert werden.",
-      );
+    if (invoicesLoading) {
+      return "Belege werden geladen …";
     }
-  };
+    if (openReceipts.length === 0) {
+      return openBalance !== null && openBalance < 0
+        ? "Guthaben"
+        : "Nichts offen";
+    }
+    return openReceipts.length === 1
+      ? "1 offener Beleg"
+      : `${openReceipts.length} offene Belege`;
+  })();
 
-  const openInvoices = useMemo(
-    () => campaiInvoices.filter(isInvoiceOpen),
-    [campaiInvoices],
+  const tarifValue = pending(
+    membership
+      ? tarifName(membership.tariff, membership.tariffLabel)
+      : undefined,
   );
+  const tarifHint = loading
+    ? undefined
+    : membership
+      ? tarifHinweis(membership.tariff, membership.tariffPriceCents)
+      : "Nicht abrufbar";
 
-  const openInvoicesTotal = useMemo(
-    () =>
-      openInvoices.reduce(
-        (sum, invoice) => sum + (invoiceTotal(invoice) ?? 0),
-        0,
-      ),
-    [openInvoices],
-  );
+  // Läuft der Bonus heute schon, oder ist er nur zugesagt? „Läuft aus" hängt
+  // auch am Hinweisband oben.
+  const bonusRunning = activeBonus ? isRunning(activeBonus) : false;
+  const bonusEndsSoon = bonusRunning && endsSoon(activeBonus?.validUntil);
+  // Beantragt wird immer das kommende Quartal — ist das schon bewilligt, gibt
+  // es gerade nichts zu beantragen.
+  const nextQuarter = nextQuarterStart();
+  const nextQuarterTaken = activeBonus?.validFrom === nextQuarter.value;
 
   if (!user) {
     return (
-      <div className={panelClassName}>
+      <div className="knglmrt-border bg-card p-[18px]">
         <h2 className="mb-1">Anmeldung erforderlich</h2>
         <p className="mb-4 text-muted-foreground">
           Bitte melde dich an, um dein Profil zu verwalten.
@@ -548,383 +484,383 @@ export default function AccountClient({
 
   return (
     <div>
-      {/* Kopf: quadratischer Avatar (das DS kennt keine Kreise), Name,
-          eine Mono-Zeile mit den harten Fakten. Alle Werte kommen aus der
-          Server-Hülle, deshalb steht der Kopf inklusive Abmelden-Button
-          sofort — hier wird auf nichts mehr gewartet. */}
-      <header className="mb-[22px] flex flex-wrap items-center gap-4">
+      {/* Kopf: quadratischer Avatar (das DS kennt keine Kreise), Begrüßung mit
+          dem Rufnamen, eine Zeile, was diese Seite ist. Alle Werte kommen aus
+          der Server-Hülle, deshalb steht der Kopf inklusive Abmelden-Taste
+          sofort. */}
+      <header className="mb-6 flex flex-wrap items-start gap-4">
         {activeAvatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={activeAvatarUrl}
-            alt={displayName || user.email || "Profilbild"}
+            alt={displayName || "Profilbild"}
             className="h-14 w-14 flex-none knglmrt-border object-cover"
             onError={() => {
-              setAvatarCandidateIndex((currentIndex) => currentIndex + 1);
+              setGravatarFailed(true);
             }}
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex h-14 w-14 flex-none items-center justify-center knglmrt-border bg-primary-soft font-bold"
+            className="flex h-14 w-14 flex-none items-center justify-center knglmrt-border bg-[var(--knglmrt-pink-30)]"
           >
-            {getInitials(displayName || user.email || "?")}
+            <Face number={19} size={36} />
           </span>
         )}
         <div className="min-w-[240px] flex-1">
-          <h1 className="mb-0.5">{displayName || "Dein Profil"}</h1>
-          <p className="knglmrt-num text-muted-foreground">
-            {[user.email, roleLabels.join(" · ")].filter(Boolean).join(" · ")}
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="m-0">
+              {greetingName ? `Hallo ${greetingName}` : "Dein Profil"}
+            </h1>
+            {/* Die Rollen stehen im Entwurf nicht, sind aber echte Angaben —
+                als Marken neben der Begrüßung nehmen sie keine eigene Zeile. */}
+            {roleLabels.map((label) => (
+              <Badge key={label} tone="neutral">
+                {label}
+              </Badge>
+            ))}
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            Schön, dass du da bist. Hier kannst du deine Mitgliedsdaten einsehen
+            und bearbeiten sowie ein paar Self-Services nutzen.
           </p>
         </div>
         <form action={signOut}>
-          <Button type="submit" kind="secondary">
+          <Button type="submit" kind="danger-secondary">
             Abmelden
           </Button>
         </form>
       </header>
 
-      {error ? (
-        <div className="mb-4 border border-destructive-border bg-destructive-soft px-4 py-3 text-destructive">
-          {decodeURIComponent(error)}
-        </div>
-      ) : null}
-      {status ? (
-        <div className="mb-4 border border-success-border bg-success-soft px-4 py-3">
-          {message ? decodeURIComponent(message) : "Gespeichert."}
-        </div>
+      {bonusEndsSoon && activeBonus ? (
+        <Notice tone="gelb" className="mb-6">
+          Dein Ehrenamtsbonus läuft am {formatDate(activeBonus.validUntil)} aus.
+          Wenn du weiter mit anpackst, beantrage ihn gleich für den nächsten
+          Zeitraum.
+        </Notice>
       ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,460px)]">
-        <section id="profil" className={panelClassName}>
-          <h2 className="mb-1">Profil</h2>
-          <p className="mb-4 text-muted-foreground">
-            Bild und Kurzbiografie erscheinen als Autoreninfo an deinen
-            Beiträgen. Der Name kommt direkt aus Campai.
-          </p>
-          <form onSubmit={handleProfileSubmit} className="flex flex-col gap-4">
-            <Field
-              id="account-campai-name"
-              label="Name in Campai"
-              type="text"
-              value={campaiName}
-              readOnly
-              placeholder="Kein Campai-Kontakt verknüpft"
-              hint="Soll der Name sich ändern, ändere ihn bitte direkt in Campai."
-            />
-            <Field
-              label="E-Mail"
-              id="account-email"
-              type="email"
-              value={user?.email ?? ""}
-              disabled
-            />
-            <div>
-              <Field
-                id="account-avatar-url"
-                label="Profilbild-URL"
-                name="avatarUrl"
-                type="url"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                placeholder="https://…"
+      {/* Links das Menü, rechts die Rubriken. Die Menüspalte streckt sich
+          absichtlich über die ganze Höhe: nur so wandert die klebende Leiste
+          darin mit. */}
+      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
+        <AccountSideNav items={ACCOUNT_NAV_ITEMS} />
+
+        <div className="flex min-w-0 flex-col gap-7">
+          {/* Mitgliedsdaten und Zahlart führt der Kontakt, der Beitrag steht
+              in seinen Verträgen. Der Tarif gehört zur
+              Zugangskarte und steht deshalb dort. */}
+          <AccountSection
+            id="mitgliedschaft"
+            title="Deine Mitgliedschaft"
+            highlight
+          >
+            <DataGrid>
+              <DataField
+                label="Mitgliedsnummer"
+                mono
+                value={pending(profile?.memberNumber)}
               />
-              <p className="mt-1 text-muted-foreground">
-                Ohne URL — oder wenn das Bild nicht lädt — nutzen wir dein
-                Gravatar anhand deiner E-Mail-Adresse.
-              </p>
-            </div>
-            <Textarea
-              label="Kurzbiografie"
-              id="account-short-bio"
-              name="shortBio"
-              value={shortBio}
-              onChange={(event) => setShortBio(event.target.value)}
-              rows={4}
-              placeholder="Ein kurzer Satz zu dir, deiner Werkstattpraxis oder deinem Schwerpunkt."
-            />
-            <Button size="small" type="submit" kind="primary">
-              Profil speichern
-            </Button>
-            {profileError ? (
-              <p className="text-destructive">{profileError}</p>
-            ) : null}
-            {profileStatus ? (
-              <p className="font-bold">{profileStatus}</p>
-            ) : null}
-          </form>
-        </section>
-
-        <section id="sicherheit" className={panelClassName}>
-          <h2 className="mb-1">Passwort ändern</h2>
-          <p className="mb-4 text-muted-foreground">
-            Wähle ein neues Passwort mit mindestens 8 Zeichen.
-          </p>
-          <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className={labelClassName}>Neues Passwort</label>
-              <PasswordInput
-                name="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                showLabel="Anzeigen"
-                hideLabel="Ausblenden"
-                className={`mt-1 ${fieldClassName}`}
+              <DataField
+                label="Mitglied seit"
+                mono
+                value={pending(
+                  profile?.memberSince ? (
+                    <MemberSince since={profile.memberSince} />
+                  ) : undefined,
+                )}
+                hint={
+                  profile?.memberUntil
+                    ? `Austritt zum ${formatDate(profile.memberUntil)}`
+                    : undefined
+                }
               />
-            </div>
-            <div>
-              <label className={labelClassName}>Passwort bestätigen</label>
-              <PasswordInput
-                name="passwordConfirm"
-                required
-                minLength={8}
-                value={passwordConfirm}
-                onChange={(event) => setPasswordConfirm(event.target.value)}
-                showLabel="Anzeigen"
-                hideLabel="Ausblenden"
-                className={`mt-1 ${fieldClassName}`}
+              <DataField
+                label="Jahresbeitrag"
+                mono
+                value={pending(
+                  membership?.annualFeeCents != null
+                    ? formatAmount(membership.annualFeeCents)
+                    : undefined,
+                )}
               />
-            </div>
-            <Button size="small" type="submit" kind="primary">
-              Passwort aktualisieren
-            </Button>
-            {passwordError ? (
-              <p className="text-destructive">{passwordError}</p>
+              <DataField
+                label="Zahlweise"
+                value={pending(
+                  debtor?.paymentMethod
+                    ? PAYMENT_METHOD_LABELS[debtor.paymentMethod]
+                    : undefined,
+                )}
+              />
+              <DataField
+                label={
+                  profile?.departments.length === 1 ? "Abteilung" : "Abteilungen"
+                }
+                value={pending(
+                  profile?.departments.length
+                    ? profile.departments.map((entry) => entry.name).join(", ")
+                    : undefined,
+                )}
+                action={
+                  <Button
+                    type="button"
+                    kind="ghost"
+                    size="chip"
+                    iconOnly
+                    icon={faPen}
+                    aria-label="Abteilungen bearbeiten"
+                    aria-expanded={departmentsOpen}
+                    aria-controls="account-editor-abteilungen"
+                    disabled={campai.locked}
+                    className={`-my-1 ${departmentsOpen ? "bg-muted" : ""}`}
+                    onClick={() => {
+                      setDepartmentsOpen((open) => !open);
+                      setDepartmentsSaved(false);
+                    }}
+                  />
+                }
+              />
+            </DataGrid>
+
+            {departmentsOpen && profile ? (
+              <AccountDepartmentsEditor
+                id="account-editor-abteilungen"
+                current={profile.departments}
+                save={campai.save}
+                onSaved={() => {
+                  setDepartmentsOpen(false);
+                  setDepartmentsSaved(true);
+                }}
+                onCancel={() => setDepartmentsOpen(false)}
+              />
             ) : null}
-            {passwordStatus ? (
-              <p className="font-bold">{passwordStatus}</p>
+            {departmentsSaved && !departmentsOpen ? (
+              <p className="mt-4 font-bold">Abteilungen gespeichert.</p>
             ) : null}
-          </form>
-        </section>
-      </div>
+          </AccountSection>
 
-      {/* Tarif und offener Beitrag sind echt und kommen live aus Campai. Die
-          Schließanlage selbst ist noch nicht angebunden — was von dort käme
-          (verbleibende Zugänge, Tarifwechsel, Karte sperren), bleibt bis
-          dahin totes Bedienelement. Der Ehrenamtsbonus daneben führt als
-          Kachel auf seine eigene Unterseite. */}
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,460px)]">
-        <section id="zugangskarte" className={panelClassName}>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h2 className="m-0">Zugangskarte</h2>
-            <SoonBadge />
-          </div>
-          <p className="mb-4 text-muted-foreground">
-            Deine Karte öffnet die Werkbereiche und bucht dabei Zugänge von
-            deinem Tarif ab. Tarif und offene Beiträge kommen aus der
-            Mitgliederverwaltung; die Anbindung an die Schließanlage folgt.
-          </p>
-
-          <div className="mb-4 grid gap-3.5 sm:grid-cols-2">
-            {/* „Nicht abrufbar" ist etwas anderes als „Kein Tarif" — das eine
-                heißt, Campai hat nicht geantwortet, das andere, dass dort
-                kein Vertrag läuft. */}
-            <StatTile
-              label="Aktueller Tarif"
-              value={
-                !tarifGeladen ? "…" : tarif ? TARIFF_LABELS[tarif] : "—"
-              }
-              hint={
-                !tarifGeladen
-                  ? "Wird geladen"
-                  : tarif
-                    ? TARIFF_HINTS[tarif]
-                    : "Nicht abrufbar"
-              }
-              tone={tarif && tarif !== "keiner" ? "rosa" : "grau"}
-            />
-            <StatTile
-              label="Offene Beiträge"
-              value={
-                !tarifGeladen
-                  ? "…"
-                  : offenCents === null
-                    ? "—"
-                    : offenCents > 0
-                      ? formatEuro(offenCents)
-                      : "Nichts offen"
-              }
-              hint={
-                !tarifGeladen
-                  ? "Wird geladen"
-                  : offenCents === null
-                    ? "Nicht abrufbar"
-                    : offenCents > 0
-                      ? "Bitte beim Vorstand melden, falls das nicht stimmt"
-                      : "Alles beglichen"
-              }
-              tone={offenCents !== null && offenCents > 0 ? "rosa" : "grau"}
-            />
-          </div>
-
-          <div className="mb-4">
-            <NativeSelect
-              id="account-zugangskarte-tarif"
-              label="Tarif wechseln"
-              value={accessCardPlan}
-              onChange={(event) => setAccessCardPlan(event.target.value)}
-            >
-              {ACCESS_CARD_PLANS.map((plan) => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.label}
-                </option>
-              ))}
-            </NativeSelect>
-            <p className="mt-1 text-muted-foreground">
-              Ein Wechsel gilt ab dem nächsten Abrechnungsmonat. Vorausgewählt
-              ist dein laufender Tarif.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" kind="primary" disabled>
-              Tarif wechseln
-            </Button>
-            <Button type="button" kind="danger-secondary" disabled>
-              Karte verloren
-            </Button>
-          </div>
-        </section>
-
-        {/* Kachel als Deeplink: die ganze Fläche führt auf die Unterseite,
-            die oben ihren eigenen Zurück-Knopf mitbringt. */}
-        <Link
-          id="ehrenamtsbonus"
-          href="/account/ehrenamtsbonus"
-          className={`${panelClassName} block transition hover:bg-primary-soft`}
-        >
-          <h2 className="mb-1">Ehrenamtsbonus beantragen</h2>
-          <p className="mb-4 text-muted-foreground">
-            Für ehrenamtliche Arbeit im Verein kannst du je nach Umfang
-            zusätzliche Zugangstage für das folgende Quartal bekommen oder
-            bekommst sogar den 24/7-Zugang erlassen.
-          </p>
-          <span className="font-bold text-primary">Antrag starten →</span>
-        </Link>
-      </div>
-
-      <section id="rechnungen" className="mt-[38px]">
-        <div className="mb-3.5 flex flex-wrap items-baseline gap-3">
-          <h2 className="m-0">Meine Rechnungen</h2>
-          <span className="knglmrt-num text-muted-foreground">
-            {invoicesLoading
-              ? "Belege werden geladen …"
-              : debtorAccount
-                ? `Debitor ${campaiName || "Campai-Profil"} · Konto ${debtorAccount}`
-                : "Kein Campai-Debitor im Profil hinterlegt"}
-          </span>
-        </div>
-
-        <div className="mb-3.5 grid gap-3.5 sm:grid-cols-2">
-          <StatTile
-            label="Offene Rechnungen"
-            value={
-              invoicesLoading
-                ? "…"
-                : openInvoices.length > 0
-                  ? formatAmount(openInvoicesTotal, "EUR")
-                  : "0,00 €"
+          <AccountSection
+            id="zugangskarte"
+            title="Zugangskarte"
+            actions={
+              <>
+                <Button kind="primary" size="small" href="/monatsbeitrag">
+                  Tarif wechseln
+                </Button>
+              </>
             }
-            hint={
-              invoicesLoading
-                ? "Belege werden geladen …"
-                : openInvoices.length === 1
-                  ? "1 offener Beleg"
-                  : `${openInvoices.length} offene Belege`
-            }
-            tone="rosa"
-          />
-          <StatTile
-            label="Belege gesamt"
-            value={invoicesLoading ? "…" : String(campaiInvoices.length)}
-            hint={
-              invoicesLoading
-                ? "Belege werden geladen …"
-                : debtorAccount
-                  ? `Debitor-Konto ${debtorAccount}`
-                  : "Kein Campai-Debitor verknüpft"
-            }
-            tone="grau"
-          />
-        </div>
+          >
+            <DataGrid>
+              <DataField
+                label="Aktueller Tarif"
+                value={tarifValue}
+                hint={tarifHint}
+              />
+              <DataField label="Verbleibende Zugänge" mono />
+              <DataField
+                label="Roseguarden"
+                value={
+                  <a
+                    href={ROSEGUARDEN_ACCOUNT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-bold text-primary hover:text-[var(--ui-action-hover)]"
+                  >
+                    open.konglomerat.org
+                    <FontAwesomeIcon
+                      icon={faArrowUpRightFromSquare}
+                      className="h-3 w-3"
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only">(öffnet in neuem Tab)</span>
+                  </a>
+                }
+                hint={
+                  "Unser Schließsystem. Hier kannst du deine Zugangskarte verwalten."
+                }
+              />
+            </DataGrid>
+          </AccountSection>
 
-        {campaiError ? (
-          <p className="text-destructive">{campaiError}</p>
-        ) : (
-          <Table>
-            <THead>
-              <Th>Beleg</Th>
-              <Th>Ausgestellt</Th>
-              <Th>Fällig</Th>
-              <Th>Betrag</Th>
-              <Th>Status</Th>
-              <Th>
-                <span className="sr-only">Download</span>
-              </Th>
-            </THead>
-            <TBody>
-              {invoicesLoading ? (
-                <TableEmpty colSpan={6}>Belege werden geladen …</TableEmpty>
-              ) : campaiInvoices.length === 0 ? (
-                <TableEmpty colSpan={6}>
-                  {linkedDebtorAccount === null
-                    ? "Dein Konto ist noch nicht mit einem Campai-Debitor verknüpft."
-                    : `Keine Belege für Debitor-Konto ${debtorAccount} gefunden.`}
-                </TableEmpty>
+          <AccountSection
+            id="ehrenamtsbonus"
+            title="Ehrenamtsbonus"
+            badge={
+              activeBonus ? (
+                <Badge tone={bonusEndsSoon ? "wartet" : "gebucht"}>
+                  {bonusEndsSoon
+                    ? "Läuft aus"
+                    : bonusRunning
+                      ? "Aktiv"
+                      : "Angenommen"}
+                </Badge>
+              ) : undefined
+            }
+            actions={
+              nextQuarterTaken ? (
+                // Zurückgenommen statt gesperrt: die Taste führt nicht zum
+                // Formular, sondern zeigt beim Klick den Grund.
+                // Die Meldung schwebt unter der Taste, damit nichts darunter
+                // verrutscht.
+                <div className="relative">
+                  <Button
+                    kind="quiet"
+                    size="small"
+                    onClick={() => setBonusBlockedHint(true)}
+                  >
+                    Ehrenamtsbonus beantragen
+                  </Button>
+                  {bonusBlockedHint ? (
+                    <p
+                      role="status"
+                      className="absolute top-full right-0 z-10 mt-1.5 w-max max-w-[min(320px,calc(100vw-32px))] bg-card text-right text-sm text-muted-foreground"
+                    >
+                      Bonus fürs nächste Quartal bereits bewilligt. Neuer Antrag
+                      erst wieder möglich ab {formatDate(nextQuarter.value)}.
+                    </p>
+                  ) : null}
+                </div>
               ) : (
-                campaiInvoices.map((invoice) => (
-                  <Tr key={invoice.id} interactive>
-                    <Td>
-                      <span className="block font-bold">
-                        {invoice.receiptNumber ?? "Beleg"}
-                      </span>
-                      {invoice.title ? (
-                        <span className="block text-muted-foreground">
-                          {invoice.title}
-                        </span>
-                      ) : null}
-                    </Td>
-                    <Td className="knglmrt-num text-muted-foreground">
-                      {formatDate(invoice.receiptDate)}
-                    </Td>
-                    <Td className="knglmrt-num text-muted-foreground">
-                      {formatDate(invoice.dueDate)}
-                    </Td>
-                    <Td className="knglmrt-num whitespace-nowrap">
-                      {formatAmount(invoiceTotal(invoice), invoice.currency)}
-                    </Td>
-                    <Td>
-                      {invoice.status ? (
-                        <Badge tone={invoiceBadgeTone(invoice)}>
-                          {invoice.status}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </Td>
-                    <Td className="text-right">
-                      <a
-                        href={`/api/campai/invoices/${invoice.id}/download`}
-                        className="whitespace-nowrap font-bold text-primary"
-                      >
-                        Herunterladen
-                      </a>
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </TBody>
-          </Table>
-        )}
+                <Button
+                  kind="primary"
+                  size="small"
+                  href="/account/ehrenamtsbonus"
+                >
+                  {activeBonus
+                    ? "Ehrenamtsbonus beantragen"
+                    : "Bonus beantragen"}
+                </Button>
+              )
+            }
+          >
+            {activeBonus ? (
+              <DataGrid>
+                <DataField
+                  label="Zeitraum"
+                  mono
+                  value={`${formatDate(activeBonus.validFrom)} – ${formatDate(
+                    activeBonus.validUntil,
+                  )}`}
+                />
+                <DataField
+                  label="Gewählter Bonus"
+                  value={BONUS_OPTION_LABELS[activeBonus.requestedOption]}
+                />
+              </DataGrid>
+            ) : (
+              <p className="max-w-[700px] text-muted-foreground">
+                Wir möchten verstärkt Mitgliedern im Verein ermöglichen, ihr
+                Engagement außerhalb der bisherigen individuellen
+                Zugangsregelung auszuleben und damit den Verein hübscher,
+                smarter, glücklicher, frecher, farbiger, weicher, härter,
+                schneller, lauter - zu machen.
+              </p>
+            )}
+          </AccountSection>
 
-        {debug && campaiDebug ? (
-          <pre className="mt-4 max-h-64 overflow-auto bg-foreground p-4 text-xs text-background">
-            {JSON.stringify(campaiDebug, null, 2)}
-          </pre>
-        ) : null}
-      </section>
+          <AccountProfileSections campai={campai} accountEmail={user.email} />
+
+          {/* Gelistet wird jeder Beleg des Debitorenkontos, nicht nur
+              Rechnungen: Spenden, Angebote und Einnahmen laufen über dasselbe
+              Konto. */}
+          <AccountSection id="rechnungen" title="Belege & Rechnungen">
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              <StatTile
+                label="Saldo"
+                value={saldoValue}
+                hint={saldoHint}
+                tone={"grau"}
+              />
+            </div>
+
+            <div className="mt-6">
+              {invoicesError ? (
+                <p className="text-destructive">{invoicesError}</p>
+              ) : (
+                <Table>
+                  <THead>
+                    <Th>Datum</Th>
+                    <Th>Beleg</Th>
+                    <Th className="text-right">Betrag</Th>
+                    <Th>Status</Th>
+                    <Th>
+                      <span className="sr-only">Download</span>
+                    </Th>
+                  </THead>
+                  <TBody>
+                    {invoicesLoading ? (
+                      <TableEmpty colSpan={5}>
+                        Belege werden geladen …
+                      </TableEmpty>
+                    ) : invoiceList.length === 0 ? (
+                      <TableEmpty colSpan={5}>
+                        {!loading && debtorAccount === null
+                          ? "Für dein Konto führt Campai kein Debitorenkonto."
+                          : "Keine Belege gefunden."}
+                      </TableEmpty>
+                    ) : (
+                      invoiceList.map((invoice) => {
+                        const state = receiptPaymentState(invoice);
+                        const offen = receiptOpenCents(invoice);
+
+                        return (
+                          <Tr key={invoice.id} interactive>
+                            <Td className="knglmrt-num whitespace-nowrap text-muted-foreground">
+                              {formatDate(invoice.receiptDate) || "—"}
+                            </Td>
+                            <Td>
+                              <span className="block font-bold">
+                                {invoice.title ??
+                                  invoice.receiptNumber ??
+                                  "Beleg"}
+                              </span>
+                              {invoice.receiptNumber ? (
+                                <span className="knglmrt-num block text-muted-foreground">
+                                  {invoice.receiptNumber}
+                                </span>
+                              ) : null}
+                            </Td>
+                            <Td className="knglmrt-num whitespace-nowrap text-right">
+                              {formatAmount(
+                                receiptTotalCents(invoice),
+                                invoice.currency,
+                              )}
+                              {/* Bei einer Teilzahlung sagt der Gesamtbetrag
+                                  allein nicht, was noch zu zahlen ist. */}
+                              {state === "teilweise" ? (
+                                <span className="block text-muted-foreground">
+                                  noch {formatAmount(offen, invoice.currency)}
+                                </span>
+                              ) : null}
+                            </Td>
+                            <Td>
+                              {state === "unbekannt" ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <Badge tone={PAYMENT_TONES[state]}>
+                                  {RECEIPT_PAYMENT_LABELS[state]}
+                                </Badge>
+                              )}
+                            </Td>
+                            <Td className="text-right">
+                              <Link
+                                href={`/api/campai/invoices/${invoice.id}/download`}
+                                className="whitespace-nowrap font-bold text-primary"
+                              >
+                                PDF
+                              </Link>
+                            </Td>
+                          </Tr>
+                        );
+                      })
+                    )}
+                  </TBody>
+                </Table>
+              )}
+            </div>
+          </AccountSection>
+        </div>
+      </div>
     </div>
   );
 }

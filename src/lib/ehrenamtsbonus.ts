@@ -176,27 +176,6 @@ export const ACCESS_LEVEL_LABELS: Record<AccessLevel, string> = {
   abo_gross: "Abo groß",
 };
 
-/**
- * Dasselbe mit dem Preis dahinter, den Campai heute für die Stufe führt —
- * überall dort, wo ein Mitglied oder der Vorstand die Stufe abliest.
- */
-export const accessLevelLabel = (
-  access: AccessLevel,
-  prices: TariffPrices = FALLBACK_TARIFF_PRICES,
-) => {
-  const label = ACCESS_LEVEL_LABELS[access];
-
-  if (access === "abo_klein") {
-    return `${label} (${formatEuroShort(prices.aboKleinMonatCents)})`;
-  }
-
-  if (access === "abo_gross") {
-    return `${label} (${formatEuroShort(prices.aboGrossMonatCents)})`;
-  }
-
-  return label;
-};
-
 /** Die beantragbaren Optionen — die Spalten der Matrix. */
 export const BONUS_OPTIONS = ["tage_10", "unbegrenzt", "anerkennung"] as const;
 
@@ -247,33 +226,7 @@ export type BonusOutcome = {
   summary: string;
   /** Die aufgelösten Systemaktionen für den Vorstandsbereich. */
   actions: SystemAction[];
-  /** Beitrag, der dem Verein im Bonuszeitraum entgeht. */
-  forgoneCents: number;
 };
-
-// Die Tarife, aus denen sich der entgangene Beitrag rechnet. Sie stehen nicht
-// hier, sondern in Campai: `fetchCampaiTariffPrices` holt sie aus dem
-// Tarifkatalog, die Server-Hülle reicht sie an die Clients weiter.
-// Uneingeschränkter Zugang ist das, was das große Abo kostet.
-export type TariffPrices = {
-  /** Was zehn Zugänge kosten — der Preis einer Punktekarte. */
-  punktekarteCents: number;
-  aboKleinMonatCents: number;
-  aboGrossMonatCents: number;
-};
-
-/**
- * Wonach gerechnet wird, solange Campai nichts sagt — der Stand bei
- * Einführung des Features. Ein Antrag bleibt so auch dann stellbar und
- * entscheidbar, wenn der Tarifabruf ausfällt.
- */
-export const FALLBACK_TARIFF_PRICES: TariffPrices = {
-  punktekarteCents: 5000,
-  aboKleinMonatCents: 1500,
-  aboGrossMonatCents: 3000,
-};
-
-const MONATE_PRO_QUARTAL = 3;
 
 const roseguarden = (label: string): SystemAction => ({
   target: "roseguarden",
@@ -284,26 +237,10 @@ const campai = (label: string): SystemAction => ({ target: "campai", label });
 
 // Ein bestehendes Abo wird für den Bonuszeitraum pausiert und durch die
 // beantragte Option ersetzt — dieselbe Regel für beide Abos und beide
-// Optionen. Entgangen ist dem Verein damit genau der Beitrag des Quartals,
-// unabhängig davon, was das Mitglied stattdessen bekommt.
-const aboPause = (
-  access: AccessLevel,
-  prices: TariffPrices,
-): { action: SystemAction; quartalCents: number } | null => {
-  if (access === "abo_klein") {
-    return {
-      action: campai("Abo klein pausieren"),
-      quartalCents: MONATE_PRO_QUARTAL * prices.aboKleinMonatCents,
-    };
-  }
-
-  if (access === "abo_gross") {
-    return {
-      action: campai("Abo groß pausieren"),
-      quartalCents: MONATE_PRO_QUARTAL * prices.aboGrossMonatCents,
-    };
-  }
-
+// Optionen.
+const aboPause = (access: AccessLevel): SystemAction | null => {
+  if (access === "abo_klein") return campai("Abo klein pausieren");
+  if (access === "abo_gross") return campai("Abo groß pausieren");
   return null;
 };
 
@@ -362,17 +299,16 @@ const summaryFor = (
 /**
  * Die Entscheidungsmatrix des Features. Zeile = heutiger Zugang,
  * Spalte = beantragte Option. Besteht ein Abo, wird es pausiert und durch die
- * Option ersetzt; ohne Abo entgeht dem Verein der Wert dessen, was er gewährt.
+ * Option ersetzt.
  *
  * „Nur Anerkennung" fällt aus der Matrix heraus: Tarif und Zugang bleiben, wie
- * sie sind, kein System wird angefasst, dem Verein entgeht nichts. Der Antrag
+ * sie sind, kein System wird angefasst. Der Antrag
  * läuft trotzdem durch die Prüfung — er ist die Grundlage für das Abzeichen
  * im Profil.
  */
 export const resolveOutcome = (
   access: AccessLevel,
   option: BonusOption,
-  prices: TariffPrices = FALLBACK_TARIFF_PRICES,
   /** Das Quartal für die Vorschau, z. B. „Q1/2027". */
   periodLabel?: string,
 ): BonusOutcome => {
@@ -381,21 +317,15 @@ export const resolveOutcome = (
       summary:
         "An deiner Mitgliedschaft ändert sich nichts — dein Einsatz wird im Profil sichtbar.",
       actions: [],
-      forgoneCents: 0,
     };
   }
 
-  const pause = aboPause(access, prices);
+  const pause = aboPause(access);
   const grant = grantActions(access, option);
 
   return {
     summary: summaryFor(access, option, Boolean(pause), periodLabel),
-    actions: pause ? [pause.action, ...grant] : grant,
-    forgoneCents: pause
-      ? pause.quartalCents
-      : option === "unbegrenzt"
-        ? MONATE_PRO_QUARTAL * prices.aboGrossMonatCents
-        : prices.punktekarteCents,
+    actions: pause ? [pause, ...grant] : grant,
   };
 };
 
@@ -403,18 +333,6 @@ export const formatEuro = (cents: number) =>
   new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: "EUR",
-  }).format(cents / 100);
-
-/**
- * Dasselbe ohne „,00" bei glatten Beträgen — in einer Beschriftung wie
- * „Abo klein (15 €)" lenken die Nachkommastellen nur ab. In Summen, die sich
- * addieren, stehen sie weiter.
- */
-export const formatEuroShort = (cents: number) =>
-  new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
 
 // ---------------------------------------------------------------------------

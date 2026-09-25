@@ -4,18 +4,106 @@ export type InvoicePayload = {
   id: string;
   receiptNumber?: string;
   title?: string;
+  /** Belegart, wie Campai sie führt: invoice, donation, offer, expense … */
+  type?: string;
   status?: string;
   paymentStatus?: string;
+  /** Gesetzt, sobald der Beleg storniert wurde. */
+  canceledAt?: string;
+  paidAt?: string;
   receiptDate?: string;
   dueDate?: string;
   totalNet?: number | null;
   totalGross?: number | null;
   totalGrossAmount?: number | null;
+  /**
+   * Bruttobetrag in Cent, genau wie Campai ihn liefert — ohne die Heuristik
+   * von `normalizeAmount`, die kleine Beträge für Euro hält.
+   */
+  amountCents?: number | null;
+  /** Was von diesem Beleg noch offen ist, in Cent. Storniert = 0. */
+  amountLeftToPayCents?: number | null;
   currency?: string;
   accountName?: string;
   customerName?: string;
   customerNumber?: string;
 };
+
+/** Belegarten von Campai in der Sprache der Oberfläche. */
+export const RECEIPT_TYPE_LABELS: Record<string, string> = {
+  invoice: "Rechnung",
+  expense: "Ausgabe",
+  revenue: "Einnahme",
+  deposit: "Einzahlung",
+  donation: "Spende",
+  offer: "Angebot",
+  confirmation: "Bestätigung",
+  refund: "Rückerstattung",
+};
+
+export const receiptTypeLabel = (invoice: InvoicePayload) =>
+  (invoice.type ? RECEIPT_TYPE_LABELS[invoice.type] : undefined) ??
+  invoice.type ??
+  "Beleg";
+
+export type ReceiptPaymentState =
+  | "storniert"
+  | "bezahlt"
+  | "teilweise"
+  | "unbezahlt"
+  /** Angebote und Bestätigungen kennen keinen Zahlungsstatus. */
+  | "unbekannt";
+
+export const RECEIPT_PAYMENT_LABELS: Record<ReceiptPaymentState, string> = {
+  storniert: "Storniert",
+  bezahlt: "Bezahlt",
+  teilweise: "Teilweise bezahlt",
+  unbezahlt: "Unbezahlt",
+  unbekannt: "—",
+};
+
+/**
+ * Bezahlt oder nicht? Ein stornierter Beleg ist keins von beiden — er steht
+ * deshalb vor dem Zahlungsstatus, den Campai auf `unpaid` stehen lässt.
+ */
+export const receiptPaymentState = (
+  invoice: InvoicePayload,
+): ReceiptPaymentState => {
+  if (invoice.canceledAt) {
+    return "storniert";
+  }
+
+  const raw = (invoice.paymentStatus ?? invoice.status ?? "").toLowerCase();
+
+  if (/(^paid$|bezahlt|beglichen|settled)/.test(raw)) return "bezahlt";
+  if (/(partial|teil)/.test(raw)) return "teilweise";
+  if (/(unpaid|unbezahlt|offen|open|due|f[aä]llig|overdue)/.test(raw)) {
+    return "unbezahlt";
+  }
+
+  return invoice.paidAt ? "bezahlt" : "unbekannt";
+};
+
+/**
+ * Was Campai selbst als noch offen führt — inklusive Teilzahlungen und ohne
+ * stornierte Belege, die dort auf 0 stehen.
+ */
+export const receiptOpenCents = (invoice: InvoicePayload) =>
+  typeof invoice.amountLeftToPayCents === "number" &&
+  invoice.amountLeftToPayCents > 0
+    ? invoice.amountLeftToPayCents
+    : 0;
+
+export const isReceiptOpen = (invoice: InvoicePayload) =>
+  receiptOpenCents(invoice) > 0;
+
+/** Bruttobetrag des Belegs in Cent. */
+export const receiptTotalCents = (invoice: InvoicePayload) =>
+  invoice.amountCents ??
+  invoice.totalGrossAmount ??
+  invoice.totalGross ??
+  invoice.totalNet ??
+  null;
 
 const toNumber = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -41,6 +129,13 @@ const toNumber = (value: unknown): number | null => {
   }
   return null;
 };
+
+// Campai rechnet in Cent. `normalizeAmount` unten rät bei kleinen Zahlen auf
+// Euro — für die Felder, die sicher Cent sind, wird deshalb nicht geraten.
+const normalizeCents = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value)
+    : null;
 
 const normalizeAmount = (value: unknown) => {
   const numeric = toNumber(value);
@@ -91,6 +186,11 @@ export const normalizeInvoice = (item: RawInvoice): InvoicePayload | null => {
     item.receiptStatus ?? item.status ?? item.state ?? item.invoiceStatus,
   );
   const paymentStatus = normalizeString(item.paymentStatus ?? item.paidStatus);
+  const type = normalizeString(item.type ?? item.receiptType);
+  const canceledAt = normalizeString(item.canceledAt);
+  const paidAt = normalizeString(item.paidAt);
+  const amountCents = normalizeCents(item.totalGrossAmount);
+  const amountLeftToPayCents = normalizeCents(item.totalAmountLeftToPay);
   const receiptDate = normalizeString(item.receiptDate ?? item.date);
   const dueDate = normalizeString(item.dueDate);
   const totalGrossAmount = normalizeAmount(
@@ -133,13 +233,18 @@ export const normalizeInvoice = (item: RawInvoice): InvoicePayload | null => {
     id,
     receiptNumber,
     title,
+    type,
     status,
     paymentStatus,
+    canceledAt,
+    paidAt,
     receiptDate,
     dueDate,
     totalNet,
     totalGross,
     totalGrossAmount,
+    amountCents,
+    amountLeftToPayCents,
     currency,
     accountName,
     customerName,

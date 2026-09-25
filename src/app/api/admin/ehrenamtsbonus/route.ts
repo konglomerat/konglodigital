@@ -6,20 +6,12 @@
 //
 // Der offene Beitrag wird nicht gespeichert: Campai liefert ihn zusammen mit
 // dem Tarif im CRM-Kontakt, für die ganze Liste in wenigen Aufrufen.
-//
-// Mit der Liste gehen die heutigen Tarifpreise raus — der Vorstand liest
-// daran ab, was ein Bonus den Verein kostet, und das soll der aktuelle Tarif
-// sein und nicht der, der bei Einführung galt.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { fetchCampaiMemberSnapshots } from "@/lib/campai-member-tariff";
-import { fetchCampaiTariffPrices } from "@/lib/campai-plans";
-import type {
-  EhrenamtsbonusAdminRequest,
-  TariffPrices,
-} from "@/lib/ehrenamtsbonus";
-import { FALLBACK_TARIFF_PRICES, listAllRequests } from "@/lib/ehrenamtsbonus";
+import type { EhrenamtsbonusAdminRequest } from "@/lib/ehrenamtsbonus";
+import { listAllRequests } from "@/lib/ehrenamtsbonus";
 import type { MemberProfile } from "@/lib/member-profiles";
 import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
 import { userHasRole } from "@/lib/roles";
@@ -28,7 +20,6 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export type EhrenamtsbonusAdminResponse = {
   requests: EhrenamtsbonusAdminRequest[];
-  prices: TariffPrices;
 };
 
 export const GET = async (request: NextRequest) => {
@@ -77,12 +68,9 @@ export const GET = async (request: NextRequest) => {
       .map((entry) => profiles.get(entry.userId)?.campaiContactId)
       .filter((id): id is string => Boolean(id));
 
-    const [snapshots, prices] = await Promise.all([
-      fetchCampaiMemberSnapshots(contactIds).catch(
-        () => new Map<string, { openBalanceCents: number | null }>(),
-      ),
-      fetchCampaiTariffPrices().catch(() => null),
-    ]);
+    const snapshots = await fetchCampaiMemberSnapshots(contactIds).catch(
+      () => new Map<string, { openBalanceCents: number | null }>(),
+    );
 
     const enriched: EhrenamtsbonusAdminRequest[] = requests.map((entry) => {
       const profile = profiles.get(entry.userId);
@@ -105,7 +93,6 @@ export const GET = async (request: NextRequest) => {
 
     return NextResponse.json({
       requests: enriched,
-      prices: prices ?? FALLBACK_TARIFF_PRICES,
     } satisfies EhrenamtsbonusAdminResponse);
   } catch (loadError) {
     return NextResponse.json(

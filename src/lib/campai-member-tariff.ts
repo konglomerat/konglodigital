@@ -1,5 +1,7 @@
-// Tarif und offener Beitrag eines Mitglieds — live aus Campai, nichts davon
-// wird in Supabase gespiegelt.
+// Tarif, Beiträge und offener Saldo eines Mitglieds — live aus Campai, nichts davon
+// wird in Supabase gespiegelt. Die übrigen Sichten auf denselben Kontakt
+// stehen in `campai-contact-directory.ts` (Mitgliedsstatus, Tags, Liste) und
+// `campai-contact-profile.ts` (Stammdaten der Kontoseite).
 //
 // Drei Eigenheiten der Campai-Daten, die den Weg hierher bestimmen:
 //
@@ -10,48 +12,70 @@
 //    allein durch die gebuchte Option.
 // 2. Die Vertragsliste im Kontakt ist eine Kurzfassung **ohne** `options` —
 //    deshalb reicht `crm/contacts` nicht, es braucht `crm/contracts`. Der
-//    Kontakt liefert dafür Mitgliedsnummer und Debitorensaldo.
-// 3. Die CRM-API vergibt andere Kontakt-IDs als die alte `/contacts`-API, aus
-//    der `member_profiles.campai_contact_id` stammt — ein Abruf mit der
-//    gespeicherten ID läuft ins Leere (404). Verlässlich verbindet die beiden
-//    Welten die Mitgliedsnummer.
+//    Kontakt liefert dafür den Debitorensaldo.
+// 3. Der Vertrag nennt nur IDs: welcher Plan, welche Option. Was sie bedeuten
+//    und was sie kosten, steht im Tarifkatalog (`campai-plans`) — deshalb
+//    stehen hier keine Plan- oder Options-IDs mehr.
+//
+// Ein einzelnes Mitglied wird über die Kontakt-ID aus
+// `member_profiles.campai_contact_id` angesprochen: `crm/contracts/list` mit
+// `contactId` für die Verträge — dieser Filter greift, anders als der
+// `userFilter` der Kontaktliste (live geprüft).
+import type {
+  CampaiAccessTariff,
+  CampaiTariffCatalog,
+  CampaiTariffEntry,
+} from "@/lib/campai-plans";
+import { fetchCampaiTariffCatalog, tariffEntryFor } from "@/lib/campai-plans";
 
-/** Der Zugangskarten-Tarif, wie Campai ihn führt. */
-export type CampaiAccessTariff =
-  | "abo_gross"
-  | "abo_klein"
-  | "punktekarte"
-  | "keiner";
+export type { CampaiAccessTariff } from "@/lib/campai-plans";
 
-export type CampaiMemberSnapshot = {
+type CampaiTariffFields = {
   tariff: CampaiAccessTariff;
+  /** Wie Campai den gebuchten Tarif nennt — `null` bei „keiner". */
+  tariffLabel: string | null;
+  /** Preis des gebuchten Tarifs in Cent — `null` bei „keiner". */
+  tariffPriceCents: number | null;
+};
+
+export type CampaiMemberSnapshot = CampaiTariffFields & {
   /** Offener Beitrag in Cent, positiv = schuldet dem Verein. */
   openBalanceCents: number | null;
 };
 
-// Die Pläne und Optionen dieses Mandanten. Legt der Verein einen neuen Tarif
-// an, kommt hier eine Zeile dazu — sonst nirgends.
-const PLAN_MONATSMEHRBEITRAG = "685a957229734f4cbc1868c3";
-const PLAN_ZEHNERKARTE_MENSCH = "685a90649f62e6eb504b1de4";
-const PLAN_ZEHNERKARTE_GRUPPE = "685a97f71bc0faf3e48baf3d";
-
-const OPTION_ABO_KLEIN = "hZ1biIRv";
-const OPTION_ABO_GROSS = "qoW-uZF_";
+/** Alles, was die Rubrik „Mitgliedschaft" aus den Verträgen braucht. */
+export type CampaiMembership = CampaiTariffFields & {
+  /** Voller Jahresbeitrag in Cent — ohne anteilige Kürzung im Eintrittsjahr. */
+  annualFeeCents: number | null;
+};
 
 const PAGE_SIZE = 100;
+
+type RawCollectionAmount = {
+  adjustedAmount?: number | null;
+  optionsAmount?: number | null;
+};
+
+type RawCollection = {
+  collectAt?: string | null;
+  amount?: number | null;
+  description?: string | null;
+  amounts?: RawCollectionAmount[] | null;
+};
 
 type RawContract = {
   startAt?: string | null;
   endAt?: string | null;
   terminatedAt?: string | null;
-  plan?: { plan?: string | null } | null;
+  plan?: { plan?: string | null; interval?: string | null } | null;
   options?: unknown;
   contact?: { contact?: string | null } | null;
+  lastCollection?: RawCollection | null;
+  nextCollection?: RawCollection | null;
 };
 
 type RawContact = {
   _id?: string;
-  contactNumbers?: { member?: string | null } | null;
   debtor?: {
     totalOwedFromDebtor?: number | null;
     totalOwedToDebtor?: number | null;
@@ -69,7 +93,7 @@ const requiredEnv = (name: string) => {
   return value;
 };
 
-const campaiFetch = async <T,>(path: string, body: unknown): Promise<T> => {
+const campaiFetch = async <T>(path: string, body?: unknown): Promise<T> => {
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
@@ -77,15 +101,21 @@ const campaiFetch = async <T,>(path: string, body: unknown): Promise<T> => {
   const response = await fetch(
     `https://cloud.campai.com/api/${organizationId}/${mandateId}/${path}`,
     {
-      method: "POST",
+      method: body === undefined ? "GET" : "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": apiKey,
       },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
     },
   );
+
+  // Eine ID, die Campai nicht kennt (404) oder gar keine ObjectId ist (400),
+  // heißt „kein Kontakt", nicht „Campai ist kaputt".
+  if (response.status === 404 || response.status === 400) {
+    return null as T;
+  }
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
@@ -109,10 +139,11 @@ const isPast = (value: string | null | undefined) => {
  * ist genau das, was ein bewilligter Ehrenamtsbonus mit einem Abo macht — ein
  * Mitglied soll dadurch nicht plötzlich als tariflos gelten.
  */
+const hasEnded = (contract: RawContract) =>
+  isPast(contract.terminatedAt) || isPast(contract.endAt);
+
 const isRunning = (contract: RawContract) =>
-  !isPast(contract.terminatedAt) &&
-  !isPast(contract.endAt) &&
-  (!contract.startAt || isPast(contract.startAt));
+  !hasEnded(contract) && (!contract.startAt || isPast(contract.startAt));
 
 const optionIds = (value: unknown): string[] =>
   Array.isArray(value)
@@ -128,24 +159,16 @@ const optionIds = (value: unknown): string[] =>
     : [];
 
 /** Der Tarif, den ein einzelner Vertrag ausdrückt — oder keiner. */
-const tariffOf = (contract: RawContract): CampaiAccessTariff => {
-  if (!isRunning(contract)) return "keiner";
+const tariffOf = (
+  contract: RawContract,
+  catalog: CampaiTariffCatalog,
+): CampaiTariffEntry | null => {
+  if (!isRunning(contract)) return null;
 
-  const plan = contract.plan?.plan ?? "";
+  const planId = contract.plan?.plan ?? "";
+  if (!planId) return null;
 
-  if (plan === PLAN_MONATSMEHRBEITRAG) {
-    const options = optionIds(contract.options);
-    if (options.includes(OPTION_ABO_GROSS)) return "abo_gross";
-    if (options.includes(OPTION_ABO_KLEIN)) return "abo_klein";
-    return "keiner";
-  }
-
-  if (plan === PLAN_ZEHNERKARTE_MENSCH || plan === PLAN_ZEHNERKARTE_GRUPPE) {
-    return "punktekarte";
-  }
-
-  // Jahresbeitrag und Spenden sind keine Zugangskarte.
-  return "keiner";
+  return tariffEntryFor(catalog, planId, optionIds(contract.options));
 };
 
 // Der großzügigste laufende Vertrag gewinnt — wer ein Abo groß und daneben
@@ -157,16 +180,19 @@ const RANK: Record<CampaiAccessTariff, number> = {
   keiner: 0,
 };
 
-const bestTariff = (contracts: readonly RawContract[]): CampaiAccessTariff =>
-  contracts.reduce<CampaiAccessTariff>((best, contract) => {
-    const candidate = tariffOf(contract);
-    return RANK[candidate] > RANK[best] ? candidate : best;
-  }, "keiner");
+const isBetter = (
+  candidate: CampaiTariffEntry | null,
+  current: CampaiAccessTariff,
+) => candidate !== null && RANK[candidate.tariff] > RANK[current];
 
-const memberNumberOf = (contact: RawContact) =>
-  typeof contact.contactNumbers?.member === "string"
-    ? contact.contactNumbers.member.trim()
-    : "";
+const bestEntry = (
+  contracts: readonly RawContract[],
+  catalog: CampaiTariffCatalog,
+): CampaiTariffEntry | null =>
+  contracts.reduce<CampaiTariffEntry | null>((best, contract) => {
+    const candidate = tariffOf(contract, catalog);
+    return isBetter(candidate, best?.tariff ?? "keiner") ? candidate : best;
+  }, null);
 
 const balanceOf = (contact: RawContact) =>
   contact.debtor
@@ -174,59 +200,86 @@ const balanceOf = (contact: RawContact) =>
       toCents(contact.debtor.totalOwedToDebtor)
     : null;
 
-/**
- * Tarif und offener Beitrag eines einzelnen Mitglieds — zwei Aufrufe: den
- * Kontakt über die Mitgliedsnummer suchen, dann seine Verträge holen.
- * `null`, wenn Campai die Nummer nicht kennt — das ist etwas anderes als
- * „kein Tarif".
- */
-export const fetchCampaiMemberSnapshot = async (
-  memberNumber: string | null | undefined,
-): Promise<CampaiMemberSnapshot | null> => {
-  const needle = memberNumber?.trim();
-  if (!needle) {
-    return null;
-  }
+/** Eine gefundene Stufe als Snapshot-Felder — oder die leere Stufe. */
+const tariffFields = (entry: CampaiTariffEntry | null): CampaiTariffFields => ({
+  tariff: entry?.tariff ?? "keiner",
+  tariffLabel: entry?.label ?? null,
+  tariffPriceCents: entry?.priceCents ?? null,
+});
 
-  // `searchTerm` sucht unscharf — deshalb wird die Nummer danach noch exakt
-  // verglichen, statt dem ersten Treffer zu vertrauen.
-  const found = await campaiFetch<ContactListResponse>("crm/contacts/list", {
-    limit: 10,
-    offset: 0,
-    returnCount: false,
-    searchTerm: needle,
-  });
-
-  const contact = (found.contacts ?? []).find(
-    (entry) => memberNumberOf(entry) === needle,
-  );
-
-  if (!contact?._id) {
-    return null;
-  }
-
-  const contracts = await campaiFetch<ContractListResponse>(
+const fetchContracts = async (contactId: string) => {
+  const payload = await campaiFetch<ContractListResponse | null>(
     "crm/contracts/list",
-    { limit: PAGE_SIZE, offset: 0, contactId: contact._id },
+    { limit: PAGE_SIZE, offset: 0, contactId },
   );
+  return payload?.contracts ?? [];
+};
+
+/**
+ * Der volle Periodenbetrag einer Abrechnung. `amount` ist im Eintrittsjahr
+ * anteilig gekürzt (60 € statt 120 €) — der Beitrag selbst steht in
+ * `adjustedAmount` samt Optionen.
+ */
+const fullAmountOf = (collection: RawCollection | null | undefined) => {
+  const amounts = collection?.amounts ?? [];
+  if (amounts.length === 0) return null;
+  return amounts.reduce(
+    (sum, entry) =>
+      sum + toCents(entry.adjustedAmount) + toCents(entry.optionsAmount),
+    0,
+  );
+};
+
+/**
+ * Der Jahresbeitrag: ein nicht beendeter Vertrag über einen jährlichen
+ * Beitragsplan. Verlängerungen legt Campai als neuen Vertrag mit Start im
+ * Folgejahr an — deshalb zählt auch ein noch nicht begonnener.
+ */
+const annualFeeOf = (
+  contracts: readonly RawContract[],
+  catalog: CampaiTariffCatalog,
+) => {
+  const contract = contracts.find(
+    (entry) =>
+      !hasEnded(entry) && catalog.annualFeePlans.has(entry.plan?.plan ?? ""),
+  );
+  return contract
+    ? (fullAmountOf(contract.nextCollection) ??
+        fullAmountOf(contract.lastCollection))
+    : null;
+};
+
+/**
+ * Tarif und Jahresbeitrag eines Mitglieds — allein aus
+ * seinen Verträgen und dem Tarifkatalog (meist aus dem Cache). Den Kontakt
+ * selbst liest die Kontoseite über `campai-contact-profile`.
+ */
+export const fetchCampaiMembership = async (
+  contactId: string,
+): Promise<CampaiMembership> => {
+  const [catalog, contracts] = await Promise.all([
+    fetchCampaiTariffCatalog(),
+    fetchContracts(contactId),
+  ]);
 
   return {
-    tariff: bestTariff(contracts.contracts ?? []),
-    openBalanceCents: balanceOf(contact),
+    ...tariffFields(bestEntry(contracts, catalog)),
+    annualFeeCents: annualFeeOf(contracts, catalog),
   };
 };
 
 /**
- * Dasselbe für viele Mitglieder — für die Antragsliste des Vorstands. Campai
- * kann weder Kontakte nach Mitgliedsnummern noch Verträge nach mehreren
- * Kontakten filtern, deshalb werden beide Listen einmal durchgeblättert:
- * konstant wenige Aufrufe statt zwei je Antrag.
+ * Tarif und offener Beitrag vieler Mitglieder — für die Antragsliste des
+ * Vorstands.
+ * Verträge lassen sich nicht nach mehreren Kontakten filtern, deshalb wird
+ * ihre Liste einmal durchgeblättert: konstant wenige Aufrufe statt zwei je
+ * Antrag. Die Salden kommen aus demselben Durchlauf über die Kontakte.
  */
 export const fetchCampaiMemberSnapshots = async (
-  memberNumbers: readonly string[],
+  contactIds: readonly string[],
 ): Promise<Map<string, CampaiMemberSnapshot>> => {
   const wanted = new Set(
-    memberNumbers.map((value) => value?.trim()).filter(Boolean),
+    contactIds.map((value) => value?.trim()).filter(Boolean),
   );
 
   const snapshots = new Map<string, CampaiMemberSnapshot>();
@@ -234,8 +287,9 @@ export const fetchCampaiMemberSnapshots = async (
     return snapshots;
   }
 
-  // Schritt 1: Kontakt-ID und Saldo je gesuchter Mitgliedsnummer.
-  const numberByContactId = new Map<string, string>();
+  const catalog = await fetchCampaiTariffCatalog();
+
+  // Schritt 1: der Saldo je gesuchter Kontakt-ID.
   for (let offset = 0; offset < 10000; offset += PAGE_SIZE) {
     const payload = await campaiFetch<ContactListResponse>(
       "crm/contacts/list",
@@ -244,11 +298,9 @@ export const fetchCampaiMemberSnapshots = async (
 
     const page = payload.contacts ?? [];
     for (const contact of page) {
-      const number = memberNumberOf(contact);
-      if (!number || !wanted.has(number) || !contact._id) continue;
-      numberByContactId.set(contact._id, number);
-      snapshots.set(number, {
-        tariff: "keiner",
+      if (!contact._id || !wanted.has(contact._id)) continue;
+      snapshots.set(contact._id, {
+        ...tariffFields(null),
         openBalanceCents: balanceOf(contact),
       });
     }
@@ -256,7 +308,7 @@ export const fetchCampaiMemberSnapshots = async (
     if (page.length < PAGE_SIZE) break;
   }
 
-  if (numberByContactId.size === 0) {
+  if (snapshots.size === 0) {
     return snapshots;
   }
 
@@ -269,15 +321,13 @@ export const fetchCampaiMemberSnapshots = async (
 
     const page = payload.contracts ?? [];
     for (const contract of page) {
-      const number = numberByContactId.get(contract.contact?.contact ?? "");
-      if (!number) continue;
-
-      const current = snapshots.get(number);
+      const contactId = contract.contact?.contact ?? "";
+      const current = snapshots.get(contactId);
       if (!current) continue;
 
-      const candidate = tariffOf(contract);
-      if (RANK[candidate] > RANK[current.tariff]) {
-        snapshots.set(number, { ...current, tariff: candidate });
+      const candidate = tariffOf(contract, catalog);
+      if (isBetter(candidate, current.tariff)) {
+        snapshots.set(contactId, { ...current, ...tariffFields(candidate) });
       }
     }
 

@@ -178,7 +178,12 @@ export default function VereinPage() {
                   sollten.
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  <Button href="/register" kind="primary">
+                  <Button
+                    href="https://konglomerat.org"
+                    kind="primary"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     Fördermitglied werden
                   </Button>
                   <Button

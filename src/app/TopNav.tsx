@@ -95,7 +95,12 @@ export default function TopNav({
               <Button href="/login" kind="secondary">
                 Anmelden
               </Button>
-              <Button href="/register" kind="primary">
+              <Button
+                href="https://konglomerat.org"
+                kind="primary"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Mitglied werden
               </Button>
             </div>

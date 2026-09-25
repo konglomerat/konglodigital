@@ -3,21 +3,18 @@
 // nachladen muss, bevor Header und Abmelden-Button stehen.
 //
 // Wichtig für die gefühlte Geschwindigkeit: Hier wird ausschliesslich Supabase
-// befragt (Session, user_access, member_profiles) — kein Campai. Der frühere
-// Live-Namensabgleich lief über eine seitenweise Suche durch alle Campai-
-// Kontakte und hing damit vor dem Header. Er sitzt jetzt hinter
-// /api/account/campai-name und läuft erst nach dem ersten Paint.
+// befragt (Session, user_access, member_profiles) — kein Campai. Kontakt und
+// Verträge lädt der Client nach dem ersten Paint über
+// /api/account/campai-profile.
 import { Suspense } from "react";
 
+import { findActiveRequest, listOwnRequests } from "@/lib/ehrenamtsbonus";
 import {
   getMemberProfileByUserId,
   mergeUserMetadataWithMemberProfile,
 } from "@/lib/member-profiles";
 import { ROLE_LABELS } from "@/lib/roles";
-import {
-  getServerSession,
-  getServerSessionRoles,
-} from "@/lib/server-session";
+import { getServerSession, getServerSessionRoles } from "@/lib/server-session";
 import AccountClient from "./AccountClient";
 import AccountSkeleton from "./AccountSkeleton";
 
@@ -27,19 +24,24 @@ async function AccountContent() {
   const { supabase, user } = await getServerSession();
 
   if (!user) {
-    return <AccountClient roleLabels={[]} initialUser={null} />;
+    return (
+      <AccountClient roleLabels={[]} initialUser={null} activeBonus={null} />
+    );
   }
 
-  // Rollen und Profil hängen nicht voneinander ab — parallel spart einen
-  // kompletten Roundtrip vor dem Header.
-  const [userRoles, memberProfile] = await Promise.all([
+  // Rollen, Profil und Ehrenamtsbonus hängen nicht voneinander ab — parallel
+  // spart einen kompletten Roundtrip vor dem Header. Fehlt die Bonus-Tabelle
+  // noch, kommt die Liste leer zurück statt zu brechen.
+  const [userRoles, memberProfile, bonusRequests] = await Promise.all([
     getServerSessionRoles(),
     getMemberProfileByUserId(supabase, user.id),
+    listOwnRequests(supabase, user.id),
   ]);
 
   return (
     <AccountClient
       roleLabels={userRoles.map((role) => ROLE_LABELS[role])}
+      activeBonus={findActiveRequest(bonusRequests)}
       initialUser={{
         email: user.email ?? "",
         metadata: mergeUserMetadataWithMemberProfile(

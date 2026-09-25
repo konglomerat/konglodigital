@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import { fetchOwnDebtorAccount } from "@/lib/campai-own-debtor";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -74,8 +74,12 @@ export const GET = async (
     }
 
     const receiptPayload = (await receiptResponse.json()) as Record<string, unknown>;
-    const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
-    const linkedDebtorAccount = memberProfile?.campaiDebtorAccount ?? null;
+    // Ohne Belegverwaltungsrecht nur Belege des eigenen Debitorenkontos —
+    // bestimmt aus dem Campai-Kontakt, wie in der Belegliste.
+    const linkedDebtorAccount = await fetchOwnDebtorAccount(
+      supabase,
+      data.user.id,
+    ).catch(() => null);
     const receiptAccount = extractReceiptAccount(receiptPayload);
 
     if (linkedDebtorAccount === null || receiptAccount !== linkedDebtorAccount) {
