@@ -25,9 +25,8 @@ export const GET = async (request: NextRequest) => {
     getUserRoles(supabase, user),
   ]);
 
-  // Bewusst ohne Campai-Aufruf: der Live-Namensabgleich blättert durch alle
-  // Kontakte und lag damit vor jeder Antwort. Er hat jetzt eine eigene Route
-  // (/api/account/campai-name), die niemand blockiert.
+  // Bewusst ohne Campai-Aufruf — die Live-Daten des Kontakts holt die
+  // Kontoseite nach dem ersten Paint über /api/account/campai-profile.
   const metadata = mergeUserMetadataWithMemberProfile(
     user.user_metadata ?? {},
     memberProfile,

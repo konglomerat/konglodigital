@@ -11,6 +11,10 @@ type PasswordInputProps = Omit<
 > & {
   showLabel?: string;
   hideLabel?: string;
+  /** Wie bei Field: Beschriftung und Erklärung übernimmt die Feldschale. */
+  label?: string;
+  hint?: string;
+  error?: string;
 };
 
 export default function PasswordInput({

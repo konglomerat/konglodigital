@@ -6,7 +6,7 @@ import RessortLinks, { type RessortLink } from "./RessortLinks";
 
 type RessortPageProps = {
   title: ReactNode;
-  subTitle: ReactNode;
+  subTitle?: ReactNode;
   links?: RessortLink[];
   children?: ReactNode;
 };

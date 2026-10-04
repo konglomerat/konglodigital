@@ -1,12 +1,12 @@
 // Portiert aus knglmrt/components/ui/Badge.jsx.
 // Statusmarke: 10px Fira Sans, uppercase, getrackt, nie rund.
-// Die Tonwerte sind die Tint-Stufen der Palette — das DS kennt kein Grün/Rot.
+// Die Tonwerte sind die Tint-Stufen der Palette.
 import type { ReactNode } from "react";
 
 export type BadgeTone =
-  | "offen" // pink-30
+  | "offen" // red-30
   | "wartet" // yellow-30
-  | "gebucht" // blue-30
+  | "gebucht" // green-30
   | "neutral" // paper-grey
   | "neu" // yellow-30
   | "kontur"; // 1px schwarze Kontur

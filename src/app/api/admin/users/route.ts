@@ -22,9 +22,9 @@ import {
 } from "@/lib/user-access";
 
 import {
-	buildCampaiProfileData as buildCampaiContactProfileData,
-	getCampaiActiveMemberContactById as getActiveCampaiMemberContactById,
-} from "@/lib/campai-contacts";
+	buildCampaiProfileData,
+	getCampaiActiveMemberContactById,
+} from "@/lib/campai-contact-directory";
 
 const getErrorMessage = (error: unknown, fallback: string) => {
 	if (error instanceof Error) {
@@ -166,7 +166,7 @@ export const PATCH = async (request: NextRequest) => {
 		}
 
 		if (requestedCampaiContactId) {
-			const contact = await getActiveCampaiMemberContactById(
+			const contact = await getCampaiActiveMemberContactById(
 				requestedCampaiContactId,
 			);
 
@@ -180,7 +180,7 @@ export const PATCH = async (request: NextRequest) => {
 			const memberProfile = await upsertMemberProfile(
 				adminClient,
 				userId,
-				buildCampaiContactProfileData(contact),
+				buildCampaiProfileData(contact),
 			);
 
 			return NextResponse.json({

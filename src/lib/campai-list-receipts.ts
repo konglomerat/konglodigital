@@ -4,7 +4,9 @@ import {
 } from "@/lib/campai-cost-centers";
 
 const CAMPAI_RECEIPTS_PAGE_SIZE = 100;
-const CAMPAI_RECEIPTS_MAX_PAGES = 10;
+// Campai kann Belege nicht nach Tag filtern (siehe fetchCampaiReceiptsPage),
+// deshalb muss die Liste bis zum Ende blättern, um nichts zu übersehen.
+const CAMPAI_RECEIPTS_MAX_PAGES = 50;
 
 export type CampaiUserReceipt = {
   id: string;
@@ -40,6 +42,7 @@ type RawReceipt = {
   totalGrossAmount?: number | null;
   currency?: string | null;
   accountName?: string | null;
+  tags?: unknown;
   positions?: RawReceiptPosition[];
 };
 
@@ -171,8 +174,15 @@ const normalizeReceipt = (
   } satisfies CampaiUserReceipt;
 };
 
+// `finance/receipts/list` prüft seine Eingabe strikt und kennt kein `tags`
+// (400 „Unbekannter Schlüssel"); `userFilter` auf `tags` ignoriert der Endpunkt
+// stillschweigend. Der Tag-Vergleich passiert deshalb hier, nachdem die Seite
+// geladen ist.
+const hasTag = (item: RawReceipt, tag: string) =>
+  Array.isArray(item.tags) &&
+  item.tags.some((entry) => typeof entry === "string" && entry.trim() === tag);
+
 const fetchCampaiReceiptsPage = async (params: {
-  currentUserDisplayName: string;
   offset: number;
   limit: number;
   debug?: boolean;
@@ -186,7 +196,6 @@ const fetchCampaiReceiptsPage = async (params: {
     limit: params.limit,
     offset: params.offset,
     returnCount: true,
-    tags: [params.currentUserDisplayName],
   };
 
   const response = await fetch(endpoint, {
@@ -247,7 +256,6 @@ export const listCampaiReceipts = async (params: {
 
   for (let pageIndex = 0; pageIndex < CAMPAI_RECEIPTS_MAX_PAGES; pageIndex += 1) {
     const { receipts: page, count, debug } = await fetchCampaiReceiptsPage({
-      currentUserDisplayName: normalizedDisplayName,
       offset,
       limit: CAMPAI_RECEIPTS_PAGE_SIZE,
       debug: params.debug,
@@ -258,6 +266,7 @@ export const listCampaiReceipts = async (params: {
     }
 
     const normalizedPage = page
+      .filter((item) => hasTag(item, normalizedDisplayName))
       .map((item) => normalizeReceipt(item, costCenterLabels))
       .filter((item): item is CampaiUserReceipt => Boolean(item));
 

@@ -14,6 +14,7 @@ import FieldShell, {
   cn,
   fieldEdgeClassName,
   fieldPaddingClassName,
+  fieldPaddingLgClassName,
   type FieldStateProps,
 } from "@/components/knglmrt/FieldShell";
 
@@ -40,6 +41,7 @@ export function normalizeOptions(
 export function OptionList({
   options,
   value,
+  selectedValues,
   activeIndex,
   listboxId,
   onPick,
@@ -49,6 +51,8 @@ export function OptionList({
 }: {
   options: SelectOption[];
   value?: string;
+  /** Mehrfachauswahl: alle markierten Werte. Ergänzt `value`. */
+  selectedValues?: string[];
   activeIndex: number;
   listboxId: string;
   onPick: (option: SelectOption) => void;
@@ -57,10 +61,13 @@ export function OptionList({
   /** Der getippte Teil einer Zeile, der fett und pink stehen bleibt. */
   highlight?: string;
 }) {
+  const multiple = selectedValues !== undefined;
+
   return (
     <div
       id={listboxId}
       role="listbox"
+      aria-multiselectable={multiple || undefined}
       className="absolute left-0 right-0 top-full z-20 -mt-[var(--hairline-width)] max-h-64 overflow-y-auto knglmrt-border border-primary bg-card"
     >
       {options.length === 0 ? (
@@ -69,7 +76,9 @@ export function OptionList({
         </div>
       ) : (
         options.map((option, index) => {
-          const selected = option.value === value;
+          const selected = multiple
+            ? selectedValues.includes(option.value)
+            : option.value === value;
           const active = index === activeIndex;
           return (
             <div
@@ -82,7 +91,7 @@ export function OptionList({
               onMouseDown={(event) => event.preventDefault()}
               onClick={option.disabled ? undefined : () => onPick(option)}
               className={cn(
-                "flex items-baseline justify-between gap-2.5 px-[var(--ui-field-pad-x)] py-1",
+                "flex items-baseline justify-between gap-2.5 px-[var(--ui-field-pad-x)] py-[var(--ui-option-pad-y)]",
                 "text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)]",
                 index > 0 && "border-t border-border",
                 option.disabled
@@ -164,6 +173,8 @@ export type SelectProps = FieldStateProps & {
   onOpenChange?: (open: boolean) => void;
   name?: string;
   id?: string;
+  /** `lg` gibt dem geschlossenen Feld mehr Höhe — für Filterleisten. */
+  size?: "md" | "lg";
   className?: string;
 };
 
@@ -181,6 +192,7 @@ export default function Select({
   onOpenChange,
   name,
   id,
+  size = "md",
   className,
 }: SelectProps) {
   const generatedId = useId();
@@ -282,7 +294,7 @@ export default function Select({
               invalid: Boolean(error),
               focusWithin: false,
             }),
-            fieldPaddingClassName,
+            size === "lg" ? fieldPaddingLgClassName : fieldPaddingClassName,
             "flex w-full cursor-pointer items-center justify-between gap-2.5 text-left outline-none",
             "text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)]",
             open && !disabled && "border-primary",

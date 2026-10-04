@@ -7,12 +7,23 @@ export type RessortLink = {
   comingSoon?: boolean;
 };
 
+// Immer mindestens zwei Spalten — auch auf dem Telefon, wo die Kacheln dafür
+// enger sitzen, kleiner setzen und ohne Beschreibung auskommen. Ab lg stehen
+// sie in einer Reihe und teilen sich die Breite zu gleichen Teilen. Der
+// Schatten ist der Betonungsschatten des Systems, derselbe wie an Dialog und
+// Primärknopf.
 const tileClassName =
-  "flex flex-col gap-1.5 knglmrt-border bg-card p-[18px]";
+  "flex flex-col gap-1 knglmrt-border knglmrt-emphasis-shadow bg-card p-2.5 sm:gap-1.5 sm:p-[18px] lg:min-w-0 lg:flex-1 lg:basis-0";
+
+// Wie knglmrt-card-title, nur eine Stufe kleiner auf dem Telefon. Die
+// DS-Klasse selbst lässt sich nicht per sm: schalten — sie liegt nicht in
+// Tailwinds Utility-Layer.
+const titleClassName =
+  "font-bold text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)] sm:text-[length:var(--ui-size-card)] sm:leading-[var(--ui-line-card)]";
 
 export default function RessortLinks({ links }: { links: RessortLink[] }) {
   return (
-    <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3.5 lg:flex lg:flex-nowrap lg:items-stretch">
       {links.map((link) =>
         link.comingSoon || !link.href ? (
           <div
@@ -21,12 +32,14 @@ export default function RessortLinks({ links }: { links: RessortLink[] }) {
             className={`${tileClassName} cursor-not-allowed select-none border-border text-muted-foreground/80`}
           >
             <span className="flex items-center gap-2">
-              <span className="knglmrt-card-title">{link.label}</span>
-              <span className="whitespace-nowrap border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+              <span className={titleClassName}>{link.label}</span>
+              <span className="knglmrt-tag whitespace-nowrap border border-border px-1.5 py-0.5">
                 Soon
               </span>
             </span>
-            {link.description ? <span>{link.description}</span> : null}
+            {link.description ? (
+              <span className="hidden sm:block">{link.description}</span>
+            ) : null}
           </div>
         ) : (
           <Link
@@ -34,9 +47,11 @@ export default function RessortLinks({ links }: { links: RessortLink[] }) {
             href={link.href}
             className={`${tileClassName} transition hover:bg-primary-soft`}
           >
-            <span className="knglmrt-card-title">{link.label}</span>
+            <span className={titleClassName}>{link.label}</span>
             {link.description ? (
-              <span className="text-muted-foreground">{link.description}</span>
+              <span className="hidden text-muted-foreground sm:block">
+                {link.description}
+              </span>
             ) : null}
           </Link>
         ),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { listAllActiveCampaiContacts } from "@/lib/campai-contacts";
+import { listAllActiveCampaiContacts } from "@/lib/campai-contact-directory";
 import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";

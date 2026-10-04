@@ -308,8 +308,12 @@ export default function RegisterCompletePage() {
         {!isLoading && !profile && error ? (
           <div className="mt-6 space-y-3 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-4 text-sm text-destructive">
             <p>{error}</p>
-            <Link className="font-semibold underline" href="/register">
-              Neue Registrierung starten
+            <p>
+              Einladungen verschickt der Vorstand — bitte melde dich dort für
+              einen neuen Link.
+            </p>
+            <Link className="font-semibold underline" href="/login">
+              Zur Anmeldung
             </Link>
           </div>
         ) : null}

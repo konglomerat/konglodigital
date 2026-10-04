@@ -61,7 +61,7 @@ export function fieldEdgeClassName({
 }
 
 /**
- * Schriftbild im Feld: 16/19 — eine Stufe unter dem Fließtext. Radius 0,
+ * Schriftbild im Feld: 18/24 — dasselbe Maß wie der Fließtext. Radius 0,
  * keine Outline.
  * Enthält bewusst keine border-Klasse — `border-0` läge in Tailwinds
  * utilities-Layer und würde die Kontur aus `knglmrt-border` (components-Layer)
@@ -79,6 +79,10 @@ export const fieldBareTextClassName = `${fieldTextClassName} border-0 bg-transpa
 /** Innenabstand eines Steuerelements — an einer Stelle, damit alle gleich hoch sind. */
 export const fieldPaddingClassName =
   "px-[var(--ui-field-pad-x)] py-[var(--ui-field-pad-y)]";
+
+/** Dieselbe Schrift, mehr Luft — für Filterleisten, in denen ein Feld tragen muss. */
+export const fieldPaddingLgClassName =
+  "px-[var(--ui-field-pad-x)] py-[var(--ui-field-pad-y-lg)]";
 
 type FieldShellProps = FieldStateProps &
   Omit<HTMLAttributes<HTMLElement>, "className" | "children"> & {
@@ -143,7 +147,7 @@ export default function FieldShell({
         <span
           id={messageId}
           className={cn(
-            "text-[13px] leading-[18px]",
+            "text-[15px] leading-[20px]",
             error && !disabled ? "text-primary" : "text-muted-foreground",
           )}
         >

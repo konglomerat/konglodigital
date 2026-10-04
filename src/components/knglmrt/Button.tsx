@@ -1,25 +1,3 @@
-// Die eine Taste des Systems. Portiert aus
-// public/branding/controls_surfaces_tables-export/react/ui/Button.jsx und um
-// die Rollen erweitert, die die App wirklich braucht (Icon-Tasten, Ladezustand,
-// stille Toolbar-Tasten). Wer eine Taste baut, nimmt diese Datei — es gibt
-// keine zweite.
-//
-// Werte 1:1 aus dem Export:
-//   Schale   700 13/16, padding 8px 16px, Kontur (--hairline), Radius 0,
-//            background-Transition 200ms cubic-bezier(.2,0,0,1)
-//   chip     700 11/16, padding 5px 11px — die "sm"-Größe des DS
-//   primary  Fläche pink, Hover braun, Schrift weiß
-//   emphasis wie primary plus der eine 3px-Offset-Schatten (max. 1× pro View),
-//            beim Druck wandert die Taste in den Schatten
-//   quiet    keine Kontur, paper-grey, Hover --ui-quiet-hover
-//   ghost    keine Kontur, keine Fläche — Hover paper-grey. Für Toolbars,
-//            Schließen-Kreuze, Sortierköpfe: alles, was im Ruhezustand
-//            unsichtbar bleiben soll.
-//   tertiary keine Taste: pinker Fettsatz mit gezeichneter Linie darunter
-//   disabled Kontur --border, Fläche --muted, Schrift --muted-foreground
-//
-// Anders als im Export ist die Größe unabhängig von der Variante: eine kleine
-// primäre Taste ist pink, nicht weiß. Sonst hieße "size" heimlich auch "kind".
 import { Children, isValidElement } from "react";
 import type {
   AnchorHTMLAttributes,
@@ -47,6 +25,8 @@ export type ButtonKind =
   | "ghost"
   /** Keine Taste: pinker Fettsatz mit gezeichneter Linie darunter. */
   | "tertiary"
+  /** Der Weg in die Verwaltung — dunkles Braun statt Markenpink. */
+  | "admin"
   /** Löschen und Verwerfen, gefüllt. */
   | "danger-primary"
   /** Löschen und Verwerfen, als Kontur-Taste. */
@@ -109,11 +89,33 @@ const iconOnlySizeClassName: Record<ButtonSize, string> = {
   large: "h-11 w-11 p-0 text-[13px]",
 };
 
+const tertiarySizeClassName: Record<ButtonSize, string> = {
+  chip: "gap-1.5 pb-[7px] text-[11px] leading-4",
+  small: "gap-2 pb-[9px] text-[13px] leading-4",
+  medium: "gap-2 pb-[10px] text-[15px] leading-5",
+  large: "gap-2.5 pb-[11px] text-[17px] leading-6",
+};
+
+// Die Linie wächst mit der Zeile mit, sonst franst sie unter großem Satz aus.
+const tertiaryDividerHeight: Record<ButtonSize, number> = {
+  chip: 6,
+  small: 7,
+  medium: 8,
+  large: 9,
+};
+
 const iconPixelSize: Record<ButtonSize, string> = {
   chip: "h-3 w-3",
   small: "h-3.5 w-3.5",
   medium: "h-4 w-4",
   large: "h-4 w-4",
+};
+
+const tertiaryIconPixelSize: Record<ButtonSize, string> = {
+  chip: "h-3 w-3",
+  small: "h-3.5 w-3.5",
+  medium: "h-4 w-4",
+  large: "h-[18px] w-[18px]",
 };
 
 const kindClassName: Record<ButtonKind, string> = {
@@ -126,6 +128,8 @@ const kindClassName: Record<ButtonKind, string> = {
   ghost:
     "border-0 bg-transparent text-foreground hover:bg-muted disabled:bg-transparent aria-disabled:bg-transparent",
   tertiary: "",
+  admin:
+    "bg-[var(--ui-admin)] text-[var(--ui-admin-ink)] hover:bg-[var(--ui-admin-hover)]",
   "danger-primary":
     "bg-destructive text-destructive-foreground hover:bg-[var(--ui-action-hover)]",
   "danger-secondary": "bg-card text-destructive hover:bg-destructive-soft",
@@ -174,7 +178,11 @@ export default function Button({
   ) : loading || !hasIconChild ? (
     <FontAwesomeIcon
       icon={resolvedIcon as IconProp}
-      className={`${iconPixelSize[size]}${loading ? " animate-spin" : ""}`}
+      className={`${
+        resolvedKind === "tertiary"
+          ? tertiaryIconPixelSize[size]
+          : iconPixelSize[size]
+      }${loading ? " animate-spin" : ""}`}
     />
   ) : null;
 
@@ -193,14 +201,18 @@ export default function Button({
 
   // Tertiär ist keine Taste, sondern der pinke Fettsatz mit gezeichneter Linie.
   if (resolvedKind === "tertiary") {
-    const tertiaryClassName = `relative inline-block w-max cursor-pointer pb-[9px] text-[13px] font-bold leading-4 text-primary transition-colors duration-200 hover:text-[var(--ui-action-hover)] ${focusClassName}${
+    const tertiaryClassName = `relative inline-flex w-max cursor-pointer items-center ${tertiarySizeClassName[size]} font-bold text-primary transition-colors duration-200 hover:text-[var(--ui-action-hover)] ${focusClassName}${
       className ? ` ${className}` : ""
     }`;
     const tertiaryContent = (
       <>
         {content}
         <span className="absolute inset-x-0 bottom-0 block">
-          <Divider number={4} height={7} color="currentColor" />
+          <Divider
+            number={4}
+            height={tertiaryDividerHeight[size]}
+            color="currentColor"
+          />
         </span>
       </>
     );
