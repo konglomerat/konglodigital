@@ -461,7 +461,7 @@ export default async function RootLayout({
                                 {tx("Anmelden")}
                               </Button>
                               <Button
-                                href={localizePathname("/mitglied-werden", locale)}
+                                href={localizePathname("/registration", locale)}
                                 kind="primary"
                                 className={navButtonClassName}
                               >

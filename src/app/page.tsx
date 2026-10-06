@@ -138,7 +138,7 @@ async function StaticHome() {
                 "de",
               ),
               cta: {
-                href: "/mitglied-werden",
+                href: "/registration",
                 kind: "tertiary" as const,
                 label: tx("Mitgliedsantrag", "de"),
               },

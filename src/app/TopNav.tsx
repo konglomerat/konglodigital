@@ -106,7 +106,7 @@ export default async function TopNav({
               <Button href={localizePathname("/login", locale)} kind="secondary">
                 {tx("Anmelden")}
               </Button>
-              <Button href={localizePathname("/mitglied-werden", locale)} kind="primary">
+              <Button href={localizePathname("/registration", locale)} kind="primary">
                 {tx("Mitglied werden")}
               </Button>
             </div>

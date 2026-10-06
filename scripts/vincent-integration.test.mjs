@@ -99,7 +99,7 @@ test("home fallback combines Vincent's four membership steps with localized link
   const list = nodes.find(({ type }) => type === "ol");
   assert.equal(elements(list).filter(({ type }) => type === "li").length, 4);
   const links = nodes.filter(({ type }) => type === "button").map(({ props }) => props.href);
-  assert.ok(links.includes("/en/mitglied-werden"));
+  assert.ok(links.includes("/en/registration"));
   assert.ok(links.includes("/en/calendar"));
   assert.ok(links.includes("/en/werkbereiche"));
 });
