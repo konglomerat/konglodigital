@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { stripLocalePrefix } from "@/i18n/config";
 import Divider from "@/components/knglmrt/Divider";
 
+import { isTopNavSectionActive } from "./topNavSections";
+
 type TopNavLinkProps = {
   href: string;
   label: string;
@@ -14,7 +16,7 @@ export default function TopNavLink({ href, label }: TopNavLinkProps) {
   const pathname = usePathname() ?? "/";
   const current =
     stripLocalePrefix(pathname).pathname.replace(/\/+$/, "") || "/";
-  const isActive = current === href || current.startsWith(`${href}/`);
+  const isActive = isTopNavSectionActive(current, href);
 
   return (
     <Link

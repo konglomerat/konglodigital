@@ -5,6 +5,7 @@ import Face from "@/components/knglmrt/Face";
 
 import TopNavLink from "./TopNavLink";
 import Button from "@/components/knglmrt/Button";
+import { getInitials, getTopNavSections } from "./topNavSections";
 
 type TopNavProps = {
   isAuthenticated: boolean;
@@ -12,31 +13,17 @@ type TopNavProps = {
   adminAreaHref: string;
 };
 
-const getInitials = (name: string | null) => {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-};
-
 export default function TopNav({
   isAuthenticated,
   currentUserDisplayName,
   adminAreaHref,
 }: TopNavProps) {
-  // Login-pflichtige Bereiche erscheinen ausgeloggt gar nicht.
-  const sections = [
-    { href: "/verein", label: "Verein" },
-    { href: "/werkbereiche", label: "Werkbereiche" },
-    { href: "/showcase", label: "Hier entstanden" },
-    ...(isAuthenticated ? [{ href: "/resources", label: "Inventar" }] : []),
-  ];
+  const sections = getTopNavSections(isAuthenticated);
 
+  // Unter 1024px übernimmt MobileTopNav; zwischen 1024 und 1280px fehlt der
+  // Platz für den Namen, dann bleiben nur die Initialen.
   return (
-    <header className="sticky top-0 z-40 hidden knglmrt-border-b bg-card md:block">
+    <header className="sticky top-0 z-40 hidden knglmrt-border-b bg-card lg:block">
       <div className="flex h-[70px] w-full items-stretch justify-between px-7">
         <div className="flex min-w-0 items-stretch">
           <Link
@@ -70,6 +57,7 @@ export default function TopNav({
               Bereichsnavigation (/account), nicht ein Dropdown. */}
               <Link
                 href="/account"
+                title={currentUserDisplayName ?? "Profil"}
                 className="flex items-center gap-2.5 py-1 transition hover:text-primary"
               >
                 <span
@@ -78,7 +66,7 @@ export default function TopNav({
                 >
                   {getInitials(currentUserDisplayName)}
                 </span>
-                <span className="max-w-[9rem] truncate text-[length:var(--ui-size-body)] font-bold">
+                <span className="sr-only xl:not-sr-only xl:max-w-[9rem] xl:truncate xl:text-[length:var(--ui-size-body)] xl:font-bold">
                   {currentUserDisplayName ?? "Profil"}
                 </span>
               </Link>
