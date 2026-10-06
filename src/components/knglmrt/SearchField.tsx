@@ -102,7 +102,7 @@ export default function SearchField({
         className={cn(
           "w-full min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 outline-none placeholder:text-muted-foreground disabled:text-muted-foreground",
           size === "small"
-            ? "text-[14px] leading-[18px]"
+            ? "text-[16px] leading-5"
             : "text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)]",
         )}
       />

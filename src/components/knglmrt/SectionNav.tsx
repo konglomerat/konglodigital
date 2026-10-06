@@ -33,8 +33,8 @@ export default function SectionNav({
             aria-current={active ? "page" : undefined}
             className={
               active
-                ? "bg-foreground px-3 py-[5px] text-xs font-bold leading-4 text-background"
-                : "knglmrt-border px-[11px] py-1 text-xs leading-4 text-foreground transition hover:bg-primary-soft"
+                ? "bg-foreground px-3 py-[5px] text-[14px] font-bold leading-4 text-background"
+                : "knglmrt-border px-[11px] py-1 text-[14px] leading-4 text-foreground transition hover:bg-primary-soft"
             }
           >
             {item.label}
