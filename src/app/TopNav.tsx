@@ -9,6 +9,7 @@ import Face from "@/components/knglmrt/Face";
 import TopNavLink from "./TopNavLink";
 import Button from "@/components/knglmrt/Button";
 import type { SiteNavItem } from "@/lib/payload-navigation";
+import { getInitials, getTopNavSections } from "./topNavSections";
 
 type TopNavProps = {
   isAuthenticated: boolean;
@@ -16,16 +17,6 @@ type TopNavProps = {
   adminAreaHref: string;
   links: SiteNavItem[];
   inventoryHref: string;
-};
-
-const getInitials = (name: string | null) => {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 };
 
 export default async function TopNav({
@@ -36,16 +27,12 @@ export default async function TopNav({
   inventoryHref,
 }: TopNavProps) {
   const { locale, tx } = await getServerI18n();
-  // Login-pflichtige Bereiche erscheinen ausgeloggt gar nicht.
-  const sections: SiteNavItem[] = [
-    ...links,
-    ...(isAuthenticated && !links.some((link) => link.href === inventoryHref)
-      ? [{ href: inventoryHref, label: "Inventar" }]
-      : []),
-  ];
+  const sections = getTopNavSections(links, isAuthenticated, inventoryHref);
 
+  // Unter 1024px übernimmt MobileTopNav; zwischen 1024 und 1280px fehlt der
+  // Platz für den Namen, dann bleiben nur die Initialen.
   return (
-    <header className="sticky top-0 z-40 hidden knglmrt-border-b bg-card xl:block">
+    <header className="sticky top-0 z-40 hidden knglmrt-border-b bg-card lg:block">
       <div className="flex min-h-[70px] w-full items-stretch justify-between px-7">
         <div className="flex min-w-0 items-stretch">
           <Link
@@ -81,6 +68,7 @@ export default async function TopNav({
               Bereichsnavigation (/account), nicht ein Dropdown. */}
               <Link
                 href={localizePathname("/account", locale)}
+                title={currentUserDisplayName ?? tx("Profil")}
                 className="flex items-center gap-2.5 py-1 transition hover:text-primary"
               >
                 <span
@@ -89,7 +77,7 @@ export default async function TopNav({
                 >
                   {getInitials(currentUserDisplayName)}
                 </span>
-                <span className="max-w-[9rem] truncate text-[length:var(--ui-size-body)] font-bold">
+                <span className="sr-only xl:not-sr-only xl:max-w-[9rem] xl:truncate xl:text-[length:var(--ui-size-body)] xl:font-bold">
                   {currentUserDisplayName ?? tx("Profil")}
                 </span>
               </Link>

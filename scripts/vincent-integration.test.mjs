@@ -121,6 +121,9 @@ test("CMS navigation keeps Vincent's admin button and avoids duplicate inventory
     "next/image": { default: "image" }, "next/link": { default: "link" },
     "@/components/knglmrt/Face": { default: "face" },
     "./TopNavLink": { default: "nav-link" },
+    "./topNavSections": compile("src/app/topNavSections.ts", {
+      "@/i18n/config": { stripLocalePrefix: (pathname) => ({ pathname }) },
+    }),
     "@/components/knglmrt/Button": { default: "button" },
   });
   const nodes = elements(await TopNav({
