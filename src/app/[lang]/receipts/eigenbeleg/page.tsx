@@ -8,6 +8,7 @@ import {
   faArrowTrendDown,
   faArrowTrendUp,
   faCheck,
+  faFileArrowDown,
   faFolderOpen,
   faMoneyBillTransfer,
   faXmark,
@@ -50,11 +51,7 @@ type ReasonOption = (typeof reasonOptions)[number];
 
 type BookingType = "ausgabe" | "einnahme" | "umbuchung";
 type AssociationAccount =
-  | "K0004 B"
-  | "K0104 A"
-  | "BAR"
-  | "PAYPAL"
-  | "Kreditkarte";
+  "K0004 B" | "K0104 A" | "BAR" | "PAYPAL" | "Kreditkarte";
 type CostCenterOption = {
   value: string;
   label: string;
@@ -122,6 +119,26 @@ const associationAccountOptions: Array<{
   { value: "Kreditkarte", label: "Kreditkarte" },
 ];
 
+const fieldLabels: Record<keyof FormValues, string> = {
+  reason: "Grund des Eigenbelegs",
+  reasonOther: "Sonstiger Grund",
+  occasion: "Anlass",
+  documentReference: "Verweis auf Dokument",
+  transactionDate: "Datum der Transaktion",
+  bookingType: "Buchungsart",
+  amountEuro: "Betrag",
+  counterpartyName: "Kreditor/Debitor",
+  counterpartyAccount: "Kreditor/Debitor",
+  associationArea: "Werkbereich/Projekt",
+  associationAccount: "Konto/Kasse",
+  transferSenderArea: "Werkbereich/Projekt (Sender)",
+  transferSenderAccount: "Konto/Kasse (Sender)",
+  transferReceiverArea: "Werkbereich/Projekt (Empfänger)",
+  transferReceiverAccount: "Konto/Kasse (Empfänger)",
+  invoiceStatus: "Status",
+  notes: "Interne Notiz",
+};
+
 const testFormData: FormValues = {
   reason: "Mietkosten Raum",
   reasonOther: "",
@@ -177,6 +194,10 @@ async function loadTransferAccountNames() {
   }
 
   return { creditorName, debtorName };
+}
+
+function counterpartyEntityLabelFor(bookingType: BookingType) {
+  return bookingType === "einnahme" ? "Debitor" : "Kreditor";
 }
 
 function getFormattedDate(value: string) {
@@ -594,6 +615,18 @@ async function createEigenbelegPdf(values: ReceiptValues) {
   return { fileName, bytes };
 }
 
+function downloadPdf(bytes: Uint8Array, fileName: string) {
+  const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   const chunkSize = 0x8000;
   let binary = "";
@@ -718,6 +751,8 @@ export default function EigenbelegPage() {
     },
   });
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadedAt, setDownloadedAt] = useState<string | null>(null);
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [costCentersLoading, setCostCentersLoading] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
@@ -783,7 +818,13 @@ export default function EigenbelegPage() {
     );
   }, [costCenters, selectedTransferReceiverArea]);
 
-  const errorCount = Object.keys(errors).length;
+  const errorFields = (Object.keys(errors) as Array<keyof FormValues>).map(
+    (name) =>
+      name === "counterpartyName" || name === "counterpartyAccount"
+        ? counterpartyEntityLabelFor(selectedBookingType)
+        : fieldLabels[name],
+  );
+  const errorCount = errorFields.length;
   const isTransferFlow = selectedBookingType === "umbuchung";
   const isExpenseFlow = selectedBookingType === "ausgabe";
   const isExpenseLikeFlow = isExpenseFlow || isTransferFlow;
@@ -948,15 +989,71 @@ export default function EigenbelegPage() {
     setValue,
   ]);
 
-  const onSubmit = async (values: FormValues) => {
-    setStoreResult(null);
-    setSubmittedAt(null);
-
+  const validateReasonOther = (values: FormValues) => {
     if (values.reason === "Sonstiges" && !values.reasonOther?.trim()) {
       setError("reasonOther", {
         type: "required",
         message: "Bitte den Grund für Sonstiges eintragen.",
       });
+      return false;
+    }
+
+    clearErrors("reasonOther");
+    return true;
+  };
+
+  const generatePdf = async (values: FormValues) => {
+    const internalNote = [values.notes?.trim(), statusNoteLine]
+      .filter(Boolean)
+      .join("\n");
+    // Die Status-Zeile druckt das PDF selbst aus — daher hier nur die Notiz,
+    // die Status-Zeile steckt nur in der internen Notiz für Campai.
+    const receiptValues = buildReceiptValues(
+      values,
+      selectedAssociationAreaLabel,
+      selectedTransferSenderAreaLabel,
+      selectedTransferReceiverAreaLabel,
+    );
+    const { fileName, bytes } = await createEigenbelegPdf(receiptValues);
+    return { internalNote, receiptValues, fileName, bytes };
+  };
+
+  // Nur den Eigenbeleg als PDF erzeugen, ohne Buchung in Campai — z. B. wenn
+  // ein Beleg verloren ging und nur der Ersatzbeleg gebraucht wird. Ein
+  // Kreditor/Debitor muss dafür nicht aus Campai ausgewählt sein.
+  const onDownloadOnly = async (values: FormValues) => {
+    setStoreResult(null);
+    setSubmittedAt(null);
+    setDownloadedAt(null);
+
+    if (!validateReasonOther(values)) {
+      return;
+    }
+
+    clearErrors("counterpartyName");
+    setDownloadingPdf(true);
+    try {
+      const { fileName, bytes } = await generatePdf(values);
+      downloadPdf(bytes, fileName);
+      setDownloadedAt(new Date().toLocaleString("de-DE"));
+    } catch (error) {
+      setStoreResult({
+        error:
+          error instanceof Error
+            ? error.message
+            : "PDF konnte nicht erstellt werden.",
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    setStoreResult(null);
+    setSubmittedAt(null);
+    setDownloadedAt(null);
+
+    if (!validateReasonOther(values)) {
       return;
     }
 
@@ -968,19 +1065,13 @@ export default function EigenbelegPage() {
       return;
     }
 
-    clearErrors("reasonOther");
     clearErrors("counterpartyName");
-    const internalNote = [values.notes?.trim(), statusNoteLine]
-      .filter(Boolean)
-      .join("\n");
-    const receiptValues = buildReceiptValues(
-      { ...values, notes: internalNote },
-      selectedAssociationAreaLabel,
-      selectedTransferSenderAreaLabel,
-      selectedTransferReceiverAreaLabel,
-    );
-    const { fileName: generatedPdfFileName, bytes: generatedPdfBytes } =
-      await createEigenbelegPdf(receiptValues);
+    const {
+      internalNote,
+      receiptValues,
+      fileName: generatedPdfFileName,
+      bytes: generatedPdfBytes,
+    } = await generatePdf(values);
 
     const attachment = await buildAttachmentForCampai({
       generatedPdfBytes,
@@ -1139,7 +1230,7 @@ export default function EigenbelegPage() {
         {errorCount > 0 ? (
           <div className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
             Bitte korrigiere {errorCount} Feld{errorCount === 1 ? "" : "er"} vor
-            dem Speichern.
+            dem Speichern: {errorFields.join(", ")}.
           </div>
         ) : null}
 
@@ -1473,6 +1564,11 @@ export default function EigenbelegPage() {
                         as="div"
                         label="Name"
                         required={!isExpenseLikeFlow}
+                        error={
+                          isExpenseLikeFlow
+                            ? undefined
+                            : errors.counterpartyName?.message
+                        }
                       >
                         {isExpenseLikeFlow ? (
                           <Field value={senderDisplayValue} disabled readOnly />
@@ -1568,6 +1664,11 @@ export default function EigenbelegPage() {
                         as="div"
                         label="Name"
                         required={isExpenseLikeFlow}
+                        error={
+                          isExpenseLikeFlow
+                            ? errors.counterpartyName?.message
+                            : undefined
+                        }
                       >
                         {isExpenseLikeFlow ? (
                           <AutocompleteInput
@@ -1770,6 +1871,11 @@ export default function EigenbelegPage() {
                 Eigenbeleg erstellt: {submittedAt}
               </p>
             ) : null}
+            {downloadedAt ? (
+              <p className="text-sm text-foreground">
+                PDF heruntergeladen (ohne Buchung in Campai): {downloadedAt}
+              </p>
+            ) : null}
             {storeResult?.successMessage ? (
               <p className="text-sm text-foreground">
                 {storeResult.successMessage}
@@ -1787,8 +1893,21 @@ export default function EigenbelegPage() {
             <Button type="button" kind="secondary" href="/receipts">
               Abbrechen
             </Button>
+            <Button
+              type="button"
+              kind="secondary"
+              icon={faFileArrowDown}
+              disabled={isSubmitting}
+              loading={downloadingPdf}
+              title="Erstellt nur das PDF, ohne Buchung in Campai"
+              onClick={handleSubmit(onDownloadOnly)}
+            >
+              Nur PDF herunterladen
+            </Button>
             <Button type="submit" kind="primary" disabled={isSubmitting}>
-              {isSubmitting ? "Wird erstellt…" : "Eigenbeleg erstellen"}
+              {isSubmitting && !downloadingPdf
+                ? "Wird erstellt…"
+                : "Eigenbeleg erstellen"}
             </Button>
           </div>
         </div>
