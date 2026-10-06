@@ -391,10 +391,10 @@ export default function AusgabePage() {
         ) : null}
 
         <div className="flex items-center justify-end gap-3">
-          <Button type="button" kind="secondary" href="/receipts">
+          <Button type="button" kind="secondary" size="large" href="/receipts">
             Abbrechen
           </Button>
-          <Button type="submit" kind="primary" disabled={isSubmitting}>
+          <Button type="submit" kind="primary" size="large" disabled={isSubmitting}>
             {isSubmitting ? "Wird gespeichert…" : "Ausgabe speichern"}
           </Button>
         </div>

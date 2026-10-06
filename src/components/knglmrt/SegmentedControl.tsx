@@ -17,6 +17,9 @@ type SegmentedControlProps<T extends string> = {
   options: ReadonlyArray<SegmentedControlOption<T>>;
   onChange: (value: T) => void;
   size?: ButtonSize;
+  /** `ink` füllt das aktive Segment schwarz statt pink — für Filterleisten,
+   *  in denen Pink der einen Handlung der Seite vorbehalten ist. */
+  tone?: "primary" | "ink";
   className?: string;
 };
 
@@ -25,6 +28,7 @@ export function SegmentedControl<T extends string>({
   options,
   onChange,
   size = "chip",
+  tone = "primary",
   className,
 }: SegmentedControlProps<T>) {
   const containerClassName = [
@@ -43,11 +47,15 @@ export function SegmentedControl<T extends string>({
         return (
           <Button
             key={option.value}
-            kind={isActive ? "primary" : "ghost"}
+            kind={isActive && tone === "primary" ? "primary" : "ghost"}
             size={size}
             onClick={() => onChange(option.value)}
             aria-pressed={isActive}
-            className="border-0"
+            className={
+              isActive && tone === "ink"
+                ? "border-0 bg-foreground! text-background!"
+                : "border-0"
+            }
           >
             {option.label}
           </Button>

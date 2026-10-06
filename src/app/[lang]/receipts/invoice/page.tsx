@@ -1343,10 +1343,10 @@ export default function NewSimpleInvoicePage() {
           </div>
 
           <div className="ml-auto flex items-center justify-end gap-3">
-            <Button type="button" kind="secondary" href="/receipts">
+            <Button type="button" kind="secondary" size="large" href="/receipts">
               Abbrechen
             </Button>
-            <Button type="submit" kind="primary" disabled={submitting}>
+            <Button type="submit" kind="primary" size="large" disabled={submitting}>
               {submitting ? "Rechnung wird erstellt..." : "Rechnung erstellen"}
             </Button>
           </div>

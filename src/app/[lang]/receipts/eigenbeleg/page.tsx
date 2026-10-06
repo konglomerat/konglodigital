@@ -1890,12 +1890,13 @@ export default function EigenbelegPage() {
           </div>
 
           <div className="ml-auto flex items-center justify-end gap-3">
-            <Button type="button" kind="secondary" href="/receipts">
+            <Button type="button" kind="secondary" size="large" href="/receipts">
               Abbrechen
             </Button>
             <Button
               type="button"
               kind="secondary"
+              size="large"
               icon={faFileArrowDown}
               disabled={isSubmitting}
               loading={downloadingPdf}
@@ -1904,7 +1905,7 @@ export default function EigenbelegPage() {
             >
               Nur PDF herunterladen
             </Button>
-            <Button type="submit" kind="primary" disabled={isSubmitting}>
+            <Button type="submit" kind="primary" size="large" disabled={isSubmitting}>
               {isSubmitting && !downloadingPdf
                 ? "Wird erstellt…"
                 : "Eigenbeleg erstellen"}
