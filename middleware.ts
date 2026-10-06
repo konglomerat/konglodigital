@@ -8,6 +8,7 @@ import {
   localizePathname,
   stripLocalePrefix,
 } from "@/i18n/config";
+import { resilientSupabaseFetch } from "@/lib/supabase/fetch";
 
 const protectedPagePrefixes = [
   "/account",
@@ -145,6 +146,7 @@ export async function middleware(request: NextRequest) {
     shouldRefreshAuthSession(pathnameWithoutLocalePrefix)
   ) {
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      global: { fetch: resilientSupabaseFetch },
       cookies: {
         getAll() {
           return request.cookies.getAll();

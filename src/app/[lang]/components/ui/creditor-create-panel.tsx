@@ -272,10 +272,12 @@ export default function CreditorCreatePanel(props: CreditorCreatePanelProps) {
 
       if (!response.ok) {
         setError(
-          result.error ??
-            (isUpdate
-              ? "Kreditor konnte nicht aktualisiert werden."
-              : "Kreditor konnte nicht angelegt werden."),
+          response.status === 401
+            ? "Anmeldung konnte nicht geprüft werden (Sitzung abgelaufen oder Anmeldedienst nicht erreichbar). Bitte erneut versuchen oder neu anmelden."
+            : (result.error ??
+                (isUpdate
+                  ? "Kreditor konnte nicht aktualisiert werden."
+                  : "Kreditor konnte nicht angelegt werden.")),
         );
         return;
       }
