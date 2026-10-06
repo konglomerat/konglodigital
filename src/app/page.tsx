@@ -104,7 +104,7 @@ export default async function Home() {
                 "de",
               ),
               cta: {
-                href: "/mitglied-werden",
+                href: "/registration",
                 kind: "tertiary" as const,
                 label: tx("Online Antrag", "de"),
               },

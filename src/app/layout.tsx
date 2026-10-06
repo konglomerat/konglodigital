@@ -491,10 +491,8 @@ export default async function RootLayout({
                                 Anmelden
                               </Button>
                               <Button
-                                href="https://konglomerat.org"
+                                href="/registration"
                                 kind="primary"
-                                target="_blank"
-                                rel="noreferrer"
                                 className={navButtonClassName}
                               >
                                 Mitglied werden
