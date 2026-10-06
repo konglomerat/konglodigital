@@ -1,6 +1,7 @@
 // src/app/[lang]/verein/page.tsx — die Vereinsseite nach dem Prototyp
 // "Konglo Digital Prototyp.dc.html" (Claude Design):
-// Über uns + Kalender nebeneinander → Freunde & Förderer → Das #Rosenwerk.
+// Über uns + Kalender nebeneinander → Werkstätten nutzen (Anreißer für
+// /tarife) → Freunde & Förderer → Das #Rosenwerk.
 // Der Kalender hängt in einer eigenen Suspense-Grenze; alles andere steht
 // sofort, ohne auf den Google-Feed zu warten.
 import { Suspense } from "react";
@@ -154,6 +155,53 @@ export default function VereinPage() {
           </Suspense>
         </div>
       </div>
+
+      {/* Anreißer für /tarife: drei Einstiegspreise, der Rest steht dort. */}
+      <section className="mb-11 knglmrt-border-t pt-[26px]">
+        <div className="grid items-start gap-10 lg:grid-cols-[1.4fr_1fr]">
+          <div>
+            <h2 className="text-[length:var(--ui-size-title)] leading-[var(--ui-line-title)]">
+              Werkstätten nutzen
+            </h2>
+            <div className="knglmrt-lead mb-4">Tarife und Preise</div>
+            <p className="mb-4 max-w-[600px] text-pretty">
+              Als Mitglied kommst du günstiger rein und hast die Wahl zwischen
+              Abo und Punktekarte. Extern geht auch — tageweise oder mit der
+              10er-Karte. Enthalten ist jeweils der Zugang; für bestimmte
+              Maschinen brauchst du je nach Werkbereich eine Einweisung.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <Button href="/tarife" kind="primary">
+                Tarife und Preise ansehen
+              </Button>
+              <Button href="/registration" kind="secondary">
+                Mitglied werden
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <StatTile
+              label="Jahresbeitrag"
+              value="ab 120 €"
+              hint="macht dich zum Mitglied"
+              tone="rosa"
+            />
+            <StatTile
+              label="Abo für Mitglieder"
+              value="ab 15 €"
+              hint="pro Monat"
+              tone="grau"
+            />
+            <StatTile
+              label="Für Gäste"
+              value="ab 20 €"
+              hint="pro Tag, ohne Mitgliedschaft"
+              tone="grau"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Fläche bis an die Fensterkanten, Inhalt zurück in den Rahmen
           von <main> (max-w-[1600px], px-3 / md:px-7). */}
