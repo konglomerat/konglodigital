@@ -7,6 +7,11 @@ export type RessortId =
   | "vhc"
   | "oeffentlichkeitsarbeit";
 
+export type RessortChild = {
+  href: string;
+  label: string;
+};
+
 export type Ressort = {
   id: RessortId;
   href: string;
@@ -15,6 +20,9 @@ export type Ressort = {
   match: string[];
   /** Module, von denen eines fuer den Zugriff reicht. */
   modules: AppModule[];
+  /** Unterpunkte in der Sidenav. Die Werkbereiche der Buchhaltung kommen aus
+   *  Campai und werden in VerwaltungShell ergänzt. */
+  children?: RessortChild[];
 };
 
 export const RESSORTS: Ressort[] = [
@@ -31,6 +39,10 @@ export const RESSORTS: Ressort[] = [
     label: "Vorstand",
     match: ["/admin/vorstand", "/kofi"],
     modules: ["admin", "volkshaus"],
+    children: [
+      { href: "/kofi", label: "KoFi" },
+      { href: "/admin/vorstand/ehrenamtsbonus", label: "Ehrenamtsbonus" },
+    ],
   },
   {
     id: "admin",
@@ -38,6 +50,10 @@ export const RESSORTS: Ressort[] = [
     label: "Admin",
     match: ["/admin", "/admin/users", "/admin/contacts"],
     modules: ["admin"],
+    children: [
+      { href: "/admin/users", label: "Benutzer" },
+      { href: "/admin/contacts", label: "Mitglieder" },
+    ],
   },
   {
     id: "vhc",
@@ -56,6 +72,10 @@ export const RESSORTS: Ressort[] = [
       "/admin/generate-story",
     ],
     modules: ["admin", "volkshaus"],
+    children: [
+      { href: "/admin/generate-newsletter", label: "Newsletter" },
+      { href: "/admin/generate-story", label: "Storys" },
+    ],
   },
 ];
 

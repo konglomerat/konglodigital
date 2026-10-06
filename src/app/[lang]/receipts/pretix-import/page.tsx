@@ -783,6 +783,7 @@ export default function PretixImportPage() {
               <Button
                 type="button"
                 kind="primary"
+                size="large"
                 icon={faFileImport}
                 disabled={submitDisabled}
                 onClick={() => void submit()}
