@@ -75,23 +75,23 @@ const focusClassName =
 const baseClassName = `inline-flex cursor-pointer items-center justify-center gap-2 rounded-none knglmrt-border text-center align-middle font-[family-name:var(--font-core)] font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-[cubic-bezier(.2,0,0,1)] ${focusClassName} disabled:pointer-events-none disabled:cursor-default disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none aria-disabled:pointer-events-none aria-disabled:cursor-default aria-disabled:border-border aria-disabled:bg-muted aria-disabled:text-muted-foreground`;
 
 const sizeClassName: Record<ButtonSize, string> = {
-  chip: "px-[11px] py-[5px] text-[11px] leading-4",
-  small: "px-4 py-2 text-[13px] leading-4",
-  medium: "px-[18px] py-2.5 text-[13px] leading-4",
-  large: "px-[22px] py-3 text-[13px] leading-4",
+  chip: "px-[11px] py-[5px] text-[13px] leading-4",
+  small: "px-4 py-2 text-[15px] leading-4",
+  medium: "px-[18px] py-2.5 text-[15px] leading-4",
+  large: "px-[22px] py-3 text-[16px] leading-4",
 };
 
 // Quadratisch: die Höhe der Zeile bleibt, die Breite folgt ihr.
 const iconOnlySizeClassName: Record<ButtonSize, string> = {
-  chip: "h-[26px] w-[26px] p-0 text-[11px]",
-  small: "h-8 w-8 p-0 text-[13px]",
-  medium: "h-9 w-9 p-0 text-[13px]",
-  large: "h-11 w-11 p-0 text-[13px]",
+  chip: "h-[26px] w-[26px] p-0 text-[13px]",
+  small: "h-8 w-8 p-0 text-[15px]",
+  medium: "h-9 w-9 p-0 text-[15px]",
+  large: "h-11 w-11 p-0 text-[16px]",
 };
 
 const tertiarySizeClassName: Record<ButtonSize, string> = {
-  chip: "gap-1.5 pb-[7px] text-[11px] leading-4",
-  small: "gap-2 pb-[9px] text-[13px] leading-4",
+  chip: "gap-1.5 pb-[7px] text-[13px] leading-4",
+  small: "gap-2 pb-[9px] text-[15px] leading-5",
   medium: "gap-2 pb-[10px] text-[15px] leading-5",
   large: "gap-2.5 pb-[11px] text-[17px] leading-6",
 };

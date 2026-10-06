@@ -104,7 +104,7 @@ export default function Textarea({
           <span
             id={messageId}
             className={cn(
-              "text-[13px] leading-[18px]",
+              "text-[15px] leading-5",
               error && !disabled ? "text-primary" : "text-muted-foreground",
             )}
           >

@@ -102,7 +102,7 @@ export default function Choice({
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="text-foreground">{label}</span>
           {hint ? (
-            <span className="text-[13px] leading-[18px] text-muted-foreground">
+            <span className="text-[15px] leading-5 text-muted-foreground">
               {hint}
             </span>
           ) : null}
@@ -144,7 +144,7 @@ export function ChoiceGroup({
       {error || hint ? (
         <span
           className={cn(
-            "text-[13px] leading-[18px]",
+            "text-[15px] leading-5",
             error ? "text-primary" : "text-muted-foreground",
           )}
         >
