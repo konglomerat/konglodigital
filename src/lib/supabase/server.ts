@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { resilientSupabaseFetch } from "./fetch";
+
 const requiredEnv = (name: string) => {
   const value = process.env[name];
   if (!value) {
@@ -18,6 +20,7 @@ export const createSupabaseServerClient = async (options?: {
   const readOnly = options?.readOnly ?? false;
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    global: { fetch: resilientSupabaseFetch },
     cookies: {
       getAll() {
         return cookieStore.getAll();
