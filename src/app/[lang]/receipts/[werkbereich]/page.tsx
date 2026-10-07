@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import Notice from "@/components/knglmrt/Notice";
+import { loadAllowedCostCenters } from "@/lib/access/server";
 import {
   type BuchhaltungWerkbereich,
   findBuchhaltungWerkbereich,
+  isCostCenterAllowed,
 } from "@/lib/buchhaltung-werkbereiche";
 import { getBuchhaltungWerkbereiche } from "@/lib/buchhaltung-werkbereiche-server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 
+import { NoAccessNotice } from "../../admin/AccessGuard";
 import WerkbereichReceipts from "../WerkbereichReceipts";
 
 type WerkbereichPageProps = {
@@ -54,6 +58,16 @@ export default async function WerkbereichReceiptsPage({
 
   if (!werkbereich) {
     notFound();
+  }
+
+  const { supabase } = await getServerSession();
+  const allowed = await loadAllowedCostCenters(
+    supabase,
+    await getServerAccess(),
+    "receipts.view",
+  );
+  if (!isCostCenterAllowed(werkbereich.value, allowed)) {
+    return <NoAccessNotice />;
   }
 
   return <WerkbereichReceipts key={werkbereich.value} werkbereich={werkbereich} />;

@@ -5,6 +5,9 @@ import { GoogleGenAI } from "@google/genai";
 import { toFile } from "openai/uploads";
 import sharp from "sharp";
 
+import { canEditResource } from "@/lib/access/resource-access";
+import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createOpenAIClient } from "@/lib/openai";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
@@ -192,6 +195,26 @@ export const POST = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const resourceRow = row as ResourceRow & {
+    owner_id?: string | null;
+    type?: string | null;
+  };
+  if (
+    !canEditResource(await loadUserAccess(supabase, data.user), {
+      ownerId: resourceRow.owner_id,
+      type: resourceRow.type,
+    })
+  ) {
+    return forbiddenResponse("Für diesen Eintrag fehlt dir das Bearbeitungsrecht.");
+  }
+  // Wer nicht Eigentümer ist, schreibt über den Service-Client — die RLS
+  // kennt nur Eigentümer.
+  const writeSupabase = (
+    resourceRow.owner_id === data.user.id
+      ? supabase
+      : createSupabaseAdminClient()
+  ) as typeof supabase;
+
   const existingUrls = Array.isArray((row as ResourceRow).images)
     ? ((row as ResourceRow).images ?? []).filter(
         (url): url is string =>
@@ -371,7 +394,7 @@ export const POST = async (
 
     const nextUrls = [publicUrl, ...existingUrls];
 
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await writeSupabase
       .from("resources")
       .update({
         image: publicUrl,

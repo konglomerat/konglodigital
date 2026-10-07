@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 
 import ShowcaseEditorClient from "../../ShowcaseEditorClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { hasRight } from "@/lib/permissions";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { buildShowcasePath } from "@/lib/showcase-path";
 import { loadShowcaseByIdentifier } from "../../showcase-data";
 
@@ -29,26 +29,27 @@ export default async function EditShowcasePage({
     notFound();
   }
 
-  const isAdmin = await userHasRole(supabase, user, "admin");
-  if (showcase.isPrivate && !isAdmin) {
+  const access = await loadUserAccess(supabase, user);
+  const canManagePrivacy = can(access, "showcase.private");
+  if (showcase.isPrivate && !canManagePrivacy) {
     notFound();
   }
 
+  // Eigene Showcases darf jeder bearbeiten und löschen, fremde nur mit der
+  // Rolle Showcase.
   const canEdit =
-    showcase.ownerId === user.id || hasRight(user, "resources:edit");
+    showcase.ownerId === user.id || can(access, "showcase.edit");
   if (!canEdit) {
     redirect(buildShowcasePath(showcase));
   }
-
-  const isShowcaseOwner = showcase.ownerId === user.id;
-  const canDelete = isShowcaseOwner || isAdmin;
+  const canDelete = canEdit;
 
   return (
     <ShowcaseEditorClient
       mode="edit"
       initialShowcase={showcase}
       canDelete={canDelete}
-      canManagePrivacy={isAdmin}
+      canManagePrivacy={canManagePrivacy}
     />
   );
 }

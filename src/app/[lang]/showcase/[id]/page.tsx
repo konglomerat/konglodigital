@@ -18,8 +18,8 @@ import { localizePathname } from "@/i18n/config";
 import { buildShowcasePath } from "@/lib/showcase-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { hasRight } from "@/lib/permissions";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
@@ -36,8 +36,8 @@ const loadCachedShowcase = cache(async (id: string) =>
 
 const canViewShowcase = (
   showcase: Awaited<ReturnType<typeof loadShowcaseByIdentifier>>,
-  isAdmin: boolean,
-) => Boolean(showcase && (!showcase.isPrivate || isAdmin));
+  canSeePrivate: boolean,
+) => Boolean(showcase && (!showcase.isPrivate || canSeePrivate));
 
 const normalizeLocale = (lang?: string): Locale =>
   lang === "en" ? "en" : "de";
@@ -119,10 +119,11 @@ export async function generateMetadata({
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const isAdmin = user
-      ? await userHasRole(supabase, user, "admin")
-      : false;
-    if (!canViewShowcase(showcase, isAdmin)) {
+    const canSeePrivate = can(
+      await loadUserAccess(supabase, user),
+      "showcase.private",
+    );
+    if (!canViewShowcase(showcase, canSeePrivate)) {
       return { robots: { index: false, follow: false } };
     }
   }
@@ -231,10 +232,8 @@ export default async function ShowcaseDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isAdmin = user
-    ? await userHasRole(supabase, user, "admin")
-    : false;
-  if (!canViewShowcase(showcase, isAdmin)) {
+  const access = await loadUserAccess(supabase, user);
+  if (!canViewShowcase(showcase, can(access, "showcase.private"))) {
     notFound();
   }
 
@@ -244,11 +243,12 @@ export default async function ShowcaseDetailPage({
     redirect(canonicalPath);
   }
 
+  // Eigene Showcases darf jeder bearbeiten und löschen, fremde nur mit der
+  // Rolle Showcase.
   const canEdit = Boolean(
-    user && (showcase.ownerId === user.id || hasRight(user, "resources:edit")),
+    user && (showcase.ownerId === user.id || can(access, "showcase.edit")),
   );
-  const isShowcaseOwner = Boolean(user && showcase.ownerId === user.id);
-  const canDelete = Boolean(user && (isShowcaseOwner || isAdmin));
+  const canDelete = canEdit;
   const heroMedia =
     showcase.images?.filter(
       (media): media is string => typeof media === "string",

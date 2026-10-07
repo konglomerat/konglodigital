@@ -6,7 +6,12 @@ import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { userHasRole } from "@/lib/roles";
+import {
+  canDeleteResource,
+  canEditResource,
+} from "@/lib/access/resource-access";
+import { can } from "@/lib/access/access";
+import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
@@ -960,7 +965,15 @@ export const GET = async (
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: row, error } = await supabase
+  // Private Einträge sieht die RLS nur für Eigentümer; mit showcase.private
+  // liest der Service-Client.
+  const canSeePrivate = can(
+    await loadUserAccess(supabase, data.user),
+    "showcase.private",
+  );
+  const { data: row, error } = await (
+    canSeePrivate ? createSupabaseAdminClient() : supabase
+  )
     .from("resources")
     .select("*")
     .eq("id", params.id)
@@ -971,10 +984,7 @@ export const GET = async (
   }
 
   const resourceRow = row as ResourceRow;
-  if (
-    resourceRow.is_private &&
-    !(await userHasRole(supabase, data.user, "admin"))
-  ) {
+  if (resourceRow.is_private && !canSeePrivate) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -1005,11 +1015,13 @@ export const PUT = async (
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // Berechtigungen prüft der Code unten; der Service-Client findet auch
+  // private Einträge, die die RLS nur ihren Eigentümern zeigt.
   const { data: existingResource, error: existingResourceError } =
-    await supabase
+    await adminSupabase
       .from("resources")
       .select(
-        "owner_id, map_features, image, images, media_previews, media_posters, workshop_resource_id, is_private",
+        "owner_id, type, map_features, image, images, media_previews, media_posters, workshop_resource_id, is_private",
       )
       .eq("id", params.id)
       .maybeSingle();
@@ -1025,10 +1037,27 @@ export const PUT = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // Eigene Einträge immer, fremde nur mit der Rolle (canEditResource). Wer
+  // nicht Eigentümer ist, schreibt über den Service-Client — die RLS kennt
+  // nur Eigentümer.
+  const isOwnResource = existingResource.owner_id === data.user.id;
+  const access = await loadUserAccess(supabase, data.user);
+  if (
+    !canEditResource(access, {
+      ownerId: existingResource.owner_id,
+      type: existingResource.type,
+    })
+  ) {
+    return forbiddenResponse("Für diesen Eintrag fehlt dir das Bearbeitungsrecht.");
+  }
+  const writeSupabase = (
+    isOwnResource ? supabase : adminSupabase
+  ) as typeof supabase;
+
   const payload = await readResourcePayload(request);
   if (
     (payload.isPrivate ?? false) !== (existingResource.is_private ?? false) &&
-    !(await userHasRole(supabase, data.user, "admin"))
+    !can(access, "showcase.private")
   ) {
     return NextResponse.json(
       { error: "Only admins can change project privacy." },
@@ -1269,7 +1298,7 @@ export const PUT = async (
     });
   }
 
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await writeSupabase
     .from("resources")
     .update(updateData)
     .eq("id", params.id)
@@ -1294,7 +1323,7 @@ export const PUT = async (
     console.error("Unable to persist resource pretty title:", prettyTitleError);
   }
 
-  await setResourceLinks(supabase, params.id, relatedResourceIds);
+  await setResourceLinks(writeSupabase, params.id, relatedResourceIds);
 
   const workshopById = await getWorkshopResourcesMap(supabase, [
     (updated as ResourceRow).workshop_resource_id ?? null,
@@ -1347,23 +1376,19 @@ export const DELETE = async (
     typeof row.type === "string" &&
     row.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
 
-  if (isShowcase) {
-    const isOwner = row.owner_id === data.user.id;
-    const isAdmin = isOwner
-      ? false
-      : await userHasRole(supabase, data.user, "admin");
-    if (!isOwner && !isAdmin) {
-      return NextResponse.json(
-        { error: "You can only delete your own showcases." },
-        { status: 403 },
-      );
-    }
+  // Inventar nur mit resources.delete, Showcases auch die eigenen. Gelöscht
+  // wird nach der Prüfung immer über den Service-Client — die RLS erlaubt
+  // nur das Löschen eigener Showcases.
+  if (
+    !canDeleteResource(await loadUserAccess(supabase, data.user), {
+      ownerId: row.owner_id,
+      type: row.type,
+    })
+  ) {
+    return forbiddenResponse("Für diesen Eintrag fehlt dir das Löschrecht.");
   }
 
-  // Showcase deletion has been authorized above, so the admin client lets an
-  // administrator delete any showcase even when they do not have a broad
-  // resources:delete right. Non-showcase resources retain their existing RLS.
-  const deleteClient = isShowcase ? adminSupabase : supabase;
+  const deleteClient = adminSupabase;
 
   const { error: deleteLinksError } = await deleteClient
     .from("resource_links")

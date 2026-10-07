@@ -1,39 +1,20 @@
 import { redirect } from "next/navigation";
 
-import { userCanAccessModule } from "@/lib/roles";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getServerSession } from "@/lib/server-session";
 
 import VerwaltungShell from "./VerwaltungShell";
 
+// Zugriff prüft jede Seite selbst über AccessGuard bzw. can() — der Rahmen
+// bleibt stehen, damit man von „Kein Zugriff" aus weiternavigieren kann.
 export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const { data } = await supabase.auth.getUser();
+  const { user } = await getServerSession();
 
-  if (!data.user) {
-    redirect("/login?redirectedFrom=/admin/users");
-  }
-
-  const [canAccessAdmin, canAccessVolkshaus] = await Promise.all([
-    userCanAccessModule(supabase, data.user, "admin"),
-    userCanAccessModule(supabase, data.user, "volkshaus"),
-  ]);
-
-  if (!canAccessAdmin && !canAccessVolkshaus) {
-    return (
-      // Der Rahmen bleibt stehen, damit man von hier weiternavigieren kann.
-      <VerwaltungShell>
-        <section className="border border-destructive-border bg-destructive-soft p-6">
-          <h1 className="text-destructive">Kein Zugriff</h1>
-          <p className="mt-2 text-destructive">
-            Für diesen Bereich fehlt dir die erforderliche Rolle.
-          </p>
-        </section>
-      </VerwaltungShell>
-    );
+  if (!user) {
+    redirect("/login?redirectedFrom=/admin");
   }
 
   return <VerwaltungShell>{children}</VerwaltungShell>;

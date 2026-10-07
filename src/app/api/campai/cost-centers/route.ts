@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { can } from "@/lib/access/access";
+import {
+  forbiddenResponse,
+  getBuchhaltungRouteAccess,
+  loadUserAccess,
+} from "@/lib/access/server";
+import { isCostCenterAllowed } from "@/lib/buchhaltung-werkbereiche";
 import {
   addCampaiCostCenter,
   fetchCampaiCostCenters,
@@ -8,16 +15,21 @@ import {
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const GET = async (request: NextRequest) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.view");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   try {
     const includeNonBookable =
       request.nextUrl.searchParams.get("includeNonBookable") === "1";
-    const costCenters = await fetchCampaiCostCenters({ includeNonBookable });
+    // Mit Bereichs-Buchhaltung nur die eigenen Kostenstellen — so bieten die
+    // Buchungsformulare gar keine fremden an.
+    const costCenters = (
+      await fetchCampaiCostCenters({ includeNonBookable })
+    ).filter((option) =>
+      isCostCenterAllowed(option.value, routeAccess.allowedCostCenters),
+    );
 
     return NextResponse.json({ costCenters });
   } catch (error) {
@@ -34,6 +46,11 @@ export const POST = async (request: NextRequest) => {
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (
+    !can(await loadUserAccess(supabase, data.user), "receipts.edit")
+  ) {
+    return forbiddenResponse();
   }
 
   const body = (await request.json().catch(() => ({}))) as {

@@ -19,7 +19,9 @@ import {
   parseStatus,
 } from "@/lib/ehrenamtsbonus";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const POST = async (
@@ -33,7 +35,7 @@ export const POST = async (
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await userHasRole(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
@@ -75,7 +77,10 @@ export const POST = async (
     );
   }
 
-  const { data: current, error: loadError } = await supabase
+  // Berechtigung ist geprüft; Anträge anderer liest und ändert der
+  // Service-Client.
+  const adminClient = createSupabaseAdminClient();
+  const { data: current, error: loadError } = await adminClient
     .from(EHRENAMTSBONUS_TABLE)
     .select("status")
     .eq("id", id)
@@ -126,7 +131,7 @@ export const POST = async (
           decided_at: now,
         };
 
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await adminClient
     .from(EHRENAMTSBONUS_TABLE)
     .update(patch)
     .eq("id", id)

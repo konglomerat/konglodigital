@@ -6,16 +6,11 @@ import {
   getCampaiActiveContactById,
   splitCampaiContactName,
 } from "@/lib/campai-contact-directory";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { upsertMemberProfile } from "@/lib/member-profiles";
-import { getInitialUserRoles, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import {
-  getUserAccessByUserId,
-  getUserRightsFromAppMetadata,
-  syncUserAccessToAuthMetadata,
-  upsertUserAccess,
-} from "@/lib/user-access";
 
 const findExistingUserByEmail = async (
   adminClient: ReturnType<typeof createSupabaseAdminClient>,
@@ -57,7 +52,7 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!(await userCanAccessModule(supabase, authData.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, authData.user), "users.manage")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -97,7 +92,6 @@ export const POST = async (request: NextRequest) => {
       last_name: splitName.lastName,
     };
     const memberProfile = buildCampaiProfileData(linkedContact);
-    const initialRoles = getInitialUserRoles(linkedContact.tags);
 
     const publicBaseUrl =
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
@@ -126,23 +120,6 @@ export const POST = async (request: NextRequest) => {
       }
 
       await upsertMemberProfile(adminClient, existingUser.id, memberProfile);
-
-      const existingAccess = await getUserAccessByUserId(
-        adminClient,
-        existingUser.id,
-      );
-      const nextAccess =
-        existingAccess ??
-        (await upsertUserAccess(adminClient, {
-          userId: existingUser.id,
-          roles: initialRoles,
-          rights: getUserRightsFromAppMetadata(existingUser),
-        }));
-      await syncUserAccessToAuthMetadata(
-        adminClient,
-        existingUser,
-        nextAccess,
-      );
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         normalizedEmail,
@@ -179,12 +156,6 @@ export const POST = async (request: NextRequest) => {
     }
 
     await upsertMemberProfile(adminClient, invitedUser.id, memberProfile);
-    const createdAccess = await upsertUserAccess(adminClient, {
-      userId: invitedUser.id,
-      roles: initialRoles,
-      rights: getUserRightsFromAppMetadata(invitedUser),
-    });
-    await syncUserAccessToAuthMetadata(adminClient, invitedUser, createdAccess);
 
     return NextResponse.json({ ok: true, status: "invited" });
   } catch (error) {

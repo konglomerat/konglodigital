@@ -5,9 +5,9 @@ import ExifReader from "exifreader";
 import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import { hasRight } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
 import { describeInventoryImages } from "@/lib/openai-vision";
@@ -949,26 +949,17 @@ export const POST = async (request: NextRequest) => {
       { status: 400 },
     );
   }
-  const isShowcase = payload.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
-  const canCreateByRight = hasRight(data.user, "resources:create");
   if (
     payload.isPrivate &&
-    !(await userHasRole(supabase, data.user, "admin"))
+    !can(await loadUserAccess(supabase, data.user), "showcase.private")
   ) {
     return NextResponse.json(
       { error: "Only admins can create private showcases." },
       { status: 403 },
     );
   }
-  if (!canCreateByRight && !isShowcase) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
-  }
-  const writeSupabase = (
-    canCreateByRight ? supabase : adminSupabase
-  ) as typeof supabase;
+  // Anlegen darf jedes angemeldete Mitglied; der Service-Client schreibt.
+  const writeSupabase = adminSupabase as typeof supabase;
   const hasIncomingMedia =
     payload.imageFiles.length > 0 ||
     (Array.isArray(payload.imageUrls) && payload.imageUrls.length > 0);

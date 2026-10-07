@@ -14,7 +14,8 @@ import type { EhrenamtsbonusAdminRequest } from "@/lib/ehrenamtsbonus";
 import { listAllRequests } from "@/lib/ehrenamtsbonus";
 import type { MemberProfile } from "@/lib/member-profiles";
 import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -30,12 +31,13 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await userHasRole(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
   try {
-    const requests = await listAllRequests(supabase);
+    // Berechtigung ist geprüft; alle Anträge liest der Service-Client.
+    const requests = await listAllRequests(createSupabaseAdminClient());
 
     // Antragsteller, Entscheidende und Stornierende in einem Rutsch — alle
     // Namen kommen aus derselben Tabelle.

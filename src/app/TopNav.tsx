@@ -14,7 +14,8 @@ import { getInitials, getTopNavSections } from "./topNavSections";
 type TopNavProps = {
   isAuthenticated: boolean;
   currentUserDisplayName: string | null;
-  adminAreaHref: string;
+  /** null, wenn der Nutzer kein Ressort der Verwaltung öffnen darf. */
+  adminAreaHref: string | null;
   links: SiteNavItem[];
   inventoryHref: string;
 };
@@ -81,13 +82,15 @@ export default async function TopNav({
                   {currentUserDisplayName ?? tx("Profil")}
                 </span>
               </Link>
-              <Button
-                href={localizePathname(adminAreaHref, locale)}
-                kind="admin"
-                icon={<Face number={6} size={24} />}
-              >
-                {tx("Verwaltung")}
-              </Button>
+              {adminAreaHref ? (
+                <Button
+                  href={localizePathname(adminAreaHref, locale)}
+                  kind="admin"
+                  icon={<Face number={6} size={24} />}
+                >
+                  {tx("Verwaltung")}
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div className="flex items-center gap-2">

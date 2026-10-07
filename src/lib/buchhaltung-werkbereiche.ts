@@ -2,6 +2,8 @@
 // eine eigene Unterseite unter /receipts/<slug>, die dreistelligen mit
 // denselben ersten beiden Ziffern sind ihre Unterprojekte (571 → 57 Holz).
 // Rein und ohne Server-Abhängigkeit — Sidenav und Tabelle teilen sich das.
+import { ALL_SCOPES, type AllowedScopes } from "@/lib/access/access";
+import type { Scope } from "@/lib/access/scopes";
 
 export type BuchhaltungWerkbereich = {
   /** Zweistellige Kostenstelle 2, z. B. "57". */
@@ -65,6 +67,81 @@ export const toBuchhaltungWerkbereiche = (
       return { value: option.value.trim(), label: option.label, slug };
     });
 };
+
+// --- Bereichsfilter -------------------------------------------------------
+// Wer Buchhaltung nur für einzelne Geltungsbereiche hat, sieht nur deren
+// Kostenstellen 2 samt Unterprojekten (57 → 571, 572 …). Kostenstellen ohne
+// Bereich (Basis, Rücklagen …) und Belege ohne Kostenstelle 2 bleiben der
+// globalen Buchhaltung vorbehalten.
+
+/** Zweistellige Kostenstellen 2 — oder alle. */
+export type AllowedCostCenters = typeof ALL_SCOPES | string[];
+
+export const getAllowedCostCenters = (
+  allowed: AllowedScopes,
+  scopes: readonly Scope[],
+): AllowedCostCenters => {
+  if (allowed === ALL_SCOPES) {
+    return ALL_SCOPES;
+  }
+
+  return Array.from(
+    new Set(
+      scopes
+        .filter((scope) => allowed.includes(scope.id))
+        .map((scope) => scope.campaiCostCenter?.trim() ?? "")
+        .filter(isWerkbereichCostCenter),
+    ),
+  ).sort();
+};
+
+export const isCostCenterAllowed = (
+  value: string | number | null | undefined,
+  allowed: AllowedCostCenters,
+): boolean => {
+  if (allowed === ALL_SCOPES) {
+    return true;
+  }
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  const normalized = String(value).trim();
+  return allowed.some((werkbereich) =>
+    belongsToWerkbereich(normalized, werkbereich),
+  );
+};
+
+export const filterAllowedCostCenters = <T extends string | number>(
+  values: readonly T[],
+  allowed: AllowedCostCenters,
+): T[] => values.filter((value) => isCostCenterAllowed(value, allowed));
+
+/** Ein Beleg mit Positionen in mehreren Bereichen ist sichtbar, sobald einer
+ *  davon erlaubt ist — so wie er auch in der Liste des Bereichs auftaucht. */
+export const canViewReceiptCostCenters = (
+  costCenters: readonly (string | number | null)[],
+  allowed: AllowedCostCenters,
+) =>
+  allowed === ALL_SCOPES ||
+  costCenters.some((value) => isCostCenterAllowed(value, allowed));
+
+/** Ändern dagegen nur, wenn jede Position in einem erlaubten Bereich liegt. */
+export const canEditReceiptCostCenters = (
+  costCenters: readonly (string | number | null)[],
+  allowed: AllowedCostCenters,
+) =>
+  allowed === ALL_SCOPES ||
+  (costCenters.length > 0 &&
+    costCenters.every((value) => isCostCenterAllowed(value, allowed)));
+
+export const filterAllowedWerkbereiche = (
+  werkbereiche: readonly BuchhaltungWerkbereich[],
+  allowed: AllowedCostCenters,
+): BuchhaltungWerkbereich[] =>
+  werkbereiche.filter((werkbereich) =>
+    isCostCenterAllowed(werkbereich.value, allowed),
+  );
 
 export const getWerkbereichHref = (werkbereich: BuchhaltungWerkbereich) =>
   `/receipts/${werkbereich.slug}`;

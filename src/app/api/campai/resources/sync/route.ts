@@ -4,7 +4,8 @@ import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
@@ -17,7 +18,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!hasRight(data.user, "resources:edit") && !hasRight(data.user, "resources:create")) {
+  if (!can(await loadUserAccess(supabase, data.user), "resources.edit")) {
     return NextResponse.json({ error: "Insufficient permissions." }, { status: 403 });
   }
 

@@ -25,7 +25,8 @@ import {
 type MobileTopNavProps = {
   isAuthenticated: boolean;
   currentUserDisplayName: string | null;
-  adminAreaHref: string;
+  /** null, wenn der Nutzer kein Ressort der Verwaltung öffnen darf. */
+  adminAreaHref: string | null;
   links: SiteNavItem[];
   inventoryHref: string;
 };
@@ -159,15 +160,17 @@ export default function MobileTopNav({
                       {currentUserDisplayName ?? tx("Profil")}
                     </span>
                   </Link>
-                  <Button
-                    href={localizePathname(adminAreaHref, locale)}
-                    kind="admin"
-                    fullWidth
-                    icon={<Face number={6} size={24} />}
-                    onClick={close}
-                  >
-                    {tx("Verwaltung")}
-                  </Button>
+                  {adminAreaHref ? (
+                    <Button
+                      href={localizePathname(adminAreaHref, locale)}
+                      kind="admin"
+                      fullWidth
+                      icon={<Face number={6} size={24} />}
+                      onClick={close}
+                    >
+                      {tx("Verwaltung")}
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">

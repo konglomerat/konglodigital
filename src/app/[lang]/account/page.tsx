@@ -3,7 +3,7 @@
 // nachladen muss, bevor Header und Abmelden-Button stehen.
 //
 // Wichtig für die gefühlte Geschwindigkeit: Hier wird ausschliesslich Supabase
-// befragt (Session, user_access, member_profiles) — kein Campai. Kontakt und
+// befragt (Session, role_assignments, member_profiles) — kein Campai. Kontakt und
 // Verträge lädt der Client nach dem ersten Paint über
 // /api/account/campai-profile.
 import { Suspense } from "react";
@@ -13,14 +13,15 @@ import {
   getMemberProfileByUserId,
   mergeUserMetadataWithMemberProfile,
 } from "@/lib/member-profiles";
-import { ROLE_LABELS } from "@/lib/roles";
-import { getServerSession, getServerSessionRoles } from "@/lib/server-session";
+import { listScopes } from "@/lib/access/assignments";
+import { describeAssignment } from "@/lib/access/labels";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 import AccountClient from "./AccountClient";
 import AccountSkeleton from "./AccountSkeleton";
 
 async function AccountContent() {
-  // Session und Rollen teilt sich die Seite über React-`cache` mit dem
-  // Layout — hier fällt dafür kein zusätzlicher Supabase-Aufruf mehr an.
+  // Die Session teilt sich die Seite über React-`cache` mit dem Layout — hier
+  // fällt dafür kein zusätzlicher Supabase-Aufruf mehr an.
   const { supabase, user } = await getServerSession();
 
   if (!user) {
@@ -29,18 +30,21 @@ async function AccountContent() {
     );
   }
 
-  // Rollen, Profil und Ehrenamtsbonus hängen nicht voneinander ab — parallel
-  // spart einen kompletten Roundtrip vor dem Header. Fehlt die Bonus-Tabelle
-  // noch, kommt die Liste leer zurück statt zu brechen.
-  const [userRoles, memberProfile, bonusRequests] = await Promise.all([
-    getServerSessionRoles(),
+  // Zuweisungen, Profil und Ehrenamtsbonus hängen nicht voneinander ab —
+  // parallel spart einen kompletten Roundtrip vor dem Header. Fehlt die
+  // Bonus-Tabelle noch, kommt die Liste leer zurück statt zu brechen.
+  const [access, scopes, memberProfile, bonusRequests] = await Promise.all([
+    getServerAccess(),
+    listScopes(supabase),
     getMemberProfileByUserId(supabase, user.id),
     listOwnRequests(supabase, user.id),
   ]);
 
   return (
     <AccountClient
-      roleLabels={userRoles.map((role) => ROLE_LABELS[role])}
+      roleLabels={(access?.assignments ?? []).map((assignment) =>
+        describeAssignment(assignment, scopes),
+      )}
       activeBonus={findActiveRequest(bonusRequests)}
       initialUser={{
         email: user.email ?? "",

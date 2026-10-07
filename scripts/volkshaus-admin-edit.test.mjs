@@ -303,7 +303,12 @@ function apiFixture({
         throw new Error("Unexpected Supabase access");
       },
     },
-    "@/lib/roles": { userCanAccessModule: async () => authorized },
+    "@/lib/access/access": { can: () => authorized },
+    "@/lib/access/scopes": { VOLKSHAUS_SCOPE_ID: "vhc" },
+    "@/lib/access/server": {
+      loadUserAccess: async () => null,
+      loadAccessOf: async () => null,
+    },
     "@/lib/campai-booking-tags": {
       getCampaiBookingDisplayName: () => "Test Team",
     },

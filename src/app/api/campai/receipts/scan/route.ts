@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { canAnywhere } from "@/lib/access/access";
+import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -65,6 +67,11 @@ export const POST = async (request: NextRequest) => {
 
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (
+    !canAnywhere(await loadUserAccess(supabase, data.user), "receipts.edit")
+  ) {
+    return forbiddenResponse();
   }
 
   try {

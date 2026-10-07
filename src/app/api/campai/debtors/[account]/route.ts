@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { canAnywhere } from "@/lib/access/access";
+import type { Permission } from "@/lib/access/role-config";
+import {
+	forbiddenResponse,
+	getRouteAccess,
+	unauthorizedResponse,
+} from "@/lib/access/server";
 import {
 	buildDebtorPayload,
 	type CampaiDebtorPaymentMethodType,
@@ -15,19 +21,31 @@ const requiredEnv = (name: string) => {
 	return value;
 };
 
-const ensureAuthenticatedUser = async (request: NextRequest) => {
-	const { supabase } = createSupabaseRouteClient(request);
-	const { data } = await supabase.auth.getUser();
-	return data.user ?? null;
+// Angemeldet und mit der Buchhaltungs-Berechtigung in mindestens einem Bereich.
+const ensureBuchhaltungUser = async (
+	request: NextRequest,
+	permission: Permission,
+) => {
+	const { user, access } = await getRouteAccess(request);
+	if (!user) {
+		return { user: null, response: unauthorizedResponse() };
+	}
+	if (!canAnywhere(access, permission)) {
+		return { user: null, response: forbiddenResponse() };
+	}
+	return { user, response: null };
 };
 
 export const POST = async (
 	request: NextRequest,
 	context: { params: Promise<{ account: string }> },
 ) => {
-	const user = await ensureAuthenticatedUser(request);
+	const { user, response } = await ensureBuchhaltungUser(
+		request,
+		"receipts.edit",
+	);
 	if (!user) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		return response;
 	}
 
 	const { account } = await context.params;

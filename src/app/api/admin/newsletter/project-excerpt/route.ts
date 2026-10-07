@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -18,7 +19,7 @@ export const PATCH = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

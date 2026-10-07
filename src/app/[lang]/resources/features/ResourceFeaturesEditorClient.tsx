@@ -47,6 +47,8 @@ import {
   type ResourceFormValues,
 } from "../resource-form-utils";
 import type { RelatedResourceSelectOption } from "../ResourceForm";
+import { canDeleteResource } from "@/lib/access/resource-access";
+import { useAccess } from "@/lib/access/use-access";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
 import {
@@ -631,6 +633,7 @@ export default function ResourceFeaturesEditorClient({
   embedded = false,
 }: ResourceFeaturesEditorClientProps = {}) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
+  const access = useAccess();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialResourceId = resourceId ?? searchParams.get("resourceId") ?? "";
@@ -2278,15 +2281,22 @@ export default function ResourceFeaturesEditorClient({
               {tx("Back to resource")}
             </Button>
           ) : null}
-          <Button
-            type="button"
-            kind="danger-secondary"
-            icon={faTrash}
-            onClick={handleDeleteResource}
-            disabled={!selectedResourceId || deletingResource}
-          >
-            {deletingResource ? tx("Deleting...") : tx("Delete")}
-          </Button>
+          {selectedResource &&
+          // Die Liste kennt keine Eigentümer; im Editor zählt nur die Rolle.
+          canDeleteResource(access, {
+            ownerId: null,
+            type: selectedResource.type,
+          }) ? (
+            <Button
+              type="button"
+              kind="danger-secondary"
+              icon={faTrash}
+              onClick={handleDeleteResource}
+              disabled={deletingResource}
+            >
+              {deletingResource ? tx("Deleting...") : tx("Delete")}
+            </Button>
+          ) : null}
           <Button
             type="button"
             kind="primary"

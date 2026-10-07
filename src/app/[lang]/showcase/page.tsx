@@ -2,7 +2,8 @@ import PageTitle from "../components/PageTitle";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import ShowcaseCard from "./ShowcaseCard";
 import ShowcaseOfTheMonthCard from "./ShowcaseOfTheMonthCard";
 import ShowcaseUploadPromptCard from "./ShowcaseUploadPromptCard";
@@ -23,10 +24,13 @@ export default async function ShowcasesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isAdmin = user ? await userHasRole(supabase, user, "admin") : false;
+  const canSeePrivate = can(
+    await loadUserAccess(supabase, user),
+    "showcase.private",
+  );
   const [publicShowcases, privateShowcases] = await Promise.all([
     loadShowcases(),
-    isAdmin ? loadPrivateShowcasesForAdmin() : Promise.resolve([]),
+    canSeePrivate ? loadPrivateShowcasesForAdmin() : Promise.resolve([]),
   ]);
   const showcases = [...publicShowcases, ...privateShowcases].sort(
     (left, right) =>

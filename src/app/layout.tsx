@@ -15,7 +15,12 @@ import "./globals.css";
 import "./knglmrt-theme.css";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
-import { getServerSession, getServerSessionRoles } from "@/lib/server-session";
+import { canPreviewAccess } from "@/lib/access/server";
+import {
+  getServerAccess,
+  getServerRealAccess,
+  getServerSession,
+} from "@/lib/server-session";
 import { I18nProvider } from "@/i18n/client";
 import { getServerI18n } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
@@ -118,8 +123,11 @@ export default async function RootLayout({
   const currentUserDisplayName = user
     ? getCampaiBookingDisplayName(user)
     : null;
-  const userRoles = await getServerSessionRoles();
-  const adminAreaHref = getVerwaltungEntryHref(userRoles);
+  // Ohne sichtbares Ressort keine Verwaltung — außer für Admins in einer
+  // Rechte-Vorschau, die sonst nicht mehr an den Schalter zum Beenden kämen.
+  const adminAreaHref =
+    getVerwaltungEntryHref(await getServerAccess()) ??
+    (user && canPreviewAccess(await getServerRealAccess()) ? "/admin" : null);
   const navigation = await navigationPromise;
   const headerLinks = localizeNavigationItems(navigation.header ?? DEFAULT_HEADER_LINKS, locale);
   const footerLinks = localizeNavigationItems(navigation.footer ?? DEFAULT_FOOTER_LINKS, locale);
