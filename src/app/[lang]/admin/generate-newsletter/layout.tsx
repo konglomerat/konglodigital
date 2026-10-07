@@ -1,7 +1,7 @@
-import ModuleAccessGuard from "../ModuleAccessGuard";
+import AccessGuard from "../AccessGuard";
 
 export default function GenerateNewsletterLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <ModuleAccessGuard module="admin">{children}</ModuleAccessGuard>;
+  return <AccessGuard permissions="newsletter.manage">{children}</AccessGuard>;
 }

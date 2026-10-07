@@ -13,7 +13,8 @@ import {
   type RapidmailRecipientList,
 } from "@/lib/rapidmail";
 import { isImageUrl } from "@/lib/resource-media";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type NewsletterShowcase = {
@@ -88,7 +89,7 @@ export default async function GenerateNewsletterPage() {
     );
   }
 
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return null;
   }
 

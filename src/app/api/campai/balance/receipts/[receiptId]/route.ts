@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { extractReceiptCostCenters } from "@/lib/access/campai-receipt-cost-centers";
+import {
+  costCenterForbiddenResponse,
+  getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import {
+  canEditReceiptCostCenters,
+  canViewReceiptCostCenters,
+} from "@/lib/buchhaltung-werkbereiche";
 import { addCampaiReceiptNote } from "@/lib/campai-receipt-notes";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -55,10 +63,9 @@ export const GET = async (
   request: NextRequest,
   context: { params: Promise<{ receiptId: string }> },
 ) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.view");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   const { receiptId } = await context.params;
@@ -73,6 +80,14 @@ export const GET = async (
     const result = await fetchReceiptDetail(receiptId);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+    if (
+      !canViewReceiptCostCenters(
+        extractReceiptCostCenters(result.receipt),
+        routeAccess.allowedCostCenters,
+      )
+    ) {
+      return costCenterForbiddenResponse();
     }
     return NextResponse.json({ receipt: result.receipt });
   } catch (error) {
@@ -198,10 +213,9 @@ export const PATCH = async (
   request: NextRequest,
   context: { params: Promise<{ receiptId: string }> },
 ) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   const { receiptId } = await context.params;
@@ -282,6 +296,21 @@ export const PATCH = async (
 
     payload.positions = nextPositions;
 
+    // Vorher und nachher müssen alle Positionen in den eigenen Bereichen
+    // liegen — sonst ließe sich ein Beleg in einen fremden Bereich schieben.
+    if (
+      !canEditReceiptCostCenters(
+        extractReceiptCostCenters(receipt),
+        routeAccess.allowedCostCenters,
+      ) ||
+      !canEditReceiptCostCenters(
+        extractReceiptCostCenters({ positions: nextPositions }),
+        routeAccess.allowedCostCenters,
+      )
+    ) {
+      return costCenterForbiddenResponse();
+    }
+
     const updateResponse = await fetch(
       `${baseUrl}/receipts/${type}/${receiptId}`,
       {
@@ -321,10 +350,9 @@ export const POST = async (
   request: NextRequest,
   context: { params: Promise<{ receiptId: string }> },
 ) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   const { receiptId } = await context.params;
@@ -345,6 +373,22 @@ export const POST = async (
   }
 
   try {
+    const current = await fetchReceiptDetail(receiptId);
+    if (!current.ok) {
+      return NextResponse.json(
+        { error: current.error },
+        { status: current.status },
+      );
+    }
+    if (
+      !canViewReceiptCostCenters(
+        extractReceiptCostCenters(current.receipt),
+        routeAccess.allowedCostCenters,
+      )
+    ) {
+      return costCenterForbiddenResponse();
+    }
+
     const apiKey = requiredEnv("CAMPAI_API_KEY");
     const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
     const mandateId = requiredEnv("CAMPAI_MANDATE_ID");

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { canAnywhere } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { listCampaiReceipts } from "@/lib/campai-list-receipts";
 import {
@@ -45,7 +47,10 @@ export const GET = async (
   }
 
   const currentUserDisplayName = getCampaiBookingDisplayName(data.user).trim();
-  if (!currentUserDisplayName) {
+  if (
+    !currentUserDisplayName ||
+    !canAnywhere(await loadUserAccess(supabase, data.user), "receipts.view")
+  ) {
     return withRouteCookies(
       NextResponse.json({ error: "Forbidden" }, { status: 403 }),
       routeResponse,

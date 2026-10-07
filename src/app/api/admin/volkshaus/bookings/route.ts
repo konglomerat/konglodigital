@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { can } from "@/lib/access/access";
+import { listAssignments } from "@/lib/access/assignments";
+import { VOLKSHAUS_SCOPE_ID } from "@/lib/access/scopes";
+import { loadUserAccess, toUserAccess } from "@/lib/access/server";
 import { listMemberProfilesByUserIds } from "@/lib/member-profiles";
-import { normalizeUserRoles, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import { listUserAccessByUserIds } from "@/lib/user-access";
 import { listVolkshausBookings } from "@/lib/volkshaus-booking-store";
 
 const resolvePublicOrigin = (request: NextRequest) => {
@@ -25,7 +27,13 @@ export const GET = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
+  if (
+    !can(
+      await loadUserAccess(supabase, data.user),
+      "volkshaus.bookings.manage",
+      { scope: VOLKSHAUS_SCOPE_ID },
+    )
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,36 +51,31 @@ export const GET = async (request: NextRequest) => {
       Boolean(user.email_confirmed_at || user.last_sign_in_at),
     );
     const userIds = activeUsers.map((user) => user.id);
-    const [memberProfiles, accessByUserId] = await Promise.all([
+    const [memberProfiles, assignments] = await Promise.all([
       listMemberProfilesByUserIds(adminClient, userIds),
-      listUserAccessByUserIds(adminClient, userIds),
+      listAssignments(adminClient),
     ]);
-    const assignees = activeUsers
-      .map((user) => {
-        const memberProfile = memberProfiles.get(user.id);
-        const roles =
-          accessByUserId.get(user.id)?.roles ??
-          normalizeUserRoles(
-            user.app_metadata?.roles ?? user.app_metadata?.role,
-          );
-        return {
-          id: user.id,
-          email: user.email ?? "",
-          firstName:
-            typeof user.user_metadata?.first_name === "string"
-              ? user.user_metadata.first_name
-              : null,
-          lastName:
-            typeof user.user_metadata?.last_name === "string"
-              ? user.user_metadata.last_name
-              : null,
-          campaiName: memberProfile?.campaiName ?? null,
-          roles,
-        };
-      })
-      .filter(
-        (user) => user.roles.includes("admin") || user.roles.includes("vhc"),
-      );
+    // Zuweisbar ist, wer die Raumbuchung selbst bearbeiten darf.
+    const canManageBookings = (user: (typeof activeUsers)[number]) =>
+      can(toUserAccess(user, assignments), "volkshaus.bookings.manage", {
+        scope: VOLKSHAUS_SCOPE_ID,
+      });
+    const assignees = activeUsers.filter(canManageBookings).map((user) => {
+      const memberProfile = memberProfiles.get(user.id);
+      return {
+        id: user.id,
+        email: user.email ?? "",
+        firstName:
+          typeof user.user_metadata?.first_name === "string"
+            ? user.user_metadata.first_name
+            : null,
+        lastName:
+          typeof user.user_metadata?.last_name === "string"
+            ? user.user_metadata.last_name
+            : null,
+        campaiName: memberProfile?.campaiName ?? null,
+      };
+    });
     return NextResponse.json({ bookings, assignees });
   } catch (error) {
     return NextResponse.json(

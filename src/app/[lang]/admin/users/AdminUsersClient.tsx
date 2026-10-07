@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
-import type { UserRole } from "@/lib/roles";
-import Choice from "@/components/knglmrt/Choice";
+import AccessRulesExplainer from "@/app/[lang]/admin/users/AccessRulesExplainer";
+import { type Locale, localizePathname } from "@/i18n/config";
 import SearchField from "@/components/knglmrt/SearchField";
 import Badge from "@/components/knglmrt/Badge";
 import Dialog from "@/components/knglmrt/Dialog";
@@ -24,7 +25,8 @@ type ActiveProfile = {
   campaiMemberNumber: string | null;
   campaiDebtorAccount: number | null;
   campaiName: string | null;
-  roles: UserRole[];
+  /** „Buchhaltung · Holz" usw. — vergeben wird in der Profilansicht. */
+  roleLabels: string[];
 };
 
 type CampaiContactOption = {
@@ -38,13 +40,6 @@ type CampaiContactOption = {
 };
 
 const MAX_CAMPAI_RESULTS = 8;
-
-const ROLE_OPTIONS = [
-  { value: "admin", label: "Admin" },
-  { value: "vhc", label: "VHC" },
-  { value: "buchhaltung", label: "Buchhaltung" },
-  { value: "member", label: "Mitglied" },
-] as const satisfies ReadonlyArray<{ value: UserRole; label: string }>;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -73,12 +68,10 @@ const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   return data;
 };
 
-export default function AdminUsersClient() {
+export default function AdminUsersClient({ locale }: { locale: Locale }) {
   const [profiles, setProfiles] = useState<ActiveProfile[]>([]);
   const [profileListError, setProfileListError] = useState<string | null>(null);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
-  const [roleError, setRoleError] = useState<string | null>(null);
-  const [savingRoleForId, setSavingRoleForId] = useState<string | null>(null);
   const [campaiLinkError, setCampaiLinkError] = useState<string | null>(null);
   const [campaiContacts, setCampaiContacts] = useState<
     CampaiContactOption[] | null
@@ -92,9 +85,6 @@ export default function AdminUsersClient() {
   );
   const [campaiSearchTerm, setCampaiSearchTerm] = useState("");
   const [selectedCampaiContactId, setSelectedCampaiContactId] = useState("");
-  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
-  const [testEmailError, setTestEmailError] = useState<string | null>(null);
-  const [testEmailSuccess, setTestEmailSuccess] = useState<string | null>(null);
   const editingCampaiProfile = useMemo(
     () => profiles.find((profile) => profile.id === editingCampaiForId) ?? null,
     [editingCampaiForId, profiles],
@@ -241,43 +231,6 @@ export default function AdminUsersClient() {
     setCampaiLinkError(null);
   }, []);
 
-  const handleRolesChange = async (
-    profileId: string,
-    nextRoles: UserRole[],
-  ) => {
-    setSavingRoleForId(profileId);
-    setRoleError(null);
-
-    try {
-      const data = await fetchJson<{
-        profile: {
-          id: string;
-          roles: UserRole[];
-        };
-      }>("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: profileId, roles: nextRoles }),
-      });
-
-      setProfiles((currentProfiles) =>
-        currentProfiles.map((profile) =>
-          profile.id === data.profile.id
-            ? { ...profile, roles: data.profile.roles }
-            : profile,
-        ),
-      );
-    } catch (error) {
-      setRoleError(
-        error instanceof Error
-          ? error.message
-          : "Rollen konnten nicht gespeichert werden.",
-      );
-    } finally {
-      setSavingRoleForId(null);
-    }
-  };
-
   const handleCampaiLink = async (profileId: string) => {
     if (!selectedCampaiContactId) {
       setCampaiLinkError("Bitte waehle zuerst ein Campai-Konto aus.");
@@ -331,57 +284,15 @@ export default function AdminUsersClient() {
     }
   };
 
-  const handleSendTestEmail = async () => {
-    setIsSendingTestEmail(true);
-    setTestEmailError(null);
-    setTestEmailSuccess(null);
-
-    try {
-      await fetchJson<{ ok: true; recipient: string }>(
-        "/api/admin/test-email",
-        {
-          method: "POST",
-        },
-      );
-
-      setTestEmailSuccess(
-        "Test-E-Mail wurde an robert@wirewire.de angestossen.",
-      );
-    } catch (error) {
-      setTestEmailError(
-        error instanceof Error
-          ? error.message
-          : "Test-E-Mail konnte nicht gesendet werden.",
-      );
-    } finally {
-      setIsSendingTestEmail(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <SubPageTitle
         ressort="admin"
         title="Benutzer"
-        subTitle="Verwalte registrierte Benutzerprofile und ihre Rollen. Die Registrierung selbst läuft wieder direkt über Supabase-Mail links mit Mitgliedsabgleich."
-        links={[
-          {
-            label: isSendingTestEmail
-              ? "Sende Test-E-Mail ..."
-              : "Test-E-Mail an robert@wirewire.de senden",
-            onClick: () => {
-              void handleSendTestEmail();
-            },
-            disabled: isSendingTestEmail,
-            className: "px-4 py-2 text-sm",
-          },
-        ]}
+        subTitle="Registrierte Benutzerprofile. Rollen vergibst du in der Profilansicht einer Person. Die Registrierung selbst läuft über Supabase-Maillinks mit Mitgliedsabgleich."
       />
 
-      {testEmailError ? <Notice tone="rosa">{testEmailError}</Notice> : null}
-      {testEmailSuccess ? (
-        <Notice tone="blau">{testEmailSuccess}</Notice>
-      ) : null}
+      <AccessRulesExplainer />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -409,8 +320,6 @@ export default function AdminUsersClient() {
         {profileListError ? (
           <Notice tone="rosa">{profileListError}</Notice>
         ) : null}
-
-        {roleError ? <Notice tone="rosa">{roleError}</Notice> : null}
 
         {campaiLinkError && editingCampaiForId === null ? (
           <Notice tone="rosa">{campaiLinkError}</Notice>
@@ -440,12 +349,17 @@ export default function AdminUsersClient() {
                   profile.campaiName || fallbackName || profile.email;
                 const hasCampaiLink = Boolean(profile.campaiContactId);
                 const isEditingCampai = editingCampaiForId === profile.id;
-                const isSavingRoles = savingRoleForId === profile.id;
+                const profileHref = localizePathname(
+                  `/admin/users/${encodeURIComponent(profile.id)}`,
+                  locale,
+                );
 
                 return (
                   <Tr key={profile.id}>
                     <Td className="align-middle font-semibold">
-                      {displayName}
+                      <Link href={profileHref} className="hover:text-primary">
+                        {displayName}
+                      </Link>
                     </Td>
                     <Td className="align-middle text-muted-foreground">
                       {profile.email}
@@ -474,57 +388,23 @@ export default function AdminUsersClient() {
                       )}
                     </Td>
                     <Td className="align-middle">
-                      <fieldset
-                        className="flex min-w-72 flex-wrap gap-1.5"
-                        disabled={isSavingRoles}
+                      <Link
+                        href={profileHref}
+                        className="flex min-w-48 flex-wrap gap-1.5"
+                        title="Rollen in der Profilansicht vergeben"
                       >
-                        <legend className="sr-only">
-                          Rollen fuer {displayName}
-                        </legend>
-                        {ROLE_OPTIONS.map((roleOption) => {
-                          const isChecked = profile.roles.includes(
-                            roleOption.value,
-                          );
-                          const isOnlyRole =
-                            isChecked && profile.roles.length === 1;
-                          return (
-                            <span
-                              key={roleOption.value}
-                              title={
-                                isOnlyRole
-                                  ? "Mindestens eine Rolle muss ausgewählt bleiben."
-                                  : undefined
-                              }
-                              className={`knglmrt-tag inline-flex items-center knglmrt-border px-2.5 py-1 transition ${
-                                isChecked
-                                  ? "border-primary bg-primary-soft text-primary"
-                                  : "bg-card text-muted-foreground hover:text-foreground"
-                              } ${
-                                isSavingRoles
-                                  ? "cursor-wait opacity-60"
-                                  : isOnlyRole
-                                    ? "cursor-not-allowed opacity-60"
-                                    : "cursor-pointer"
-                              }`}
-                            >
-                              <Choice
-                                className="items-center gap-1.5"
-                                label={roleOption.label}
-                                checked={isChecked}
-                                disabled={isOnlyRole}
-                                onChange={(event) => {
-                                  const nextRoles = event.target.checked
-                                    ? [...profile.roles, roleOption.value]
-                                    : profile.roles.filter(
-                                        (role) => role !== roleOption.value,
-                                      );
-                                  void handleRolesChange(profile.id, nextRoles);
-                                }}
-                              />
-                            </span>
-                          );
-                        })}
-                      </fieldset>
+                        {profile.roleLabels.length > 0 ? (
+                          profile.roleLabels.map((label) => (
+                            <Badge key={label} tone="neutral">
+                              {label}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Keine Rolle
+                          </span>
+                        )}
+                      </Link>
                     </Td>
                     <Td className="knglmrt-num align-middle">
                       {formatDateTime(profile.createdAt) ?? "—"}

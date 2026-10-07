@@ -15,7 +15,12 @@ import "./globals.css";
 import "./knglmrt-theme.css";
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
-import { getServerSession, getServerSessionRoles } from "@/lib/server-session";
+import { canPreviewAccess } from "@/lib/access/server";
+import {
+  getServerAccess,
+  getServerRealAccess,
+  getServerSession,
+} from "@/lib/server-session";
 import { I18nProvider } from "@/i18n/client";
 import { getRequestLocale } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
@@ -110,8 +115,11 @@ export default async function RootLayout({
   const currentUserDisplayName = user
     ? getCampaiBookingDisplayName(user)
     : null;
-  const userRoles = await getServerSessionRoles();
-  const adminAreaHref = getVerwaltungEntryHref(userRoles);
+  // Ohne sichtbares Ressort keine Verwaltung — außer für Admins in einer
+  // Rechte-Vorschau, die sonst nicht mehr an den Schalter zum Beenden kämen.
+  const adminAreaHref =
+    getVerwaltungEntryHref(await getServerAccess()) ??
+    (user && canPreviewAccess(await getServerRealAccess()) ? "/admin" : null);
 
   return (
     // Die next/font-Variablen gehören auf <html>: knglmrt-theme.css definiert

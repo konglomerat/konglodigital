@@ -59,37 +59,6 @@ with check (auth.role() = 'authenticated');
 
 create extension if not exists "pgcrypto";
 
-create or replace function public.has_right(required_right text)
-returns boolean
-language sql
-stable
-as $$
-  select exists (
-    select 1
-    from jsonb_array_elements_text(
-      (
-        case
-          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'array'
-            then auth.jwt() -> 'app_metadata' -> 'rights'
-          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'string'
-            then jsonb_build_array(auth.jwt() -> 'app_metadata' -> 'rights')
-          else '[]'::jsonb
-        end
-      )
-      || (
-        case
-          when jsonb_typeof(auth.jwt() -> 'user_metadata' -> 'rights') = 'array'
-            then auth.jwt() -> 'user_metadata' -> 'rights'
-          when jsonb_typeof(auth.jwt() -> 'user_metadata' -> 'rights') = 'string'
-            then jsonb_build_array(auth.jwt() -> 'user_metadata' -> 'rights')
-          else '[]'::jsonb
-        end
-      )
-    ) as right_value
-    where right_value = required_right
-  );
-$$;
-
 create table if not exists public.resources (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references auth.users (id) on delete set null,
@@ -411,96 +380,129 @@ for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create table if not exists public.user_access (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  role text not null default 'member',
-  roles text[] not null default '{member}'::text[],
-  rights text[] not null default '{}'::text[],
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint user_access_role_check check (role in ('admin', 'accounting', 'member'))
+-- Rollen mit Geltungsbereich. Welche Rolle was darf, steht im Code
+-- (src/lib/access/role-config.ts) — hier nur, wer welche Rolle wo hat.
+-- Geprüft wird in der App; Vergabe und Übersichten laufen danach mit dem
+-- Service-Role-Client.
+create table if not exists public.scopes (
+  id text primary key check (id ~ '^[a-z0-9-]+$'),
+  name text not null,
+  type text not null check (type in ('werkbereich', 'projekt')),
+  -- Zweistellige Campai-Kostenstelle 2; darüber filtert die Buchhaltung.
+  campai_cost_center text unique check (campai_cost_center ~ '^[0-9]{2}$'),
+  created_at timestamptz not null default now()
 );
 
-alter table public.user_access add column if not exists role text not null default 'member';
-alter table public.user_access add column if not exists roles text[] not null default '{member}'::text[];
-alter table public.user_access add column if not exists rights text[] not null default '{}'::text[];
-alter table public.user_access add column if not exists updated_at timestamptz not null default now();
+alter table public.scopes enable row level security;
 
-update public.user_access
-set roles = case role
-  when 'admin' then array['admin']::text[]
-  when 'accounting' then array['buchhaltung']::text[]
-  else array['member']::text[]
-end
-where roles = array['member']::text[] and role <> 'member';
-
-alter table public.user_access drop constraint if exists user_access_roles_check;
-alter table public.user_access
-  add constraint user_access_roles_check
-  check (
-    cardinality(roles) > 0
-    and roles <@ array['admin', 'vhc', 'buchhaltung', 'member']::text[]
-  );
-
-alter table public.user_access enable row level security;
-
-drop policy if exists "Users can read own access" on public.user_access;
-
-create policy "Users can read own access"
-on public.user_access
+drop policy if exists "Authenticated users can read scopes" on public.scopes;
+create policy "Authenticated users can read scopes"
+on public.scopes
 for select
-using (auth.uid() = user_id);
+to authenticated
+using (true);
 
+-- Werkbereiche und Projekte der Übersichtsseite /werkbereiche. Buchdruck und
+-- Metall sind inaktiv und fehlen bewusst.
+insert into public.scopes (id, name, type, campai_cost_center) values
+  ('3d-druck', '3D Druck', 'werkbereich', '51'),
+  ('siebdruck', 'Siebdruck', 'werkbereich', '52'),
+  ('beton', 'Beton', 'werkbereich', '53'),
+  ('cnc', 'CNC', 'werkbereich', '54'),
+  ('elektronik', 'Elektronik', 'werkbereich', '55'),
+  ('darkroom', 'Darkroom', 'werkbereich', '56'),
+  ('holz', 'Holz', 'werkbereich', '57'),
+  ('kunststoffschmiede', 'Kunststoffschmiede', 'werkbereich', '58'),
+  ('laser', 'Laser', 'werkbereich', '59'),
+  ('neuweltbib', 'Neuweltbib', 'werkbereich', '60'),
+  ('printshop', 'Printshop', 'werkbereich', '61'),
+  ('textil', 'Textil', 'werkbereich', '62'),
+  ('materialvermittlung', 'Materialvermittlung', 'werkbereich', '63'),
+  ('riso', 'Riso', 'werkbereich', '64'),
+  ('aenderei', 'Änderei', 'projekt', '70'),
+  ('forum', 'FOR:UM', 'projekt', '73'),
+  ('tools2go', 'Tools2Go', 'projekt', '78'),
+  ('vhc', 'VHC', 'projekt', '80')
+on conflict (id) do update
+set name = excluded.name,
+    type = excluded.type,
+    campai_cost_center = excluded.campai_cost_center;
+
+create table if not exists public.role_assignments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  role text not null check (role ~ '^[a-z_]+$'),
+  -- null = global
+  scope_id text references public.scopes (id) on delete cascade,
+  -- Vorbereitet für ein späteres Vergaberecht; derzeit ungenutzt.
+  can_grant boolean not null default false,
+  granted_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists role_assignments_user_role_scope_key
+  on public.role_assignments (user_id, role, coalesce(scope_id, ''));
+create index if not exists role_assignments_scope_id_idx
+  on public.role_assignments (scope_id);
+
+alter table public.role_assignments enable row level security;
+
+drop policy if exists "Users can read own role assignments"
+  on public.role_assignments;
+create policy "Users can read own role assignments"
+on public.role_assignments
+for select
+to authenticated
+using (user_id = auth.uid());
+
+-- Der letzte globale Admin bleibt. Gilt auch, wenn sein auth.users-Eintrag
+-- gelöscht wird (on delete cascade).
+create or replace function public.prevent_removing_last_global_admin()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.role <> 'admin' or old.scope_id is not null then
+    return coalesce(new, old);
+  end if;
+
+  if tg_op = 'UPDATE' and new.role = 'admin' and new.scope_id is null then
+    return new;
+  end if;
+
+  -- Zwei gleichzeitige Entzüge dürfen nicht beide durchrutschen.
+  perform pg_advisory_xact_lock(hashtext('role_assignments_global_admin'));
+
+  if not exists (
+    select 1
+    from public.role_assignments
+    where role = 'admin'
+      and scope_id is null
+      and id <> old.id
+  ) then
+    raise exception 'Der letzte globale Admin kann nicht entfernt werden.'
+      using errcode = 'P0001';
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists role_assignments_keep_last_global_admin
+  on public.role_assignments;
+create trigger role_assignments_keep_last_global_admin
+before update or delete on public.role_assignments
+for each row
+execute function public.prevent_removing_last_global_admin();
+
+-- Volkshaus-Buchungen liest und schreibt die App nur mit dem
+-- Service-Role-Client; ohne Policies bleiben sie für alle anderen zu.
 drop policy if exists "Admins can read VHC bookings" on public.volkshaus_booking_requests;
 drop policy if exists "Admins can update VHC bookings" on public.volkshaus_booking_requests;
 drop policy if exists "Admins can read VHC booking events" on public.volkshaus_booking_events;
 drop policy if exists "VHC team can read bookings" on public.volkshaus_booking_requests;
 drop policy if exists "VHC team can update bookings" on public.volkshaus_booking_requests;
 drop policy if exists "VHC team can read booking events" on public.volkshaus_booking_events;
-
-create policy "VHC team can read bookings"
-on public.volkshaus_booking_requests
-for select
-using (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin', 'vhc']::text[]
-  )
-);
-
-create policy "VHC team can update bookings"
-on public.volkshaus_booking_requests
-for update
-using (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin', 'vhc']::text[]
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin', 'vhc']::text[]
-  )
-);
-
-create policy "VHC team can read booking events"
-on public.volkshaus_booking_events
-for select
-using (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin', 'vhc']::text[]
-  )
-);
 
 create table if not exists public.access_code_inbox (
   id uuid primary key default gen_random_uuid(),
@@ -591,131 +593,6 @@ do update set
   avatar_url = excluded.avatar_url,
   short_bio = excluded.short_bio,
   updated_at = now();
-
-with normalized_user_access as (
-  select
-    users.id as user_id,
-    case
-      when lower(btrim(coalesce(users.raw_app_meta_data ->> 'role', users.raw_user_meta_data ->> 'role', 'member'))) in ('admin', 'accounting', 'member')
-        then lower(btrim(coalesce(users.raw_app_meta_data ->> 'role', users.raw_user_meta_data ->> 'role', 'member')))
-      else 'member'
-    end as role,
-    array(
-      select distinct
-        case
-          when lower(btrim(role_value)) = 'accounting' then 'buchhaltung'
-          else lower(btrim(role_value))
-        end
-      from (
-        select jsonb_array_elements_text(
-          case
-            when jsonb_typeof(users.raw_app_meta_data -> 'roles') = 'array'
-              then users.raw_app_meta_data -> 'roles'
-            when jsonb_typeof(users.raw_user_meta_data -> 'roles') = 'array'
-              then users.raw_user_meta_data -> 'roles'
-            else '[]'::jsonb
-          end
-        ) as role_value
-        union all
-        select case
-          when lower(btrim(coalesce(
-            users.raw_app_meta_data ->> 'role',
-            users.raw_user_meta_data ->> 'role',
-            'member'
-          ))) in ('admin', 'accounting', 'buchhaltung', 'vhc', 'member')
-            then coalesce(
-              users.raw_app_meta_data ->> 'role',
-              users.raw_user_meta_data ->> 'role',
-              'member'
-            )
-          else 'member'
-        end as role_value
-      ) as normalized_roles
-      where lower(btrim(role_value)) in (
-        'admin',
-        'accounting',
-        'buchhaltung',
-        'vhc',
-        'member'
-      )
-    ) as roles,
-    coalesce(
-      array(
-        select distinct right_value
-        from (
-          select nullif(btrim(jsonb_array_elements_text(
-            case
-              when jsonb_typeof(users.raw_app_meta_data -> 'rights') = 'array'
-                then users.raw_app_meta_data -> 'rights'
-              when jsonb_typeof(users.raw_app_meta_data -> 'rights') = 'string'
-                then jsonb_build_array(users.raw_app_meta_data -> 'rights')
-              else '[]'::jsonb
-            end
-          )), '') as right_value
-          union all
-          select nullif(btrim(jsonb_array_elements_text(
-            case
-              when jsonb_typeof(users.raw_user_meta_data -> 'rights') = 'array'
-                then users.raw_user_meta_data -> 'rights'
-              when jsonb_typeof(users.raw_user_meta_data -> 'rights') = 'string'
-                then jsonb_build_array(users.raw_user_meta_data -> 'rights')
-              else '[]'::jsonb
-            end
-          )), '') as right_value
-        ) as normalized_rights
-        where right_value is not null
-      ),
-      '{}'::text[]
-    ) as rights
-  from auth.users as users
-)
-insert into public.user_access (user_id, role, roles, rights)
-select user_id, role, roles, rights
-from normalized_user_access
-on conflict (user_id)
-do update set
-  rights = excluded.rights,
-  updated_at = now();
-
-update auth.users as users
-set raw_app_meta_data =
-  coalesce(users.raw_app_meta_data, '{}'::jsonb)
-  || jsonb_build_object(
-    'roles', to_jsonb(access.roles),
-    'role', access.role,
-    'rights', to_jsonb(access.rights)
-  )
-from public.user_access as access
-where access.user_id = users.id;
-
-create or replace function public.has_right(required_right text)
-returns boolean
-language sql
-stable
-as $$
-  select exists (
-    select 1
-    from (
-      select unnest(
-        coalesce(
-          (select rights from public.user_access where user_id = auth.uid()),
-          '{}'::text[]
-        )
-      ) as right_value
-      union all
-      select jsonb_array_elements_text(
-        case
-          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'array'
-            then auth.jwt() -> 'app_metadata' -> 'rights'
-          when jsonb_typeof(auth.jwt() -> 'app_metadata' -> 'rights') = 'string'
-            then jsonb_build_array(auth.jwt() -> 'app_metadata' -> 'rights')
-          else '[]'::jsonb
-        end
-      )
-    ) as rights
-    where right_value = required_right
-  );
-$$;
 
 drop table if exists public.registration_invites;
 
@@ -1000,43 +877,36 @@ alter table public.resources enable row level security;
 
 drop policy if exists "Authenticated users can read resources" on public.resources;
 drop policy if exists "Owners can insert resources" on public.resources;
+drop policy if exists "Members can insert own resources" on public.resources;
 drop policy if exists "Owners can update resources" on public.resources;
 drop policy if exists "Owners can delete resources" on public.resources;
+drop policy if exists "Owners can delete own showcases" on public.resources;
 
 create policy "Authenticated users can read resources"
 on public.resources
 for select
 using (auth.role() = 'authenticated');
 
-create policy "Owners can insert resources"
+-- Anlegen darf jedes Mitglied, eigene Einträge bearbeiten auch. Fremde
+-- bearbeiten (Rolle Inventar bzw. Showcase) und Inventar löschen laufen nach
+-- der Prüfung in der App über den Service-Role-Client.
+create policy "Members can insert own resources"
 on public.resources
 for insert
-with check (auth.uid() = owner_id and public.has_right('resources:create'));
+with check (auth.uid() = owner_id);
 
 create policy "Owners can update resources"
 on public.resources
 for update
-using (owner_id = auth.uid() or public.has_right('resources:edit'))
-with check (owner_id = auth.uid() or public.has_right('resources:edit'));
+using (owner_id = auth.uid())
+with check (owner_id = auth.uid());
 
-create policy "Owners can delete resources"
+create policy "Owners can delete own showcases"
 on public.resources
 for delete
 using (
   owner_id = auth.uid()
-  or (
-    lower(btrim(coalesce(type, ''))) = 'project'
-    and exists (
-      select 1
-      from public.user_access
-      where user_access.user_id = auth.uid()
-        and 'admin' = any(user_access.roles)
-    )
-  )
-  or (
-    lower(btrim(coalesce(type, ''))) <> 'project'
-    and public.has_right('resources:delete')
-  )
+  and lower(btrim(coalesce(type, ''))) = 'project'
 );
 
 create table if not exists public.resource_links (
@@ -1057,35 +927,38 @@ drop policy if exists "Authenticated users can read resource pretty titles" on p
 drop policy if exists "Authorized users can insert resource pretty titles" on public.resource_pretty_titles;
 drop policy if exists "Authorized users can update resource pretty titles" on public.resource_pretty_titles;
 drop policy if exists "Authorized users can delete resource pretty titles" on public.resource_pretty_titles;
+drop policy if exists "Owners can insert resource links" on public.resource_links;
+drop policy if exists "Owners can delete resource links" on public.resource_links;
+drop policy if exists "Owners can insert resource pretty titles" on public.resource_pretty_titles;
+drop policy if exists "Owners can update resource pretty titles" on public.resource_pretty_titles;
+drop policy if exists "Owners can delete resource pretty titles" on public.resource_pretty_titles;
 
 create policy "Authenticated users can read resource links"
 on public.resource_links
 for select
 using (auth.role() = 'authenticated');
 
-create policy "Authorized users can insert resource links"
+create policy "Owners can insert resource links"
 on public.resource_links
 for insert
 with check (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where (r.id = resource_a or r.id = resource_b)
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit') or public.has_right('resources:create'))
+      and r.owner_id = auth.uid()
   )
 );
 
-create policy "Authorized users can delete resource links"
+create policy "Owners can delete resource links"
 on public.resource_links
 for delete
 using (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where (r.id = resource_a or r.id = resource_b)
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit') or public.has_right('resources:delete'))
+      and r.owner_id = auth.uid()
   )
 );
 
@@ -1094,51 +967,47 @@ on public.resource_pretty_titles
 for select
 using (auth.role() = 'authenticated');
 
-create policy "Authorized users can insert resource pretty titles"
+create policy "Owners can insert resource pretty titles"
 on public.resource_pretty_titles
 for insert
 with check (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where r.id = resource_id
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit') or public.has_right('resources:create'))
+      and r.owner_id = auth.uid()
   )
 );
 
-create policy "Authorized users can update resource pretty titles"
+create policy "Owners can update resource pretty titles"
 on public.resource_pretty_titles
 for update
 using (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where r.id = resource_id
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit'))
+      and r.owner_id = auth.uid()
   )
 )
 with check (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where r.id = resource_id
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit'))
+      and r.owner_id = auth.uid()
   )
 );
 
-create policy "Authorized users can delete resource pretty titles"
+create policy "Owners can delete resource pretty titles"
 on public.resource_pretty_titles
 for delete
 using (
-  auth.role() = 'authenticated'
-  and exists (
+  exists (
     select 1
     from public.resources r
     where r.id = resource_id
-      and (r.owner_id = auth.uid() or public.has_right('resources:edit') or public.has_right('resources:delete'))
+      and r.owner_id = auth.uid()
   )
 );
 
@@ -1535,34 +1404,9 @@ with check (
   and decided_at is null
 );
 
-create policy "Vorstand can read ehrenamtsbonus requests"
-on public.ehrenamtsbonus_requests
-for select
-using (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin']::text[]
-  )
-);
+-- Alle Anträge sieht und entscheidet nur der Vorstand (ehrenamtsbonus.manage);
+-- das prüft die App und schreibt dann mit dem Service-Role-Client.
 
-create policy "Vorstand can update ehrenamtsbonus requests"
-on public.ehrenamtsbonus_requests
-for update
-using (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin']::text[]
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.user_access
-    where user_access.user_id = auth.uid()
-      and user_access.roles && array['admin']::text[]
-  )
-);
+-- Altes Rollenmodell: erst ganz am Ende, wenn keine Policy mehr daran hängt.
+drop function if exists public.has_right(text);
+drop table if exists public.user_access;

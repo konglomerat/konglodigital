@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { loadCampaiKoFi } from "@/lib/campai-kofi";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
@@ -30,10 +31,10 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const canAccess = await userCanAccessModule(supabase, data.user, "invoices");
-  if (!canAccess) {
+  // KoFi rechnet über alle Kostenstellen — nur mit globaler Berechtigung.
+  if (!can(await loadUserAccess(supabase, data.user), "kofi.view")) {
     return NextResponse.json(
-      { error: "KoFi ist nur für Admin und Accounting verfügbar." },
+      { error: "Für KoFi fehlt dir die Berechtigung." },
       { status: 403 },
     );
   }

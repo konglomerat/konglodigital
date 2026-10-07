@@ -41,7 +41,6 @@ import {
   getRoomLabel,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
-import type { UserRole } from "@/lib/roles";
 import Field from "@/components/knglmrt/Field";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Textarea from "@/components/knglmrt/Textarea";
@@ -54,7 +53,6 @@ type AssignablePerson = {
   firstName: string | null;
   lastName: string | null;
   campaiName: string | null;
-  roles: UserRole[];
 };
 type AdminAction =
   | "start_review"

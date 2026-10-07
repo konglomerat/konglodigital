@@ -10,7 +10,8 @@ import { getInitials, getTopNavSections } from "./topNavSections";
 type TopNavProps = {
   isAuthenticated: boolean;
   currentUserDisplayName: string | null;
-  adminAreaHref: string;
+  /** null, wenn der Nutzer kein Ressort der Verwaltung öffnen darf. */
+  adminAreaHref: string | null;
 };
 
 export default function TopNav({
@@ -70,13 +71,15 @@ export default function TopNav({
                   {currentUserDisplayName ?? "Profil"}
                 </span>
               </Link>
-              <Button
-                href={adminAreaHref}
-                kind="admin"
-                icon={<Face number={6} size={24} />}
-              >
-                Verwaltung
-              </Button>
+              {adminAreaHref ? (
+                <Button
+                  href={adminAreaHref}
+                  kind="admin"
+                  icon={<Face number={6} size={24} />}
+                >
+                  Verwaltung
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div className="flex items-center gap-2">

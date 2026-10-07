@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { listAllActiveCampaiContacts } from "@/lib/campai-contact-directory";
-import { userCanAccessModule } from "@/lib/roles";
+import { canAny } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export const GET = async (request: NextRequest) => {
 			return createUnauthorizedResponse();
 		}
 
-		if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+		const access = await loadUserAccess(supabase, data.user);
+		if (!canAny(access, ["users.manage", "contacts.manage"])) {
 			return createForbiddenResponse();
 		}
 

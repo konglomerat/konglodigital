@@ -14,6 +14,10 @@ import {
 
 import { stripLocalePrefix } from "@/i18n/config";
 
+import AccessPreviewSwitch, {
+  type AccessPreviewState,
+} from "./AccessPreviewSwitch";
+
 export type RessortNavChild = {
   href: string;
   label: string;
@@ -33,6 +37,8 @@ type VerwaltungSideNavProps = {
   items: RessortNavItem[];
   /** Hauptseite des ersten zugaenglichen Ressorts. */
   homeHref: string;
+  /** Nur für Admins: Rechte einer anderen Person testen. */
+  accessPreview?: AccessPreviewState | null;
 };
 
 const matchesRoute = (current: string, route: string) =>
@@ -41,6 +47,7 @@ const matchesRoute = (current: string, route: string) =>
 export default function VerwaltungSideNav({
   items,
   homeHref,
+  accessPreview = null,
 }: VerwaltungSideNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   // Nur was von Hand auf- oder zugeklappt wurde; sonst entscheidet „aktiv".
@@ -175,6 +182,11 @@ export default function VerwaltungSideNav({
       )?.label ?? null)
     : null;
 
+  // Steht unten in der Leiste (mt-auto im Schalter selbst).
+  const previewSwitch = accessPreview ? (
+    <AccessPreviewSwitch preview={accessPreview} />
+  ) : null;
+
   const homeLink = (
     <Link
       href={homeHref}
@@ -237,13 +249,15 @@ export default function VerwaltungSideNav({
               </button>
             </div>
             {navigation}
+            {previewSwitch}
           </aside>
         </div>
       ) : null}
 
-      <aside className="hidden w-[220px] shrink-0 bg-[var(--knglmrt-dark-100)] lg:block lg:h-full lg:overflow-y-auto">
+      <aside className="hidden w-[220px] shrink-0 bg-[var(--knglmrt-dark-100)] lg:flex lg:h-full lg:flex-col lg:overflow-y-auto">
         <div className="px-5 pb-4 pt-5">{homeLink}</div>
         {navigation}
+        {previewSwitch}
       </aside>
     </>
   );

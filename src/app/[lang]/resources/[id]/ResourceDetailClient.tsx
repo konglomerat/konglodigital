@@ -19,6 +19,11 @@ import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
 import { getPointFeatures } from "../map-features";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
+import {
+  canDeleteResource,
+  canEditResource,
+} from "@/lib/access/resource-access";
+import { useAccess } from "@/lib/access/use-access";
 import CampaiRentalPanel from "./CampaiRentalPanel";
 
 type Resource = ResourcePayload;
@@ -38,6 +43,9 @@ export default function ResourceDetailClient({
 }: ResourceDetailClientProps) {
   const router = useRouter();
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
+  // Die Seite ist statisch erzeugt — welche Knöpfe passen, entscheidet der
+  // Browser, sobald die Rechte da sind. Die API prüft trotzdem selbst.
+  const access = useAccess();
   const [resource] = useState<Resource | null>(initialResource);
   const [errorMessage, setErrorMessage] = useState<string | null>(
     initialErrorMessage,
@@ -106,65 +114,82 @@ export default function ResourceDetailClient({
     [resource?.description],
   );
 
+  const canEdit = canEditResource(access, {
+    ownerId: resource?.ownerId,
+    type: resource?.type,
+  });
+  const canDelete = canDeleteResource(access, {
+    ownerId: resource?.ownerId,
+    type: resource?.type,
+  });
+
   const pageTitleLinks = resource
     ? [
-        {
-          href: localizePathname(
-            `/resources/features?resourceId=${resourceId}`,
-            locale,
-          ),
-          label: tx("Edit"),
-          icon: faPen,
-          className: "border-primary-border text-primary",
-        },
-        {
-          href: localizePathname(
-            `/resources/features?resourceId=${resourceId}`,
-            locale,
-          ),
-          label: tx("Map features"),
-          icon: faLayerGroup,
-        },
-        {
-          label: deleting ? tx("Deleting…") : tx("Delete"),
-          onClick: async () => {
-            if (deleting) {
-              return;
-            }
-            const confirmed = window.confirm(
-              tx("Really delete this resource? This cannot be undone."),
-            );
-            if (!confirmed) {
-              return;
-            }
-            setDeleting(true);
-            setErrorMessage(null);
-            try {
-              const response = await fetch(
-                `/api/campai/resources/${resourceId}`,
-                {
-                  method: "DELETE",
+        ...(canEdit
+          ? [
+              {
+                href: localizePathname(
+                  `/resources/features?resourceId=${resourceId}`,
+                  locale,
+                ),
+                label: tx("Edit"),
+                icon: faPen,
+                className: "border-primary-border text-primary",
+              },
+              {
+                href: localizePathname(
+                  `/resources/features?resourceId=${resourceId}`,
+                  locale,
+                ),
+                label: tx("Map features"),
+                icon: faLayerGroup,
+              },
+            ]
+          : []),
+        ...(canDelete
+          ? [
+              {
+                label: deleting ? tx("Deleting…") : tx("Delete"),
+                onClick: async () => {
+                  if (deleting) {
+                    return;
+                  }
+                  const confirmed = window.confirm(
+                    tx("Really delete this resource? This cannot be undone."),
+                  );
+                  if (!confirmed) {
+                    return;
+                  }
+                  setDeleting(true);
+                  setErrorMessage(null);
+                  try {
+                    const response = await fetch(
+                      `/api/campai/resources/${resourceId}`,
+                      {
+                        method: "DELETE",
+                      },
+                    );
+                    const data = (await response.json()) as { error?: string };
+                    if (!response.ok) {
+                      throw new Error(data.error ?? tx("Unable to delete resource."));
+                    }
+                    router.push(localizePathname("/resources", locale));
+                  } catch (error) {
+                    setErrorMessage(
+                      error instanceof Error
+                        ? error.message
+                        : tx("Unable to delete resource."),
+                    );
+                  } finally {
+                    setDeleting(false);
+                  }
                 },
-              );
-              const data = (await response.json()) as { error?: string };
-              if (!response.ok) {
-                throw new Error(data.error ?? tx("Unable to delete resource."));
-              }
-              router.push(localizePathname("/resources", locale));
-            } catch (error) {
-              setErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : tx("Unable to delete resource."),
-              );
-            } finally {
-              setDeleting(false);
-            }
-          },
-          disabled: deleting,
-          icon: faTrash,
-          kind: "danger-secondary" as const,
-        },
+                disabled: deleting,
+                icon: faTrash,
+                kind: "danger-secondary" as const,
+              },
+            ]
+          : []),
       ]
     : undefined;
 

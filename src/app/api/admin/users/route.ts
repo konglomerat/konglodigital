@@ -5,21 +5,12 @@ import {
 	listMemberProfilesByUserIds,
 	upsertMemberProfile,
 } from "@/lib/member-profiles";
-import {
-	normalizeUserRole,
-	normalizeUserRoles,
-	USER_ROLES,
-	userCanAccessModule,
-} from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { listAssignments, listScopes } from "@/lib/access/assignments";
+import { describeAssignment } from "@/lib/access/labels";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import {
-	getUserAccessByUserId,
-	getUserRightsFromAppMetadata,
-	listUserAccessByUserIds,
-	syncUserAccessToAuthMetadata,
-	upsertUserAccess,
-} from "@/lib/user-access";
 
 import {
 	buildCampaiProfileData,
@@ -59,7 +50,7 @@ export const GET = async (request: NextRequest) => {
 			return createUnauthorizedResponse();
 		}
 
-		if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+		if (!can(await loadUserAccess(supabase, data.user), "users.manage")) {
 			return createForbiddenResponse();
 		}
 
@@ -75,16 +66,16 @@ export const GET = async (request: NextRequest) => {
 
 		const users = usersPage.users ?? [];
 		const userIds = users.map((user) => user.id);
-		const [memberProfilesByUserId, userAccessByUserId] = await Promise.all([
+		const [memberProfilesByUserId, assignments, scopes] = await Promise.all([
 			listMemberProfilesByUserIds(adminClient, userIds),
-			listUserAccessByUserIds(adminClient, userIds),
+			listAssignments(adminClient),
+			listScopes(adminClient),
 		]);
 
 		const profiles = users
 			.filter((user) => Boolean(user.email_confirmed_at || user.last_sign_in_at))
 			.map((user) => {
 				const memberProfile = memberProfilesByUserId.get(user.id);
-				const access = userAccessByUserId.get(user.id);
 
 				return {
 					id: user.id,
@@ -104,9 +95,9 @@ export const GET = async (request: NextRequest) => {
 					campaiMemberNumber: memberProfile?.campaiMemberNumber ?? null,
 					campaiDebtorAccount: memberProfile?.campaiDebtorAccount ?? null,
 					campaiName: memberProfile?.campaiName ?? null,
-					roles: access?.roles ?? normalizeUserRoles(
-						user.app_metadata?.roles ?? user.app_metadata?.role,
-					),
+					roleLabels: assignments
+						.filter((assignment) => assignment.userId === user.id)
+						.map((assignment) => describeAssignment(assignment, scopes)),
 				};
 			})
 			.sort((left, right) => {
@@ -136,17 +127,12 @@ export const PATCH = async (request: NextRequest) => {
 			return createUnauthorizedResponse();
 		}
 
-		if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+		if (!can(await loadUserAccess(supabase, data.user), "users.manage")) {
 			return createForbiddenResponse();
 		}
 
 		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 		const userId = typeof body.userId === "string" ? body.userId.trim() : "";
-		const requestedRoleValues = Array.isArray(body.roles)
-			? body.roles
-			: typeof body.role === "string"
-				? [body.role]
-				: null;
 		const requestedCampaiContactId =
 			typeof body.campaiContactId === "string"
 				? body.campaiContactId.trim()
@@ -194,41 +180,10 @@ export const PATCH = async (request: NextRequest) => {
 			});
 		}
 
-		if (!requestedRoleValues) {
-			return NextResponse.json(
-				{ error: "Keine Aenderung angegeben." },
-				{ status: 400 },
-			);
-		}
-
-		const hasInvalidRole = requestedRoleValues.some((role) => {
-			if (typeof role !== "string") return true;
-			const normalized = role.trim().toLowerCase();
-			return normalized !== "accounting" &&
-				!USER_ROLES.includes(normalized as (typeof USER_ROLES)[number]);
-		});
-		if (hasInvalidRole) {
-			return NextResponse.json({ error: "Ungueltige Rolle." }, { status: 400 });
-		}
-
-		const roles = requestedRoleValues.length > 0
-			? Array.from(new Set(requestedRoleValues.map(normalizeUserRole)))
-			: normalizeUserRoles([]);
-
-		const currentAccess = await getUserAccessByUserId(adminClient, userId);
-		const updatedAccess = await upsertUserAccess(adminClient, {
-			userId,
-			roles,
-			rights: currentAccess?.rights ?? getUserRightsFromAppMetadata(userLookup.user),
-		});
-		await syncUserAccessToAuthMetadata(adminClient, userLookup.user, updatedAccess);
-
-		return NextResponse.json({
-			profile: {
-				id: userLookup.user.id,
-				roles: updatedAccess.roles,
-			},
-		});
+		return NextResponse.json(
+			{ error: "Keine Aenderung angegeben." },
+			{ status: 400 },
+		);
 	} catch (error) {
 		const message = getErrorMessage(
 			error,

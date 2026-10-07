@@ -17,7 +17,9 @@
     "i18n:sync": "npm run i18n:extract && node scripts/i18n-autotranslate.mjs",
     "supabase:compare": "node scripts/supabase-cutover-compare.mjs",
     "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
-    "supabase:table-sync": "node scripts/supabase-table-sync.mjs"
+    "supabase:table-sync": "node scripts/supabase-table-sync.mjs",
+    "test": "vitest run",
+    "access:seed-admin": "node --env-file=.env.local scripts/seed-bootstrap-admin.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
@@ -59,6 +61,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3"
   }
 }

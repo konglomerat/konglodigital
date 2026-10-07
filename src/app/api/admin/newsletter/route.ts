@@ -27,7 +27,8 @@ import {
   getSupabaseRenderedImageUrl,
   isImageUrl,
 } from "@/lib/resource-media";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
@@ -287,7 +288,7 @@ export const POST = async (request: NextRequest) => {
     const { supabase } = createSupabaseRouteClient(request);
     const { data } = await supabase.auth.getUser();
     if (!data.user) return unauthorized();
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
       return forbidden();
     }
 

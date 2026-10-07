@@ -29,7 +29,9 @@ import {
 import {
   notifyVolkshausContractReady,
 } from "@/lib/volkshaus-notifications";
-import { getUserRoles, userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { VOLKSHAUS_SCOPE_ID } from "@/lib/access/scopes";
+import { loadAccessOf, loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -128,7 +130,13 @@ export const PATCH = async (
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
+  if (
+    !can(
+      await loadUserAccess(supabase, data.user),
+      "volkshaus.bookings.manage",
+      { scope: VOLKSHAUS_SCOPE_ID },
+    )
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -264,18 +272,24 @@ export const PATCH = async (
             { status: 400 },
           );
         }
-        const selectedUserRoles = await Promise.all(
+        const selectedUserAccess = await Promise.all(
           userLookups.map(({ data: userData }) =>
-            getUserRoles(adminClient, userData.user),
+            loadAccessOf(adminClient, userData.user),
           ),
         );
         if (
-          selectedUserRoles.some(
-            (roles) => !roles.includes("admin") && !roles.includes("vhc"),
+          selectedUserAccess.some(
+            (access) =>
+              !can(access, "volkshaus.bookings.manage", {
+                scope: VOLKSHAUS_SCOPE_ID,
+              }),
           )
         ) {
           return NextResponse.json(
-            { error: "Ausgewählte Personen benötigen die Rolle VHC." },
+            {
+              error:
+                "Ausgewählte Personen brauchen die Rolle Tools im Bereich VHC.",
+            },
             { status: 400 },
           );
         }

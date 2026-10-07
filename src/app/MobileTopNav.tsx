@@ -22,7 +22,8 @@ import {
 type MobileTopNavProps = {
   isAuthenticated: boolean;
   currentUserDisplayName: string | null;
-  adminAreaHref: string;
+  /** null, wenn der Nutzer kein Ressort der Verwaltung öffnen darf. */
+  adminAreaHref: string | null;
 };
 
 export default function MobileTopNav({
@@ -147,15 +148,17 @@ export default function MobileTopNav({
                       {currentUserDisplayName ?? "Profil"}
                     </span>
                   </Link>
-                  <Button
-                    href={adminAreaHref}
-                    kind="admin"
-                    fullWidth
-                    icon={<Face number={6} size={24} />}
-                    onClick={close}
-                  >
-                    Verwaltung
-                  </Button>
+                  {adminAreaHref ? (
+                    <Button
+                      href={adminAreaHref}
+                      kind="admin"
+                      fullWidth
+                      icon={<Face number={6} size={24} />}
+                      onClick={close}
+                    >
+                      Verwaltung
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">

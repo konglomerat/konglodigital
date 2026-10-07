@@ -18,8 +18,8 @@ import { localizePathname } from "@/i18n/config";
 import { buildShowcasePath } from "@/lib/showcase-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { hasRight } from "@/lib/permissions";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
@@ -216,15 +216,14 @@ export default async function ShowcaseDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // Eigene Showcases darf jeder bearbeiten und löschen, fremde nur mit der
+  // Rolle Showcase.
   const canEdit = Boolean(
-    user && (showcase.ownerId === user.id || hasRight(user, "resources:edit")),
+    user &&
+      (showcase.ownerId === user.id ||
+        can(await loadUserAccess(supabase, user), "showcase.edit")),
   );
-  const isShowcaseOwner = Boolean(user && showcase.ownerId === user.id);
-  const isAdmin =
-    user && !isShowcaseOwner
-      ? await userHasRole(supabase, user, "admin")
-      : false;
-  const canDelete = Boolean(user && (isShowcaseOwner || isAdmin));
+  const canDelete = canEdit;
   const heroMedia =
     showcase.images?.filter(
       (media): media is string => typeof media === "string",
