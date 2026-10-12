@@ -17,9 +17,7 @@ import {
   faCube,
   faBoxOpen,
   faCalendarCheck,
-  faCalendarDays,
   faChartPie,
-  faCircleInfo,
   faEuroSign,
   faFolderOpen,
   faLayerGroup,
@@ -30,7 +28,6 @@ import {
   faLock,
   faRightFromBracket,
   faRightToBracket,
-  faHouse,
   faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -46,11 +43,18 @@ import Button from "@/components/knglmrt/Button";
 import ThemeToggle from "./[lang]/components/ThemeToggle";
 import AutoCloseMenuDetails from "./[lang]/components/AutoCloseMenuDetails";
 import { I18nProvider } from "@/i18n/client";
-import { getRequestLocale } from "@/i18n/server";
+import { getServerI18n } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
 import AppShell from "./AppShell";
 import SiteFooter from "./SiteFooter";
 import TopNav from "./TopNav";
+import { localizePathname } from "@/i18n/config";
+import {
+  DEFAULT_HEADER_LINKS,
+  DEFAULT_FOOTER_LINKS,
+  loadPayloadNavigation,
+  localizeNavigationItems,
+} from "@/lib/payload-navigation";
 
 config.autoAddCss = false;
 
@@ -158,7 +162,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getRequestLocale();
+  const { locale, tx } = await getServerI18n();
+  const navigationPromise = loadPayloadNavigation();
   const { user } = await getServerSession();
   const isAuthenticated = Boolean(user);
   const currentUserDisplayName = user
@@ -174,6 +179,16 @@ export default async function RootLayout({
   const canAccessFinanzen =
     isAuthenticated && rolesCanAccessModule(userRoles, "invoices");
   const adminAreaHref = getVerwaltungEntryHref(userRoles);
+  const navigation = await navigationPromise;
+  const headerLinks = localizeNavigationItems(navigation.header ?? DEFAULT_HEADER_LINKS, locale);
+  const mobileHeaderLinks = navigation.header === null
+    ? localizeNavigationItems([
+        ...DEFAULT_HEADER_LINKS,
+        { href: "/calendar", label: "Kalender" },
+        { href: "/volkshaus/buchen", label: "Volkshaus buchen" },
+      ], locale)
+    : headerLinks;
+  const footerLinks = localizeNavigationItems(navigation.footer ?? DEFAULT_FOOTER_LINKS, locale);
   const navLinkClassName =
     "group flex items-center gap-3 border-b border-border bg-transparent px-2 py-2.5 text-sm font-medium text-foreground transition hover:text-primary";
   const navSectionTitleClassName =
@@ -207,14 +222,14 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <I18nProvider locale={locale}>
           <AppShell
             mobileNavigation={
-              <header className="sticky top-0 z-40 knglmrt-border-b bg-card md:hidden">
+              <header className="sticky top-0 z-40 knglmrt-border-b bg-card xl:hidden">
                 <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4">
                   <Link
-                    href="/"
+                    href={localizePathname("/", locale)}
                     className="text-xl font-black leading-none uppercase tracking-widest text-foreground transition hover:text-primary"
                   >
                     Konglo
@@ -226,7 +241,7 @@ export default async function RootLayout({
                       className="group"
                       summary={
                         <summary className="flex cursor-pointer list-none items-center gap-2 knglmrt-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft">
-                          Menü
+                          {tx("Menü")}
                           <span className="text-lg transition group-open:rotate-45">
                             +
                           </span>
@@ -235,95 +250,56 @@ export default async function RootLayout({
                     >
                       <div className="absolute left-0 right-0 top-full z-50 max-h-[70vh] overflow-y-auto knglmrt-border bg-popover text-popover-foreground">
                         <nav className="flex flex-col px-2 py-2">
-                          <p className={navSectionTitleClassName}>Verein</p>
-                          <ActiveNavLink
-                            href="/verein"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faCircleInfo}
-                              className="h-4 w-4"
-                            />
-                            Über uns
-                          </ActiveNavLink>
-                          <ActiveNavLink
-                            href="/calendar"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faCalendarDays}
-                              className="h-4 w-4"
-                            />
-                            Kalender
-                          </ActiveNavLink>
-                          <ActiveNavLink
-                            href="/volkshaus/buchen"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faHouse}
-                              className="h-4 w-4"
-                            />
-                            Volkshaus buchen
-                          </ActiveNavLink>
-                          <ActiveNavLink
-                            href="/monatsbeitrag"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faEuroSign}
-                              className="h-4 w-4"
-                            />
-                            Mitgliedschaft & Beitrag
-                          </ActiveNavLink>
-
-                          <p className={navSectionTitleClassName}>
-                            Werkbereiche
-                          </p>
-                          <ActiveNavLink
-                            href="/werkbereiche"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faLayerGroup}
-                              className="h-4 w-4"
-                            />
-                            Alle Werkbereiche
-                          </ActiveNavLink>
+                          <p className={navSectionTitleClassName}>{tx("Entdecken")}</p>
+                          {mobileHeaderLinks.map((item, index) => {
+                            const Element = item.href.startsWith("/") ? ActiveNavLink : "a";
+                            return (
+                              <Element
+                                key={`${item.href}-${index}`}
+                                href={item.href}
+                                className={navLinkClassName}
+                                target={item.newTab ? "_blank" : undefined}
+                                rel={item.newTab ? "noopener noreferrer" : undefined}
+                              >
+                                {tx(item.label)}
+                              </Element>
+                            );
+                          })}
+                          <p className={navSectionTitleClassName}>{tx("Werkstatt")}</p>
                           {isAuthenticated ? (
                             <>
                               <ActiveNavLink
-                                href="/printers"
+                                href={localizePathname("/printers", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faCube}
                                   className="h-4 w-4"
                                 />
-                                3D-Druck
+                                {tx("3D-Druck")}
                               </ActiveNavLink>
                               <ActiveNavLink
-                                href="/printers/emptying"
+                                href={localizePathname("/printers/emptying", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faPrint}
                                   className="h-4 w-4"
                                 />
-                                Drucker entleeren
+                                {tx("Drucker entleeren")}
                               </ActiveNavLink>
                               <ActiveNavLink
-                                href="/printers/access-codes"
+                                href={localizePathname("/printers/access-codes", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faKey}
                                   className="h-4 w-4"
                                 />
-                                Drucker Zugang
+                                {tx("Drucker Zugang")}
                               </ActiveNavLink>
                               <ActiveNavLink
-                                href="/split-invoice"
+                                href={localizePathname("/split-invoice", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
@@ -344,42 +320,35 @@ export default async function RootLayout({
                             className={navLinkClassName}
                             icon={faLayerGroup}
                           >
-                            Lagerplatz
+                            {tx("Lagerplatz")}
                           </ComingSoonNavItem>
-
-                          <p className={navSectionTitleClassName}>
-                            Hier entstanden
-                          </p>
-                          <ActiveNavLink
-                            href="/showcase"
-                            className={navLinkClassName}
-                          >
-                            <FontAwesomeIcon
-                              icon={faFolderOpen}
-                              className="h-4 w-4"
-                            />
-                            Hier entstanden
-                          </ActiveNavLink>
 
                           {isAuthenticated ? (
                             <>
                               <p className={navSectionTitleClassName}>
-                                Inventar
+                                {tx("Inventar")}
                               </p>
                               <ActiveNavLink
-                                href="/resources"
+                                href={localizePathname("/resources", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faFolderOpen}
                                   className="h-4 w-4"
                                 />
-                                Inventar
+                                {tx("Inventar")}
                               </ActiveNavLink>
 
-                              <p className={navSectionTitleClassName}>Profil</p>
                               <ActiveNavLink
-                                href="/account"
+                                href={localizePathname("/monatsbeitrag", locale)}
+                                className={navLinkClassName}
+                              >
+                                <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4" />
+                                {tx("Mitgliedschaft & Beitrag")}
+                              </ActiveNavLink>
+                              <p className={navSectionTitleClassName}>{tx("Profil")}</p>
+                              <ActiveNavLink
+                                href={localizePathname("/account", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
@@ -387,65 +356,66 @@ export default async function RootLayout({
                                   className="h-4 w-4"
                                 />
                                 {currentUserDisplayName
-                                  ? `Profil (${currentUserDisplayName})`
-                                  : "Profil"}
+                                  ? `${tx("Profil")} (${currentUserDisplayName})`
+                                  : tx("Profil")}
                               </ActiveNavLink>
                               <ActiveNavLink
-                                href="/checkout"
+                                href={localizePathname("/checkout", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faCartShopping}
                                   className="h-4 w-4"
                                 />
-                                Warenkorb
+                                {tx("Warenkorb")}
                               </ActiveNavLink>
                               {canAccessFinanzen ? (
                                 <>
                                   <ActiveNavLink
-                                    href="/receipts"
+                                    href={localizePathname("/receipts", locale)}
                                     className={navLinkClassName}
                                   >
                                     <FontAwesomeIcon
                                       icon={faFolderOpen}
                                       className="h-4 w-4"
                                     />
-                                    Belege
+                                    {tx("Belege")}
                                   </ActiveNavLink>
                                   <ActiveNavLink
-                                    href="/balance"
+                                    href={localizePathname("/balance", locale)}
                                     className={navLinkClassName}
                                   >
                                     <FontAwesomeIcon
                                       icon={faWallet}
                                       className="h-4 w-4"
                                     />
-                                    Guthaben
+                                    {tx("Guthaben")}
                                   </ActiveNavLink>
                                 </>
                               ) : null}
                               <ActiveNavLink
-                                href="/products"
+                                href={localizePathname("/products", locale)}
                                 className={navLinkClassName}
                               >
                                 <FontAwesomeIcon
                                   icon={faBoxOpen}
                                   className="h-4 w-4"
                                 />
-                                Produkte
+                                {tx("Produkte")}
                               </ActiveNavLink>
                               <ComingSoonNavItem
                                 className={navLinkClassName}
                                 icon={faCalendarCheck}
                               >
-                                Zugangskarte
+                                {tx("Zugangskarte")}
                               </ComingSoonNavItem>
-                              <ComingSoonNavItem
+                              <ActiveNavLink
+                                href={localizePathname("/account/ehrenamtsbonus", locale)}
                                 className={navLinkClassName}
-                                icon={faUser}
                               >
-                                Ehrenamtsbonus
-                              </ComingSoonNavItem>
+                                <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
+                                {tx("Ehrenamtsbonus")}
+                              </ActiveNavLink>
                             </>
                           ) : null}
                         </nav>
@@ -456,14 +426,14 @@ export default async function RootLayout({
                               {canAccessBackOffice ? (
                                 <Button
                                   fullWidth
-                                  href={adminAreaHref}
+                                  href={localizePathname(adminAreaHref, locale)}
                                   kind="secondary"
                                 >
                                   <FontAwesomeIcon
                                     icon={faLock}
                                     className="h-4 w-4"
                                   />
-                                  Back-Office
+                                  {tx("Back-Office")}
                                 </Button>
                               ) : null}
                               <form action={signOut}>
@@ -476,28 +446,26 @@ export default async function RootLayout({
                                     icon={faRightFromBracket}
                                     className="h-4 w-4"
                                   />
-                                  Abmelden
+                                  {tx("Abmelden")}
                                 </Button>
                               </form>
                             </div>
                           ) : (
                             <div className="space-y-3">
                               <ThemeToggle />
-                              <Button fullWidth href="/login" kind="secondary">
+                              <Button fullWidth href={localizePathname("/login", locale)} kind="secondary">
                                 <FontAwesomeIcon
                                   icon={faRightToBracket}
                                   className="h-4 w-4"
                                 />
-                                Anmelden
+                                {tx("Anmelden")}
                               </Button>
                               <Button
-                                href="https://konglomerat.org"
+                                href={localizePathname("/mitglied-werden", locale)}
                                 kind="primary"
-                                target="_blank"
-                                rel="noreferrer"
                                 className={navButtonClassName}
                               >
-                                Mitglied werden
+                                {tx("Mitglied werden")}
                               </Button>
                             </div>
                           )}
@@ -513,9 +481,11 @@ export default async function RootLayout({
                 isAuthenticated={isAuthenticated}
                 currentUserDisplayName={currentUserDisplayName}
                 adminAreaHref={adminAreaHref}
+                links={headerLinks}
+                inventoryHref={localizePathname("/resources", locale)}
               />
             }
-            footer={<SiteFooter />}
+            footer={<SiteFooter links={footerLinks} />}
           >
             {children}
           </AppShell>

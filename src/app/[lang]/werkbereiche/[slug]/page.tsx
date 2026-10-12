@@ -1,37 +1,54 @@
-// src/app/[lang]/werkbereiche/[slug]/page.tsx — Platzhalter für die spätere
-// CMS-basierte Detailseite.
-import { notFound } from "next/navigation";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+// Existing Werkbereiche and additional published CMS Werkbereich pages.
+import { notFound, permanentRedirect } from "next/navigation";
+import type { Metadata } from "next";
 
+import { isSupportedLocale, localizePathname } from "@/i18n/config";
+import { getPayloadPagePath } from "@/lib/payload-page-path";
 import { findVereinsprojekt, findWerkbereich } from "@/lib/werkbereiche";
-import PageTitle from "../../components/PageTitle";
-import WerkbereichSideNav from "../WerkbereichSideNav";
+import { loadPayloadWerkbereichPage } from "@/lib/payload-cms";
+import WerkbereichCmsPage, {
+  getWerkbereichCmsMetadata,
+} from "../WerkbereichCmsPage";
 
-export default async function WerkbereichPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
+type PageProps = {
+  params: Promise<{ slug: string; lang: string }>;
+};
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug, lang } = await params;
+  if (!isSupportedLocale(lang)) notFound();
+  const path = getPayloadPagePath(`werkbereich-${slug}`);
+  if (!path) notFound();
+  if (path !== `/werkbereiche/${slug}`) permanentRedirect(localizePathname(path, lang));
   const werkbereich = findWerkbereich(slug);
   const projekt = findVereinsprojekt(slug);
   const entry = werkbereich ?? projekt;
-  if (!entry) notFound();
+  return getWerkbereichCmsMetadata({
+    slug,
+    fallbackTitle: entry?.name ?? "Werkbereich",
+    fallbackDescription: werkbereich?.description,
+  });
+}
+
+export default async function WerkbereichPage({
+  params,
+}: PageProps) {
+  const { slug, lang } = await params;
+  if (!isSupportedLocale(lang)) notFound();
+  const path = getPayloadPagePath(`werkbereich-${slug}`);
+  if (!path) notFound();
+  if (path !== `/werkbereiche/${slug}`) permanentRedirect(localizePathname(path, lang));
+  const werkbereich = findWerkbereich(slug);
+  const projekt = findVereinsprojekt(slug);
+  const entry = werkbereich ?? projekt;
+  const page = !entry ? await loadPayloadWerkbereichPage(slug) : null;
+  if (!entry && !page) notFound();
 
   return (
-    <div className="grid items-start gap-8 md:grid-cols-[212px_minmax(0,1fr)]">
-      <WerkbereichSideNav />
-      <div className="min-w-0">
-        <PageTitle
-          backLink={{
-            href: "/werkbereiche",
-            label: "Zur Übersicht",
-            icon: faArrowLeft,
-          }}
-          title={entry.name}
-          subTitle={werkbereich?.description}
-        />
-      </div>
-    </div>
+    <WerkbereichCmsPage
+      slug={slug}
+      fallbackTitle={entry?.name ?? page!.title}
+      fallbackDescription={werkbereich?.description}
+    />
   );
 }

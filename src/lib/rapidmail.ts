@@ -64,6 +64,10 @@ type RapidmailRecipientListsResponse = {
   };
 };
 
+type RapidmailListOptions = {
+  signal?: AbortSignal;
+};
+
 type CreateRapidmailDraftInput = {
   fromName: string;
   fromEmail: string;
@@ -261,9 +265,13 @@ export const createHtmlZip = (
   ]);
 };
 
-export const listRapidmailRecipientLists = async () => {
-  const response =
-    await rapidmailFetch<RapidmailRecipientListsResponse>("/recipientlists");
+export const listRapidmailRecipientLists = async (
+  options: RapidmailListOptions = {},
+) => {
+  const response = await rapidmailFetch<RapidmailRecipientListsResponse>(
+    "/recipientlists",
+    { signal: options.signal },
+  );
 
   return (response._embedded?.recipientlists ?? [])
     .filter((entry) => typeof entry.id === "number" && Boolean(entry.name))
@@ -276,8 +284,13 @@ export const listRapidmailRecipientLists = async () => {
     .sort((left, right) => left.name.localeCompare(right.name, "de"));
 };
 
-export const listRapidmailMailings = async () => {
-  const response = await rapidmailFetch<RapidmailMailingsResponse>("/mailings");
+export const listRapidmailMailings = async (
+  options: RapidmailListOptions = {},
+) => {
+  const response = await rapidmailFetch<RapidmailMailingsResponse>(
+    "/mailings",
+    { signal: options.signal },
+  );
 
   return (response._embedded?.mailings ?? [])
     .filter(

@@ -17,6 +17,7 @@ import {
 } from "@/lib/resource-media";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
+import { markdownExcerpt } from "@/lib/markdown-excerpt";
 import Button from "@/components/knglmrt/Button";
 
 // Redaktionell gesetzte Beiträge: Wer einen Artikel auf der Startseite zeigen
@@ -41,14 +42,7 @@ type NewsRow = {
 const NEWS_COLUMNS =
   "id, pretty_title, name, description, image, images, media_posters, type, tags";
 
-const truncateText = (text: string, maxLength: number) => {
-  const normalized = text.trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
 
-  return `${normalized.slice(0, maxLength - 1).trimEnd()}...`;
-};
 
 const toArticle = (row: NewsRow) => {
   const media =
@@ -168,7 +162,7 @@ export default async function NewsSection() {
                 </span>
                 {article.description ? (
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    {truncateText(article.description, 110)}
+                    {markdownExcerpt(article.description, 110)}
                   </p>
                 ) : null}
               </div>
@@ -179,7 +173,7 @@ export default async function NewsSection() {
 
       <div className="mt-7">
         <Button
-          href="/showcase"
+          href={localizePathname("/showcase", locale)}
           kind="tertiary"
           size="large"
           icon={faArrowRight}

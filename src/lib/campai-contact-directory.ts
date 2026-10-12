@@ -236,6 +236,26 @@ export const getCampaiActiveMemberContactById = async (contactId: string) => {
   return contact && isMemberContact(contact) ? contact : null;
 };
 
+/** Bestehende Mitglieder können ihr digitales Konto per E-Mail aktivieren. */
+export const getCampaiActiveMemberContactByEmail = async (email: string) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  for (let offset = 0; offset < 10000; offset += CAMPAI_PAGE_SIZE) {
+    const contacts = await fetchCampaiContactsPage(offset);
+    const contact = contacts.find(
+      (entry) =>
+        entry.email === normalizedEmail &&
+        isMemberContact(entry) &&
+        isActiveCampaiContact(entry),
+    );
+    if (contact) return contact;
+    if (contacts.length < CAMPAI_PAGE_SIZE) break;
+  }
+
+  return null;
+};
+
 export const splitCampaiContactName = (name: string): CampaiNameParts => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 

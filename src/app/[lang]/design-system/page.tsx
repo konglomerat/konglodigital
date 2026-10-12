@@ -310,7 +310,7 @@ export default function DesignSystemPage() {
       <Section
         title="Button"
         source="components/knglmrt/Button.tsx"
-        hint="Acht Varianten, vier Größen. Größe und Variante sind unabhängig: eine kleine primäre Taste bleibt pink."
+        hint="Primary: volle Markenfarbe ohne Rahmen. Secondary: dieselbe Farbe mit 25 % Deckkraft, ebenfalls ohne Rahmen. Vier Größen, unabhängig von der Variante."
       >
         <div className="mb-8 flex flex-wrap items-end gap-x-8 gap-y-6">
           {BUTTON_KINDS.map((kind) => (

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import type { Metadata } from "next";
 import Divider from "@/components/knglmrt/Divider";
 import Button from "@/components/knglmrt/Button";
 import Face from "@/components/knglmrt/Face";
@@ -8,19 +9,52 @@ import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import NewsSection from "./NewsSection";
 import TerrazzoParallax from "./TerrazzoParallax";
 import heroHelloImage from "./hero-hello.jpg";
+import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
+import {
+  loadPayloadPage,
+  payloadPageHasAppSlot,
+  type PayloadPage,
+} from "@/lib/payload-cms";
+import PayloadPageContent, {
+  payloadPageMetadata,
+} from "./[lang]/components/PayloadPageContent";
 
-export default async function Home() {
-  const { tx } = await getServerI18n();
+const loadHomePage = () => loadPayloadPage("startseite", "home");
+
+export async function generateMetadata(): Promise<Metadata> {
+  return payloadPageMetadata(await loadHomePage(), {
+    title: "Konglomerat e.V.",
+    description:
+      "Werkstatt, Self-Service und Verwaltung des Konglomerat e.V.",
+  });
+}
+
+function HomeFeeds({ page }: { page?: PayloadPage }) {
+  return (
+    <>
+      {!page || !payloadPageHasAppSlot(page, "showcaseOfMonth") ? (
+        <ShowcaseOfTheMonthSection />
+      ) : null}
+      {!page || !payloadPageHasAppSlot(page, "news") ? <NewsSection /> : null}
+      {!page || !payloadPageHasAppSlot(page, "resourceOfMonth") ? (
+        <ResourceOfTheMonthSection />
+      ) : null}
+    </>
+  );
+}
+
+async function StaticHome() {
+  const { tx, locale } = await getServerI18n();
   return (
     <>
       <TerrazzoParallax />
       <section className="frontpage-hero knglmrt-terrazzo-fein-rosa relative left-1/2 -mt-4 w-[100dvw] -translate-x-1/2 knglmrt-border-b py-8 md:-mt-10 md:py-11">
         <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
-          <div className="knglmrt-panel grid h-fit gap-8 p-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
-            <div className="order-2 md:order-1">
+          <div className="knglmrt-panel grid h-fit gap-8 p-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
+            <div className="min-w-0 order-2 lg:order-1">
               <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
-              <h1 className="mt-3 whitespace-nowrap text-[clamp(28px,7.5vw,40px)] leading-[1.05] md:text-[56px] md:leading-[52px]">
+              <h1 className="mt-3 text-[clamp(28px,5vw,56px)] leading-[1.05]">
                 Konglomerat e.V.
               </h1>
               <p className="knglmrt-lead mt-4 max-w-[420px]">
@@ -31,23 +65,23 @@ export default async function Home() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <Button href="/werkbereiche" kind="primary" size="large">
+                <Button href={localizePathname("/werkbereiche", locale)} kind="primary" size="large">
                   {tx("Werkbereiche ansehen", "de")}
                 </Button>
-                <Button href="/verein" kind="secondary" size="large">
+                <Button href={localizePathname("/verein", locale)} kind="secondary" size="large">
                   {tx("Über uns", "de")}
                 </Button>
               </div>
             </div>
 
-            <div className="order-1 mx-auto w-full max-w-[620px] md:order-2 md:max-w-none">
+            <div className="order-1 mx-auto w-full max-w-[420px] lg:order-2 lg:max-w-none">
               <Image
                 src={heroHelloImage}
                 alt="Willkommensgrafik"
                 priority
-                className="h-auto w-full object-cover multiply negative-multiply md:hidden"
+                className="h-auto w-full object-cover multiply negative-multiply lg:hidden"
               />
-              <div className="relative hidden md:-my-6 md:block lg:-my-10">
+              <div className="relative hidden lg:block lg:-my-10">
                 <video
                   autoPlay
                   muted
@@ -106,7 +140,7 @@ export default async function Home() {
               cta: {
                 href: "/mitglied-werden",
                 kind: "tertiary" as const,
-                label: tx("Online Antrag", "de"),
+                label: tx("Mitgliedsantrag", "de"),
               },
             },
             {
@@ -144,7 +178,7 @@ export default async function Home() {
                 {step.cta ? (
                   <div className="mt-auto pt-3">
                     <Button
-                      href={step.cta.href}
+                      href={localizePathname(step.cta.href, locale)}
                       kind={step.cta.kind}
                       size="large"
                       icon={faArrowRight}
@@ -160,11 +194,7 @@ export default async function Home() {
         </ol>
       </section>
 
-      <ShowcaseOfTheMonthSection />
-
-      <NewsSection />
-
-      <ResourceOfTheMonthSection />
+      <HomeFeeds />
 
       <section className="knglmrt-terrazzo-hellgelb relative left-1/2 w-[100dvw] -translate-x-1/2 knglmrt-border-t px-3 py-9 text-center md:px-7">
         <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
@@ -179,6 +209,21 @@ export default async function Home() {
           konglomerat.org
         </a>
       </section>
+    </>
+  );
+}
+
+export default async function Home() {
+  const page = await loadHomePage();
+  if (!page) return <StaticHome />;
+
+  return (
+    <>
+      <TerrazzoParallax />
+      <PayloadPageContent page={page} />
+      {/* Diese Bereiche kommen aus Live-Daten und bleiben deshalb feste
+          App-Bausteine unterhalb der redaktionellen CMS-Blöcke. */}
+      <HomeFeeds page={page} />
     </>
   );
 }

@@ -432,6 +432,26 @@
   background-color: var(--card);
 }
 
+/* Die Originalgrafiken enthalten auch helle Binnenflächen (z. B. Beton).
+ * Graustufen + Invertierung erhalten diese Details und die Transparenz;
+ * brightness(0) würde sie zu einer geschlossenen Silhouette machen. */
+.werkbereich-mark {
+  color: var(--foreground);
+}
+.werkbereich-mark-image {
+  filter: grayscale(1);
+}
+.dark .werkbereich-mark-image {
+  filter: grayscale(1) invert(1);
+}
+/* Die feinen, teiltransparenten Linien des Laser-Siegels leicht verstärken. */
+.werkbereich-mark-image-fine {
+  filter: grayscale(1) drop-shadow(0 0 0.35px currentColor);
+}
+.dark .werkbereich-mark-image-fine {
+  filter: grayscale(1) invert(1) drop-shadow(0 0 0.35px currentColor);
+}
+
 .knglmrt-terrazzo-hover {
   position: relative;
   isolation: isolate;

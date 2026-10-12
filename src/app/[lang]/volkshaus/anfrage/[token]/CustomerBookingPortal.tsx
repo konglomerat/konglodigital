@@ -73,6 +73,7 @@ type CustomerBooking = Pick<
   | "updatedAt"
 > & {
   requestStatusLabel: string;
+  previousContracts?: Array<{ version: number; signed: boolean }>;
   reservationStatusLabel: string;
   contractStatusLabel: string;
   invoiceStatusLabel: string;
@@ -94,9 +95,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
   timeZone: "Europe/Berlin",
 });
-
-const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 const WORKFLOW_STEPS = [
   {
@@ -132,7 +130,11 @@ const WORKFLOW_STEPS = [
 ] as const;
 
 const getWorkflowPosition = (booking: CustomerBooking) => {
-  if (booking.reservationStatus === "confirmed") return 4;
+  if (
+    booking.reservationStatus === "confirmed" &&
+    booking.contractStatus === "fully_signed"
+  )
+    return 4;
   if (
     booking.invoiceStatus === "created" ||
     booking.invoiceStatus === "draft_created"
@@ -217,6 +219,7 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "sign_contract",
+          contractHash: booking?.contractHash,
           signerName,
           accepted,
         }),
@@ -516,6 +519,23 @@ export default function CustomerBookingPortal({ token }: { token: string }) {
           </section>
 
           <section className="knglmrt-border-section bg-card p-5 text-sm">
+            {booking.previousContracts?.length ? (
+              <div className="mb-4">
+                <h2 className="font-bold">Vorherige Vertragsversionen</h2>
+                {booking.previousContracts.map((contract) => (
+                  <a
+                    className="mt-2 block underline"
+                    key={contract.version}
+                    href={`${endpoint}/contract?version=${contract.version}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Version {contract.version}
+                    {contract.signed ? " · unterschrieben" : ""} (PDF)
+                  </a>
+                ))}
+              </div>
+            ) : null}
             <h2 className="flex items-center gap-2 font-bold text-foreground">
               <FontAwesomeIcon
                 icon={faReceipt}

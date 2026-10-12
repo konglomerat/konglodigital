@@ -3,10 +3,15 @@
 // erst beim Überfahren, dann als Terrazzo — je Kachel eine andere Variante.
 // Muster: Titel → Sektionskopf mit Zähler und Wellenlinie → Kartenraster.
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 
+import { loadPayloadPage } from "@/lib/payload-cms";
 import { VEREINSPROJEKTE, WERKBEREICHE } from "@/lib/werkbereiche";
 import PageTitle from "../components/PageTitle";
+import PayloadPageContent, {
+  payloadPageMetadata,
+} from "../components/PayloadPageContent";
 import WerkbereichMark from "../components/WerkbereichMark";
 
 // Die Terrazzo-Platten der Bibliothek — alle im hellen Ende der Palette, damit
@@ -69,11 +74,9 @@ function WaveRule({ className }: Readonly<{ className?: string }>) {
 const tileClassName =
   "knglmrt-terrazzo-hover flex min-h-20 items-center gap-4 border-2 border-[var(--primary-hairline)] bg-card px-5 py-3 transition-colors duration-300 ease-out hover:border-[var(--knglmrt-pink-60)] focus-visible:border-[var(--knglmrt-pink-60)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground";
 
-export default function WerkbereichePage() {
+function WerkbereicheGrid() {
   return (
-    <div>
-      <PageTitle title="Werkbereiche" className="mb-8" />
-
+    <>
       <section aria-label="Werkbereiche" className="mb-10">
         <TileGrid>
           {WERKBEREICHE.map((werkbereich, index) => (
@@ -85,7 +88,7 @@ export default function WerkbereichePage() {
             >
               <WerkbereichMark
                 werkbereich={werkbereich}
-                height={40}
+                height={48}
                 className="self-center"
               />
               <span className="knglmrt-card-title min-w-0">
@@ -114,17 +117,47 @@ export default function WerkbereichePage() {
               // der Platten zeigen wie die Werkbereiche darüber.
               style={terrazzoStyle(index + 2)}
             >
-              <span
-                aria-hidden="true"
-                className="flex size-10 flex-none items-center justify-center knglmrt-border font-display text-2xl leading-none"
-              >
-                {projekt.name.charAt(0)}
-              </span>
+              <WerkbereichMark werkbereich={projekt} height={48} />
               <span className="knglmrt-card-title min-w-0">{projekt.name}</span>
             </Link>
           ))}
         </TileGrid>
       </section>
+    </>
+  );
+}
+
+function StaticWerkbereichePage() {
+  return (
+    <div>
+      <PageTitle title="Werkbereiche" className="mb-8" />
+      <WerkbereicheGrid />
+    </div>
+  );
+}
+
+const loadWerkbereichePage = () =>
+  loadPayloadPage("werkbereiche", "werkstattbereiche");
+
+export async function generateMetadata(): Promise<Metadata> {
+  return payloadPageMetadata(await loadWerkbereichePage(), {
+    title: "Werkbereiche",
+    description: "Werkbereiche und Projekte des Konglomerat e.V.",
+  });
+}
+
+export default async function WerkbereichePage() {
+  const page = await loadWerkbereichePage();
+  if (!page) return <StaticWerkbereichePage />;
+
+  return (
+    <div>
+      <PayloadPageContent page={page} />
+      {/* Die Kacheln bleiben aus der zentralen Werkbereichsliste generiert;
+          Einleitung, Hero und ergänzende Inhalte kommen aus Payload. */}
+      <div className="mt-8">
+        <WerkbereicheGrid />
+      </div>
     </div>
   );
 }

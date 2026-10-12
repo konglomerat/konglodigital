@@ -69,6 +69,7 @@ type ShowcaseOptions = {
   gifFrameDurationMs: number;
   showLink: boolean;
   linkText: string;
+  href: string;
 };
 
 type ShowcaseItem = {
@@ -311,6 +312,7 @@ const createShowcaseItem = (showcase: NewsletterShowcase): ShowcaseItem => ({
     gifFrameDurationMs: 1_000,
     showLink: true,
     linkText: "Weiterlesen",
+    href: showcase.href,
   },
 });
 
@@ -420,6 +422,10 @@ const restoreItems = (
             raw.options.linkText.trim()
               ? raw.options.linkText.trim().slice(0, 80)
               : "Weiterlesen",
+          href:
+            typeof raw.options?.href === "string"
+              ? raw.options.href.slice(0, 2_000)
+              : showcase.href,
         },
       });
       usedShowcaseIds.add(showcase.id);
@@ -541,6 +547,7 @@ export default function GenerateNewsletterClient({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
+  const [previewHeight, setPreviewHeight] = useState(740);
   const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(null);
   const [status, setStatus] = useState<{
     kind: "success" | "error";
@@ -565,6 +572,34 @@ export default function GenerateNewsletterClient({
   const projectExcerptLatestValues = useRef<Map<string, string>>(new Map());
   const projectExcerptSavesInFlight = useRef<Set<string>>(new Set());
   const draggedItemId = useRef<string | null>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const previewResizeObserver = useRef<ResizeObserver | null>(null);
+
+  const handlePreviewFrameLoad = () => {
+    previewResizeObserver.current?.disconnect();
+
+    const frame = previewFrameRef.current;
+    const frameDocument = frame?.contentDocument;
+    if (!frame || !frameDocument) return;
+
+    const emailRoot =
+      frameDocument.querySelector<HTMLElement>(".email-center") ??
+      frameDocument.body;
+
+    const updatePreviewHeight = () => {
+      if (previewFrameRef.current?.contentDocument !== frameDocument) return;
+      const nextHeight = Math.ceil(emailRoot.getBoundingClientRect().height);
+      if (nextHeight > 0) setPreviewHeight(nextHeight);
+    };
+
+    updatePreviewHeight();
+
+    const observer = new ResizeObserver(updatePreviewHeight);
+    observer.observe(emailRoot);
+    previewResizeObserver.current = observer;
+
+    void frameDocument.fonts.ready.then(updatePreviewHeight);
+  };
 
   const currentDraftContent = useMemo<NewsletterDraftContent>(
     () => ({
@@ -730,6 +765,7 @@ export default function GenerateNewsletterClient({
       projectExcerptSaveTimers.current.forEach((timer) =>
         window.clearTimeout(timer),
       );
+      previewResizeObserver.current?.disconnect();
     },
     [],
   );
@@ -1923,6 +1959,20 @@ export default function GenerateNewsletterClient({
                               })
                             }
                           />
+                          <Field
+                            label="Ziel-URL"
+                            type="url"
+                            value={item.options.href}
+                            disabled={!item.options.showLink}
+                            maxLength={2_000}
+                            hint="Kann auf eine beliebige Webseite oder einen eigenen Pfad verweisen."
+                            className="sm:col-span-2 xl:col-span-3"
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                href: event.target.value,
+                              })
+                            }
+                          />
                           {item.options.imageMode === "gif" ? (
                             <div className="space-y-4 rounded-lg border border-primary-border bg-primary-soft/40 p-4 sm:col-span-2 xl:col-span-4">
                               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2126,125 +2176,6 @@ export default function GenerateNewsletterClient({
           </FormSection>
 
           <FormSection
-            title="Beiträge auswählen"
-            description="Die Beiträge werden direkt aus KongloDigital geladen. Ein Klick fügt sie am Ende des Newsletters hinzu oder entfernt sie wieder."
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field
-                label="Beiträge durchsuchen"
-                className="flex-1"
-                type="search"
-                value={query}
-                placeholder="Name oder Beschreibung"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <Button
-                type="button"
-                kind="secondary"
-                onClick={addFilteredShowcases}
-                disabled={
-                  selectedShowcaseCount >= MAX_SELECTED_SHOWCASES ||
-                  filteredShowcases.length === 0 ||
-                  filteredShowcases.every((showcase) =>
-                    selectedShowcaseIds.has(showcase.id),
-                  )
-                }
-              >
-                {query.trim() ? "Alle Treffer wählen" : "Alle wählen"}
-              </Button>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Maximal {MAX_SELECTED_SHOWCASES} Beiträge pro Newsletter, damit
-              Abmeldelink und Footer in E-Mail-Programmen sichtbar bleiben.
-            </p>
-
-            {filteredShowcases.length === 0 ? (
-              <div className="mt-5 rounded-lg border border-dashed border-input bg-muted/40 px-5 py-8 text-center text-sm text-muted-foreground">
-                Keine passenden Beiträge gefunden.
-              </div>
-            ) : (
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filteredShowcases.map((showcase) => {
-                  const selected = selectedShowcaseIds.has(showcase.id);
-                  const limitReached =
-                    !selected &&
-                    selectedShowcaseCount >= MAX_SELECTED_SHOWCASES;
-                  const imageUrl = previewImage(
-                    showcase.images[0] ?? null,
-                    520,
-                    300,
-                  );
-                  const description = stripText(showcase.description);
-
-                  return (
-                    <button
-                      key={showcase.id}
-                      type="button"
-                      onClick={() => addShowcase(showcase)}
-                      disabled={limitReached}
-                      aria-pressed={selected}
-                      className={cn(
-                        "overflow-hidden rounded-lg border text-left transition focus:outline-none focus:ring-2 focus:ring-ring/30",
-                        selected
-                          ? "border-primary bg-primary-soft"
-                          : "border-border bg-card hover:border-input hover:-translate-y-0.5 hover:shadow-md",
-                        limitReached &&
-                          "cursor-not-allowed opacity-55 hover:translate-y-0 hover:border-border ",
-                      )}
-                    >
-                      {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt=""
-                          width={520}
-                          height={300}
-                          unoptimized
-                          loading="lazy"
-                          className="h-36 w-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-36 w-full items-center justify-center bg-muted text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Kein Bild
-                        </span>
-                      )}
-                      <span className="block space-y-2 p-4">
-                        <span className="flex items-start justify-between gap-3">
-                          <span className="font-semibold leading-snug text-foreground">
-                            {showcase.name}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
-                              selected
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {selected
-                              ? "Ausgewählt"
-                              : limitReached
-                                ? "Limit erreicht"
-                                : "Auswählen"}
-                          </span>
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {formatDate(
-                            showcase.publishDate ?? showcase.updatedAt,
-                          )}
-                        </span>
-                        <span className="block text-sm leading-relaxed text-muted-foreground">
-                          {description.slice(0, 130) ||
-                            "Noch keine Beschreibung hinterlegt."}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </FormSection>
-
-          <FormSection
             title="Rapidmail"
             description="Diese Angaben werden nur beim Anlegen des Entwurfs benötigt. Versand und Terminierung bleiben in Rapidmail."
           >
@@ -2343,7 +2274,7 @@ export default function GenerateNewsletterClient({
           </section>
         </div>
 
-        <aside className="min-w-0 xl:sticky xl:top-6">
+        <aside className="min-w-0">
           <section className="knglmrt-border-section overflow-hidden bg-card">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
@@ -2403,7 +2334,7 @@ export default function GenerateNewsletterClient({
               </div>
             ) : null}
 
-            <div className="min-h-[760px] overflow-x-auto bg-muted/50 p-3 sm:p-5">
+            <div className="overflow-x-auto bg-muted/50 p-3 sm:p-5">
               {previewHtml ? (
                 <div
                   className="mx-auto overflow-hidden rounded-md bg-white shadow-lg transition-[width] duration-200"
@@ -2413,12 +2344,16 @@ export default function GenerateNewsletterClient({
                   }}
                 >
                   <iframe
+                    ref={previewFrameRef}
                     title={`Newsletter-Vorschau – ${
                       previewViewport === "mobile" ? "Mobil" : "Desktop"
                     }`}
                     srcDoc={previewHtml}
                     sandbox="allow-same-origin"
-                    className="h-[740px] w-full border-0 bg-white"
+                    scrolling="no"
+                    onLoad={handlePreviewFrameLoad}
+                    className="block w-full border-0 bg-white"
+                    style={{ height: previewHeight }}
                   />
                 </div>
               ) : (

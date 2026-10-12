@@ -57,6 +57,32 @@ type CreateBookingParams = Omit<
 export type VolkshausBookingPatch = Partial<
   Pick<
     VolkshausBooking,
+    | "customerName"
+    | "organization"
+    | "email"
+    | "phone"
+    | "billingAddressLine"
+    | "billingZip"
+    | "billingCity"
+    | "eventTitle"
+    | "eventDescription"
+    | "usageType"
+    | "frequency"
+    | "recurringOccurrences"
+    | "expectedAttendees"
+    | "bookingDate"
+    | "startTime"
+    | "endTime"
+    | "setupStartTime"
+    | "teardownEndTime"
+    | "startAt"
+    | "endAt"
+    | "setupStartAt"
+    | "teardownEndAt"
+    | "requestedRooms"
+    | "equipment"
+    | "specialRequirements"
+    | "priceSnapshot"
     | "requestStatus"
     | "reservationStatus"
     | "contractStatus"
@@ -95,9 +121,7 @@ type AuditEvent = {
 };
 
 declare global {
-  var __volkshausBookingMemoryStore:
-    | Map<string, VolkshausBooking>
-    | undefined;
+  var __volkshausBookingMemoryStore: Map<string, VolkshausBooking> | undefined;
   var __volkshausBookingMemoryAudit: AuditEvent[] | undefined;
   var __volkshausBookingDatabaseUnavailable: boolean | undefined;
 }
@@ -195,9 +219,10 @@ const mapBookingRow = (row: BookingRow): VolkshausBooking => ({
   requestedRooms: Array.isArray(row.requested_rooms)
     ? (row.requested_rooms as VolkshausRoomId[])
     : [],
-  equipment: normalizeObject<
-    Partial<Record<VolkshausEquipmentId, number>>
-  >(row.equipment, {}),
+  equipment: normalizeObject<Partial<Record<VolkshausEquipmentId, number>>>(
+    row.equipment,
+    {},
+  ),
   specialRequirements: normalizeNullableString(row.special_requirements),
   priceSnapshot: normalizeObject<VolkshausPriceSnapshot>(row.price_snapshot, {
     tariffVersion: "",
@@ -301,6 +326,32 @@ const toBookingRow = (booking: VolkshausBooking): BookingRow => ({
 
 const toPatchRow = (patch: VolkshausBookingPatch): BookingRow => {
   const keyMap: Record<keyof VolkshausBookingPatch, string> = {
+    customerName: "customer_name",
+    organization: "organization",
+    email: "email",
+    phone: "phone",
+    billingAddressLine: "billing_address_line",
+    billingZip: "billing_zip",
+    billingCity: "billing_city",
+    eventTitle: "event_title",
+    eventDescription: "event_description",
+    usageType: "usage_type",
+    frequency: "frequency",
+    recurringOccurrences: "recurring_occurrences",
+    expectedAttendees: "expected_attendees",
+    bookingDate: "booking_date",
+    startTime: "start_time",
+    endTime: "end_time",
+    setupStartTime: "setup_start_time",
+    teardownEndTime: "teardown_end_time",
+    startAt: "start_at",
+    endAt: "end_at",
+    setupStartAt: "setup_start_at",
+    teardownEndAt: "teardown_end_at",
+    requestedRooms: "requested_rooms",
+    equipment: "equipment",
+    specialRequirements: "special_requirements",
+    priceSnapshot: "price_snapshot",
     requestStatus: "request_status",
     reservationStatus: "reservation_status",
     contractStatus: "contract_status",
@@ -399,7 +450,9 @@ const withFallback = async <T>(
   }
 };
 
-const createInitialBooking = (params: CreateBookingParams): VolkshausBooking => {
+const createInitialBooking = (
+  params: CreateBookingParams,
+): VolkshausBooking => {
   const now = new Date().toISOString();
   return {
     ...params,
@@ -507,20 +560,30 @@ export const getVolkshausBookingByToken = async (accessToken: string) =>
 export const updateVolkshausBooking = async (
   id: string,
   patch: VolkshausBookingPatch,
+  expectedUpdatedAt?: string,
 ) =>
   withFallback(
     async () => {
       const supabase = createSupabaseAdminClient();
-      const { data, error } = await supabase
+      let query = supabase
         .from(TABLE_NAME)
         .update({
           ...toPatchRow(patch),
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(
+            Math.max(
+              Date.now(),
+              expectedUpdatedAt ? Date.parse(expectedUpdatedAt) + 1 : 0,
+            ),
+          ).toISOString(),
         })
-        .eq("id", id)
-        .select("*")
-        .single();
+        .eq("id", id);
+      if (expectedUpdatedAt) query = query.eq("updated_at", expectedUpdatedAt);
+      const { data, error } = await query.select("*").maybeSingle();
       if (error) throw error;
+      if (!data)
+        throw new Error(
+          "Die Buchung wurde inzwischen geändert. Bitte neu laden.",
+        );
       return mapBookingRow(data as BookingRow);
     },
     () => {
@@ -528,10 +591,20 @@ export const updateVolkshausBooking = async (
       if (!current) {
         throw new Error("Buchungsanfrage wurde nicht gefunden.");
       }
+      if (expectedUpdatedAt && current.updatedAt !== expectedUpdatedAt) {
+        throw new Error(
+          "Die Buchung wurde inzwischen geändert. Bitte neu laden.",
+        );
+      }
       const updated: VolkshausBooking = {
         ...current,
         ...patch,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(
+          Math.max(
+            Date.now(),
+            expectedUpdatedAt ? Date.parse(expectedUpdatedAt) + 1 : 0,
+          ),
+        ).toISOString(),
       };
       memoryStore.set(id, updated);
       return updated;

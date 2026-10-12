@@ -18,7 +18,7 @@ export const PATCH = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

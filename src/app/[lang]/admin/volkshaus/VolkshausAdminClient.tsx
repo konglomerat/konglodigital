@@ -17,7 +17,6 @@ import {
   faFileSignature,
   faHouse,
   faListCheck,
-  faMagnifyingGlass,
   faNoteSticky,
   faPaperPlane,
   faPenToSquare,
@@ -30,6 +29,9 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+
+import BookingEditor from "./BookingEditor";
+import BookingHistory from "./BookingHistory";
 
 import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
@@ -46,6 +48,7 @@ import Field from "@/components/knglmrt/Field";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Textarea from "@/components/knglmrt/Textarea";
 import SearchField from "@/components/knglmrt/SearchField";
+import { formatVolkshausRequestReceivedAt } from "@/lib/volkshaus-request-messages";
 
 type AdminBooking = VolkshausBooking & { accessUrl: string };
 type AssignablePerson = {
@@ -57,13 +60,14 @@ type AssignablePerson = {
   roles: UserRole[];
 };
 type AdminAction =
+  | "save_booking"
+  | "resolve_invoice_correction"
   | "start_review"
   | "needs_info"
   | "hold"
   | "reject"
   | "save_assignees"
   | "save_notes"
-  | "save_price_adjustment"
   | "send_contract"
   | "retry_invoice"
   | "mark_paid"
@@ -100,9 +104,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
-const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-
 const getPersonName = (person: AssignablePerson) => {
   if (person.campaiName?.trim()) return person.campaiName.trim();
   const fullName = [person.firstName, person.lastName]
@@ -130,6 +131,7 @@ const FILTERS: Array<{
   { value: "active", label: "Aktiv", icon: faListCheck },
   { value: "new", label: "Zu prüfen", icon: faClock },
   { value: "contract", label: "Vertrag", icon: faFileSignature },
+  { value: "invoice", label: "Rechnung offen", icon: faReceipt },
   { value: "done", label: "Abgeschlossen", icon: faCheck },
   { value: "all", label: "Alle", icon: faReceipt },
 ];
@@ -162,12 +164,12 @@ const ACTION_CONFIRMATIONS: Partial<Record<AdminAction, ActionConfirmation>> = {
   reopen_contract: {
     title: "Vertrag wirklich neu aufsetzen?",
     description:
-      "Die aktuelle Vertragsversion wird verworfen, damit Preis oder Inhalte erneut bearbeitet werden können.",
+      "Die aktuelle Vertragsversion bleibt im Verlauf erhalten. Eine neue Version kann anschließend freigegeben werden.",
     confirmLabel: "Vertrag neu aufsetzen",
     tone: "danger",
     icon: faRotate,
     consequences: [
-      "Bereits gespeicherte Kunden- und Teamunterschriften werden entfernt.",
+      "Die bisherige Version einschließlich Unterschriften wird archiviert.",
       "Der überarbeitete Vertrag muss anschließend erneut freigegeben werden.",
     ],
   },
@@ -210,16 +212,16 @@ const ACTION_CONFIRMATIONS: Partial<Record<AdminAction, ActionConfirmation>> = {
     tone: "warning",
     icon: faFileSignature,
     consequences: [
-      "Preisänderungen sind danach erst wieder nach einem Neuaufsetzen möglich.",
+      "Spätere Änderungen erzeugen einen neuen Entwurf; diese Version bleibt im Verlauf erhalten.",
       "Die Vereinbarung wird dabei bereits durch Konglomerat e.V. unterschrieben.",
       "Bei konfiguriertem E-Mail-Versand wird die Kund:in sofort benachrichtigt.",
     ],
   },
   retry_invoice: {
-    title: "Campai-Anlage erneut versuchen?",
+    title: "Rechnung in Campai anlegen?",
     description:
-      "KongloDigital versucht erneut, für diese Buchung eine Campai-Rechnung anzulegen.",
-    confirmLabel: "Rechnung erneut anlegen",
+      "Die geprüften Rechnungsangaben werden an Campai übertragen. Die Rechnung wird nicht automatisch an die Kund:in versendet.",
+    confirmLabel: "Rechnung anlegen",
     tone: "warning",
     icon: faReceipt,
     consequences: [
@@ -253,10 +255,9 @@ export default function VolkshausAdminClient() {
   const [actionWarning, setActionWarning] = useState<string | null>(null);
   const [activeAction, setActiveAction] = useState<AdminAction | null>(null);
   const [internalNotes, setInternalNotes] = useState("");
-  const [adjustmentEuro, setAdjustmentEuro] = useState("0");
-  const [adjustmentReason, setAdjustmentReason] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
   const [backupAssignedUserId, setBackupAssignedUserId] = useState("");
+  const [editDirty, setEditDirty] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
@@ -307,15 +308,44 @@ export default function VolkshausAdminClient() {
   useEffect(() => {
     if (!selected) return;
     setInternalNotes(selected.internalNotes ?? "");
-    setAdjustmentEuro((selected.priceAdjustmentCents / 100).toFixed(2));
-    setAdjustmentReason(selected.priceAdjustmentReason ?? "");
     setAssignedUserId(selected.assignedUserId ?? "");
     setBackupAssignedUserId(selected.backupAssignedUserId ?? "");
-    setActionError(null);
-    setActionWarning(null);
     setCopySuccess(false);
     setPendingConfirmation(null);
   }, [selected?.id, selected]);
+
+  const hasUnsavedChanges =
+    editDirty ||
+    Boolean(
+      selected &&
+        (internalNotes !== (selected.internalNotes ?? "") ||
+          assignedUserId !== (selected.assignedUserId ?? "") ||
+          backupAssignedUserId !== (selected.backupAssignedUserId ?? "")),
+    );
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const preventLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", preventLeave);
+    const preventLink = (event: MouseEvent) => {
+      const link = (event.target as Element)?.closest?.("a[href]");
+      if (
+        link &&
+        !window.confirm(
+          "Ungespeicherte Änderungen verwerfen und die Seite verlassen?",
+        )
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener("click", preventLink, true);
+    return () => {
+      window.removeEventListener("beforeunload", preventLeave);
+      document.removeEventListener("click", preventLink, true);
+    };
+  }, [hasUnsavedChanges]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("de-DE");
@@ -329,6 +359,14 @@ export default function VolkshausAdminClient() {
         (filter === "contract" &&
           (booking.contractStatus === "sent" ||
             booking.contractStatus === "customer_signed")) ||
+        (filter === "invoice" &&
+          (booking.priceSnapshot.admin?.invoiceCorrection?.required ||
+            (booking.contractStatus === "fully_signed" &&
+              !booking.campaiInvoiceId &&
+              applyPriceAdjustment(
+                booking.priceSnapshot,
+                booking.priceAdjustmentCents,
+              ).grossCents > 0))) ||
         (filter === "active" &&
           booking.reservationStatus !== "cancelled" &&
           booking.reservationStatus !== "completed" &&
@@ -367,7 +405,11 @@ export default function VolkshausAdminClient() {
       }>(`/api/admin/volkshaus/bookings/${selected.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, ...payload }),
+        body: JSON.stringify({
+          action,
+          expectedUpdatedAt: selected.updatedAt,
+          ...payload,
+        }),
       });
       setBookings((current) =>
         current.map((booking) =>
@@ -498,14 +540,27 @@ export default function VolkshausAdminClient() {
                 Keine passenden Anfragen.
               </p>
             ) : (
-              <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
+              <ul className="max-h-[40vh] lg:max-h-[70vh] divide-y divide-border overflow-y-auto">
                 {filtered.map((booking) => {
                   const bookedEquipment = getBookedEquipment(booking);
                   return (
                     <li key={booking.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedId(booking.id)}
+                        onClick={() => {
+                          if (booking.id === selectedId) return;
+                          if (
+                            hasUnsavedChanges &&
+                            !window.confirm(
+                              "Ungespeicherte Änderungen verwerfen?",
+                            )
+                          )
+                            return;
+                          setEditDirty(false);
+                          setActionError(null);
+                          setActionWarning(null);
+                          setSelectedId(booking.id);
+                        }}
                         className={`w-full p-4 text-left transition ${
                           booking.id === selectedId
                             ? "bg-primary-soft"
@@ -541,6 +596,15 @@ export default function VolkshausAdminClient() {
                             {booking.referenceCode}
                           </span>
                         </div>
+                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FontAwesomeIcon icon={faClock} className="h-3 w-3" />
+                          <span>
+                            Eingegangen:{" "}
+                            {formatVolkshausRequestReceivedAt(
+                              booking.createdAt,
+                            )}
+                          </span>
+                        </p>
                         {bookedEquipment.length > 0 ||
                         booking.internalNotes ||
                         booking.specialRequirements ? (
@@ -592,13 +656,14 @@ export default function VolkshausAdminClient() {
 
           {selected ? (
             <BookingDetail
+              key={selected.id}
               booking={selected}
+              onEditDirty={setEditDirty}
+              executeAction={executeAction}
               assignablePeople={assignablePeople}
               assignedUserId={assignedUserId}
               backupAssignedUserId={backupAssignedUserId}
               internalNotes={internalNotes}
-              adjustmentEuro={adjustmentEuro}
-              adjustmentReason={adjustmentReason}
               activeAction={activeAction}
               actionError={actionError}
               actionWarning={actionWarning}
@@ -606,8 +671,6 @@ export default function VolkshausAdminClient() {
               setInternalNotes={setInternalNotes}
               setAssignedUserId={setAssignedUserId}
               setBackupAssignedUserId={setBackupAssignedUserId}
-              setAdjustmentEuro={setAdjustmentEuro}
-              setAdjustmentReason={setAdjustmentReason}
               performAction={performAction}
               copyLink={copyLink}
             />
@@ -840,12 +903,12 @@ function ActionConfirmationModal({
 
 function BookingDetail({
   booking,
+  onEditDirty,
+  executeAction,
   assignablePeople,
   assignedUserId,
   backupAssignedUserId,
   internalNotes,
-  adjustmentEuro,
-  adjustmentReason,
   activeAction,
   actionError,
   actionWarning,
@@ -853,18 +916,19 @@ function BookingDetail({
   setAssignedUserId,
   setBackupAssignedUserId,
   setInternalNotes,
-  setAdjustmentEuro,
-  setAdjustmentReason,
   performAction,
   copyLink,
 }: {
   booking: AdminBooking;
+  onEditDirty: (dirty: boolean) => void;
+  executeAction: (
+    action: AdminAction,
+    payload?: Record<string, unknown>,
+  ) => Promise<boolean>;
   assignablePeople: AssignablePerson[];
   assignedUserId: string;
   backupAssignedUserId: string;
   internalNotes: string;
-  adjustmentEuro: string;
-  adjustmentReason: string;
   activeAction: AdminAction | null;
   actionError: string | null;
   actionWarning: string | null;
@@ -872,8 +936,6 @@ function BookingDetail({
   setAssignedUserId: (value: string) => void;
   setBackupAssignedUserId: (value: string) => void;
   setInternalNotes: (value: string) => void;
-  setAdjustmentEuro: (value: string) => void;
-  setAdjustmentReason: (value: string) => void;
   performAction: (
     action: AdminAction,
     payload?: Record<string, unknown>,
@@ -884,6 +946,15 @@ function BookingDetail({
     booking.priceSnapshot,
     booking.priceAdjustmentCents,
     booking.priceAdjustmentReason,
+  );
+  const [tab, setTab] = useState<"overview" | "edit" | "history">("overview");
+  const [editorDirty, setEditorDirty] = useState(false);
+  const changeDirty = useCallback(
+    (dirty: boolean) => {
+      setEditorDirty(dirty);
+      onEditDirty(dirty);
+    },
+    [onEditDirty],
   );
   const equipment = getBookedEquipment(booking);
   const isBusy = activeAction !== null;
@@ -904,501 +975,562 @@ function BookingDetail({
       !assignablePeople.some((person) => person.id === userId),
   );
 
+  const switchTab = (value: typeof tab) => {
+    if (value === tab) return;
+    if (
+      (editorDirty || hasInternalNotesChanges || hasAssignmentChanges) &&
+      !window.confirm("Ungespeicherte Änderungen verwerfen?")
+    )
+      return;
+    setInternalNotes(booking.internalNotes ?? "");
+    setAssignedUserId(booking.assignedUserId ?? "");
+    setBackupAssignedUserId(booking.backupAssignedUserId ?? "");
+    setTab(value);
+  };
+
   return (
-    <main className="space-y-5">
-      <section className="knglmrt-border-section bg-card p-5 md:p-6">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill
-                label={STATUS_LABELS.request[booking.requestStatus]}
-                tone={
-                  booking.requestStatus === "rejected"
-                    ? "danger"
-                    : booking.requestStatus === "approved"
-                      ? "success"
-                      : "warning"
-                }
-              />
-              <StatusPill
-                label={STATUS_LABELS.reservation[booking.reservationStatus]}
-                tone={
-                  booking.reservationStatus === "confirmed"
-                    ? "success"
-                    : booking.reservationStatus === "cancelled"
-                      ? "danger"
-                      : "neutral"
-                }
-              />
-            </div>
-            <h2 className="mt-4 flex items-center gap-3 text-3xl font-black tracking-tight text-foreground">
-              <FontAwesomeIcon
-                icon={faHouse}
-                className="h-5 w-5 text-primary"
-              />
-              {booking.eventTitle}
-            </h2>
-            <p className="mt-2 font-mono text-sm text-muted-foreground">
-              {booking.referenceCode}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              href={booking.accessUrl}
-              target="_blank"
-              kind="secondary"
-              icon={faArrowUpRightFromSquare}
-            >
-              Kundenansicht
-            </Button>
-            <Button
-              kind="secondary"
-              icon={copySuccess ? faCheck : faCopy}
-              onClick={() => void copyLink()}
-            >
-              {copySuccess ? "Kopiert" : "Link kopieren"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-foreground">
-            <FontAwesomeIcon
-              icon={faTriangleExclamation}
-              className="h-3.5 w-3.5 text-warning"
-            />
-            Wichtig für Übergabe und Nutzung
-          </p>
-          <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <section
-              className={`rounded-lg border-2 p-4 ${
-                equipment.length > 0
-                  ? "border-warning-border bg-warning-soft/65"
-                  : "border-border bg-background"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="flex items-center gap-2 text-base font-black text-foreground">
-                    <FontAwesomeIcon
-                      icon={faScrewdriverWrench}
-                      className={`h-4 w-4 ${
-                        equipment.length > 0
-                          ? "text-warning"
-                          : "text-muted-foreground"
-                      }`}
-                    />
-                    Gemietete Technik
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Für die Einmietenden bereitlegen und aushändigen.
-                  </p>
-                </div>
-                {equipment.length > 0 ? (
-                  <span className="shrink-0 rounded-md border border-warning-border bg-card/80 px-2.5 py-1 text-xs font-black text-warning">
-                    {equipment.length} Position
-                    {equipment.length === 1 ? "" : "en"}
-                  </span>
-                ) : null}
-              </div>
-
-              {equipment.length > 0 ? (
-                <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
-                  {equipment.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground "
-                    >
-                      <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-warning-soft px-2 font-mono text-sm font-black text-warning">
-                        {Number(booking.equipment[item.id] ?? 0)} ×
-                      </span>
-                      <span className="text-sm font-bold leading-tight">
-                        {item.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-4 flex items-center gap-2 rounded-md border border-success-border bg-success-soft px-3 py-2.5 text-sm font-semibold text-success">
-                  <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
-                  Keine zusätzliche Technik gemietet
-                </p>
-              )}
-            </section>
-
-            <section
-              className={`rounded-lg border-2 p-4 ${
-                internalNotes.trim() || booking.specialRequirements
-                  ? "border-primary-border bg-primary-soft/60"
-                  : "border-border bg-background"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="flex items-center gap-2 text-base font-black text-foreground">
-                    <FontAwesomeIcon
-                      icon={faNoteSticky}
-                      className="h-4 w-4 text-primary"
-                    />
-                    Sonstige Absprachen
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Alles, was das NVC-Team vor Ort wissen muss.
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-md border border-primary-border bg-card/80 px-2.5 py-1 text-xs font-black text-primary">
-                  Intern
-                </span>
-              </div>
-
-              {booking.specialRequirements ? (
-                <div className="mt-4 rounded-md border border-primary-border bg-card/85 p-3">
-                  <p className="text-[0.7rem] font-black uppercase tracking-widest text-primary">
-                    Hinweis der Einmietenden
-                  </p>
-                  <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                    {booking.specialRequirements}
-                  </p>
-                </div>
-              ) : null}
-
-              <Textarea
-                label="Interne Absprachen ergänzen"
-                className="mt-4"
-                textareaClassName="min-h-28 resize-y bg-card/90"
-                value={internalNotes}
-                maxLength={10_000}
-                disabled={isBusy}
-                onChange={(event) => setInternalNotes(event.target.value)}
-                placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
-              />
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Nur im internen Bereich sichtbar.
-                </p>
-                <Button
-                  kind="primary"
-                  icon={faSave}
-                  disabled={isBusy || !hasInternalNotesChanges}
-                  onClick={() =>
-                    void performAction("save_notes", { internalNotes })
-                  }
-                >
-                  {activeAction === "save_notes"
-                    ? "Wird gespeichert …"
-                    : "Absprachen speichern"}
-                </Button>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoTile
-            label="Termin"
-            icon={faCalendarDays}
-            value={`${dateFormatter.format(
-              new Date(`${booking.bookingDate}T12:00:00Z`),
-            )}, ${booking.startTime}–${booking.endTime}`}
-          />
-          <InfoTile
-            label="Räume"
-            icon={faDoorOpen}
-            value={booking.requestedRooms.map(getRoomLabel).join(", ")}
-          />
-          <InfoTile
-            label="Personen"
-            icon={faUsers}
-            value={String(booking.expectedAttendees)}
-          />
-          <InfoTile
-            label="Preis brutto"
-            icon={faEuroSign}
-            value={formatEuro(effectivePrice.grossCents)}
-          />
-        </div>
-
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          <div>
-            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon
-                icon={faListCheck}
-                className="h-3 w-3 text-primary"
-              />
-              Nutzung
-            </h3>
-            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-              {booking.eventDescription}
-            </p>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {booking.usageType === "commercial"
-                ? "Privat / kommerziell / gewerblich"
-                : "Nichtkommerziell / nachbarschaftlich"}{" "}
-              ·{" "}
-              {booking.frequency === "recurring"
-                ? `${booking.recurringOccurrences} × monatlich`
-                : "einmalig"}
-            </p>
-          </div>
-          <div>
-            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-primary" />
-              Kontakt und Rechnung
-            </h3>
-            <address className="mt-2 not-italic text-sm leading-relaxed text-foreground">
-              {booking.organization ? (
-                <>
-                  {booking.organization}
-                  <br />
-                </>
-              ) : null}
-              {booking.customerName}
-              <br />
-              {booking.billingAddressLine}
-              <br />
-              {booking.billingZip} {booking.billingCity}
-              <br />
-              <a className="text-primary" href={`mailto:${booking.email}`}>
-                {booking.email}
-              </a>
-              {booking.phone ? (
-                <>
-                  <br />
-                  {booking.phone}
-                </>
-              ) : null}
-            </address>
-          </div>
-        </div>
-      </section>
-
-      <section className="knglmrt-border-section bg-card p-5">
-        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-          <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-primary" />
-          Zuständigkeit
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Verantwortliche Person und Vertretung für diese Buchung festlegen.
-        </p>
-        <div className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]">
-          <NativeSelect
-            label="Verantwortliche Person"
-            value={assignedUserId}
-            disabled={isBusy}
-            onChange={(event) => {
-              const userId = event.target.value;
-              setAssignedUserId(userId);
-              if (!userId) setBackupAssignedUserId("");
-            }}
-          >
-            <option value="">Nicht zugewiesen</option>
-            {missingAssignedPersonIds.includes(assignedUserId) ? (
-              <option value={assignedUserId}>
-                Nicht mehr verfügbares Konto
-              </option>
-            ) : null}
-            {assignablePeople.map((person) => (
-              <option
-                key={person.id}
-                value={person.id}
-                disabled={person.id === backupAssignedUserId}
-              >
-                {getPersonOptionLabel(person)}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect
-            label="Ersatz / Vertretung"
-            value={backupAssignedUserId}
-            disabled={isBusy || !assignedUserId}
-            onChange={(event) => setBackupAssignedUserId(event.target.value)}
-          >
-            <option value="">Kein Ersatz</option>
-            {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
-              <option value={backupAssignedUserId}>
-                Nicht mehr verfügbares Konto
-              </option>
-            ) : null}
-            {assignablePeople.map((person) => (
-              <option
-                key={person.id}
-                value={person.id}
-                disabled={person.id === assignedUserId}
-              >
-                {getPersonOptionLabel(person)}
-              </option>
-            ))}
-          </NativeSelect>
+    <section aria-label="Ausgewählte Buchung" className="space-y-5">
+      <nav aria-label="Buchungsdetails" className="flex flex-wrap gap-2">
+        {(
+          [
+            ["overview", "Übersicht"],
+            ["edit", "Buchung bearbeiten"],
+            ["history", "Vertrag & Verlauf"],
+          ] as const
+        ).map(([value, label]) => (
           <Button
-            kind="secondary"
-            icon={faSave}
-            disabled={isBusy || !hasAssignmentChanges || hasDuplicateAssignees}
-            onClick={() =>
-              void performAction("save_assignees", {
-                assignedUserId: assignedUserId || null,
-                backupAssignedUserId: backupAssignedUserId || null,
-              })
-            }
+            key={value}
+            kind={tab === value ? "primary" : "secondary"}
+            aria-pressed={tab === value}
+            disabled={isBusy}
+            onClick={() => switchTab(value)}
           >
-            {activeAction === "save_assignees"
-              ? "Wird gespeichert …"
-              : "Zuständigkeit speichern"}
+            {label}
           </Button>
-        </div>
-        {hasDuplicateAssignees ? (
-          <p className="mt-2 text-xs text-destructive">
-            Verantwortliche Person und Ersatz müssen verschieden sein.
-          </p>
-        ) : null}
-      </section>
-
-      <WorkflowActions
-        booking={booking}
-        isBusy={isBusy}
-        activeAction={activeAction}
-        performAction={performAction}
-      />
-
+        ))}
+      </nav>
       {actionError ? (
-        <div className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
-          <FontAwesomeIcon
-            icon={faCircleExclamation}
-            className="mt-0.5 h-4 w-4 shrink-0"
-          />
+        <p
+          role="alert"
+          className="border border-destructive-border bg-destructive-soft p-4 text-destructive"
+        >
           {actionError}
-        </div>
+        </p>
       ) : null}
       {actionWarning ? (
-        <div className="flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
-          <FontAwesomeIcon
-            icon={faTriangleExclamation}
-            className="mt-0.5 h-4 w-4 shrink-0"
-          />
+        <p
+          role="status"
+          className="border border-warning-border bg-warning-soft p-4"
+        >
           {actionWarning}
+        </p>
+      ) : null}
+      {booking.priceSnapshot.admin?.invoiceCorrection?.required &&
+      tab !== "history" ? (
+        <div className="border border-warning-border bg-warning-soft p-4 text-sm">
+          Rechnungskorrektur in Campai offen.{" "}
+          <button
+            className="font-bold underline"
+            onClick={() => switchTab("history")}
+          >
+            Aufgabe ansehen
+          </button>
         </div>
       ) : null}
+      {tab === "edit" ? (
+        <BookingEditor
+          key={booking.updatedAt}
+          booking={booking}
+          busy={isBusy}
+          onDirty={changeDirty}
+          save={(payload) => executeAction("save_booking", payload)}
+          done={() => setTab("overview")}
+        />
+      ) : null}
+      {tab === "history" ? (
+        <BookingHistory
+          booking={booking}
+          busy={isBusy}
+          resolveCorrection={(note) =>
+            executeAction("resolve_invoice_correction", {
+              note,
+              expectedUpdatedAt: booking.updatedAt,
+            })
+          }
+        />
+      ) : null}
+      <div hidden={tab !== "overview"} className="space-y-5">
+        <section className="knglmrt-border-section bg-card p-5 md:p-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill
+                  label={STATUS_LABELS.request[booking.requestStatus]}
+                  tone={
+                    booking.requestStatus === "rejected"
+                      ? "danger"
+                      : booking.requestStatus === "approved"
+                        ? "success"
+                        : "warning"
+                  }
+                />
+                <StatusPill
+                  label={STATUS_LABELS.reservation[booking.reservationStatus]}
+                  tone={
+                    booking.reservationStatus === "confirmed"
+                      ? "success"
+                      : booking.reservationStatus === "cancelled"
+                        ? "danger"
+                        : "neutral"
+                  }
+                />
+              </div>
+              <h2 className="mt-4 flex items-center gap-3 text-3xl font-black tracking-tight text-foreground">
+                <FontAwesomeIcon
+                  icon={faHouse}
+                  className="h-5 w-5 text-primary"
+                />
+                {booking.eventTitle}
+              </h2>
+              <p className="mt-2 font-mono text-sm text-muted-foreground">
+                {booking.referenceCode}
+              </p>
+              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <FontAwesomeIcon icon={faClock} className="h-3 w-3" />
+                Eingegangen am{" "}
+                {formatVolkshausRequestReceivedAt(booking.createdAt)} (Berliner
+                Zeit)
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                href={booking.accessUrl}
+                target="_blank"
+                kind="secondary"
+                icon={faArrowUpRightFromSquare}
+              >
+                Kundenansicht
+              </Button>
+              <Button
+                kind="secondary"
+                icon={copySuccess ? faCheck : faCopy}
+                onClick={() => void copyLink()}
+              >
+                {copySuccess ? "Kopiert" : "Link kopieren"}
+              </Button>
+            </div>
+          </div>
 
-      <section className="knglmrt-border-section bg-card p-5">
-        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-          <FontAwesomeIcon icon={faEuroSign} className="h-4 w-4 text-primary" />
-          Preisprüfung
-        </h3>
-        <div className="mt-4 divide-y divide-border">
-          {effectivePrice.lines.map((line) => (
-            <div
-              key={line.code}
-              className="flex justify-between gap-3 py-2.5 text-sm"
-            >
-              <span className="text-foreground">{line.description}</span>
-              <span
-                className={`whitespace-nowrap font-semibold ${
-                  line.totalNetCents < 0
-                    ? "text-destructive"
-                    : "text-foreground"
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <InfoTile
+              label="Termin"
+              icon={faCalendarDays}
+              value={`${dateFormatter.format(
+                new Date(`${booking.bookingDate}T12:00:00Z`),
+              )}, ${booking.startTime.slice(0, 5)}–${booking.endTime.slice(0, 5)}`}
+            />
+            <InfoTile
+              label="Räume"
+              icon={faDoorOpen}
+              value={booking.requestedRooms.map(getRoomLabel).join(", ")}
+            />
+            <InfoTile
+              label="Personen"
+              icon={faUsers}
+              value={String(booking.expectedAttendees)}
+            />
+            <InfoTile
+              label="Preis brutto"
+              icon={faEuroSign}
+              value={formatEuro(effectivePrice.grossCents)}
+            />
+          </div>
+
+          <div className="mt-6">
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-foreground">
+              <FontAwesomeIcon
+                icon={faTriangleExclamation}
+                className="h-3.5 w-3.5 text-warning"
+              />
+              Wichtig für Übergabe und Nutzung
+            </p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <section
+                className={`rounded-lg border-2 p-4 ${
+                  equipment.length > 0
+                    ? "border-warning-border bg-warning-soft/65"
+                    : "border-border bg-background"
                 }`}
               >
-                {formatEuro(line.totalNetCents)}
-              </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-base font-black text-foreground">
+                      <FontAwesomeIcon
+                        icon={faScrewdriverWrench}
+                        className={`h-4 w-4 ${
+                          equipment.length > 0
+                            ? "text-warning"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      Gemietete Technik
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Für die Einmietenden bereitlegen und aushändigen.
+                    </p>
+                  </div>
+                  {equipment.length > 0 ? (
+                    <span className="shrink-0 rounded-md border border-warning-border bg-card/80 px-2.5 py-1 text-xs font-black text-warning">
+                      {equipment.length} Position
+                      {equipment.length === 1 ? "" : "en"}
+                    </span>
+                  ) : null}
+                </div>
+
+                {equipment.length > 0 ? (
+                  <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
+                    {equipment.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-md border border-warning-border bg-card/85 px-3 py-2.5 text-foreground "
+                      >
+                        <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-warning-soft px-2 font-mono text-sm font-black text-warning">
+                          {Number(booking.equipment[item.id] ?? 0)} ×
+                        </span>
+                        <span className="text-sm font-bold leading-tight">
+                          {item.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 flex items-center gap-2 rounded-md border border-success-border bg-success-soft px-3 py-2.5 text-sm font-semibold text-success">
+                    <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
+                    Keine zusätzliche Technik gemietet
+                  </p>
+                )}
+              </section>
+
+              <section
+                className={`rounded-lg border-2 p-4 ${
+                  internalNotes.trim() || booking.specialRequirements
+                    ? "border-primary-border bg-primary-soft/60"
+                    : "border-border bg-background"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-base font-black text-foreground">
+                      <FontAwesomeIcon
+                        icon={faNoteSticky}
+                        className="h-4 w-4 text-primary"
+                      />
+                      Sonstige Absprachen
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Alles, was das NVC-Team vor Ort wissen muss.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-md border border-primary-border bg-card/80 px-2.5 py-1 text-xs font-black text-primary">
+                    Intern
+                  </span>
+                </div>
+
+                {booking.specialRequirements ? (
+                  <div className="mt-4 rounded-md border border-primary-border bg-card/85 p-3">
+                    <p className="text-[0.7rem] font-black uppercase tracking-widest text-primary">
+                      Hinweis der Einmietenden
+                    </p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                      {booking.specialRequirements}
+                    </p>
+                  </div>
+                ) : null}
+
+                <Textarea
+                  label="Interne Absprachen ergänzen"
+                  className="mt-4"
+                  textareaClassName="min-h-28 resize-y bg-card/90"
+                  value={internalNotes}
+                  maxLength={10_000}
+                  disabled={isBusy}
+                  onChange={(event) => setInternalNotes(event.target.value)}
+                  placeholder="z. B. Schlüsselübergabe, Bestuhlung, Einweisung, Reinigung …"
+                />
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Nur im internen Bereich sichtbar.
+                  </p>
+                  <Button
+                    kind="primary"
+                    icon={faSave}
+                    disabled={isBusy || !hasInternalNotesChanges}
+                    onClick={() =>
+                      void performAction("save_notes", { internalNotes })
+                    }
+                  >
+                    {activeAction === "save_notes"
+                      ? "Wird gespeichert …"
+                      : "Absprachen speichern"}
+                  </Button>
+                </div>
+              </section>
             </div>
-          ))}
-        </div>
-        <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">Netto</dt>
-            <dd>{formatEuro(effectivePrice.netCents)}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">USt. 19 %</dt>
-            <dd>{formatEuro(effectivePrice.taxCents)}</dd>
+
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <div>
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <FontAwesomeIcon
+                  icon={faListCheck}
+                  className="h-3 w-3 text-primary"
+                />
+                Nutzung
+              </h3>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                {booking.eventDescription}
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {booking.usageType === "commercial"
+                  ? "Privat / kommerziell / gewerblich"
+                  : "Nichtkommerziell / nachbarschaftlich"}{" "}
+                ·{" "}
+                {booking.frequency === "recurring"
+                  ? `${booking.recurringOccurrences} × monatlich`
+                  : "einmalig"}
+              </p>
+            </div>
+            <div>
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="h-3 w-3 text-primary"
+                />
+                Kontakt und Rechnung
+              </h3>
+              <address className="mt-2 not-italic text-sm leading-relaxed text-foreground">
+                {booking.organization ? (
+                  <>
+                    {booking.organization}
+                    <br />
+                  </>
+                ) : null}
+                {booking.customerName}
+                <br />
+                {booking.billingAddressLine}
+                <br />
+                {booking.billingZip} {booking.billingCity}
+                <br />
+                <a className="text-primary" href={`mailto:${booking.email}`}>
+                  {booking.email}
+                </a>
+                {booking.phone ? (
+                  <>
+                    <br />
+                    {booking.phone}
+                  </>
+                ) : null}
+              </address>
+            </div>
           </div>
-          <div className="flex justify-between text-lg font-black">
-            <dt>Brutto</dt>
-            <dd>{formatEuro(effectivePrice.grossCents)}</dd>
+        </section>
+
+        <section className="knglmrt-border-section bg-card p-5">
+          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+            <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-primary" />
+            Zuständigkeit
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Verantwortliche Person und Vertretung für diese Buchung festlegen.
+          </p>
+          <div className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]">
+            <NativeSelect
+              label="Verantwortliche Person"
+              value={assignedUserId}
+              disabled={isBusy}
+              onChange={(event) => {
+                const userId = event.target.value;
+                setAssignedUserId(userId);
+                if (!userId) setBackupAssignedUserId("");
+              }}
+            >
+              <option value="">Nicht zugewiesen</option>
+              {missingAssignedPersonIds.includes(assignedUserId) ? (
+                <option value={assignedUserId}>
+                  Nicht mehr verfügbares Konto
+                </option>
+              ) : null}
+              {assignablePeople.map((person) => (
+                <option
+                  key={person.id}
+                  value={person.id}
+                  disabled={person.id === backupAssignedUserId}
+                >
+                  {getPersonOptionLabel(person)}
+                </option>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              label="Ersatz / Vertretung"
+              value={backupAssignedUserId}
+              disabled={isBusy || !assignedUserId}
+              onChange={(event) => setBackupAssignedUserId(event.target.value)}
+            >
+              <option value="">Kein Ersatz</option>
+              {missingAssignedPersonIds.includes(backupAssignedUserId) ? (
+                <option value={backupAssignedUserId}>
+                  Nicht mehr verfügbares Konto
+                </option>
+              ) : null}
+              {assignablePeople.map((person) => (
+                <option
+                  key={person.id}
+                  value={person.id}
+                  disabled={person.id === assignedUserId}
+                >
+                  {getPersonOptionLabel(person)}
+                </option>
+              ))}
+            </NativeSelect>
+            <Button
+              kind="secondary"
+              icon={faSave}
+              disabled={
+                isBusy || !hasAssignmentChanges || hasDuplicateAssignees
+              }
+              onClick={() =>
+                void performAction("save_assignees", {
+                  assignedUserId: assignedUserId || null,
+                  backupAssignedUserId: backupAssignedUserId || null,
+                })
+              }
+            >
+              {activeAction === "save_assignees"
+                ? "Wird gespeichert …"
+                : "Zuständigkeit speichern"}
+            </Button>
           </div>
-        </dl>
-        <div className="mt-5 grid gap-3">
-          <Field
-            label="Anpassung netto in Euro"
-            type="number"
-            step="0.01"
-            value={adjustmentEuro}
-            disabled={booking.contractStatus !== "draft"}
-            onChange={(event) => setAdjustmentEuro(event.target.value)}
-          />
-          <Field
-            label="Begründung"
-            value={adjustmentReason}
-            disabled={booking.contractStatus !== "draft"}
-            placeholder="z. B. Kulanz oder Sondervereinbarung"
-            onChange={(event) => setAdjustmentReason(event.target.value)}
-          />
+          {hasDuplicateAssignees ? (
+            <p className="mt-2 text-xs text-destructive">
+              Verantwortliche Person und Ersatz müssen verschieden sein.
+            </p>
+          ) : null}
+        </section>
+
+        <section className="knglmrt-border-section bg-card p-5">
+          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+            <FontAwesomeIcon
+              icon={faEuroSign}
+              className="h-4 w-4 text-primary"
+            />
+            Preisprüfung
+          </h3>
+          <div className="mt-4 divide-y divide-border">
+            {effectivePrice.lines.map((line) => (
+              <div
+                key={line.code}
+                className="flex justify-between gap-3 py-2.5 text-sm"
+              >
+                <span className="text-foreground">{line.description}</span>
+                <span
+                  className={`whitespace-nowrap font-semibold ${
+                    line.totalNetCents < 0
+                      ? "text-destructive"
+                      : "text-foreground"
+                  }`}
+                >
+                  {formatEuro(line.totalNetCents)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Netto</dt>
+              <dd>{formatEuro(effectivePrice.netCents)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">USt. 19 %</dt>
+              <dd>{formatEuro(effectivePrice.taxCents)}</dd>
+            </div>
+            <div className="flex justify-between text-lg font-black">
+              <dt>Brutto</dt>
+              <dd>{formatEuro(effectivePrice.grossCents)}</dd>
+            </div>
+          </dl>
           <Button
             kind="secondary"
-            icon={faSave}
-            disabled={isBusy || booking.contractStatus !== "draft"}
-            onClick={() =>
-              void performAction("save_price_adjustment", {
-                adjustmentEuro: Number(adjustmentEuro.replace(",", ".")),
-                reason: adjustmentReason,
-              })
-            }
+            className="mt-4"
+            disabled={isBusy}
+            onClick={() => switchTab("edit")}
           >
-            Preis speichern
+            Preis und Rechnung bearbeiten
           </Button>
-        </div>
-      </section>
+        </section>
 
-      <section className="knglmrt-border-section bg-card p-5">
-        <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
-          <FontAwesomeIcon
-            icon={faFileCircleCheck}
-            className="h-4 w-4 text-primary"
-          />
-          Vertrag, Rechnung und Zahlung
-        </h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <WorkflowTile
-            label="Vertrag"
-            icon={faFileSignature}
-            value={STATUS_LABELS.contract[booking.contractStatus]}
-            meta={
-              booking.customerSignedAt
-                ? `Kundensignatur ${dateTimeFormatter.format(
-                    new Date(booking.customerSignedAt),
-                  )}`
-                : undefined
-            }
-          />
-          <WorkflowTile
-            label="VHC-Unterschrift"
-            icon={faFileCircleCheck}
-            value={
-              booking.staffSignature
-                ? booking.staffSignature.name
-                : "Noch nicht erfolgt"
-            }
-            meta={
-              booking.staffSignedAt
-                ? dateTimeFormatter.format(new Date(booking.staffSignedAt))
-                : undefined
-            }
-          />
-          <WorkflowTile
-            label="Campai-Rechnung"
-            icon={faReceipt}
-            value={STATUS_LABELS.invoice[booking.invoiceStatus]}
-            meta={booking.campaiInvoiceId ?? booking.campaiError ?? undefined}
-          />
-          <WorkflowTile
-            label="Zahlung"
-            icon={faEuroSign}
-            value={STATUS_LABELS.payment[booking.paymentStatus]}
-          />
-        </div>
-      </section>
-    </main>
+        <WorkflowActions
+          booking={booking}
+          isBusy={isBusy}
+          activeAction={activeAction}
+          performAction={performAction}
+        />
+
+        <section className="knglmrt-border-section bg-card p-5">
+          <h3 className="flex items-center gap-2 text-lg font-black text-foreground">
+            <FontAwesomeIcon
+              icon={faFileCircleCheck}
+              className="h-4 w-4 text-primary"
+            />
+            Vertrag, Rechnung und Zahlung
+          </h3>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <WorkflowTile
+              label="Vertrag"
+              icon={faFileSignature}
+              value={STATUS_LABELS.contract[booking.contractStatus]}
+              meta={
+                booking.customerSignedAt
+                  ? `Kundensignatur ${dateTimeFormatter.format(
+                      new Date(booking.customerSignedAt),
+                    )}`
+                  : undefined
+              }
+            />
+            <WorkflowTile
+              label="VHC-Unterschrift"
+              icon={faFileCircleCheck}
+              value={
+                booking.staffSignature
+                  ? booking.staffSignature.name
+                  : "Noch nicht erfolgt"
+              }
+              meta={
+                booking.staffSignedAt
+                  ? dateTimeFormatter.format(new Date(booking.staffSignedAt))
+                  : undefined
+              }
+            />
+            <WorkflowTile
+              label="Campai-Rechnung"
+              icon={faReceipt}
+              value={STATUS_LABELS.invoice[booking.invoiceStatus]}
+              meta={booking.campaiInvoiceId ?? booking.campaiError ?? undefined}
+            />
+            <WorkflowTile
+              label="Zahlung"
+              icon={faEuroSign}
+              value={STATUS_LABELS.payment[booking.paymentStatus]}
+            />
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }
+
+const effectivePriceForActions = (booking: VolkshausBooking) =>
+  applyPriceAdjustment(booking.priceSnapshot, booking.priceAdjustmentCents)
+    .grossCents;
 
 function WorkflowActions({
   booking,
@@ -1414,6 +1546,9 @@ function WorkflowActions({
     payload?: Record<string, unknown>,
   ) => Promise<void>;
 }) {
+  const [holdUntil, setHoldUntil] = useState(() =>
+    new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+  );
   const actionLabel = (action: AdminAction, fallback: string) =>
     activeAction === action ? "Wird ausgeführt …" : fallback;
 
@@ -1422,6 +1557,23 @@ function WorkflowActions({
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         <FontAwesomeIcon icon={faListCheck} className="h-3 w-3 text-primary" />
         Nächste Schritte
+      </p>
+      {["new", "in_review", "needs_info"].includes(booking.requestStatus) ? (
+        <Field
+          className="mt-4 max-w-xs"
+          label="Vorläufig reservieren bis"
+          type="date"
+          value={holdUntil}
+          onChange={(event) => setHoldUntil(event.target.value)}
+          disabled={isBusy}
+        />
+      ) : null}
+      <p className="mt-2 text-sm text-muted-foreground">
+        {booking.contractStatus === "fully_signed" && !booking.campaiInvoiceId
+          ? effectivePriceForActions(booking) > 0
+            ? "Vertrag unterschrieben. Prüfe die Rechnung und lege sie anschließend in Campai an."
+            : "Kostenfreie Nutzung. Es ist keine Rechnung erforderlich."
+          : "Prüfe Buchungsdaten und Preis, bevor du den Vertrag freigibst."}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {booking.requestStatus === "new" ? (
@@ -1440,9 +1592,9 @@ function WorkflowActions({
               kind="primary"
               icon={faClock}
               disabled={isBusy}
-              onClick={() => void performAction("hold")}
+              onClick={() => void performAction("hold", { holdUntil })}
             >
-              {actionLabel("hold", "Freigeben & 7 Tage reservieren")}
+              {actionLabel("hold", "Freigeben & reservieren")}
             </Button>
             <Button
               kind="secondary"
@@ -1450,7 +1602,7 @@ function WorkflowActions({
               disabled={isBusy}
               onClick={() => void performAction("needs_info")}
             >
-              {actionLabel("needs_info", "Rückfrage markieren")}
+              {actionLabel("needs_info", "Rückfrage markieren (ohne E-Mail)")}
             </Button>
             <Button
               kind="danger-secondary"
@@ -1463,7 +1615,9 @@ function WorkflowActions({
           </>
         ) : null}
         {booking.requestStatus === "approved" &&
-        booking.reservationStatus === "held" &&
+        ["held", "confirmed", "completed"].includes(
+          booking.reservationStatus,
+        ) &&
         booking.contractStatus === "draft" ? (
           <Button
             kind="primary"
@@ -1475,19 +1629,21 @@ function WorkflowActions({
           </Button>
         ) : null}
         {booking.contractStatus === "fully_signed" &&
-        !booking.campaiInvoiceId ? (
+        !booking.campaiInvoiceId &&
+        effectivePriceForActions(booking) > 0 ? (
           <Button
             kind="primary"
             icon={faReceipt}
             disabled={isBusy}
             onClick={() => void performAction("retry_invoice")}
           >
-            {actionLabel("retry_invoice", "Campai-Anlage erneut versuchen")}
+            {actionLabel("retry_invoice", "Rechnung in Campai anlegen")}
           </Button>
         ) : null}
         {booking.campaiInvoiceId &&
         ["draft_created", "created"].includes(booking.invoiceStatus) &&
-        booking.paymentStatus !== "paid" ? (
+        booking.paymentStatus !== "paid" &&
+        !booking.priceSnapshot.admin?.invoiceCorrection?.required ? (
           <Button
             kind="secondary"
             icon={faCheck}
@@ -1499,7 +1655,8 @@ function WorkflowActions({
         ) : null}
         {booking.campaiInvoiceId &&
         ["draft_created", "created"].includes(booking.invoiceStatus) &&
-        booking.paymentStatus === "open" ? (
+        booking.paymentStatus === "open" &&
+        !booking.priceSnapshot.admin?.invoiceCorrection?.required ? (
           <Button
             kind="secondary"
             icon={faClock}
@@ -1520,7 +1677,6 @@ function WorkflowActions({
           </Button>
         ) : null}
         {booking.contractStatus !== "draft" &&
-        booking.contractStatus !== "fully_signed" &&
         booking.contractStatus !== "cancelled" ? (
           <Button
             kind="secondary"
@@ -1534,14 +1690,20 @@ function WorkflowActions({
         {booking.reservationStatus !== "cancelled" &&
         booking.reservationStatus !== "completed" &&
         booking.requestStatus !== "rejected" ? (
-          <Button
-            kind="danger-secondary"
-            icon={faBan}
-            disabled={isBusy}
-            onClick={() => void performAction("cancel")}
-          >
-            Buchung stornieren
-          </Button>
+          <details className="basis-full pt-2">
+            <summary className="cursor-pointer text-sm text-muted-foreground">
+              Weitere Aktionen
+            </summary>
+            <Button
+              className="mt-3"
+              kind="danger-secondary"
+              icon={faBan}
+              disabled={isBusy}
+              onClick={() => void performAction("cancel")}
+            >
+              Buchung stornieren
+            </Button>
+          </details>
         ) : null}
       </div>
     </section>

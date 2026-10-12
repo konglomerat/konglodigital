@@ -73,6 +73,39 @@ import {
   type VolkshausRoomId,
   type VolkshausUsageType,
 } from "@/lib/volkshaus-booking";
+import {
+  isVolkshausFutureRequest,
+  VOLKSHAUS_FUTURE_REQUEST_PARAGRAPHS,
+  VOLKSHAUS_WAITLIST_EMAIL,
+} from "@/lib/volkshaus-request-messages";
+
+function FutureRequestNotice() {
+  return (
+    <div
+      role="status"
+      className="mt-5 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning"
+    >
+      <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>
+        <p className="font-black">Terminanfragen ab 2027</p>
+        {VOLKSHAUS_FUTURE_REQUEST_PARAGRAPHS.map((paragraph) => (
+          <p key={paragraph} className="mt-2 leading-relaxed">
+            {paragraph.split(VOLKSHAUS_WAITLIST_EMAIL).map((part, index) => (
+              <span key={index}>
+                {index > 0 ? (
+                  <a className="underline" href={`mailto:${VOLKSHAUS_WAITLIST_EMAIL}`}>
+                    {VOLKSHAUS_WAITLIST_EMAIL}
+                  </a>
+                ) : null}
+                {part}
+              </span>
+            ))}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type WizardState = Omit<
   VolkshausBookingRequestInput,
@@ -212,8 +245,6 @@ const EQUIPMENT_VISUALS: Record<
   },
 };
 
-const inputClassName =
-  "w-full rounded-md border-0 bg-muted/45 px-3.5 py-3 text-sm text-foreground ring-1 ring-inset ring-border/70 transition placeholder:text-muted-foreground/70 hover:bg-muted/60 focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/35";
 const labelClassName = "mb-1.5 block text-sm font-semibold text-foreground";
 const cardClassName =
   "rounded-lg bg-card p-5 shadow-[0_10px_30px_rgba(23,21,25,0.07)] ring-1 ring-foreground/5 md:p-7";
@@ -319,33 +350,6 @@ const buildInitialState = (initialDate: string): WizardState => ({
   acceptedPrivacy: false,
   acceptedHouseRules: false,
   website: "",
-});
-
-const buildTestState = (initialDate: string): WizardState => ({
-  ...buildInitialState(initialDate),
-  customerName: "Max Mustermann",
-  organization: "Testverein Dresden e. V.",
-  email: `volkshaus-test-${initialDate.replaceAll("-", "")}@example.com`,
-  phone: "+49 351 1234567",
-  billingAddressLine: "Musterstraße 12",
-  billingZip: "01159",
-  eventTitle: "Testveranstaltung im Volkshaus",
-  eventDescription:
-    "Dies ist eine automatisch ausgefüllte Testanfrage für die Prüfung des Buchungsablaufs.",
-  usageType: "neighborhood",
-  expectedAttendees: 20,
-  startTime: "09:00",
-  endTime: "11:00",
-  setupStartTime: "08:30",
-  teardownEndTime: "11:30",
-  equipment: {
-    projector: 1,
-    cable_reel: 1,
-  },
-  specialRequirements:
-    "Testhinweis: Bitte die gewünschte Bestuhlung und den Technikaufbau prüfen.",
-  acceptedPrivacy: true,
-  acceptedHouseRules: true,
 });
 
 export default function BookingWizard({
@@ -543,12 +547,6 @@ export default function BookingWizard({
     setStep((current) => Math.max(0, current - 1));
   };
 
-  const fillTestForm = () => {
-    setForm(buildTestState(initialDate));
-    setStepError(null);
-    setSubmitError(null);
-  };
-
   const submit = async () => {
     for (let currentStep = 0; currentStep < 3; currentStep += 1) {
       const error = validateStep(currentStep);
@@ -605,11 +603,14 @@ export default function BookingWizard({
               Danke für deine Anfrage
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Die Anfrage ist noch keine verbindliche Reservierung. Das
-              Volkshaus-Team prüft Termin, Nutzung und Preis.
+              Die Anfrage ist noch keine verbindliche Reservierung.
+              {!isVolkshausFutureRequest(form.bookingDate)
+                ? " Das Volkshaus-Team prüft Termin, Nutzung und Preis."
+                : null}
             </p>
           </div>
           <div className="space-y-5 p-6 md:p-8">
+            {isVolkshausFutureRequest(form.bookingDate) ? <FutureRequestNotice /> : null}
             <div className="rounded-lg border border-border bg-muted/40 p-5 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Deine Referenz
@@ -675,16 +676,6 @@ export default function BookingWizard({
             wenn alles geprüft ist und du die bereits von uns unterschriebene
             Vereinbarung unterschrieben hast.
           </p>
-          <div className="mt-5">
-            <Button
-              kind="secondary"
-              size="medium"
-              icon={faClipboardCheck}
-              onClick={fillTestForm}
-            >
-              Testformular ausfüllen
-            </Button>
-          </div>
         </div>
         <Image
           key={step}
@@ -776,7 +767,7 @@ export default function BookingWizard({
           {step === 3 ? <ReviewStep form={form} price={price} /> : null}
 
           {stepError ? (
-            <div className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+            <div role="alert" className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
               <FontAwesomeIcon
                 icon={faTriangleExclamation}
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -786,7 +777,7 @@ export default function BookingWizard({
           ) : null}
 
           {submitError ? (
-            <div className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+            <div role="alert" className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
               <FontAwesomeIcon
                 icon={faTriangleExclamation}
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -949,7 +940,6 @@ function BookingTimeStep({
     parseIsoDate(`${visibleMonth}-01`) ??
     new Date(`${minimumMonth}-01T12:00:00Z`);
   const hasValidBookingDate = Boolean(parseIsoDate(form.bookingDate));
-  const is2027BookingDate = form.bookingDate.startsWith("2027-");
 
   return (
     <>
@@ -971,6 +961,7 @@ function BookingTimeStep({
                 key={room.id}
                 type="button"
                 onClick={() => toggleRoom(room.id)}
+                aria-pressed={selected}
                 className={`relative rounded-md p-4 text-left ring-1 ring-inset transition ${
                   selected
                     ? "bg-primary-soft/70 ring-primary/30"
@@ -1224,30 +1215,7 @@ function BookingTimeStep({
           </div>
         </div>
 
-        {is2027BookingDate ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-5 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning"
-          >
-            <FontAwesomeIcon
-              icon={faCircleInfo}
-              className="mt-0.5 h-4 w-4 shrink-0"
-            />
-            <div>
-              <p className="font-black">Terminanfragen für 2027</p>
-              <p className="mt-1 leading-relaxed">
-                Es tut uns leid, euch mitteilen zu müssen, dass wir aktuell noch
-                keine verbindlichen Terminanfragen für 2027 annehmen können,
-                weil sich die Trägerschaft des Neuen Volkshauses Cotta derzeit
-                in einer Übergangsphase befindet. Wir freuen uns, wenn ihr euch
-                im kommenden Jahr erneut bei uns meldet. Wenn es für euch in
-                Ordnung ist, könnt ihr diese Anfrage trotzdem absenden – wir
-                setzen euch damit gern auf unsere Warteliste für 2027.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        {isVolkshausFutureRequest(form.bookingDate) ? <FutureRequestNotice /> : null}
 
         <details className="mt-4 rounded-md bg-muted/35 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-foreground">

@@ -8,17 +8,23 @@ import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../components/PasswordInput";
 import Field from "@/components/knglmrt/Field";
 import FieldShell from "@/components/knglmrt/FieldShell";
+import { useI18n } from "@/i18n/client";
+import { localizePathname } from "@/i18n/config";
 
 export const dynamic = "force-dynamic";
 
 function LoginForm() {
+  const { tx, locale } = useI18n();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const getSafeRedirect = () => {
-    const redirectedFrom = searchParams.get("redirectedFrom") ?? "/";
-    return redirectedFrom.startsWith("/") ? redirectedFrom : "/";
+    const fallback = localizePathname("/", locale);
+    const redirectedFrom = searchParams.get("redirectedFrom") ?? fallback;
+    return redirectedFrom.startsWith("/") && !redirectedFrom.startsWith("//") && !redirectedFrom.includes("\\")
+      ? redirectedFrom
+      : fallback;
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -29,7 +35,7 @@ function LoginForm() {
     try {
       const formData = new FormData(event.currentTarget);
       const email = String(formData.get("email") ?? "").trim();
-      const password = String(formData.get("password") ?? "").trim();
+      const password = String(formData.get("password") ?? "");
 
       const response = await fetch("/api/auth/signin", {
         method: "POST",
@@ -42,51 +48,49 @@ function LoginForm() {
         const body = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
-        setError(body.error ?? "Unable to sign in.");
+        setError(body.error === "Invalid login credentials"
+          ? tx("E-Mail-Adresse oder Passwort ist falsch.")
+          : tx(body.error ?? "Anmeldung nicht möglich. Bitte versuche es erneut."));
         return;
       }
 
-      if (!response.ok) {
-        const body = (await response.json()) as { error?: string };
-        setError(body.error ?? "Anmeldung nicht möglich.");
-        setIsLoading(false);
-      }
       window.location.replace(getSafeRedirect());
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Anmeldung nicht möglich.",
-      );
+    } catch {
+      setError(tx("Verbindung fehlgeschlagen. Bitte versuche es erneut."));
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md knglmrt-border bg-card p-8">
-        <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
+    <div className="flex items-center justify-center bg-background py-6 md:py-12">
+      <div className="w-full max-w-md knglmrt-border bg-card p-6 sm:p-8">
+        <h1 className="text-2xl font-semibold text-foreground">{tx("Anmelden")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Melde dich mit deinen Zugangsdaten an.
+          {tx("Melde dich mit deinen Zugangsdaten an.")}
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <Field label="Email" name="email" type="email" required />
-          <FieldShell as="div" label="Passwort">
+          <Field label={tx("E-Mail-Adresse")} name="email" type="email" autoComplete="username" required />
+          <FieldShell as="div" label={tx("Passwort")} htmlFor="login-password" required>
             <PasswordInput
+              id="login-password"
               name="password"
+              autoComplete="current-password"
               required
-              showLabel="Anzeigen"
-              hideLabel="Ausblenden"
+              showLabel={tx("Anzeigen")}
+              hideLabel={tx("Ausblenden")}
             />
           </FieldShell>
           <p className="text-right text-sm text-muted-foreground">
             <Link
               className="font-semibold text-primary hover:text-primary/80"
-              href="/password-reset"
+              href={localizePathname("/password-reset", locale)}
             >
-              Passwort vergessen?
+              {tx("Passwort vergessen?")}
             </Link>
           </p>
           {error ? (
-            <p className="bg-destructive-soft px-4 py-3 text-foreground">
+            <p role="alert" className="bg-destructive-soft px-4 py-3 text-foreground">
               {error}
             </p>
           ) : null}
@@ -97,9 +101,15 @@ function LoginForm() {
             kind="primary"
             disabled={isLoading}
           >
-            {isLoading ? "Anmeldung läuft ..." : "Anmelden"}
+            {isLoading ? tx("Anmeldung läuft ...") : tx("Anmelden")}
           </Button>
         </form>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          {tx("Schon Mitglied, aber noch kein Konto?")} {" "}
+          <Link className="font-semibold text-primary underline" href={localizePathname("/register", locale)}>
+            {tx("Konto aktivieren")}
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -107,16 +117,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background px-6">
-          <div className="knglmrt-border-section w-full max-w-md bg-card p-8">
-            <h1 className="text-2xl font-semibold text-foreground">Anmelden</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Lädt ...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-80 animate-pulse bg-muted/50" />}>
       <LoginForm />
     </Suspense>
   );

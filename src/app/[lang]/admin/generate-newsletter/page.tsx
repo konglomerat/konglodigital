@@ -76,6 +76,8 @@ const createIssueDefaults = () => {
 
 export const dynamic = "force-dynamic";
 
+const RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS = 8_000;
+
 export default async function GenerateNewsletterPage() {
   const locale = await getRequestLocale();
   const supabase = await createSupabaseServerClient({ readOnly: true });
@@ -89,15 +91,18 @@ export default async function GenerateNewsletterPage() {
     );
   }
 
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
     return null;
   }
 
+  const rapidmailSignal = AbortSignal.timeout(
+    RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS,
+  );
   const [showcaseRecords, rapidmailResult] = await Promise.all([
     loadShowcases(180),
     Promise.allSettled([
-      listRapidmailRecipientLists(),
-      listRapidmailMailings(),
+      listRapidmailRecipientLists({ signal: rapidmailSignal }),
+      listRapidmailMailings({ signal: rapidmailSignal }),
     ]),
   ]);
 
@@ -145,10 +150,13 @@ export default async function GenerateNewsletterPage() {
     const rejected = rapidmailResult.find(
       (entry): entry is PromiseRejectedResult => entry.status === "rejected",
     );
+    const rejectedReason = rejected?.reason;
     rapidmailError =
-      rejected?.reason instanceof Error
-        ? rejected.reason.message
-        : "Rapidmail konnte nicht geladen werden.";
+      rejectedReason instanceof Error && rejectedReason.name === "TimeoutError"
+        ? "Rapidmail antwortet gerade zu langsam. Der Newsletter kann trotzdem bearbeitet und exportiert werden; zum Anlegen eines Rapidmail-Entwurfs lade die Seite später erneut."
+        : rejectedReason instanceof Error
+          ? rejectedReason.message
+          : "Rapidmail konnte nicht geladen werden.";
   }
 
   return (

@@ -13,11 +13,11 @@ import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 import Divider from "@/components/knglmrt/Divider";
 
 export type ButtonKind =
-  /** Die Handlung, die die Seite meint. Pink, Hover braun. */
+  /** Gefüllte Markenfarbe ohne Rahmen, Hover braun. */
   | "primary"
-  /** Der Normalfall: weiß mit Kontur, Hover paper-pink. */
+  /** Halbtransparente Markenfarbe ohne Rahmen, beim Hover kräftiger. */
   | "secondary"
-  /** Wie primary plus der eine Offset-Schatten. Höchstens einmal pro View. */
+  /** Gefüllte Markenfarbe mit Kontur und Offset-Schatten. Einmal pro View. */
   | "emphasis"
   /** Leise Fläche ohne Kontur — Filterleisten, Nebenhandlungen. */
   | "quiet"
@@ -72,28 +72,28 @@ export type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 const focusClassName =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] focus-visible:outline-solid";
 
-const baseClassName = `inline-flex cursor-pointer items-center justify-center gap-2 rounded-none knglmrt-border text-center align-middle font-[family-name:var(--font-core)] font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-[cubic-bezier(.2,0,0,1)] ${focusClassName} disabled:pointer-events-none disabled:cursor-default disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none aria-disabled:pointer-events-none aria-disabled:cursor-default aria-disabled:border-border aria-disabled:bg-muted aria-disabled:text-muted-foreground`;
+const baseClassName = `inline-flex cursor-pointer items-center justify-center gap-2 rounded-none text-center align-middle font-[family-name:var(--font-core)] font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-[cubic-bezier(.2,0,0,1)] ${focusClassName} disabled:pointer-events-none disabled:cursor-default disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none aria-disabled:pointer-events-none aria-disabled:cursor-default aria-disabled:border-border aria-disabled:bg-muted aria-disabled:text-muted-foreground`;
 
 const sizeClassName: Record<ButtonSize, string> = {
-  chip: "px-[11px] py-[5px] text-[11px] leading-4",
-  small: "px-4 py-2 text-[13px] leading-4",
-  medium: "px-[18px] py-2.5 text-[13px] leading-4",
-  large: "px-[22px] py-3 text-[13px] leading-4",
+  chip: "min-h-8 px-3 py-1.5 text-[13px] leading-5",
+  small: "min-h-11 px-5 py-3 text-[15px] leading-5",
+  medium: "min-h-12 px-6 py-3 text-[16px] leading-6",
+  large: "min-h-14 px-7 py-4 text-[18px] leading-6",
 };
 
 // Quadratisch: die Höhe der Zeile bleibt, die Breite folgt ihr.
 const iconOnlySizeClassName: Record<ButtonSize, string> = {
-  chip: "h-[26px] w-[26px] p-0 text-[11px]",
-  small: "h-8 w-8 p-0 text-[13px]",
-  medium: "h-9 w-9 p-0 text-[13px]",
-  large: "h-11 w-11 p-0 text-[13px]",
+  chip: "h-8 w-8 p-0 text-[13px]",
+  small: "h-11 w-11 p-0 text-[15px]",
+  medium: "h-12 w-12 p-0 text-[16px]",
+  large: "h-14 w-14 p-0 text-[18px]",
 };
 
 const tertiarySizeClassName: Record<ButtonSize, string> = {
-  chip: "gap-1.5 pb-[7px] text-[11px] leading-4",
-  small: "gap-2 pb-[9px] text-[13px] leading-4",
-  medium: "gap-2 pb-[10px] text-[15px] leading-5",
-  large: "gap-2.5 pb-[11px] text-[17px] leading-6",
+  chip: "gap-1.5 pb-[7px] text-[13px] leading-5",
+  small: "gap-2 pb-[9px] text-[15px] leading-5",
+  medium: "gap-2.5 pb-[10px] text-[17px] leading-6",
+  large: "gap-3 pb-[11px] text-[19px] leading-7",
 };
 
 // Die Linie wächst mit der Zeile mit, sonst franst sie unter großem Satz aus.
@@ -105,34 +105,34 @@ const tertiaryDividerHeight: Record<ButtonSize, number> = {
 };
 
 const iconPixelSize: Record<ButtonSize, string> = {
-  chip: "h-3 w-3",
-  small: "h-3.5 w-3.5",
-  medium: "h-4 w-4",
-  large: "h-4 w-4",
+  chip: "h-3.5 w-3.5",
+  small: "h-4 w-4",
+  medium: "h-5 w-5",
+  large: "h-5 w-5",
 };
 
 const tertiaryIconPixelSize: Record<ButtonSize, string> = {
-  chip: "h-3 w-3",
-  small: "h-3.5 w-3.5",
-  medium: "h-4 w-4",
-  large: "h-[18px] w-[18px]",
+  chip: "h-3.5 w-3.5",
+  small: "h-4 w-4",
+  medium: "h-5 w-5",
+  large: "h-6 w-6",
 };
 
 const kindClassName: Record<ButtonKind, string> = {
   primary:
-    "bg-primary text-primary-foreground hover:bg-[var(--ui-action-hover)]",
-  secondary: "bg-card text-foreground hover:bg-primary-soft",
+    "border-0 bg-primary text-primary-foreground hover:bg-[var(--ui-action-hover)]",
+  secondary: "border-0 bg-primary/25 text-[var(--knglmrt-ink)] hover:bg-primary/35 active:bg-primary/40 dark:text-foreground",
   emphasis:
-    "bg-primary text-primary-foreground shadow-[3px_3px_0_var(--hairline-color)] hover:bg-[var(--ui-action-hover)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none",
+    "knglmrt-border bg-primary text-primary-foreground shadow-[3px_3px_0_var(--hairline-color)] hover:bg-[var(--ui-action-hover)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none",
   quiet: "border-0 bg-muted text-foreground hover:bg-[var(--ui-quiet-hover)]",
   ghost:
     "border-0 bg-transparent text-foreground hover:bg-muted disabled:bg-transparent aria-disabled:bg-transparent",
   tertiary: "",
   admin:
-    "bg-[var(--ui-admin)] text-[var(--ui-admin-ink)] hover:bg-[var(--ui-admin-hover)]",
+    "knglmrt-border bg-[var(--ui-admin)] text-[var(--ui-admin-ink)] hover:bg-[var(--ui-admin-hover)]",
   "danger-primary":
-    "bg-destructive text-destructive-foreground hover:bg-[var(--ui-action-hover)]",
-  "danger-secondary": "bg-card text-destructive hover:bg-destructive-soft",
+    "knglmrt-border bg-destructive text-destructive-foreground hover:bg-[var(--ui-action-hover)]",
+  "danger-secondary": "knglmrt-border bg-card text-destructive hover:bg-destructive-soft",
 };
 
 // next/link ist für Seiten der App. Downloads, API-Routen, mailto: und fremde

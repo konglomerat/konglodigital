@@ -56,6 +56,7 @@ export default function Textarea({
       {...rest}
       ref={ref}
       id={textareaId}
+      required={required}
       rows={rows}
       disabled={disabled}
       value={value}

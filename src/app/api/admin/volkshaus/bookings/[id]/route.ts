@@ -1,13 +1,17 @@
+import { prepareVolkshausAdminEdit } from "@/lib/volkshaus-admin-edit-server";
+import { VolkshausValidationError } from "@/lib/volkshaus-booking-server";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import {
   buildVolkshausContractSnapshot,
+  getEffectiveVolkshausPrice,
   findBusySlotConflicts,
   type BusySlot,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
 import {
+  berlinDateTimeToIso,
   hashVolkshausValue,
   stableVolkshausJson,
 } from "@/lib/volkshaus-booking-server";
@@ -26,21 +30,20 @@ import {
   getVolkshausTeamupRemoteId,
   syncVolkshausBookingToTeamup,
 } from "@/lib/volkshaus-teamup";
-import {
-  notifyVolkshausContractReady,
-} from "@/lib/volkshaus-notifications";
+import { notifyVolkshausContractReady } from "@/lib/volkshaus-notifications";
 import { getUserRoles, userCanAccessModule } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AdminAction =
+  | "save_booking"
+  | "resolve_invoice_correction"
   | "start_review"
   | "needs_info"
   | "hold"
   | "reject"
   | "save_assignees"
   | "save_notes"
-  | "save_price_adjustment"
   | "send_contract"
   | "retry_invoice"
   | "mark_paid"
@@ -146,6 +149,11 @@ export const PATCH = async (
     unknown
   >;
   const action = body.action as AdminAction;
+  if (body.expectedUpdatedAt && body.expectedUpdatedAt !== booking.updatedAt)
+    return NextResponse.json(
+      { error: "Die Buchung wurde inzwischen geändert. Bitte neu laden." },
+      { status: 409 },
+    );
   const origin = resolvePublicOrigin(request);
   const accessUrl = `${origin}/volkshaus/anfrage/${booking.accessToken}`;
   const actorName =
@@ -159,6 +167,111 @@ export const PATCH = async (
     let eventPayload: Record<string, unknown> = {};
 
     switch (action) {
+      case "save_booking": {
+        if (body.expectedUpdatedAt !== booking.updatedAt) {
+          return NextResponse.json(
+            {
+              error: "Die Buchung wurde inzwischen geändert. Bitte neu laden.",
+            },
+            { status: 409 },
+          );
+        }
+        let edit;
+        try {
+          edit = prepareVolkshausAdminEdit(booking, body, actorName);
+        } catch (error) {
+          const message =
+            error instanceof VolkshausValidationError
+              ? Object.values(error.details).join(" ")
+              : error instanceof Error
+                ? error.message
+                : "Ungültige Änderungen.";
+          return NextResponse.json({ error: message }, { status: 400 });
+        }
+        if (
+          edit.scheduleChanged &&
+          ["held", "confirmed"].includes(booking.reservationStatus)
+        ) {
+          const conflicts = await getConflictsForHold({
+            ...booking,
+            ...edit.patch,
+          });
+          if (conflicts.length)
+            return NextResponse.json(
+              {
+                error:
+                  "Der geänderte Termin überschneidet sich mit einer anderen Reservierung.",
+                conflicts,
+              },
+              { status: 409 },
+            );
+        }
+        patch = edit.patch;
+        eventPayload = {
+          actorName,
+          changes: edit.changes,
+          reason: body.reason,
+        };
+        warning = booking.campaiInvoiceId
+          ? "Gespeichert. Die bestehende Rechnung muss separat in Campai geprüft und korrigiert werden."
+          : edit.needsRevision
+            ? "Gespeichert. Bitte die neue Vertragsversion prüfen und erneut freigeben. Die vorherige Version bleibt im Verlauf erhalten."
+            : null;
+        break;
+      }
+      case "resolve_invoice_correction": {
+        const note = typeof body.note === "string" ? body.note.trim() : "";
+        if (body.expectedUpdatedAt !== booking.updatedAt)
+          return NextResponse.json(
+            {
+              error: "Die Buchung wurde inzwischen geändert. Bitte neu laden.",
+            },
+            { status: 409 },
+          );
+        if (
+          !booking.priceSnapshot.admin?.invoiceCorrection?.required ||
+          !note ||
+          note.length > 1000
+        )
+          return NextResponse.json(
+            {
+              error:
+                "Bitte die in Campai ausgeführte Korrektur mit Belegreferenz dokumentieren.",
+            },
+            { status: 400 },
+          );
+        const admin = booking.priceSnapshot.admin;
+        patch = {
+          priceSnapshot: {
+            ...booking.priceSnapshot,
+            admin: {
+              ...admin,
+              invoiceCorrection: {
+                invoiceId: admin.invoiceCorrection!.invoiceId,
+                required: false,
+                note,
+              },
+              changes: [
+                ...(admin.changes ?? []),
+                {
+                  at: new Date().toISOString(),
+                  by: actorName,
+                  reason: note,
+                  changes: [
+                    {
+                      label: "Rechnungsprüfung in Campai",
+                      before: "Offen",
+                      after: "Manuell als erledigt dokumentiert",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        };
+        eventPayload = { actorName, note };
+        break;
+      }
       case "start_review":
         patch = {
           requestStatus: "in_review",
@@ -183,8 +296,23 @@ export const PATCH = async (
             { status: 409 },
           );
         }
-        const holdExpiresAt = new Date();
-        holdExpiresAt.setDate(holdExpiresAt.getDate() + 7);
+        const holdExpiresAt =
+          body.holdUntil && typeof body.holdUntil === "string"
+            ? new Date(berlinDateTimeToIso(body.holdUntil, "23:59"))
+            : new Date(Date.now() + 7 * 86400000);
+        if (
+          !Number.isFinite(holdExpiresAt.getTime()) ||
+          holdExpiresAt.getTime() <= Date.now() ||
+          holdExpiresAt.getTime() > Date.now() + 366 * 86400000
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Bitte ein Reservierungsende innerhalb des nächsten Jahres wählen.",
+            },
+            { status: 400 },
+          );
+        }
         const holdPatch: VolkshausBookingPatch = {
           requestStatus: "approved",
           reservationStatus: "held",
@@ -225,8 +353,7 @@ export const PATCH = async (
         if (backupAssignedUser.value && !assignedUser.value) {
           return NextResponse.json(
             {
-              error:
-                "Bitte zuerst eine verantwortliche Person auswählen.",
+              error: "Bitte zuerst eine verantwortliche Person auswählen.",
             },
             { status: 400 },
           );
@@ -298,43 +425,12 @@ export const PATCH = async (
               : null,
         };
         break;
-      case "save_price_adjustment": {
-        if (booking.contractStatus !== "draft") {
-          return NextResponse.json(
-            {
-              error:
-                "Nach Versand des Vertrags kann der Preis nicht mehr verändert werden. Öffne den Vertrag zuerst erneut.",
-            },
-            { status: 409 },
-          );
-        }
-        const adjustmentEuro = Number(body.adjustmentEuro ?? 0);
-        if (!Number.isFinite(adjustmentEuro) || Math.abs(adjustmentEuro) > 10_000) {
-          return NextResponse.json(
-            { error: "Ungültige Preisanpassung." },
-            { status: 400 },
-          );
-        }
-        const reason =
-          typeof body.reason === "string"
-            ? body.reason.trim().slice(0, 500)
-            : "";
-        if (adjustmentEuro !== 0 && !reason) {
-          return NextResponse.json(
-            { error: "Bitte die Preisanpassung begründen." },
-            { status: 400 },
-          );
-        }
-        patch = {
-          priceAdjustmentCents: Math.round(adjustmentEuro * 100),
-          priceAdjustmentReason: reason || null,
-        };
-        break;
-      }
       case "send_contract": {
         if (
           booking.requestStatus !== "approved" ||
-          booking.reservationStatus !== "held"
+          !["held", "confirmed", "completed"].includes(
+            booking.reservationStatus,
+          )
         ) {
           return NextResponse.json(
             {
@@ -344,30 +440,40 @@ export const PATCH = async (
             { status: 409 },
           );
         }
+        if (booking.contractStatus !== "draft")
+          return NextResponse.json(
+            {
+              error:
+                "Der Vertrag wurde bereits freigegeben. Zum Bearbeiten eine neue Version vorbereiten.",
+            },
+            { status: 409 },
+          );
         const snapshot = buildVolkshausContractSnapshot(booking);
-        const contractHash = hashVolkshausValue(
-          stableVolkshausJson(snapshot),
-        );
+        const contractHash = hashVolkshausValue(stableVolkshausJson(snapshot));
         const signedAt = new Date().toISOString();
-        updated = await updateVolkshausBooking(booking.id, {
-          contractStatus: "sent",
-          contractVersion: booking.contractVersion + 1,
-          contractSnapshot: snapshot,
-          contractHash,
-          customerSignature: null,
-          customerSignedAt: null,
-          staffSignature: {
-            name: actorName,
-            signedAt,
+        updated = await updateVolkshausBooking(
+          booking.id,
+          {
+            contractStatus: "sent",
+            contractVersion: booking.contractVersion + 1,
+            contractSnapshot: snapshot,
             contractHash,
-            ipHash: null,
-            userAgent: null,
+            customerSignature: null,
+            customerSignedAt: null,
+            staffSignature: {
+              name: actorName,
+              signedAt,
+              contractHash,
+              ipHash: null,
+              userAgent: null,
+            },
+            staffSignedAt: signedAt,
+            staffSignedBy: data.user.id,
+            notificationStatus: "contract_pending",
+            notificationError: null,
           },
-          staffSignedAt: signedAt,
-          staffSignedBy: data.user.id,
-          notificationStatus: "contract_pending",
-          notificationError: null,
-        });
+          booking.updatedAt,
+        );
         const notification = await notifyVolkshausContractReady({
           booking: updated,
           accessUrl,
@@ -385,8 +491,8 @@ export const PATCH = async (
             : "contract_pending",
           notificationError: notification.sent
             ? null
-            : notification.error ??
-              "E-Mail-Versand ist noch nicht konfiguriert.",
+            : (notification.error ??
+              "E-Mail-Versand ist noch nicht konfiguriert."),
         });
         warning = notification.sent
           ? null
@@ -394,9 +500,20 @@ export const PATCH = async (
         break;
       }
       case "retry_invoice": {
+        if (getEffectiveVolkshausPrice(booking).netCents <= 0)
+          return NextResponse.json(
+            {
+              error:
+                "Für eine kostenfreie Nutzung ist keine Rechnung erforderlich.",
+            },
+            { status: 400 },
+          );
         if (booking.contractStatus !== "fully_signed") {
           return NextResponse.json(
-            { error: "Die Vereinbarung ist noch nicht vollständig unterschrieben." },
+            {
+              error:
+                "Die Vereinbarung ist noch nicht vollständig unterschrieben.",
+            },
             { status: 409 },
           );
         }
@@ -406,6 +523,14 @@ export const PATCH = async (
         break;
       }
       case "mark_paid":
+        if (booking.priceSnapshot.admin?.invoiceCorrection?.required)
+          return NextResponse.json(
+            {
+              error:
+                "Bitte zuerst die offene Rechnungskorrektur dokumentieren.",
+            },
+            { status: 409 },
+          );
         if (
           !booking.campaiInvoiceId ||
           !["draft_created", "created"].includes(booking.invoiceStatus)
@@ -421,6 +546,14 @@ export const PATCH = async (
         patch = { paymentStatus: "paid" };
         break;
       case "mark_overdue":
+        if (booking.priceSnapshot.admin?.invoiceCorrection?.required)
+          return NextResponse.json(
+            {
+              error:
+                "Bitte zuerst die offene Rechnungskorrektur dokumentieren.",
+            },
+            { status: 409 },
+          );
         if (
           !booking.campaiInvoiceId ||
           !["draft_created", "created"].includes(booking.invoiceStatus)
@@ -439,8 +572,7 @@ export const PATCH = async (
         if (booking.reservationStatus !== "confirmed") {
           return NextResponse.json(
             {
-              error:
-                "Nur eine bestätigte Buchung kann abgeschlossen werden.",
+              error: "Nur eine bestätigte Buchung kann abgeschlossen werden.",
             },
             { status: 409 },
           );
@@ -458,20 +590,49 @@ export const PATCH = async (
             "Die Buchung wurde storniert. Die bestehende Campai-Rechnung muss separat geprüft oder gutgeschrieben werden.";
         }
         break;
-      case "reopen_contract":
-        if (
-          booking.contractStatus === "fully_signed" ||
-          Boolean(booking.campaiInvoiceId)
-        ) {
+      case "reopen_contract": {
+        if (!booking.contractSnapshot || booking.invoiceStatus === "creating")
           return NextResponse.json(
             {
               error:
-                "Ein vollständig unterschriebener oder bereits abgerechneter Vertrag kann nicht neu aufgesetzt werden.",
+                "Es gibt keinen Vertrag zum Neuaufsetzen oder die Rechnung wird gerade erstellt.",
             },
             { status: 409 },
           );
-        }
+        const admin = booking.priceSnapshot.admin ?? {};
         patch = {
+          priceSnapshot: {
+            ...booking.priceSnapshot,
+            admin: {
+              ...admin,
+              archivedContracts: [
+                ...(admin.archivedContracts ?? []),
+                {
+                  version: booking.contractVersion,
+                  archivedAt: new Date().toISOString(),
+                  snapshot: booking.contractSnapshot,
+                  hash: booking.contractHash,
+                  customerSignature: booking.customerSignature,
+                  staffSignature: booking.staffSignature,
+                },
+              ],
+              changes: [
+                ...(admin.changes ?? []),
+                {
+                  at: new Date().toISOString(),
+                  by: actorName,
+                  reason: "Neue Vertragsversion vorbereitet",
+                  changes: [
+                    {
+                      label: "Vertrag",
+                      before: `Version ${booking.contractVersion}`,
+                      after: "Neuer Entwurf",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
           contractStatus: "draft",
           contractSnapshot: null,
           contractHash: null,
@@ -480,8 +641,11 @@ export const PATCH = async (
           staffSignature: null,
           staffSignedAt: null,
           staffSignedBy: null,
+          notificationStatus: null,
+          notificationError: null,
         };
         break;
+      }
       default:
         return NextResponse.json(
           { error: "Unbekannte Aktion." },
@@ -490,7 +654,11 @@ export const PATCH = async (
     }
 
     if (patch) {
-      updated = await updateVolkshausBooking(booking.id, patch);
+      updated = await updateVolkshausBooking(
+        booking.id,
+        patch,
+        booking.updatedAt,
+      );
     }
 
     const appendTeamupWarning = (error: unknown) => {
@@ -523,6 +691,8 @@ export const PATCH = async (
         appendTeamupWarning(error);
       }
     } else if (
+      (action === "save_booking" &&
+        ["held", "confirmed"].includes(updated.reservationStatus)) ||
       action === "send_contract" ||
       action === "reopen_contract" ||
       action === "complete"
@@ -530,7 +700,11 @@ export const PATCH = async (
       try {
         const teamupResult = await syncVolkshausBookingToTeamup(
           updated,
-          action === "complete" ? "completed" : "held",
+          action === "complete" || updated.reservationStatus === "completed"
+            ? "completed"
+            : updated.reservationStatus === "confirmed"
+              ? "confirmed"
+              : "held",
         );
         eventPayload = {
           ...eventPayload,
@@ -548,6 +722,14 @@ export const PATCH = async (
       actorUserId: data.user.id,
       eventType: `admin_${action}`,
       payload: warning ? { ...eventPayload, warning } : eventPayload,
+    }).catch((error) => {
+      console.error("[volkshaus] Audit event could not be saved", error);
+      warning = [
+        warning,
+        "Die Änderung wurde gespeichert, aber das zusätzliche Systemprotokoll konnte nicht aktualisiert werden.",
+      ]
+        .filter(Boolean)
+        .join(" ");
     });
 
     return NextResponse.json({
@@ -563,7 +745,13 @@ export const PATCH = async (
             ? error.message
             : "Aktion konnte nicht ausgeführt werden.",
       },
-      { status: 500 },
+      {
+        status:
+          error instanceof Error &&
+          error.message.includes("inzwischen geändert")
+            ? 409
+            : 500,
+      },
     );
   }
 };

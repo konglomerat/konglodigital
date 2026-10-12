@@ -3,7 +3,10 @@
 // Über uns + Kalender nebeneinander → Freunde & Förderer → Das #Rosenwerk.
 // Der Kalender hängt in einer eigenen Suspense-Grenze; alles andere steht
 // sofort, ohne auf den Google-Feed zu warten.
+import { localizePathname } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/server";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { faFileLines } from "@fortawesome/free-solid-svg-icons";
 
 import PageTitle from "../components/PageTitle";
@@ -13,6 +16,10 @@ import Hand from "@/components/knglmrt/Hand";
 import StatTile from "@/components/knglmrt/StatTile";
 import { WERKBEREICHE } from "@/lib/werkbereiche";
 import Button from "@/components/knglmrt/Button";
+import { loadPayloadPage, payloadPageHasAppSlot } from "@/lib/payload-cms";
+import PayloadPageContent, {
+  payloadPageMetadata,
+} from "../components/PayloadPageContent";
 import VereinCalendar, { VereinCalendarSkeleton } from "./VereinCalendar";
 
 // TODO: Sobald die Dokumente als PDF liegen (public/ oder CMS), hier die
@@ -87,7 +94,8 @@ const NACHBARSCHAFT = [
 const captionClassName =
   "knglmrt-caption mb-2 block text-[var(--knglmrt-brown-100)]";
 
-export default function VereinPage() {
+async function StaticVereinPage() {
+  const locale = await getRequestLocale();
   return (
     <div>
       <PageTitle title="Konglomerat e.V." className="mb-2.5" />
@@ -178,16 +186,11 @@ export default function VereinPage() {
                   sollten.
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  <Button
-                    href="https://konglomerat.org"
-                    kind="primary"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <Button href={localizePathname("/mitglied-werden", locale)} kind="primary">
                     Fördermitglied werden
                   </Button>
                   <Button
-                    href="https://konglomerat.org"
+                    href="https://konglomerat.org/_Resources/Persistent/e/d/1/e/ed1ed4eb42a191127f3c906a7a48f11fbf276e9e/230101_Mitgliedschaftsantrag.pdf"
                     kind="secondary"
                     target="_blank"
                     rel="noreferrer"
@@ -307,6 +310,35 @@ export default function VereinPage() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+const loadVereinPage = () => loadPayloadPage("verein", "ueber-uns");
+
+export async function generateMetadata(): Promise<Metadata> {
+  return payloadPageMetadata(await loadVereinPage(), {
+    title: "Konglomerat e.V.",
+    description: "Die gemeinsame Lust am Selbermachen",
+  });
+}
+
+export default async function VereinPage() {
+  const page = await loadVereinPage();
+  if (!page) return <StaticVereinPage />;
+
+  return (
+    <div>
+      <PayloadPageContent page={page} />
+      {/* Der Kalender bleibt ein Live-Baustein und folgt automatisch auf die
+          redaktionell gepflegten Blöcke der Vereinsseite. */}
+      {!payloadPageHasAppSlot(page, "calendarUpcoming") ? (
+        <section className="mt-10 max-w-[620px] knglmrt-border-t pt-6">
+          <Suspense fallback={<VereinCalendarSkeleton />}>
+            <VereinCalendar />
+          </Suspense>
+        </section>
+      ) : null}
     </div>
   );
 }

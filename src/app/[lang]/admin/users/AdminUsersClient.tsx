@@ -41,6 +41,7 @@ const MAX_CAMPAI_RESULTS = 8;
 
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
+  { value: "backend", label: "Backend" },
   { value: "vhc", label: "VHC" },
   { value: "buchhaltung", label: "Buchhaltung" },
   { value: "member", label: "Mitglied" },

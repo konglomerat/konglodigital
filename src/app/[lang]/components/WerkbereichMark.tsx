@@ -1,7 +1,7 @@
 // src/app/[lang]/components/WerkbereichMark.tsx — gezeichnete Werkstatt-Marke.
 // Artwork nie unter 40px Höhe einsetzen (Untergrenze der Bibliothek).
-// Bereiche ohne eigene Marke bekommen eine gesetzte Initiale in Fengardo Neue
-// statt einer Lücke — die Karten bleiben so auf gleicher Höhe.
+// Ein gemeinsamer Rahmen richtet schmale und breite Marken an derselben Achse
+// aus. Bereiche ohne eigene Marke behalten ihre gesetzte Initiale.
 import type { Werkbereich } from "@/lib/werkbereiche";
 
 type Props = {
@@ -16,28 +16,40 @@ export default function WerkbereichMark({
   className,
 }: Props) {
   const { name, mark, markExt = "svg" } = werkbereich;
+  const frameClassName = `werkbereich-mark flex flex-none items-center justify-center${
+    className ? ` ${className}` : ""
+  }`;
+  const frameStyle = { height, width: Math.ceil(height * 1.25) };
 
   if (!mark) {
     return (
       <span
         aria-hidden="true"
-        style={{ height, width: height, fontSize: Math.round(height * 0.58) }}
-        className={`flex flex-none items-center justify-center knglmrt-border font-display leading-none text-foreground${
-          className ? ` ${className}` : ""
-        }`}
+        style={frameStyle}
+        className={frameClassName}
       >
-        {name.trim().charAt(0).toUpperCase()}
+        <span
+          style={{ height, width: height, fontSize: Math.round(height * 0.58) }}
+          className="flex items-center justify-center border border-current font-display leading-none"
+        >
+          {name.trim().charAt(0).toUpperCase()}
+        </span>
       </span>
     );
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`/branding/werkbereiche/${mark}.${markExt}`}
-      alt={`Werkbereich ${name}`}
-      style={{ height, width: "auto" }}
-      className={`self-start object-contain${className ? ` ${className}` : ""}`}
-    />
+    <span aria-hidden="true" className={frameClassName} style={frameStyle}>
+      {/* Die Beschriftung steht neben der Marke; kein doppelter Linkname. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/branding/werkbereiche/${mark}.${markExt}`}
+        alt=""
+        style={{ height, maxWidth: "100%", width: "auto" }}
+        className={`werkbereich-mark-image object-contain${
+          mark === "laser" ? " werkbereich-mark-image-fine" : ""
+        }`}
+      />
+    </span>
   );
 }

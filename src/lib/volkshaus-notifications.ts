@@ -6,14 +6,24 @@ import {
   getRoomLabel,
   type VolkshausBooking,
 } from "@/lib/volkshaus-booking";
+import { addVolkshausBookingEvent } from "@/lib/volkshaus-booking-store";
 import {
   sendSmtpMail,
   SmtpConfigurationError,
 } from "@/lib/smtp-mail";
+import {
+  formatVolkshausRequestReceivedAt,
+  getVolkshausRequestReply,
+  VOLKSHAUS_WAITLIST_EMAIL,
+} from "@/lib/volkshaus-request-messages";
 
 type NotificationResult =
   | { sent: true; provider: "smtp" }
   | { sent: false; reason: "not_configured" | "provider_error"; error?: string };
+
+// Room bookings are handled by the Volkshaus team, independently of the
+// platform-wide SMTP_ADMIN_EMAIL setting.
+const VOLKSHAUS_STAFF_EMAIL = "mitmachen@neuesvolkshaus.de";
 
 const escapeHtml = (value: string) =>
   value
@@ -37,7 +47,7 @@ const sendEmail = async ({
       subject,
       html,
       to,
-      replyTo: process.env.SMTP_ADMIN_EMAIL?.trim(),
+      replyTo: VOLKSHAUS_STAFF_EMAIL,
     });
   } catch (error) {
     if (error instanceof SmtpConfigurationError) {
@@ -60,6 +70,44 @@ const sendEmail = async ({
   return { sent: true, provider: "smtp" };
 };
 
+const sendStaffNotification = async ({
+  booking,
+  trigger,
+  subject,
+  html,
+}: {
+  booking: VolkshausBooking;
+  trigger: "request_submitted" | "contract_customer_signed";
+  subject: string;
+  html: string;
+}) => {
+  const result = await sendEmail({ to: VOLKSHAUS_STAFF_EMAIL, subject, html });
+  if (!result.sent) {
+    console.error("[volkshaus/notifications] Staff notification failed", {
+      bookingId: booking.id,
+      trigger,
+      ...result,
+    });
+  }
+  try {
+    await addVolkshausBookingEvent({
+      bookingId: booking.id,
+      actorType: "system",
+      eventType: result.sent
+        ? "staff_notification_sent"
+        : "staff_notification_failed",
+      payload: { trigger, recipient: VOLKSHAUS_STAFF_EMAIL, ...result },
+    });
+  } catch (error) {
+    console.error("[volkshaus/notifications] Could not record notification", {
+      bookingId: booking.id,
+      trigger,
+      error,
+    });
+  }
+  return result;
+};
+
 const bookingSummaryHtml = (booking: VolkshausBooking) => {
   const price = getEffectiveVolkshausPrice(booking);
   return `
@@ -76,35 +124,46 @@ const bookingSummaryHtml = (booking: VolkshausBooking) => {
 export const notifyVolkshausRequestSubmitted = async ({
   booking,
   accessUrl,
+  adminUrl,
 }: {
   booking: VolkshausBooking;
   accessUrl: string;
+  adminUrl: string;
 }) => {
-  const customerResult = await sendEmail({
-    to: booking.email,
-    subject: `Deine Anfrage ${booking.referenceCode} im Volkshaus Cotta`,
-    html: `
-      <p>Hallo ${escapeHtml(booking.customerName)},</p>
-      <p>wir haben deine Raumanfrage erhalten. Sie ist noch keine verbindliche Reservierung.</p>
-      ${bookingSummaryHtml(booking)}
-      <p><a href="${escapeHtml(accessUrl)}">Anfrage ansehen</a></p>
-      <p>Wir melden uns nach der internen Prüfung.</p>
-      <p>Viele Grüße<br>Team Neues Volkshaus Cotta</p>
-    `,
-  });
-
-  const staffAddress = process.env.SMTP_ADMIN_EMAIL?.trim();
-  if (staffAddress) {
-    await sendEmail({
-      to: staffAddress,
+  const reply = getVolkshausRequestReply(booking.bookingDate);
+  const replyHtml = reply.paragraphs
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll(
+      VOLKSHAUS_WAITLIST_EMAIL,
+      `<a href="mailto:${VOLKSHAUS_WAITLIST_EMAIL}">${VOLKSHAUS_WAITLIST_EMAIL}</a>`,
+    )}</p>`)
+    .join("\n");
+  const [customerResult] = await Promise.all([
+    sendEmail({
+      to: booking.email,
+      subject: `Ihre Anfrage ${booking.referenceCode} im Volkshaus Cotta`,
+      html: `
+        <p>Guten Tag ${escapeHtml(booking.customerName)},</p>
+        ${replyHtml}
+        <p>${reply.closing}<br>das Team der Ehrenamtlichen am Neuen Volkshaus Cotta</p>
+        <hr>
+        <p>Ihre Anfrage ist noch keine verbindliche Reservierung.</p>
+        ${bookingSummaryHtml(booking)}
+        <p><a href="${escapeHtml(accessUrl)}">Anfrage ansehen</a></p>
+      `,
+    }),
+    sendStaffNotification({
+      booking,
+      trigger: "request_submitted",
       subject: `Neue VHC-Raumanfrage ${booking.referenceCode}`,
       html: `
         <p>Eine neue Raumanfrage wurde eingereicht.</p>
+        <p><strong>Eingegangen am:</strong> ${escapeHtml(formatVolkshausRequestReceivedAt(booking.createdAt))} (Berliner Zeit)</p>
+        <p><strong>Angefragt von:</strong> ${escapeHtml(booking.customerName)} (${escapeHtml(booking.email)})</p>
         ${bookingSummaryHtml(booking)}
-        <p>Bitte im KongloDigital-Adminbereich prüfen.</p>
+        <p><a href="${escapeHtml(adminUrl)}">Anfrage im KongloDigital-Adminbereich prüfen</a></p>
       `,
-    });
-  }
+    }),
+  ]);
 
   return customerResult;
 };
@@ -135,17 +194,14 @@ export const notifyVolkshausCustomerSigned = async ({
   booking: VolkshausBooking;
   adminUrl: string;
 }) => {
-  const staffAddress = process.env.SMTP_ADMIN_EMAIL?.trim();
-  if (!staffAddress) {
-    return { sent: false, reason: "not_configured" } as const;
-  }
-
-  return sendEmail({
-    to: staffAddress,
+  return sendStaffNotification({
+    booking,
+    trigger: "contract_customer_signed",
     subject: `${booking.referenceCode} ist vollständig unterschrieben`,
     html: `
       <p>Die Nutzungsvereinbarung wurde von ${escapeHtml(booking.customerName)} unterschrieben.</p>
-      <p>Die Buchung ist bestätigt und die Campai-Rechnung wurde automatisch angestoßen.</p>
+      <p>Die Buchung ist bestätigt. Bitte prüfe die Rechnungsangaben und lege die Rechnung anschließend in der Verwaltung in Campai an.</p>
+      ${bookingSummaryHtml(booking)}
       <p><a href="${escapeHtml(adminUrl)}">Buchung und Rechnung prüfen</a></p>
     `,
   });

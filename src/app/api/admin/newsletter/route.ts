@@ -69,6 +69,7 @@ type RawShowcaseItem = {
   gifFrameDurationMs?: unknown;
   showLink?: unknown;
   linkText?: unknown;
+  href?: unknown;
 };
 
 type RawButtonItem = {
@@ -176,6 +177,7 @@ const normalizeRawItems = (body: NewsletterRequestBody) => {
         gifFrameDurationMs: raw.gifFrameDurationMs,
         showLink: raw.showLink,
         linkText: raw.linkText,
+        href: raw.href,
       });
       usedShowcaseIds.add(showcaseId);
       continue;
@@ -370,7 +372,7 @@ export const POST = async (request: NextRequest) => {
     const { supabase } = createSupabaseRouteClient(request);
     const { data } = await supabase.auth.getUser();
     if (!data.user) return unauthorized();
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
       return forbidden();
     }
 
@@ -474,7 +476,7 @@ export const POST = async (request: NextRequest) => {
       )
         ? normalizeNewsletterAspect(item.aspect)
         : "original";
-      const href = new URL(
+      const defaultHref = new URL(
         localizePathname(
           buildShowcasePath({
             id: row.id,
@@ -484,6 +486,7 @@ export const POST = async (request: NextRequest) => {
         ),
         baseUrl,
       ).toString();
+      const href = textValue(item.href, 2_000) || defaultHref;
 
       const gifImages = selectedGifImages(row, item.gifImageUrls);
       const imagePositions = selectedImagePositions(row, item.imagePositions);

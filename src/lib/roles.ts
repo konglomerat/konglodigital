@@ -7,6 +7,7 @@ import {
 
 export const USER_ROLES = [
   "admin",
+  "backend",
   "vhc",
   "buchhaltung",
   "werkbereich_lead",
@@ -28,6 +29,7 @@ export type AppModule = keyof typeof MODULE_ACCESS;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin",
+  backend: "Backend",
   vhc: "VHC",
   buchhaltung: "Buchhaltung",
   werkbereich_lead: "Werkbereichs-Leitung",

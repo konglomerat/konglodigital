@@ -15,10 +15,20 @@ export const createVolkshausInvoice = async (booking: VolkshausBooking) => {
     return { booking, warning: null as string | null };
   }
 
-  let creating = await updateVolkshausBooking(booking.id, {
-    invoiceStatus: "creating",
-    campaiError: null,
-  });
+  if (booking.invoiceStatus === "creating")
+    return {
+      booking,
+      warning:
+        "Die Rechnungsanlage läuft bereits. Bitte den Stand in Campai prüfen.",
+    };
+  let creating = await updateVolkshausBooking(
+    booking.id,
+    {
+      invoiceStatus: "creating",
+      campaiError: null,
+    },
+    booking.updatedAt,
+  );
 
   try {
     const result = await createCampaiInvoiceForVolkshausBooking(creating);
@@ -48,9 +58,7 @@ export const createVolkshausInvoice = async (booking: VolkshausBooking) => {
     const configurationError =
       error instanceof VolkshausCampaiConfigurationError;
     creating = await updateVolkshausBooking(booking.id, {
-      invoiceStatus: configurationError
-        ? "configuration_required"
-        : "error",
+      invoiceStatus: configurationError ? "configuration_required" : "error",
       campaiError: message,
     });
     await addVolkshausBookingEvent({

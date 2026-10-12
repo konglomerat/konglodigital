@@ -1,8 +1,12 @@
+import { getVolkshausInvoiceDetails } from "./volkshaus-admin-edit";
 import "server-only";
 
 import { buildDebtorPayload } from "@/lib/campai-debtors";
 import { mergeCampaiTags } from "@/lib/campai-booking-tags";
-import { loadCampaiConfig, loadInvoiceAccount } from "@/lib/campai-receipts/config";
+import {
+  loadCampaiConfig,
+  loadInvoiceAccount,
+} from "@/lib/campai-receipts/config";
 import {
   getEffectiveVolkshausPrice,
   type VolkshausBooking,
@@ -75,20 +79,20 @@ const getExactDebtorByEmail = async ({
     return null;
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | {
-        debtors?: Array<{
-          account?: number;
-          email?: string;
-        }>;
-      }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    debtors?: Array<{
+      account?: number;
+      email?: string;
+      name?: string;
+    }>;
+  } | null;
 
   return (
     payload?.debtors?.find(
       (debtor) =>
         typeof debtor.account === "number" &&
-        debtor.email?.trim().toLowerCase() === booking.email.toLowerCase(),
+        debtor.email?.trim().toLowerCase() === booking.email.toLowerCase() &&
+        debtor.name?.trim() === (booking.organization || booking.customerName),
     )?.account ?? null
   );
 };
@@ -138,11 +142,13 @@ const createDebtor = async ({
     );
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | { account?: number }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    account?: number;
+  } | null;
   if (!payload?.account) {
-    throw new Error("Campai hat für den neuen Debitor kein Konto zurückgegeben.");
+    throw new Error(
+      "Campai hat für den neuen Debitor kein Konto zurückgegeben.",
+    );
   }
   return payload.account;
 };
@@ -175,16 +181,14 @@ const resolveTaxCode19 = async ({
     );
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | {
-        taxes?: Array<{
-          type?: string;
-          code?: string;
-          rate?: number;
-          builtIn?: boolean;
-        }>;
-      }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    taxes?: Array<{
+      type?: string;
+      code?: string;
+      rate?: number;
+      builtIn?: boolean;
+    }>;
+  } | null;
   const matching = (payload?.taxes ?? []).filter(
     (tax) =>
       tax.type === "vat" &&
@@ -215,11 +219,18 @@ export const createCampaiInvoiceForVolkshausBooking = async (
     return {
       invoiceId: booking.campaiInvoiceId,
       debtorAccount: booking.campaiDebtorAccount,
-      status:
-        booking.invoiceStatus === "created" ? "created" : "draft_created",
+      status: booking.invoiceStatus === "created" ? "created" : "draft_created",
     };
   }
 
+  const invoiceDetails = getVolkshausInvoiceDetails(booking);
+  booking = {
+    ...booking,
+    organization:
+      invoiceDetails.recipient === booking.customerName
+        ? null
+        : invoiceDetails.recipient,
+  };
   const { config, costCenter1, costCenter2, positionAccount } =
     assertCampaiConfig();
   const taxCode = await resolveTaxCode19({
@@ -260,8 +271,7 @@ export const createCampaiInvoiceForVolkshausBooking = async (
       details2: "",
     },
     title: booking.referenceCode.slice(0, 30),
-    intro:
-      "Vielen Dank für die Nutzung der Räume im Neuen Volkshaus Cotta.",
+    intro: invoiceDetails.intro,
     account: debtorAccount,
     isNet: true,
     deliveryDateType: "service",
@@ -269,7 +279,7 @@ export const createCampaiInvoiceForVolkshausBooking = async (
     dueDate: dateAfterDays(
       Math.max(1, Number.parseInt(process.env.CAMPAI_DUE_DAYS ?? "14", 10)),
     ),
-    deliveryDate: booking.bookingDate,
+    deliveryDate: invoiceDetails.serviceDate,
     email: booking.email,
     sendMethod: "none",
     accountName: booking.organization || booking.customerName,
@@ -281,16 +291,19 @@ export const createCampaiInvoiceForVolkshausBooking = async (
     note: `Automatisch aus KongloDigital erstellt. Vertrag ${booking.contractHash ?? "ohne Hash"}.`,
     discount: 0,
     discountType: "%",
+    // Keep a single taxable total so Campai and the contract share exactly the
+    // same cent rounding. Editable positions (including discounts) are itemized
+    // in the printed details instead of sending negative invoice unit amounts.
     positions: [
       {
         unitAmount: price.netCents,
         discount: 0,
-        description: `Raumnutzung Neues Volkshaus Cotta · ${booking.eventTitle}`,
+        description: invoiceDetails.title,
         account: positionAccount,
         details: price.lines
           .map(
             (line) =>
-              `${line.description}: ${(line.totalNetCents / 100).toFixed(2)} EUR netto`,
+              `${line.quantity} × ${line.description}: ${(line.totalNetCents / 100).toFixed(2)} EUR netto`,
           )
           .join("\n"),
         quantity: 1,
@@ -317,13 +330,15 @@ export const createCampaiInvoiceForVolkshausBooking = async (
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(
-      body || `Campai-Rechnung konnte nicht angelegt werden (HTTP ${response.status}).`,
+      body ||
+        `Campai-Rechnung konnte nicht angelegt werden (HTTP ${response.status}).`,
     );
   }
 
-  const result = (await response.json().catch(() => null)) as
-    | { _id?: string; id?: string }
-    | null;
+  const result = (await response.json().catch(() => null)) as {
+    _id?: string;
+    id?: string;
+  } | null;
   const invoiceId = result?._id ?? result?.id ?? null;
   if (!invoiceId) {
     throw new Error("Campai hat keine Rechnungs-ID zurückgegeben.");

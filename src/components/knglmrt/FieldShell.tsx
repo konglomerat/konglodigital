@@ -92,6 +92,7 @@ type FieldShellProps = FieldStateProps &
   /**
    * `label` umschließt das Steuerelement (Field, Textarea) — für alles, was
    * kein natives Eingabefeld ist (Select, Stepper, Choice), muss es `div` sein.
+   * Mit `htmlFor` erhält auch dieser Rahmen eine verknüpfte Beschriftung.
    */
   as?: "label" | "div";
   htmlFor?: string;
@@ -118,6 +119,7 @@ export default function FieldShell({
   ...rest
 }: FieldShellProps) {
   const Tag = as;
+  const LabelTag = as === "div" && htmlFor ? "label" : "span";
   const message = error || hint;
 
   return (
@@ -127,7 +129,8 @@ export default function FieldShell({
       className={cn("group flex min-w-0 flex-col gap-1.5", className)}
     >
       {label ? (
-        <span
+        <LabelTag
+          {...(LabelTag === "label" ? { htmlFor } : {})}
           className={cn(
             "knglmrt-label",
             disabled
@@ -140,7 +143,7 @@ export default function FieldShell({
         >
           {label}
           {required ? <span className="ml-1 text-primary">*</span> : null}
-        </span>
+        </LabelTag>
       ) : null}
       {children}
       {message ? (

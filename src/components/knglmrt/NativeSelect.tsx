@@ -59,6 +59,7 @@ export default function NativeSelect({
         {...rest}
         ref={ref}
         id={selectId}
+        required={required}
         disabled={disabled}
         aria-invalid={error ? true : undefined}
         aria-describedby={messageId}
@@ -84,7 +85,8 @@ export default function NativeSelect({
 
   return (
     <FieldShell
-      as="div"
+      as="label"
+      htmlFor={selectId}
       label={label}
       required={required}
       disabled={disabled}

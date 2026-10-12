@@ -23,9 +23,9 @@ export default async function VerwaltungShell({
   }));
 
   return (
-    <div className="md:grid md:h-full md:grid-cols-[220px_minmax(0,1fr)] md:items-stretch">
+    <div className="md:grid md:h-full md:min-h-0 md:grid-cols-[220px_minmax(0,1fr)] md:items-stretch md:overflow-hidden">
       <VerwaltungSideNav items={items} homeHref={homeHref} />
-      <div className="min-w-0 px-4 py-6 md:h-full md:overflow-y-auto md:px-7 md:py-10">
+      <div className="min-w-0 px-4 py-6 md:h-full md:min-h-0 md:overflow-y-auto md:px-7 md:py-10">
         {children}
       </div>
     </div>

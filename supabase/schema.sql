@@ -443,7 +443,7 @@ alter table public.user_access
   add constraint user_access_roles_check
   check (
     cardinality(roles) > 0
-    and roles <@ array['admin', 'vhc', 'buchhaltung', 'member']::text[]
+    and roles <@ array['admin', 'backend', 'vhc', 'buchhaltung', 'werkbereich_lead', 'member']::text[]
   );
 
 alter table public.user_access enable row level security;
@@ -471,6 +471,13 @@ create index if not exists newsletter_drafts_created_by_updated_at_idx
 
 alter table public.newsletter_drafts enable row level security;
 
+grant select, insert, update, delete
+  on public.newsletter_drafts
+  to authenticated;
+grant all
+  on public.newsletter_drafts
+  to service_role;
+
 drop policy if exists "Admins can read own newsletter drafts"
   on public.newsletter_drafts;
 drop policy if exists "Admins can insert own newsletter drafts"
@@ -479,8 +486,16 @@ drop policy if exists "Admins can update own newsletter drafts"
   on public.newsletter_drafts;
 drop policy if exists "Admins can delete own newsletter drafts"
   on public.newsletter_drafts;
+drop policy if exists "Newsletter team can read own drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Newsletter team can insert own drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Newsletter team can update own drafts"
+  on public.newsletter_drafts;
+drop policy if exists "Newsletter team can delete own drafts"
+  on public.newsletter_drafts;
 
-create policy "Admins can read own newsletter drafts"
+create policy "Newsletter team can read own drafts"
 on public.newsletter_drafts
 for select
 using (
@@ -489,11 +504,11 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and 'admin' = any(user_access.roles)
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
-create policy "Admins can insert own newsletter drafts"
+create policy "Newsletter team can insert own drafts"
 on public.newsletter_drafts
 for insert
 with check (
@@ -502,11 +517,11 @@ with check (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and 'admin' = any(user_access.roles)
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
-create policy "Admins can update own newsletter drafts"
+create policy "Newsletter team can update own drafts"
 on public.newsletter_drafts
 for update
 using (
@@ -515,7 +530,7 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and 'admin' = any(user_access.roles)
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 )
 with check (
@@ -524,11 +539,11 @@ with check (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and 'admin' = any(user_access.roles)
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
-create policy "Admins can delete own newsletter drafts"
+create policy "Newsletter team can delete own drafts"
 on public.newsletter_drafts
 for delete
 using (
@@ -537,7 +552,7 @@ using (
     select 1
     from public.user_access
     where user_access.user_id = auth.uid()
-      and 'admin' = any(user_access.roles)
+      and user_access.roles && array['admin', 'vhc']::text[]
   )
 );
 
@@ -712,7 +727,7 @@ with normalized_user_access as (
             users.raw_app_meta_data ->> 'role',
             users.raw_user_meta_data ->> 'role',
             'member'
-          ))) in ('admin', 'accounting', 'buchhaltung', 'vhc', 'member')
+          ))) in ('admin', 'accounting', 'backend', 'buchhaltung', 'vhc', 'werkbereich_lead', 'member')
             then coalesce(
               users.raw_app_meta_data ->> 'role',
               users.raw_user_meta_data ->> 'role',
@@ -726,7 +741,9 @@ with normalized_user_access as (
         'accounting',
         'buchhaltung',
         'vhc',
-        'member'
+        'backend',
+        'member',
+        'werkbereich_lead'
       )
     ) as roles,
     coalesce(

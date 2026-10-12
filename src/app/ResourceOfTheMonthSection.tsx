@@ -13,6 +13,7 @@ import {
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
+import { markdownExcerpt } from "@/lib/markdown-excerpt";
 import Button from "@/components/knglmrt/Button";
 
 type ResourceOfTheMonthRow = {
@@ -30,14 +31,7 @@ type ResourceOfTheMonthRow = {
 
 const RESOURCE_OF_THE_MONTH_TAG = "resourceofthemonth";
 
-const truncateText = (text: string, maxLength: number) => {
-  const normalized = text.trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
 
-  return `${normalized.slice(0, maxLength - 1).trimEnd()}...`;
-};
 
 const loadResourceOfTheMonth = async () => {
   try {
@@ -125,7 +119,7 @@ export default async function ResourceOfTheMonthSection() {
           ) : null */}
           {resourceOfTheMonth.description ? (
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#102a1a] md:text-base">
-              {truncateText(resourceOfTheMonth.description, 260)}
+              {markdownExcerpt(resourceOfTheMonth.description, 260)}
             </p>
           ) : (
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#102a1a] md:text-base">

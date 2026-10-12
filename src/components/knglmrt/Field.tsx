@@ -72,6 +72,7 @@ export default function Field({
       {...rest}
       ref={ref}
       id={inputId}
+      required={required}
       disabled={disabled}
       aria-invalid={error ? true : undefined}
       aria-describedby={messageId}
