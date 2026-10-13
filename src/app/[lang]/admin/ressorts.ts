@@ -59,6 +59,11 @@ const VORSTAND_CHILDREN: RessortChild[] = [
     label: "Ehrenamtsbonus",
     canOpen: (access) => can(access, "ehrenamtsbonus.manage"),
   },
+  {
+    href: "/admin/vorstand/antraege",
+    label: "Anträge",
+    canOpen: (access) => can(access, "members.onboarding"),
+  },
 ];
 
 const ADMIN_CHILDREN: RessortChild[] = [

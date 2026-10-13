@@ -15,6 +15,8 @@ export const PERMISSIONS = [
   /** Campai-Mitgliederkontakte einsehen. */
   "contacts.manage",
   "ehrenamtsbonus.manage",
+  /** Mitgliedsanträge prüfen, annehmen und neue Mitglieder in Campai anlegen. */
+  "members.onboarding",
   /** KoFi-Auswertung über alle Kostenstellen. */
   "kofi.view",
   "newsletter.manage",
@@ -60,9 +62,14 @@ export const ROLE_CONFIG = {
   },
   vorstand: {
     label: "Vorstand",
-    description: "Ehrenamtsbonus und KoFi.",
+    description: "Ehrenamtsbonus, Mitgliedsanträge und KoFi.",
     scoping: "global",
-    permissions: ["ressort.vorstand", "ehrenamtsbonus.manage", "kofi.view"],
+    permissions: [
+      "ressort.vorstand",
+      "ehrenamtsbonus.manage",
+      "members.onboarding",
+      "kofi.view",
+    ],
   },
   oeffentlichkeitsarbeit: {
     label: "Öffentlichkeitsarbeit",

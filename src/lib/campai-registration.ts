@@ -1,16 +1,8 @@
-// Mitgliedsantrag — was /registration abfragt, wie es geprüft wird und wie
-// es in Campais Antragsformular übersetzt wird.
-//
-// Das Formular in Campai („Mitgliedsantrag (konglodigital)") ist ein reiner
-// Datenvertrag ohne eigene Oberfläche; angelegt und gepflegt wird es mit
-// scripts/campai-registration-form.mjs. Die Feld-IDs unten müssen zu diesem
-// Skript passen.
+// Mitgliedsantrag — was /registration abfragt und wie es geprüft wird.
 //
 // Die Datei läuft auf beiden Seiten: der Client prüft damit jeden Schritt,
-// der Server prüft dieselben Regeln noch einmal und baut die Einreichung.
-
-/** Das Antragsformular in Campai. */
-export const REGISTRATION_FORM_ID = "6aba5efa17a4b750dbe9f7f2";
+// der Server prüft dieselben Regeln noch einmal, bevor er den Antrag in die
+// Antragsliste des Vorstands legt (src/lib/membership-applications).
 
 /** Der Jahresbeitrag ist Pflicht — jeder Antrag legt diesen Vertrag an. */
 export const ANNUAL_PLAN_ID = "685a87790afb4b4a84815a53";
@@ -20,7 +12,8 @@ export const ANNUAL_PLAN_ID = "685a87790afb4b4a84815a53";
  * keine Gläubiger-ID, `paymentMethods.sepaDirectDebit` in den
  * Finanzeinstellungen ist leer. Solange das so ist, bietet der Antrag nur die
  * Überweisung an. Zum Einschalten: Lastschrift in Campai einrichten,
- * `sepaDirectDebit` im Formular-Skript erlauben, Gläubiger-ID unten eintragen.
+ * Gläubiger-ID unten eintragen und beim Annehmen das Mandat am Debitor setzen
+ * (ensureDebtor in src/lib/membership-applications/campai.ts).
  */
 export const SEPA_DIRECT_DEBIT_ENABLED = false;
 export const SEPA_CREDITOR_ID = "";
@@ -35,9 +28,6 @@ export const ANNUAL_FEE_LABELS: Record<AnnualFee, string> = {
 };
 
 export const TRIAL_FEE_EURO = 90;
-
-/** Ohne Wahl im Antrag gilt: Aktivmitglied. */
-const MEMBERSHIP_TYPE = "Aktivmitglied";
 
 export type AccessTariff = "none" | "small" | "large" | "punchCard";
 
@@ -319,6 +309,31 @@ export const validateRegistration = (
   return errors;
 };
 
+/**
+ * Nimmt aus dem Body nur die bekannten Felder mit dem erwarteten Typ; alles
+ * andere fällt auf den leeren Antrag zurück und scheitert dann an der Prüfung.
+ */
+export const readRegistrationInput = (raw: unknown): RegistrationInput => {
+  const input = emptyRegistration();
+  if (!raw || typeof raw !== "object") return input;
+  const source = raw as Record<string, unknown>;
+
+  for (const key of Object.keys(input) as (keyof RegistrationInput)[]) {
+    const value = source[key];
+    const fallback = input[key];
+    if (
+      typeof value === typeof fallback ||
+      // Leer heißt `null`: Unterschriften (Data-URL) und der Beitrag (Zahl).
+      (fallback === null &&
+        (value === null || typeof value === "string" || typeof value === "number"))
+    ) {
+      (input as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  return input;
+};
+
 /** Die Fehler eines Schritts. */
 export const stepErrors = (
   errors: RegistrationErrors,
@@ -338,70 +353,12 @@ export const firstStepWithErrors = (
     (step) => Object.keys(stepErrors(errors, step)).length > 0,
   ) ?? null;
 
-// --- Einreichung ------------------------------------------------------------
-
-/** Eine hochgeladene Unterschrift, wie Campai sie im Antrag ablegt. */
-export type UploadedFile = {
-  resource: string;
-  fileName: string;
-  contentType: string;
-  fileSizeBytes: number;
-};
-
-export type UploadedSignatures = {
-  signature: UploadedFile;
-  sepaSignature?: UploadedFile;
-};
+// --- Verträge ---------------------------------------------------------------
 
 /** Die Verträge des Antrags: immer der Jahresbeitrag, dazu die Zugangskarte. */
-export const contractPlanIds = (input: RegistrationInput): string[] => {
+export const contractPlanIds = (
+  input: Pick<RegistrationInput, "accessTariff">,
+): string[] => {
   const access = accessTariffById(input.accessTariff);
   return [ANNUAL_PLAN_ID, ...(access?.planId ? [access.planId] : [])];
-};
-
-/**
- * Die Werte in Campais Form, geschlüsselt nach den Feld-IDs des Formulars.
- * Leere optionale Felder fehlen. Setzt geprüfte Eingaben voraus.
- */
-export const buildSubmissionData = (
-  input: RegistrationInput,
-  signatures: UploadedSignatures,
-): Record<string, unknown> => {
-  const trim = (value: string) => value.trim();
-  const phone = normalizePhone(input.phone);
-  const mobilePhone = normalizePhone(input.mobilePhone);
-  const directDebit = usesDirectDebit(input);
-
-  return {
-    firstName: trim(input.firstName),
-    lastName: trim(input.lastName),
-    entryAt: `${input.entryAt}T00:00:00.000Z`,
-    membershipType: MEMBERSHIP_TYPE,
-    address: {
-      country: "DE",
-      zip: trim(input.zip),
-      city: trim(input.city),
-      addressLine: trim(input.street),
-    },
-    email: trim(input.email).toLowerCase(),
-    ...(phone ? { phone } : {}),
-    ...(mobilePhone ? { mobilePhone } : {}),
-    annualFee: input.annualFee,
-    trialRate: input.trialRate,
-    // Wiederholbare Gruppe: ein Eintrag je Vertrag.
-    contracts: contractPlanIds(input).map((plan) => ({ plan })),
-    ...(directDebit
-      ? {
-          payerName: trim(input.accountHolder),
-          paymentMethod: {
-            type: "sepaDirectDebit",
-            sepaDirectDebit: { iban: normalizeIban(input.iban), bic: null },
-          },
-        }
-      : { paymentMethod: { type: "sepaCreditTransfer" } }),
-    statutesRead: input.statutesAccepted,
-    feeRulesRead: input.feeRulesAccepted,
-    signature: signatures.signature,
-    ...(signatures.sepaSignature ? { sepaSignature: signatures.sepaSignature } : {}),
-  };
 };
