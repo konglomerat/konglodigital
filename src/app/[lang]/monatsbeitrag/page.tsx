@@ -2,20 +2,27 @@
 
 // src/app/[lang]/monatsbeitrag/page.tsx — Tarifauswahl der Zugangskarte.
 //
-// Der aktuelle Tarif kommt live aus Campai über denselben Abruf wie die
-// Kontoseite (`/api/account/campai-profile`). Die Kacheln selbst sind feste
-// Beschreibungen der vier Stufen. Wechseln oder Aufladen ist noch nicht
-// angebunden — die Taste unten zeigt nur, was passieren würde.
-import { useState } from "react";
+// Der aktuelle und ein schon vorgemerkter Tarif kommen live aus Campai
+// (`/api/account/tariff`), ebenso Preise, Quartalsgrenzen und Bankdaten. Die
+// Kacheln sind feste Beschreibungen der vier Stufen. Die Taste unten öffnet
+// den Dialog, der den Wechsel in Campai einträgt.
+import { useEffect, useState } from "react";
 
 import Badge from "@/components/knglmrt/Badge";
 import Button from "@/components/knglmrt/Button";
 import Choice from "@/components/knglmrt/Choice";
 import { cn } from "@/components/knglmrt/FieldShell";
 import Face from "@/components/knglmrt/Face";
+import Notice from "@/components/knglmrt/Notice";
+import type { AccountTariffResponse } from "@/app/api/account/tariff/route";
 import type { CampaiAccessTariff } from "@/lib/campai-member-tariff";
+import type { TariffChangeState } from "@/lib/campai-tariff-change";
 import PageTitle from "../components/PageTitle";
-import useCampaiProfile from "../account/useCampaiProfile";
+import TariffChangeDialog, {
+  formatCents,
+  formatDay,
+  TARIFF_TITLES,
+} from "./TariffChangeDialog";
 
 type TariffGroup = "ohne" | "abo" | "punktekarte";
 
@@ -129,25 +136,39 @@ const groupLabel = (group: TariffGroup) =>
 const tariffById = (id: CampaiAccessTariff) =>
   TARIFFS.find((tariff) => tariff.id === id) ?? TARIFFS[0];
 
-const formatEuro = (euro: number) =>
-  new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(euro);
+const priceOf = (target: TariffCard, state: TariffChangeState | null) =>
+  state?.prices[target.id] ?? target.priceEuro * 100;
 
-const summaryText = (target: TariffCard) => {
+const summaryText = (
+  target: TariffCard,
+  current: CampaiAccessTariff | null,
+  state: TariffChangeState | null,
+) => {
+  const ab = state ? ` ab dem ${formatDay(state.nextChangeDate)}` : "";
+  const bis = state ? ` am ${formatDay(state.currentQuarterEnd)}` : "";
+  const hasAbo = current === "abo_klein" || current === "abo_gross";
+
   switch (target.id) {
     case "keiner":
-      return "Kein laufender Beitrag mehr. Die Änderung wird zum nächsten Monat wirksam.";
+      return `Dein Abo endet zum Quartalsende${bis}. Danach läuft kein Beitrag mehr.`;
     case "abo_klein":
     case "abo_gross":
-      return `Monatlich zu zahlen: ${formatEuro(target.priceEuro)}. Die Änderung wird zum nächsten Monat wirksam, danach ist der nächste Wechsel erst im folgenden Quartal möglich.`;
+      return `Monatlich ${formatCents(priceOf(target, state))}${ab}. Der Beitrag ändert sich nur zum Quartalsende, danach ist der nächste Wechsel erst im folgenden Quartal möglich.`;
     case "punktekarte":
-      return `Einmalig zu zahlen: ${formatEuro(target.priceEuro)} einmalig. Die 10 Tage sind ab Aufladung 12 Monate gültig. Kein laufender Beitrag.`;
+      return `Einmalig ${formatCents(priceOf(target, state))}, die Rechnung kommt sofort per Mail. Die 10 Tage sind ab heute 12 Monate gültig.${
+        hasAbo ? ` Dein Abo endet zum Quartalsende${bis}.` : ""
+      }`;
   }
 };
 
-const submitLabel = (target: TariffCard, current: CampaiAccessTariff | null) => {
+const submitLabel = (
+  target: TariffCard,
+  current: CampaiAccessTariff | null,
+  onlyCard: boolean,
+) => {
+  if (onlyCard) {
+    return "Zugangskarte beantragen";
+  }
   if (target.id === "punktekarte") {
     return current === "punktekarte" ? "Jetzt nachladen" : "Jetzt aufladen";
   }
@@ -159,17 +180,77 @@ const submitLabel = (target: TariffCard, current: CampaiAccessTariff | null) => 
     : "Abo abschließen";
 };
 
+type TariffLoad = AccountTariffResponse & { status: number };
+
 export default function MonatsbeitragPage() {
-  const { membership, loading } = useCampaiProfile();
-  const current = membership?.tariff ?? null;
+  const [data, setData] = useState<TariffLoad | null>(null);
+  const loading = data === null;
+  const state = data?.state ?? null;
+  const current = state?.current ?? null;
+
+  // Nach einem Wechsel zählt der Schlüssel hoch und lädt den Stand neu.
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/account/tariff")
+      .then(async (response) => {
+        const body = (await response.json()) as AccountTariffResponse;
+        if (active) setData({ ...body, status: response.status });
+      })
+      .catch(() => {
+        if (active) {
+          setData({ state: null, email: null, linked: true, status: 0 });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
 
   // Solange nichts gewählt ist, steht die Auswahl auf dem aktuellen Tarif.
   const [picked, setPicked] = useState<CampaiAccessTariff | null>(null);
   const selected = picked ?? current;
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const target = selected ? tariffById(selected) : null;
-  // Eine 10er Karte lässt sich nachladen, jeder andere Tarif ist schon gebucht.
+  // Eine 10er Karte lässt sich nachladen, jeder andere Tarif ist schon gebucht
+  // — dann bleibt höchstens, die Karte selbst zu beantragen.
   const unchanged = selected === current && selected !== "punktekarte";
+  const onlyCard =
+    unchanged &&
+    selected !== "keiner" &&
+    state !== null &&
+    state.cardRequestedAt === null;
+  const hasAbo = current === "abo_klein" || current === "abo_gross";
+  // Ein vorgemerkter Wechsel verbraucht das Quartal — außer für den Kauf einer
+  // 10er Karte, die kein Abo beenden muss.
+  const blockedByPending =
+    state?.pending != null &&
+    !unchanged &&
+    (selected !== "punktekarte" || hasAbo);
+  const blockedNoAbo = selected === "keiner" && !unchanged && !hasAbo;
+
+  const statusText = (() => {
+    if (!target) return null;
+    if (blockedByPending && state?.pending) {
+      return `Für dieses Quartal ist schon ein Wechsel eingetragen. Der nächste ist ab dem ${formatDay(
+        state.pending.effectiveFrom,
+      )} wieder möglich.`;
+    }
+    if (blockedNoAbo) {
+      return "Du hast kein laufendes Abo — eine 10er Karte läuft einfach aus.";
+    }
+    if (onlyCard) {
+      return "Das ist dein aktueller Tarif. Fehlt dir noch die Karte dazu, kannst du sie hier beantragen.";
+    }
+    if (unchanged) {
+      return "Das ist dein aktueller Tarif.";
+    }
+    return summaryText(target, current, state);
+  })();
 
   return (
     <div className="flex flex-col gap-10">
@@ -182,6 +263,17 @@ export default function MonatsbeitragPage() {
         subTitle="Mit der Zugangskarte kannst du selbständig die Räume im Rosenwerk betreten. Sie beinhaltet nicht die freie Nutzung aller Maschinen und Materialien. Je nach Werkbereich können für die Nutzung bestimmter Maschinen zusätzliche Kosten anfallen und Einweisungen erforderlich sein."
         subTitleClassName="text-foreground!"
       />
+      {state?.pending ? (
+        <Notice tone="gelb" title="Wechsel eingetragen">
+          Ab dem {formatDay(state.pending.effectiveFrom)} gilt{" "}
+          <span className="font-bold">
+            {TARIFF_TITLES[state.pending.tariff]}
+          </span>
+          . Laut Beitragsordnung ändert sich der Beitrag höchstens einmal im
+          Quartal — bis dahin kannst du keinen weiteren Wechsel eintragen.
+        </Notice>
+      ) : null}
+
       <div className="grid gap-x-5 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
         {GROUPS.map((group) => (
           <p
@@ -246,7 +338,7 @@ export default function MonatsbeitragPage() {
                       PRICE_TEXT[tariff.group],
                     )}
                   >
-                    {tariff.priceEuro} €
+                    {formatCents(priceOf(tariff, state))}
                   </span>
                   <span className="text-muted-foreground">
                     {tariff.priceUnit}
@@ -294,30 +386,50 @@ export default function MonatsbeitragPage() {
                   ? `${tariffById(current).title} → ${target.title}`
                   : target.title}
               </p>
-              <p className="text-muted-foreground">
-                {unchanged
-                  ? "Das ist dein aktueller Tarif."
-                  : summaryText(target)}
-              </p>
+              <p className="text-muted-foreground">{statusText}</p>
             </>
           ) : (
             <p className="text-muted-foreground">
               {loading
                 ? "Dein aktueller Tarif wird geladen …"
-                : "Dein aktueller Tarif ist gerade nicht abrufbar. Wähle oben einen Tarif."}
+                : data?.status === 401
+                  ? "Bitte melde dich an, um deinen Tarif zu wechseln."
+                  : !data?.linked
+                    ? "Dein Konto ist noch nicht mit Campai verknüpft — melde dich beim Vorstand."
+                    : "Dein aktueller Tarif ist gerade nicht abrufbar."}
             </p>
           )}
         </div>
-        {/* Noch ohne Aktion — Wechsel und Aufladen folgen. */}
         <Button
           type="button"
-          kind="emphasis"
+          kind={dialogOpen ? "primary" : "emphasis"}
           size="large"
-          disabled={!target || unchanged}
+          disabled={
+            !target ||
+            !state ||
+            (unchanged && !onlyCard) ||
+            blockedByPending ||
+            blockedNoAbo
+          }
+          onClick={() => setDialogOpen(true)}
         >
-          {target ? submitLabel(target, current) : "Tarif wählen"}
+          {target ? submitLabel(target, current, onlyCard) : "Tarif wählen"}
         </Button>
       </section>
+
+      {dialogOpen && target && state ? (
+        <TariffChangeDialog
+          open
+          target={target.id}
+          state={state}
+          email={data?.email ?? null}
+          onClose={() => setDialogOpen(false)}
+          onChanged={() => {
+            setPicked(null);
+            setReloadKey((key) => key + 1);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

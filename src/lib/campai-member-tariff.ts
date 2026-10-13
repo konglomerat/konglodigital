@@ -6,10 +6,10 @@
 // Drei Eigenheiten der Campai-Daten, die den Weg hierher bestimmen:
 //
 // 1. Der Tarif ist keine Eigenschaft des Kontakts und auch kein Segment — die
-//    Segmente eines Kontakts sind undurchsichtige IDs. Er steckt als *Option*
-//    an einem Vertrag: alle Abos laufen über denselben Plan
-//    „Monatsmehrbeitrag (Zugangskarte)", klein und groß unterscheiden sich
-//    allein durch die gebuchte Option.
+//    Segmente eines Kontakts sind undurchsichtige IDs. Er steckt im Vertrag:
+//    bei den alten Abos als *Option* am gemeinsamen Plan
+//    „Monatsmehrbeitrag (Zugangskarte)", bei den neuen (aus dem Tarifwechsel
+//    der Kontoseite) im Plan selbst — je Stufe ein eigener.
 // 2. Die Vertragsliste im Kontakt ist eine Kurzfassung **ohne** `options` —
 //    deshalb reicht `crm/contacts` nicht, es braucht `crm/contracts`. Der
 //    Kontakt liefert dafür den Debitorensaldo.
