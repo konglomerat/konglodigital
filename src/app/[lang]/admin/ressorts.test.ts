@@ -64,6 +64,7 @@ describe("Verwaltungsmenü", () => {
     expect(visibleChildren(access, "vorstand")).toEqual([
       "KoFi",
       "Ehrenamtsbonus",
+      "Anträge",
     ]);
   });
 

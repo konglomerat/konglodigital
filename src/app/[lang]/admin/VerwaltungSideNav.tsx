@@ -23,6 +23,8 @@ export type RessortNavChild = {
   label: string;
   /** Unlokalisierte Route, unter der dieser Unterpunkt aktiv ist. */
   match: string;
+  /** Zahl offener Einträge, z. B. neuer Anträge. */
+  badge?: number;
 };
 
 export type RessortNavItem = {
@@ -162,7 +164,14 @@ export default function VerwaltungSideNav({
                             : "block border-l-[3px] border-transparent py-1.5 pl-[33px] pr-5 text-[length:var(--ui-size-nav)] leading-[18px] text-[var(--knglmrt-dark-30)] transition hover:bg-white/10 hover:text-white"
                         }
                       >
-                        {child.label}
+                        <span className="flex items-center justify-between gap-2">
+                          {child.label}
+                          {child.badge ? (
+                            <span className="knglmrt-tag bg-primary px-[7px] py-[3px] text-white">
+                              {child.badge}
+                            </span>
+                          ) : null}
+                        </span>
                       </Link>
                     </li>
                   );

@@ -22,6 +22,12 @@ const LINKS = [
     description:
       "Ehrenamtliche Arbeit prüfen und Zugangstage für das Folgequartal gewähren.",
   },
+  {
+    href: "/admin/vorstand/antraege",
+    label: "Anträge",
+    description:
+      "Mitgliedsanträge prüfen, annehmen oder ablehnen; danach Rechnung und Willkommensmails.",
+  },
 ];
 
 export default async function VorstandRessortPage() {

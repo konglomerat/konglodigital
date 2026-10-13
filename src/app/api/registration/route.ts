@@ -1,51 +1,32 @@
-// Mitgliedsantrag von /registration an Campai.
+// Mitgliedsantrag von /registration in die Antragsliste des Vorstands
+// (membership_applications). In Campai entsteht das Mitglied erst, wenn der
+// Vorstand den Antrag unter Vorstand → Anträge annimmt.
 //
 // Öffentlich — wer einen Antrag stellt, hat noch kein Konto. Die Eingaben
 // werden hier noch einmal mit denselben Regeln geprüft wie im Browser; die
-// Verträge (Jahresbeitrag plus Zugangskarte) leitet der Server aus der Wahl
-// ab, statt Plan-IDs vom Client zu übernehmen.
+// Verträge (Jahresbeitrag plus Zugangskarte) leitet der Server beim Annehmen
+// aus der Wahl ab, statt Plan-IDs vom Client zu übernehmen.
 //
 // Zum Antrag gehören bis zu zwei Unterschriften: immer die des Antrags, bei
 // Lastschrift die zum Mandat.
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import {
-  buildSubmissionData,
-  emptyRegistration,
+  readRegistrationInput,
   type RegistrationErrors,
   type RegistrationInput,
-  type UploadedSignatures,
   usesDirectDebit,
   validateRegistration,
 } from "@/lib/campai-registration";
 import {
-  buildSubmissionSchema,
-  CampaiValidationError,
-  createApplicationSubmission,
-  fetchApplicationForm,
-  uploadApplicationFile,
-} from "@/lib/campai-application-submit";
+  mailReceiptConfirmation,
+  mailVorstandNewApplication,
+} from "@/lib/membership-applications/mails";
+import { insertApplication } from "@/lib/membership-applications/store";
+import type { ApplicationSignatures } from "@/lib/membership-applications/types";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Datenpfade aus Campais Validierung → Felder im Antrag. Was Campai ablehnt,
- * landet so am richtigen Feld statt in der allgemeinen Fehlermeldung.
- */
-const CAMPAI_FIELDS: Record<string, keyof RegistrationInput> = {
-  firstName: "firstName",
-  lastName: "lastName",
-  entryAt: "entryAt",
-  "address.addressLine": "street",
-  "address.zip": "zip",
-  "address.city": "city",
-  email: "email",
-  phone: "phone",
-  mobilePhone: "mobilePhone",
-  payerName: "accountHolder",
-  "paymentMethod.sepaDirectDebit.iban": "iban",
-};
 
 /** Eine Unterschrift vom Pad wiegt wenige KB; alles darüber ist kein Strich. */
 const MAX_SIGNATURE_BYTES = 512 * 1024;
@@ -72,36 +53,10 @@ const fail = (
     { status },
   );
 
-const decodeSignature = (value: string | null): Buffer | null => {
-  if (!value?.startsWith(PNG_DATA_URL_PREFIX)) return null;
+const isReadablePng = (value: string | null) => {
+  if (!value?.startsWith(PNG_DATA_URL_PREFIX)) return false;
   const buffer = Buffer.from(value.slice(PNG_DATA_URL_PREFIX.length), "base64");
-  const isPng = buffer.subarray(0, 8).equals(PNG_MAGIC);
-  return isPng && buffer.length <= MAX_SIGNATURE_BYTES ? buffer : null;
-};
-
-/**
- * Nimmt aus dem Body nur die bekannten Felder mit dem erwarteten Typ; alles
- * andere fällt auf den leeren Antrag zurück und scheitert dann an der Prüfung.
- */
-const readInput = (raw: unknown): RegistrationInput => {
-  const input = emptyRegistration();
-  if (!raw || typeof raw !== "object") return input;
-  const source = raw as Record<string, unknown>;
-
-  for (const key of Object.keys(input) as (keyof RegistrationInput)[]) {
-    const value = source[key];
-    const fallback = input[key];
-    if (
-      typeof value === typeof fallback ||
-      // Leer heißt `null`: Unterschriften (Data-URL) und der Beitrag (Zahl).
-      (fallback === null &&
-        (value === null || typeof value === "string" || typeof value === "number"))
-    ) {
-      (input as Record<string, unknown>)[key] = value;
-    }
-  }
-
-  return input;
+  return buffer.subarray(0, 8).equals(PNG_MAGIC) && buffer.length <= MAX_SIGNATURE_BYTES;
 };
 
 export const POST = async (request: NextRequest) => {
@@ -119,7 +74,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json<RegistrationResponse>({ ok: true });
   }
 
-  const input = readInput(body.input);
+  const input = readRegistrationInput(body.input);
   const fieldErrors = validateRegistration(input);
   if (Object.keys(fieldErrors).length > 0) {
     return fail(422, "Bitte prüfe die markierten Felder.", fieldErrors);
@@ -127,64 +82,54 @@ export const POST = async (request: NextRequest) => {
 
   // Nur die Unterschriften, die der Antrag verlangt — eine SEPA-Unterschrift,
   // die nach einem Zurück im Zustand hängen blieb, fällt weg.
-  const fields: (keyof UploadedSignatures)[] = [
-    "signature",
-    ...(usesDirectDebit(input) ? (["sepaSignature"] as const) : []),
-  ];
-  const wanted = fields.map((field) => ({
-    field,
-    png: decodeSignature(input[field]),
-  }));
-
-  const unreadable = wanted.filter(({ png }) => !png);
+  const directDebit = usesDirectDebit(input);
+  const unreadable = (
+    ["signature", ...(directDebit ? (["sepaSignature"] as const) : [])] as const
+  ).filter((field) => !isReadablePng(input[field]));
   if (unreadable.length > 0) {
     return fail(
       422,
       "Bitte prüfe die markierten Felder.",
       Object.fromEntries(
-        unreadable.map(({ field }) => [
-          field,
-          "Die Unterschrift ließ sich nicht lesen.",
-        ]),
+        unreadable.map((field) => [field, "Die Unterschrift ließ sich nicht lesen."]),
       ),
     );
   }
 
-  try {
-    const form = await fetchApplicationForm();
-    const uploads = await Promise.all(
-      wanted.map(async ({ field, png }) => [
-        field,
-        await uploadApplicationFile(form.id, png!, "signature.png", "image/png"),
-      ] as const),
-    );
-    const signatures = Object.fromEntries(uploads) as UploadedSignatures;
+  const { signature, sepaSignature, ...data } = input;
+  const signatures: ApplicationSignatures = {
+    signature: signature!,
+    ...(directDebit && sepaSignature ? { sepaSignature } : {}),
+  };
 
-    await createApplicationSubmission(
-      form.id,
-      {
-        schema: buildSubmissionSchema(form),
-        data: buildSubmissionData(input, signatures),
-      },
-      new URL("/registration", request.nextUrl.origin).toString(),
+  let application;
+  try {
+    application = await insertApplication(
+      { ...data, email: data.email.trim().toLowerCase() },
+      signatures,
     );
   } catch (error) {
-    console.error("[registration] Einreichung fehlgeschlagen", error);
-    if (error instanceof CampaiValidationError) {
-      const fieldErrors: RegistrationErrors = {};
-      for (const path of Object.keys(error.validation)) {
-        const field = CAMPAI_FIELDS[path];
-        if (field) fieldErrors[field] = "Die Mitgliederverwaltung akzeptiert diese Angabe nicht. Bitte prüfe sie.";
-      }
-      if (Object.keys(fieldErrors).length > 0) {
-        return fail(422, "Bitte prüfe die markierten Felder.", fieldErrors);
-      }
-    }
+    console.error("[registration] Antrag nicht gespeichert", error);
     return fail(
       502,
-      "Der Antrag konnte nicht an die Mitgliederverwaltung übermittelt werden. Bitte versuche es später noch einmal.",
+      "Der Antrag konnte nicht gespeichert werden. Bitte versuche es später noch einmal.",
     );
   }
+
+  // Die Mails dürfen den Antrag nicht scheitern lassen — er liegt schon in
+  // der Liste des Vorstands.
+  const inboxUrl = new URL("/admin/vorstand/antraege", request.nextUrl.origin).toString();
+  after(async () => {
+    const results = await Promise.allSettled([
+      mailReceiptConfirmation(application),
+      mailVorstandNewApplication(application, inboxUrl),
+    ]);
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("[registration] Mail nicht verschickt", result.reason);
+      }
+    }
+  });
 
   return NextResponse.json<RegistrationResponse>({ ok: true });
 };
