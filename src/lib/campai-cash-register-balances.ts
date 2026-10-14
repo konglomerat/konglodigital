@@ -214,6 +214,15 @@ export const CASH_REGISTER_ACCOUNT_BY_COST_CENTER2: Record<string, number> = {
   "80": 16120, // #VHC (inkl. Unterprojekte 801–807)
 };
 
+/** Campai bucht den Anfangsbestand beim Anlegen einer Barkasse immer gegen
+ *  90000 (Saldenvorträge Sachkonten) — das lässt sich dort nicht ändern. */
+export const OPENING_BALANCE_ACCOUNT = 90000;
+
+/** Belegart für den Eröffnungsbestand einer Barkasse: steht in der Tabelle,
+ *  zählt aber weder als Einnahme noch als Ausgabe (der Bestand steckt schon im
+ *  Kassensaldo). */
+export const OPENING_BALANCE_TYPE = "openingBalance";
+
 /** Kassenkonten liegen in Campai im Bereich 16000–16999. */
 export const isCashRegisterAccount = (account: number): boolean =>
   account >= 16000 && account <= 16999;

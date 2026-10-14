@@ -40,6 +40,7 @@ import type {
 } from "@/lib/campai-balance-receipts";
 import {
   CASH_REGISTER_ACCOUNT_BY_COST_CENTER2,
+  OPENING_BALANCE_TYPE,
   isCashRegisterAccount,
 } from "@/lib/campai-cash-register-balances";
 import type { CampaiCashRegisterBalanceSummary } from "@/lib/campai-cash-register-balances";
@@ -118,7 +119,13 @@ const TYPE_LABELS: Record<string, string> = {
   donation: "Spende",
   confirmation: "Bestätigung",
   refund: "Rückerstattung",
+  [OPENING_BALANCE_TYPE]: "Eröffnungsbestand Barkasse",
 };
+
+const OPENING_BALANCE_HINT =
+  "Eröffnungsbestand der Barkasse — nicht in den Einnahmen enthalten, steckt schon im Kassenbestand";
+
+const CASH_REGISTER_TYPE_LABEL = "Kassenbuchung";
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   unpaid: "Offen",
@@ -1194,6 +1201,7 @@ export default function WerkbereichReceipts({
       const isIncome = receipt.type ? INCOME_TYPES.has(receipt.type) : false;
       const isExpense = receipt.type ? EXPENSE_TYPES.has(receipt.type) : false;
       const amount = receipt.totalGrossAmount;
+      const isOpeningBalance = receipt.type === OPENING_BALANCE_TYPE;
       const incomeCell =
         isIncome && amount !== null ? `+${formatCents(amount)}` : "";
       const expenseCell =
@@ -1292,6 +1300,23 @@ export default function WerkbereichReceipts({
             </td>
           );
         case "Einnahmen":
+          // Eröffnungsbestand: Betrag sichtbar, aber gedämpft und ohne „+“,
+          // weil er in keiner Summe mitzählt.
+          if (isOpeningBalance && amount !== null) {
+            return (
+              <td
+                key={cellKey}
+                className={`${CELL_CLASS_NAME} knglmrt-num text-right text-muted-foreground!`}
+              >
+                <span
+                  className={CELL_TEXT_CLASS_NAME}
+                  title={OPENING_BALANCE_HINT}
+                >
+                  ({formatCents(amount)})
+                </span>
+              </td>
+            );
+          }
           return (
             <td
               key={cellKey}
@@ -1360,21 +1385,28 @@ export default function WerkbereichReceipts({
               )}
             </td>
           );
-        case "type":
+        case "type": {
+          const typeLabel =
+            receipt.source === "cashRegister" && !isOpeningBalance
+              ? CASH_REGISTER_TYPE_LABEL
+              : receipt.type
+                ? (TYPE_LABELS[receipt.type] ?? receipt.type)
+                : null;
           return (
             <td key={cellKey} className={CELL_CLASS_NAME}>
-              {receipt.type ? (
+              {typeLabel ? (
                 <span
                   className={`${CHIP_CLASS_NAME} bg-muted`}
-                  title={TYPE_LABELS[receipt.type] ?? receipt.type}
+                  title={typeLabel}
                 >
-                  {TYPE_LABELS[receipt.type] ?? receipt.type}
+                  {typeLabel}
                 </span>
               ) : (
                 "—"
               )}
             </td>
           );
+        }
         case "receiptDate":
           return (
             <td key={cellKey} className={`${CELL_CLASS_NAME} knglmrt-num`}>
@@ -1417,6 +1449,14 @@ export default function WerkbereichReceipts({
             </td>
           );
         case "pdf":
+          // Kassenbuchungen haben keinen Beleg zum Herunterladen.
+          if (receipt.source === "cashRegister") {
+            return (
+              <td key={cellKey} className="px-4 py-2 text-center">
+                —
+              </td>
+            );
+          }
           return (
             <td key={cellKey} className="px-4 py-2 text-center">
               <a
@@ -1448,21 +1488,34 @@ export default function WerkbereichReceipts({
     [costCenterLabelMap],
   );
 
-  const renderReceiptRow = (receipt: CampaiBalanceReceipt, key: string) => (
-    <tr
-      key={key}
-      onClick={(event) => {
-        const target = event.target as HTMLElement;
-        if (target.closest("a,button")) {
-          return;
+  // Kassenbuchungen sind keine Belege — die Detailansicht hätte nichts zu laden.
+  const renderReceiptRow = (receipt: CampaiBalanceReceipt, key: string) =>
+    receipt.source === "cashRegister" ? (
+      <tr
+        key={key}
+        title={
+          receipt.type === OPENING_BALANCE_TYPE
+            ? OPENING_BALANCE_HINT
+            : "Kassenbuchung aus dem Campai-Kassenbuch"
         }
-        setSelectedReceiptId(receipt.id);
-      }}
-      className="cursor-pointer transition hover:bg-muted"
-    >
-      {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
-    </tr>
-  );
+      >
+        {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
+      </tr>
+    ) : (
+      <tr
+        key={key}
+        onClick={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest("a,button")) {
+            return;
+          }
+          setSelectedReceiptId(receipt.id);
+        }}
+        className="cursor-pointer transition hover:bg-muted"
+      >
+        {visibleColumns.map((column) => renderReceiptCell(column.key, receipt))}
+      </tr>
+    );
 
   const renderMessageRow = (content: ReactNode) => (
     <tr>
