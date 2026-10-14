@@ -4,10 +4,11 @@ import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
+import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
-const INVENTORY_HIDDEN_RESOURCE_TYPE = "project";
 
 export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
@@ -17,7 +18,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!hasRight(data.user, "resources:edit") && !hasRight(data.user, "resources:create")) {
+  if (!can(await loadUserAccess(supabase, data.user), "resources.edit")) {
     return NextResponse.json({ error: "Insufficient permissions." }, { status: 403 });
   }
 
@@ -27,7 +28,7 @@ export const POST = async (request: NextRequest) => {
     .select(
       "id, name, description, image, images, type, attachable, categories, campai_resource_id, campai_offer_id, campai_default_rate_id, campai_site_id",
     )
-    .not("type", "ilike", INVENTORY_HIDDEN_RESOURCE_TYPE)
+    .not("type", "ilike", SHOWCASE_RESOURCE_TYPE)
     .order("created_at", { ascending: false })
     .limit(1000);
 

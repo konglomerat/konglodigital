@@ -1,25 +1,40 @@
+// Die Belege des angemeldeten Mitglieds für die Kontoseite.
+//
+// Welches Debitorenkonto gemeint ist, bestimmt allein der Server aus dem
+// Campai-Kontakt des Mitglieds (`campai-own-debtor`) — die Anfrage trägt
+// keine Kontonummer mehr, damit niemand fremde Belege abrufen kann.
+//
+// `finance/receipts/list` validiert seine Eingabe strikt (additionalProperties:
+// false) und kennt nur `sort`, `limit`, `offset`, `returnCount`, `searchTerm`,
+// `hasReceipt`, `view`, `userFilter` und `selection`. Ein `account`-Feld
+// beantwortet Campai mit 400 „Unbekannter Schlüssel", und `userFilter` wird
+// stillschweigend ignoriert.
+//
+// Nach Debitor filtert deshalb `searchTerm` mit der Kontonummer: der Volltext
+// trifft die Debitorennummer des Belegs. Weil `searchTerm` unscharf sucht,
+// wird danach noch exakt auf `account` geprüft, bevor etwas die Route verlässt.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import {
   extractInvoices,
   normalizeInvoice,
   type InvoicePayload,
+  type RawInvoice,
 } from "@/lib/campai-invoices";
+import { fetchOwnDebtorAccount } from "@/lib/campai-own-debtor";
+import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-const parseDebtorAccount = (value: unknown) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
+export const dynamic = "force-dynamic";
 
-  if (typeof value === "string") {
-    const parsed = Number.parseInt(value.trim(), 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  return null;
+export type AccountInvoicesResponse = {
+  invoices: InvoicePayload[];
 };
+
+// Obergrenze von `limit` bei Campai.
+const CAMPAI_PAGE_SIZE = 100;
+const CAMPAI_MAX_PAGES = 20;
+const MAX_INVOICES = 100;
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -29,95 +44,89 @@ const requiredEnv = (name: string) => {
   return value;
 };
 
-export const POST = async (request: NextRequest) => {
+const accountOf = (item: RawInvoice) => {
+  const value = item.account;
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value.trim(), 10)
+        : Number.NaN;
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+};
+
+export const GET = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = requiredEnv("CAMPAI_API_KEY");
-  const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
-  const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
-  const baseUrl = `https://cloud.campai.com/api/${organizationId}/${mandateId}`;
-  const endpoint = `${baseUrl}/finance/receipts/list`;
-
-  const body = (await request.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-
-  const debug = body.debug === true;
-  const payload = {
-    sort: body.sort ?? { receiptDate: "desc" },
-    limit: body.limit ?? 50,
-    offset: body.offset ?? 0,
-    returnCount: body.returnCount ?? true,
-    searchTerm: body.searchTerm ?? undefined,
-    view: body.view ?? undefined,
-    invoiceType:
-      typeof body.invoiceType === "string" && body.invoiceType.trim()
-        ? body.invoiceType.trim()
-        : undefined,
-    account: body.account ?? undefined,
-    tags: body.tags ?? undefined,
-    range: body.range ?? undefined,
-    fromDate: body.fromDate ?? undefined,
-    toDate: body.toDate ?? undefined,
-    userFilter: body.userFilter ?? undefined,
-  };
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
+  let account: number | null;
+  try {
+    account = await fetchOwnDebtorAccount(supabase, data.user.id);
+  } catch {
     return NextResponse.json(
-      { error: errorBody || "Campai request failed." },
-      { status: response.status },
+      { error: "Campai-Belege konnten nicht geladen werden." },
+      { status: 502 },
     );
   }
 
-  const rawResponse = (await response.json()) as unknown;
-  const dataResponse = ((): Record<string, unknown> => {
-    if (Array.isArray(rawResponse)) {
-      const first = rawResponse[0] as Record<string, unknown> | undefined;
-      const result = first?.result as Record<string, unknown> | undefined;
-      const data = result?.data as Record<string, unknown> | undefined;
-      const json = data?.json as Record<string, unknown> | undefined;
-      return (json ?? data ?? result ?? first ?? {}) as Record<string, unknown>;
-    }
-    return (rawResponse ?? {}) as Record<string, unknown>;
-  })();
-
-  const invoices = extractInvoices(dataResponse)
-    .map((item) => normalizeInvoice(item))
-    .filter((item): item is InvoicePayload => Boolean(item));
-  const count =
-    typeof dataResponse.count === "number" ? dataResponse.count : undefined;
-
-  if (debug || invoices.length === 0) {
-    return NextResponse.json({
-      invoices,
-      count: count ?? invoices.length,
-      debug: {
-        endpoint,
-        payload,
-        raw: dataResponse,
-        parsedCount: invoices.length,
-      },
-    });
+  if (account === null) {
+    return NextResponse.json<AccountInvoicesResponse>({ invoices: [] });
   }
 
-  return NextResponse.json({
-    invoices,
-    count: count ?? invoices.length,
-  });
+  const apiKey = requiredEnv("CAMPAI_API_KEY");
+  const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
+  const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
+  const endpoint = `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/list`;
+
+  // Campai füllt die Seiten ungefiltert — die Route blättert, bis genug
+  // Belege dieses Kontos beisammen sind oder die Liste zu Ende ist.
+  const collected: RawInvoice[] = [];
+  let offset = 0;
+
+  for (let page = 0; page < CAMPAI_MAX_PAGES; page += 1) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        sort: { receiptDate: "desc" },
+        searchTerm: String(account),
+        limit: CAMPAI_PAGE_SIZE,
+        offset,
+        returnCount: false,
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: "Campai-Belege konnten nicht geladen werden." },
+        { status: 502 },
+      );
+    }
+
+    const pageItems = extractInvoices(await response.json());
+    collected.push(...pageItems.filter((item) => accountOf(item) === account));
+
+    if (
+      pageItems.length < CAMPAI_PAGE_SIZE ||
+      collected.length >= MAX_INVOICES
+    ) {
+      break;
+    }
+
+    offset += pageItems.length;
+  }
+
+  const invoices = collected
+    .slice(0, MAX_INVOICES)
+    .map((item) => normalizeInvoice(item))
+    .filter((item): item is InvoicePayload => Boolean(item));
+
+  return NextResponse.json<AccountInvoicesResponse>({ invoices });
 };

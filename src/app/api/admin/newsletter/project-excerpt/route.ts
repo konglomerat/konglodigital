@@ -2,8 +2,9 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { PROJECTS_CACHE_TAG } from "@/app/[lang]/projects/project-data";
-import { userCanAccessModule } from "@/lib/roles";
+import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -18,56 +19,61 @@ export const PATCH = async (request: NextRequest) => {
   if (!data.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    showcaseId?: unknown;
     projectId?: unknown;
     excerpt?: unknown;
   };
-  const projectId =
-    typeof body.projectId === "string" ? body.projectId.trim() : "";
-  if (!UUID_PATTERN.test(projectId)) {
+  const showcaseId =
+    typeof body.showcaseId === "string"
+      ? body.showcaseId.trim()
+      : typeof body.projectId === "string"
+        ? body.projectId.trim()
+        : "";
+  if (!UUID_PATTERN.test(showcaseId)) {
     return NextResponse.json(
-      { error: "Ungültiges Projekt." },
+      { error: "Ungültiger Beitrag." },
       { status: 400 },
     );
   }
   if (typeof body.excerpt !== "string") {
     return NextResponse.json(
-      { error: "Der Projekttext fehlt." },
+      { error: "Der Beitragstext fehlt." },
       { status: 400 },
     );
   }
 
   const excerpt = body.excerpt.trim().slice(0, MAX_EXCERPT_LENGTH) || null;
   const adminSupabase = createSupabaseAdminClient();
-  const { data: project, error } = await adminSupabase
+  const { data: showcase, error } = await adminSupabase
     .from("resources")
     .update({ excerpt, updated_at: new Date().toISOString() })
-    .eq("id", projectId)
-    .ilike("type", "project")
+    .eq("id", showcaseId)
+    .ilike("type", "showcase")
     .select("id, excerpt")
     .maybeSingle();
 
   if (error) {
     return NextResponse.json(
-      { error: error.message || "Projekttext konnte nicht gespeichert werden." },
+      { error: error.message || "Beitragstext konnte nicht gespeichert werden." },
       { status: 500 },
     );
   }
-  if (!project) {
+  if (!showcase) {
     return NextResponse.json(
-      { error: "Projekt wurde nicht gefunden." },
+      { error: "Beitrag wurde nicht gefunden." },
       { status: 404 },
     );
   }
 
-  revalidateTag(PROJECTS_CACHE_TAG, { expire: 0 });
+  revalidateTag(SHOWCASES_CACHE_TAG, { expire: 0 });
   return NextResponse.json({
     ok: true,
-    projectId: project.id,
-    excerpt: project.excerpt ?? "",
+    showcaseId: showcase.id,
+    excerpt: showcase.excerpt ?? "",
   });
 };

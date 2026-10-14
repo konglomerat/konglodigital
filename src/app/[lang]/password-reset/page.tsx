@@ -3,14 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import Button from "../components/Button";
+import Button from "@/components/knglmrt/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useI18n } from "@/i18n/client";
+import { localizePathname } from "@/i18n/config";
+import Field from "@/components/knglmrt/Field";
 
 export const dynamic = "force-dynamic";
 
 const supabase = createSupabaseBrowserClient();
 
 export default function PasswordResetPage() {
+  const { tx, locale } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +30,7 @@ export default function PasswordResetPage() {
     const email = String(formData.get("email") ?? "").trim();
 
     const redirectTo = new URL(
-      "/password-reset/complete",
+      localizePathname("/password-reset/complete", locale),
       window.location.origin,
     ).toString();
 
@@ -37,77 +41,69 @@ export default function PasswordResetPage() {
 
     if (resetError) {
       setError(
-        resetError.message || "Passwort-Reset konnte nicht gestartet werden.",
+        tx(resetError.message || "Passwort-Reset konnte nicht gestartet werden."),
       );
       setIsLoading(false);
       return;
     }
 
     setSuccess(
-      "Wenn ein Konto mit dieser Mailadresse existiert, wurde ein Link zum Zuruecksetzen gesendet.",
+      tx("Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde ein Link zum Zurücksetzen gesendet."),
     );
     form.reset();
     setIsLoading(false);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+    <div className="flex items-center justify-center py-6 md:py-12">
+      <div className="knglmrt-border-section w-full max-w-md bg-card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold text-foreground">
-          Passwort zuruecksetzen
+          {tx("Passwort zurücksetzen")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Gib deine Mailadresse ein. Wir senden dir einen Link, mit dem du ein
-          neues Passwort setzen kannst.
+          {tx("Gib deine E-Mail-Adresse ein. Wir senden dir einen Link, mit dem du ein neues Passwort setzen kannst.")}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="password-reset-email"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80"
-            >
-              Email
-            </label>
-            <input
-              id="password-reset-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
-            />
-          </div>
+          <Field
+            id="password-reset-email"
+            label={tx("E-Mail-Adresse")}
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+          />
 
           {error ? (
-            <p className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+            <p role="alert" className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <div className="space-y-2 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
+            <div role="status" className="space-y-2 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
               <p>{success}</p>
-              <Link className="font-semibold underline" href="/login">
-                Zur Anmeldung
+              <Link className="font-semibold underline" href={localizePathname("/login", locale)}>
+                {tx("Zur Anmeldung")}
               </Link>
             </div>
           ) : null}
 
           <Button
+            fullWidth
+            size="small"
             type="submit"
             kind="primary"
-            className="w-full px-4 py-2 text-sm"
             disabled={isLoading}
           >
-            {isLoading ? "Link wird versendet ..." : "Reset-Link senden"}
+            {isLoading ? tx("Link wird versendet ...") : tx("Reset-Link senden")}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Zurueck zur{" "}
-          <Link className="font-semibold text-primary" href="/login">
-            Anmeldung
+          {tx("Zurück zur Anmeldung:")}{" "}
+          <Link className="font-semibold text-primary" href={localizePathname("/login", locale)}>
+            {tx("Anmelden")}
           </Link>
         </p>
       </div>

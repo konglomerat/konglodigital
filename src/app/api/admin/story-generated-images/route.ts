@@ -9,7 +9,8 @@ import sharp from "sharp";
 
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 import { createOpenAIClient } from "@/lib/openai";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   DEFAULT_STORY_IMAGE_MODEL,
   isOpenAIStoryImageModel,
@@ -184,20 +185,20 @@ const buildSlidePrompt = ({
   imageInstructions: string;
 }) => `Erstelle und layoute eine Instagramstory als einzelnes Bild im Format 9:16 (1080x1920).
 
-Kontext: Projekt des Monats.
+Kontext: Beitrag des Monats.
 Stil: sehr einfaches Layout, nicht hochtrabend, eher informativ.
-Bildreferenz 1 ist das Projekt-Cover. Bildreferenz 2 ist die Stilvorlage. Orientiere dich visuell an Bildreferenz 2 und bewahre das Projekt aus Bildreferenz 1.
+Bildreferenz 1 ist das Beitrags-Cover. Bildreferenz 2 ist die Stilvorlage. Orientiere dich visuell an Bildreferenz 2 und bewahre das Motiv aus Bildreferenz 1.
 Nutze grosse Bilder.
 Schreibe auf Deutsch.
 Du darfst Text leicht kuerzen und optimieren, aber die Aussage soll gleich bleiben.
 Keine Erklaerung ausgeben, sondern genau ein fertiges vertikales Story-Bild erzeugen.
 
 Seite: ${slideIndex + 1} von ${slideCount}
-${slideIndex === 0 ? "Die erste Seite soll vor allem nur das Ergebnis zeigen. Das Objekt oder Projekt muss dominant und gross wirken. Wenig Text, klare Hierarchie." : "Diese Seite darf etwas informativer sein, soll das Projekt aber weiterhin gross und klar zeigen."}
+${slideIndex === 0 ? "Die erste Seite soll vor allem nur das Ergebnis zeigen. Das Objekt oder Werkstueck muss dominant und gross wirken. Wenig Text, klare Hierarchie." : "Diese Seite darf etwas informativer sein, soll das Motiv aber weiterhin gross und klar zeigen."}
 
 Inhalt:
-- Projekttitel: ${name}
-- Kicker: ${slide.kicker || "Projekt des Monats"}
+- Titel: ${name}
+- Kicker: ${slide.kicker || "Beitrag des Monats"}
 - Headline: ${slide.headline}
 - Kurzbeschreibung: ${slide.body || ""}
 
@@ -210,7 +211,7 @@ const buildSecondSlidePrompt = ({
 }: {
   slide: StoryDraftSlide;
   imageInstructions: string;
-}) => `Erstelle und layoute eine Instagramstory (als Bild) Kontext: Projekt des Monats), sehr einfaches Layout (nicht hochtrabend, eher informativ). Die Story soll mehrseitig werden. Dies ist die Seite 2 (Making of). Große Bilder! Bildreferenz 1 ist das Projektfoto, Bildreferenz 2 ist die Stilvorlage. Bewahre das Projekt aus Bildreferenz 1 und orientiere dich visuell an Bildreferenz 2. Den Text kannst du kürzen und optimieren.
+}) => `Erstelle und layoute eine Instagramstory (als Bild) Kontext: Beitrag des Monats), sehr einfaches Layout (nicht hochtrabend, eher informativ). Die Story soll mehrseitig werden. Dies ist die Seite 2 (Making of). Große Bilder! Bildreferenz 1 ist das Beitragsfoto, Bildreferenz 2 ist die Stilvorlage. Bewahre das Motiv aus Bildreferenz 1 und orientiere dich visuell an Bildreferenz 2. Den Text kannst du kürzen und optimieren.
 
 BESCHREIBUNG:
 ${slide.body || slide.headline}
@@ -255,7 +256,7 @@ export const POST = async (request: NextRequest) => {
       return createUnauthorizedResponse();
     }
 
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "stories.manage")) {
       return createForbiddenResponse();
     }
 

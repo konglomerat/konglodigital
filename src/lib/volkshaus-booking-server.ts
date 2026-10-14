@@ -45,7 +45,9 @@ const isValidDate = (value: string) => {
     return false;
   }
   const parsed = new Date(`${value}T12:00:00Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
+  return (
+    !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
+  );
 };
 
 const isValidTime = (value: string) => {
@@ -135,6 +137,7 @@ export const hashVolkshausAuditValue = (value: string) => {
 
 export const parseVolkshausBookingRequest = (
   body: Record<string, unknown>,
+  options: { admin?: boolean } = {},
 ): VolkshausBookingRequestInput => {
   const details: Record<string, string> = {};
 
@@ -143,7 +146,10 @@ export const parseVolkshausBookingRequest = (
     required: true,
   });
   const organization = stringValue(body.organization, { max: 180 });
-  const email = stringValue(body.email, { max: 254, required: true })?.toLowerCase();
+  const email = stringValue(body.email, {
+    max: 254,
+    required: true,
+  })?.toLowerCase();
   const phone = stringValue(body.phone, { max: 80 });
   const billingAddressLine = stringValue(body.billingAddressLine, {
     max: 220,
@@ -179,7 +185,8 @@ export const parseVolkshausBookingRequest = (
   }
   if (!billingZip) details.billingZip = "Bitte eine Postleitzahl angeben.";
   if (!billingCity) details.billingCity = "Bitte einen Ort angeben.";
-  if (!eventTitle) details.eventTitle = "Bitte einen Veranstaltungstitel angeben.";
+  if (!eventTitle)
+    details.eventTitle = "Bitte einen Veranstaltungstitel angeben.";
   if (!eventDescription) {
     details.eventDescription = "Bitte die geplante Nutzung kurz beschreiben.";
   }
@@ -204,7 +211,7 @@ export const parseVolkshausBookingRequest = (
     const requested = new Date(`${bookingDate}T23:59:59Z`);
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
-    if (requested < today) {
+    if (!options.admin && requested < today) {
       details.bookingDate = "Das Datum darf nicht in der Vergangenheit liegen.";
     }
   }
@@ -230,7 +237,8 @@ export const parseVolkshausBookingRequest = (
     calculateDurationMinutes(setupStartTime, startTime) === 0 &&
     setupStartTime !== startTime
   ) {
-    details.setupStartTime = "Der Aufbau muss vor dem Veranstaltungsbeginn liegen.";
+    details.setupStartTime =
+      "Der Aufbau muss vor dem Veranstaltungsbeginn liegen.";
   }
   if (
     teardownEndTime &&
@@ -317,10 +325,11 @@ export const parseVolkshausBookingRequest = (
 
   const acceptedPrivacy = body.acceptedPrivacy === true;
   const acceptedHouseRules = body.acceptedHouseRules === true;
-  if (!acceptedPrivacy) {
-    details.acceptedPrivacy = "Die Datenschutzhinweise müssen bestätigt werden.";
+  if (!options.admin && !acceptedPrivacy) {
+    details.acceptedPrivacy =
+      "Die Datenschutzhinweise müssen bestätigt werden.";
   }
-  if (!acceptedHouseRules) {
+  if (!options.admin && !acceptedHouseRules) {
     details.acceptedHouseRules =
       "Leitbild sowie Haus- und Raumordnung müssen bestätigt werden.";
   }
@@ -344,8 +353,7 @@ export const parseVolkshausBookingRequest = (
     eventDescription: eventDescription!,
     usageType: usageType!,
     frequency: frequency!,
-    recurringOccurrences:
-      frequency === "recurring" ? recurringOccurrences : 1,
+    recurringOccurrences: frequency === "recurring" ? recurringOccurrences : 1,
     expectedAttendees,
     bookingDate,
     startTime,

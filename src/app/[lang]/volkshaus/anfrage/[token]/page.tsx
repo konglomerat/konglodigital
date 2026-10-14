@@ -15,4 +15,3 @@ export default async function VolkshausRequestPage({
   const { token } = await params;
   return <CustomerBookingPortal token={token} />;
 }
-

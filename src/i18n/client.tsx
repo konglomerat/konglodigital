@@ -52,7 +52,7 @@ export function I18nProvider({ locale, children }: I18nProviderProps) {
   const normalizedLocale = normalizeLocale(locale);
   const pathname = usePathname() ?? "/";
   const localeFromPath = stripLocalePrefix(pathname).localeFromPath;
-  const activeLocale = normalizeLocale(localeFromPath ?? normalizedLocale);
+  const activeLocale = normalizeLocale(localeFromPath ?? DEFAULT_LOCALE);
   const [i18nInstance] = useState<i18n>(() =>
     createClientInstance(normalizedLocale),
   );

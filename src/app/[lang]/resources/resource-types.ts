@@ -33,7 +33,7 @@ export const RESOURCE_TYPES = {
     color: "text-chart-1",
   },
   project: {
-    label: "Project",
+    label: "Showcase",
     icon: faDiagramProject,
     color: "text-info",
   },

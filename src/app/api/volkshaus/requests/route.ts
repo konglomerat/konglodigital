@@ -202,6 +202,7 @@ export const POST = async (request: NextRequest) => {
     const notification = await notifyVolkshausRequestSubmitted({
       booking,
       accessUrl,
+      adminUrl: `${resolvePublicOrigin(request)}/admin/volkshaus`,
     }).catch((error) => ({
       sent: false as const,
       reason: "provider_error" as const,

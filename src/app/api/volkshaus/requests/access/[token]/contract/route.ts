@@ -6,16 +6,37 @@ import { createVolkshausContractPdf } from "@/lib/volkshaus-contract-pdf";
 export const runtime = "nodejs";
 
 export const GET = async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) => {
   const { token } = await params;
-  const booking = await getVolkshausBookingByToken(token);
+  let booking = await getVolkshausBookingByToken(token);
   if (!booking) {
     return NextResponse.json(
       { error: "Dieser Zugangslink ist ungültig oder abgelaufen." },
       { status: 404 },
     );
+  }
+  const version = request.nextUrl.searchParams.get("version");
+  if (version) {
+    const archived = booking.priceSnapshot.admin?.archivedContracts?.find(
+      (entry) => String(entry.version) === version,
+    );
+    if (!archived)
+      return NextResponse.json(
+        { error: "Vertragsversion nicht gefunden." },
+        { status: 404 },
+      );
+    booking = {
+      ...booking,
+      contractVersion: archived.version,
+      contractSnapshot: archived.snapshot,
+      contractHash: archived.hash,
+      customerSignature: archived.customerSignature,
+      staffSignature: archived.staffSignature,
+      customerSignedAt: archived.customerSignature?.signedAt ?? null,
+      staffSignedAt: archived.staffSignature?.signedAt ?? null,
+    };
   }
   if (!booking.contractSnapshot) {
     return NextResponse.json(
@@ -33,4 +54,3 @@ export const GET = async (
     },
   });
 };
-

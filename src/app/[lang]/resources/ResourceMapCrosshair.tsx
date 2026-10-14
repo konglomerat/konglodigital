@@ -166,7 +166,7 @@ export default function ResourceMapCrosshair({
       {/*<button
         type="button"
         onClick={() => setIsSatellite((prev) => !prev)}
-        className="absolute left-3 top-3 rounded-full border border-foreground/80 bg-foreground/90 px-3 py-1 text-xs font-semibold text-background shadow-sm transition hover:bg-foreground"
+        className="absolute left-3 top-3 rounded-full knglmrt-border/80 bg-foreground/90 px-3 py-1 text-xs font-semibold text-background transition hover:bg-foreground"
       >
         {isSatellite ? "Karte" : "Satellit"}
       </button> */}

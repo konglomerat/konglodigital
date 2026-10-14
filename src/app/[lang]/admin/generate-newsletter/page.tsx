@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 
 import GenerateNewsletterClient from "./GenerateNewsletterClient";
 
-import { loadProjects } from "@/app/[lang]/projects/project-data";
+import { loadShowcases } from "@/app/[lang]/showcase/showcase-data";
 import { localizePathname } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/server";
-import { buildProjectPath } from "@/lib/project-path";
+import { buildShowcasePath } from "@/lib/showcase-path";
 import {
   listRapidmailMailings,
   listRapidmailRecipientLists,
@@ -13,10 +13,11 @@ import {
   type RapidmailRecipientList,
 } from "@/lib/rapidmail";
 import { isImageUrl } from "@/lib/resource-media";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type NewsletterProject = {
+type NewsletterShowcase = {
   id: string;
   name: string;
   prettyTitle: string | null;
@@ -76,6 +77,8 @@ const createIssueDefaults = () => {
 
 export const dynamic = "force-dynamic";
 
+const RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS = 8_000;
+
 export default async function GenerateNewsletterPage() {
   const locale = await getRequestLocale();
   const supabase = await createSupabaseServerClient({ readOnly: true });
@@ -89,22 +92,25 @@ export default async function GenerateNewsletterPage() {
     );
   }
 
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return null;
   }
 
-  const [projectRecords, rapidmailResult] = await Promise.all([
-    loadProjects(180),
+  const rapidmailSignal = AbortSignal.timeout(
+    RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS,
+  );
+  const [showcaseRecords, rapidmailResult] = await Promise.all([
+    loadShowcases(180),
     Promise.allSettled([
-      listRapidmailRecipientLists(),
-      listRapidmailMailings(),
+      listRapidmailRecipientLists({ signal: rapidmailSignal }),
+      listRapidmailMailings({ signal: rapidmailSignal }),
     ]),
   ]);
 
-  const projects = projectRecords.map((project) => {
+  const showcases = showcaseRecords.map((showcase) => {
     const images = Array.from(
       new Set(
-        [project.image, ...(project.images ?? [])].filter(
+        [showcase.image, ...(showcase.images ?? [])].filter(
           (value): value is string =>
             typeof value === "string" && Boolean(value) && isImageUrl(value),
         ),
@@ -112,16 +118,16 @@ export default async function GenerateNewsletterPage() {
     );
 
     return {
-      id: project.id,
-      name: project.name,
-      prettyTitle: project.prettyTitle ?? null,
-      excerpt: project.excerpt ?? null,
-      description: project.description ?? null,
+      id: showcase.id,
+      name: showcase.name,
+      prettyTitle: showcase.prettyTitle ?? null,
+      excerpt: showcase.excerpt ?? null,
+      description: showcase.description ?? null,
       images,
-      publishDate: project.publishDate ?? null,
-      updatedAt: project.updatedAt ?? null,
-      href: localizePathname(buildProjectPath(project), locale),
-    } satisfies NewsletterProject;
+      publishDate: showcase.publishDate ?? null,
+      updatedAt: showcase.updatedAt ?? null,
+      href: localizePathname(buildShowcasePath(showcase), locale),
+    } satisfies NewsletterShowcase;
   });
 
   let recipientLists: RapidmailRecipientList[] = [];
@@ -145,16 +151,19 @@ export default async function GenerateNewsletterPage() {
     const rejected = rapidmailResult.find(
       (entry): entry is PromiseRejectedResult => entry.status === "rejected",
     );
+    const rejectedReason = rejected?.reason;
     rapidmailError =
-      rejected?.reason instanceof Error
-        ? rejected.reason.message
-        : "Rapidmail konnte nicht geladen werden.";
+      rejectedReason instanceof Error && rejectedReason.name === "TimeoutError"
+        ? "Rapidmail antwortet gerade zu langsam. Der Newsletter kann trotzdem bearbeitet und exportiert werden; zum Anlegen eines Rapidmail-Entwurfs lade die Seite später erneut."
+        : rejectedReason instanceof Error
+          ? rejectedReason.message
+          : "Rapidmail konnte nicht geladen werden.";
   }
 
   return (
     <GenerateNewsletterClient
       locale={locale}
-      projects={projects}
+      showcases={showcases}
       recipientLists={recipientLists}
       issueDefaults={createIssueDefaults()}
       rapidmailDefaults={rapidmailDefaults}

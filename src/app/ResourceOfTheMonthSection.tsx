@@ -13,7 +13,8 @@ import {
   normalizeResourceMediaPosters,
   normalizeResourceMediaPreviews,
 } from "@/lib/resource-media";
-import Button from "./[lang]/components/Button";
+import { markdownExcerpt } from "@/lib/markdown-excerpt";
+import Button from "@/components/knglmrt/Button";
 
 type ResourceOfTheMonthRow = {
   id: string;
@@ -30,14 +31,7 @@ type ResourceOfTheMonthRow = {
 
 const RESOURCE_OF_THE_MONTH_TAG = "resourceofthemonth";
 
-const truncateText = (text: string, maxLength: number) => {
-  const normalized = text.trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
 
-  return `${normalized.slice(0, maxLength - 1).trimEnd()}...`;
-};
 
 const loadResourceOfTheMonth = async () => {
   try {
@@ -109,7 +103,7 @@ export default async function ResourceOfTheMonthSection() {
   }
 
   return (
-    <section className="relative overflow-hidden rounded-lg bg-[#559f62]">
+    <section className="relative overflow-hidden knglmrt-border bg-[#559f62]">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,460px)] lg:items-stretch">
         <div className="relative z-10 flex flex-col justify-center px-6 py-7 md:px-8 md:py-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#102a1a]">
@@ -125,7 +119,7 @@ export default async function ResourceOfTheMonthSection() {
           ) : null */}
           {resourceOfTheMonth.description ? (
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#102a1a] md:text-base">
-              {truncateText(resourceOfTheMonth.description, 260)}
+              {markdownExcerpt(resourceOfTheMonth.description, 260)}
             </p>
           ) : (
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#102a1a] md:text-base">
@@ -141,7 +135,7 @@ export default async function ResourceOfTheMonthSection() {
               {resourceOfTheMonth.tags.slice(0, 4).map((tag) => (
                 <span
                   key={`${resourceOfTheMonth.id}-${tag}`}
-                  className="rounded-full border border-[#102a1a]/20 bg-[#d4ead1]/80 px-3 py-1 text-xs font-semibold text-[#102a1a] backdrop-blur"
+                  className="knglmrt-tag bg-[#d4ead1] px-[7px] py-[3px] text-[#102a1a]"
                 >
                   {tag}
                 </span>
@@ -159,8 +153,7 @@ export default async function ResourceOfTheMonthSection() {
                 locale,
               )}
               kind="primary"
-              size="medium"
-              className="!bg-[#102a1a] !text-white hover:!bg-[#07180d]"
+              size="large"
               icon={faArrowRight}
               iconPosition="right"
             >

@@ -15,7 +15,6 @@ import {
   getVolkshausBookingByToken,
   updateVolkshausBooking,
 } from "@/lib/volkshaus-booking-store";
-import { createVolkshausInvoice } from "@/lib/volkshaus-invoice";
 import { syncVolkshausBookingToTeamup } from "@/lib/volkshaus-teamup";
 import {
   notifyVolkshausContractCompleted,
@@ -28,8 +27,7 @@ const toCustomerView = (booking: VolkshausBooking) => ({
   requestStatus: booking.requestStatus,
   requestStatusLabel: STATUS_LABELS.request[booking.requestStatus],
   reservationStatus: booking.reservationStatus,
-  reservationStatusLabel:
-    STATUS_LABELS.reservation[booking.reservationStatus],
+  reservationStatusLabel: STATUS_LABELS.reservation[booking.reservationStatus],
   contractStatus: booking.contractStatus,
   contractStatusLabel: STATUS_LABELS.contract[booking.contractStatus],
   invoiceStatus: booking.invoiceStatus,
@@ -54,6 +52,12 @@ const toCustomerView = (booking: VolkshausBooking) => ({
   equipment: booking.equipment,
   specialRequirements: booking.specialRequirements,
   price: getEffectiveVolkshausPrice(booking),
+  previousContracts: (booking.priceSnapshot.admin?.archivedContracts ?? []).map(
+    (contract) => ({
+      version: contract.version,
+      signed: Boolean(contract.customerSignature),
+    }),
+  ),
   contractSnapshot: booking.contractSnapshot,
   contractHash: booking.contractHash,
   customerSignature: booking.customerSignature,
@@ -132,8 +136,9 @@ export const POST = async (
   }
 
   if (
-    booking.reservationStatus !== "held" ||
-    (booking.holdExpiresAt &&
+    !["held", "confirmed", "completed"].includes(booking.reservationStatus) ||
+    (booking.reservationStatus === "held" &&
+      booking.holdExpiresAt &&
       new Date(booking.holdExpiresAt).getTime() <= Date.now())
   ) {
     return NextResponse.json(
@@ -144,6 +149,15 @@ export const POST = async (
       { status: 409 },
     );
   }
+
+  if (body.contractHash !== booking.contractHash)
+    return NextResponse.json(
+      {
+        error:
+          "Die Vertragsversion wurde inzwischen geändert. Bitte lade die Seite neu und prüfe den aktuellen Vertrag.",
+      },
+      { status: 409 },
+    );
 
   const currentHash = hashVolkshausValue(
     stableVolkshausJson(booking.contractSnapshot),
@@ -159,7 +173,9 @@ export const POST = async (
   }
 
   const signerName =
-    typeof body.signerName === "string" ? body.signerName.trim().slice(0, 160) : "";
+    typeof body.signerName === "string"
+      ? body.signerName.trim().slice(0, 160)
+      : "";
   if (signerName.length < 2 || body.accepted !== true) {
     return NextResponse.json(
       {
@@ -183,13 +199,18 @@ export const POST = async (
     userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
   };
 
-  let updated = await updateVolkshausBooking(booking.id, {
-    contractStatus: "fully_signed",
-    reservationStatus: "confirmed",
-    holdExpiresAt: null,
-    customerSignature: signature,
-    customerSignedAt: signedAt,
-  });
+  const updated = await updateVolkshausBooking(
+    booking.id,
+    {
+      contractStatus: "fully_signed",
+      reservationStatus:
+        booking.reservationStatus === "completed" ? "completed" : "confirmed",
+      holdExpiresAt: null,
+      customerSignature: signature,
+      customerSignedAt: signedAt,
+    },
+    booking.updatedAt,
+  );
   await addVolkshausBookingEvent({
     bookingId: booking.id,
     actorType: "customer",
@@ -200,7 +221,7 @@ export const POST = async (
   try {
     const teamupResult = await syncVolkshausBookingToTeamup(
       updated,
-      "confirmed",
+      updated.reservationStatus === "completed" ? "completed" : "confirmed",
     );
     await addVolkshausBookingEvent({
       bookingId: booking.id,
@@ -209,7 +230,8 @@ export const POST = async (
       payload: {
         action: teamupResult.action,
         eventId: teamupResult.eventId,
-        reservationStatus: "confirmed",
+        reservationStatus:
+          booking.reservationStatus === "completed" ? "completed" : "confirmed",
       },
     });
   } catch (error) {
@@ -222,13 +244,13 @@ export const POST = async (
           error instanceof Error
             ? error.message
             : "Unbekannter Fehler bei der Teamup-Synchronisierung.",
-        reservationStatus: "confirmed",
+        reservationStatus:
+          booking.reservationStatus === "completed" ? "completed" : "confirmed",
       },
     }).catch(() => undefined);
   }
 
-  const invoiceResult = await createVolkshausInvoice(updated);
-  updated = invoiceResult.booking;
+  // Staff review and create the invoice explicitly after signature.
 
   const adminUrl = `${resolvePublicOrigin(request)}/admin/volkshaus`;
   await notifyVolkshausCustomerSigned({

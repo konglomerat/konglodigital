@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, use } from "react";
 import { getCartProducts, setCartProducts, type CartProduct } from "@/lib/cart";
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PageTitle from "../../components/PageTitle";
 
 type CampaiProduct = {
@@ -130,8 +130,8 @@ export default function CampaiProductDetailPage({
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 text-foreground">
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
+    <div>
+      <div className="flex flex-col gap-6">
         <PageTitle
           title="Produktdetails"
           subTitle="Sieh dir Details an und passe die Menge im Warenkorb an."
@@ -145,7 +145,7 @@ export default function CampaiProductDetailPage({
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <section className="knglmrt-border-section bg-card p-6">
           {loading ? (
             <p className="text-sm text-muted-foreground">
               Produkt wird geladen ...
@@ -177,10 +177,10 @@ export default function CampaiProductDetailPage({
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
+                    size="small"
                     type="button"
                     onClick={handleDecreaseProduct}
                     kind="secondary"
-                    className="px-4 py-2 text-sm"
                     disabled={!cartEntry}
                   >
                     −
@@ -201,7 +201,7 @@ export default function CampaiProductDetailPage({
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   faArrowDown,
@@ -27,23 +21,21 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "@/app/[lang]/components/Button";
-import PageTitle from "@/app/[lang]/components/PageTitle";
-import {
-  Checkbox,
-  FormField,
-  FormSection,
-  Input,
-  Select,
-  Textarea,
-} from "@/app/[lang]/components/ui/form";
+import Button from "@/components/knglmrt/Button";
+import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
+import FormSection from "@/components/knglmrt/FormSection";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 import { getSupabaseRenderedImageUrl } from "@/lib/resource-media";
 
 import NewsletterImagePositionDialog, {
   type NewsletterImagePosition,
 } from "./NewsletterImagePositionDialog";
 
-type NewsletterProject = {
+type NewsletterShowcase = {
   id: string;
   name: string;
   prettyTitle: string | null;
@@ -62,18 +54,11 @@ type RecipientList = {
   isDefault: boolean;
 };
 
-type AspectRatio =
-  | "original"
-  | "1:1"
-  | "4:3"
-  | "3:2"
-  | "16:9"
-  | "4:5"
-  | "3:4";
+type AspectRatio = "original" | "1:1" | "4:3" | "3:2" | "16:9" | "4:5" | "3:4";
 
 type NewsletterDesign = "konglomerat" | "volkshaus-cotta";
 
-type ProjectOptions = {
+type ShowcaseOptions = {
   excerpt: string;
   layout: "split" | "stacked";
   aspect: AspectRatio;
@@ -84,13 +69,14 @@ type ProjectOptions = {
   gifFrameDurationMs: number;
   showLink: boolean;
   linkText: string;
+  href: string;
 };
 
-type ProjectItem = {
+type ShowcaseItem = {
   id: string;
-  type: "project";
-  projectId: string;
-  options: ProjectOptions;
+  type: "showcase";
+  showcaseId: string;
+  options: ShowcaseOptions;
 };
 
 type ButtonItem = {
@@ -107,11 +93,11 @@ type BannerItem = {
   content: string;
 };
 
-type BuilderItem = ProjectItem | ButtonItem | BannerItem;
+type BuilderItem = ShowcaseItem | ButtonItem | BannerItem;
 
 type GenerateNewsletterClientProps = {
   locale: string;
-  projects: NewsletterProject[];
+  showcases: NewsletterShowcase[];
   recipientLists: RecipientList[];
   issueDefaults: {
     title: string;
@@ -133,7 +119,7 @@ type DraftResponse = {
     status: string | null;
     subject: string | null;
   };
-  counts?: { projects: number };
+  counts?: { showcases: number };
 };
 
 type NewsletterDraftContent = {
@@ -141,7 +127,7 @@ type NewsletterDraftContent = {
   title: string;
   subject: string;
   intro: string;
-  showProjectsHeading: boolean;
+  showShowcasesHeading: boolean;
   items: BuilderItem[];
   previewViewport: "desktop" | "mobile";
   fromName: string;
@@ -176,7 +162,7 @@ type ProjectExcerptSaveState = {
 };
 
 const STORAGE_KEY = "konglodigital.newsletter.config.v1";
-const MAX_SELECTED_PROJECTS = 24;
+const MAX_SELECTED_SHOWCASES = 24;
 const MAX_GIF_FRAMES = 12;
 const GIF_IMAGE_OPTION = "__animated_gif__";
 const GIF_SPEED_OPTIONS = [
@@ -311,21 +297,22 @@ const normalizeImagePositions = (
   );
 };
 
-const createProjectItem = (project: NewsletterProject): ProjectItem => ({
-  id: `project:${project.id}`,
-  type: "project",
-  projectId: project.id,
+const createShowcaseItem = (showcase: NewsletterShowcase): ShowcaseItem => ({
+  id: `showcase:${showcase.id}`,
+  type: "showcase",
+  showcaseId: showcase.id,
   options: {
-    excerpt: project.excerpt?.trim() || project.description || "",
+    excerpt: showcase.excerpt?.trim() || showcase.description || "",
     layout: "split",
     aspect: "original",
     imageMode: "single",
-    imageUrl: project.images[0] ?? null,
+    imageUrl: showcase.images[0] ?? null,
     imagePositions: {},
-    gifImageUrls: project.images.slice(0, 4),
+    gifImageUrls: showcase.images.slice(0, 4),
     gifFrameDurationMs: 1_000,
     showLink: true,
     linkText: "Weiterlesen",
+    href: showcase.href,
   },
 });
 
@@ -343,35 +330,51 @@ const errorMessageFromResponse = (raw: string, fallback: string) => {
 
 const restoreItems = (
   value: unknown,
-  projectMap: Map<string, NewsletterProject>,
+  showcaseMap: Map<string, NewsletterShowcase>,
 ): BuilderItem[] => {
   if (!Array.isArray(value)) return [];
 
-  const usedProjectIds = new Set<string>();
+  const usedShowcaseIds = new Set<string>();
   const usedItemIds = new Set<string>();
   const restored: BuilderItem[] = [];
 
   for (const candidate of value.slice(0, 200)) {
     if (!candidate || typeof candidate !== "object") continue;
     const raw = candidate as Partial<BuilderItem> & {
-      options?: Partial<ProjectOptions>;
+      options?: Partial<ShowcaseOptions>;
     };
 
-    if (raw.type === "project" && typeof raw.projectId === "string") {
-      const project = projectMap.get(raw.projectId);
+    // Ältere Entwürfe aus dem localStorage nutzen noch "project"/"projectId".
+    const legacy = candidate as {
+      type?: unknown;
+      showcaseId?: unknown;
+      projectId?: unknown;
+    };
+    const rawShowcaseId =
+      typeof legacy.showcaseId === "string"
+        ? legacy.showcaseId
+        : typeof legacy.projectId === "string"
+          ? legacy.projectId
+          : null;
+
+    if (
+      (raw.type === "showcase" || legacy.type === "project") &&
+      rawShowcaseId
+    ) {
+      const showcase = showcaseMap.get(rawShowcaseId);
       if (
-        !project ||
-        usedProjectIds.has(project.id) ||
-        usedProjectIds.size >= MAX_SELECTED_PROJECTS
+        !showcase ||
+        usedShowcaseIds.has(showcase.id) ||
+        usedShowcaseIds.size >= MAX_SELECTED_SHOWCASES
       ) {
         continue;
       }
       const requestedImage = raw.options?.imageUrl;
       const imageUrl =
         typeof requestedImage === "string" &&
-        project.images.includes(requestedImage)
+        showcase.images.includes(requestedImage)
           ? requestedImage
-          : (project.images[0] ?? null);
+          : (showcase.images[0] ?? null);
       const aspect = ASPECT_RATIOS.includes(raw.options?.aspect as AspectRatio)
         ? (raw.options?.aspect as AspectRatio)
         : "original";
@@ -380,33 +383,33 @@ const restoreItems = (
             new Set(
               raw.options.gifImageUrls.filter(
                 (value): value is string =>
-                  typeof value === "string" && project.images.includes(value),
+                  typeof value === "string" && showcase.images.includes(value),
               ),
             ),
           ).slice(0, MAX_GIF_FRAMES)
-        : project.images.slice(0, 4);
+        : showcase.images.slice(0, 4);
       const requestedGifDuration = Number(raw.options?.gifFrameDurationMs);
       const gifFrameDurationMs = GIF_SPEED_OPTIONS.includes(requestedGifDuration)
         ? requestedGifDuration
         : 1_000;
       const imagePositions = normalizeImagePositions(
         raw.options?.imagePositions,
-        project.images,
+        showcase.images,
       );
 
       restored.push({
-        id: `project:${project.id}`,
-        type: "project",
-        projectId: project.id,
+        id: `showcase:${showcase.id}`,
+        type: "showcase",
+        showcaseId: showcase.id,
         options: {
           excerpt:
             typeof raw.options?.excerpt === "string"
               ? raw.options.excerpt.slice(0, 5_000)
-              : project.excerpt?.trim() || project.description || "",
+              : showcase.excerpt?.trim() || showcase.description || "",
           layout: raw.options?.layout === "stacked" ? "stacked" : "split",
           aspect,
           imageMode:
-            raw.options?.imageMode === "gif" && project.images.length >= 2
+            raw.options?.imageMode === "gif" && showcase.images.length >= 2
               ? "gif"
               : "single",
           imageUrl,
@@ -419,9 +422,13 @@ const restoreItems = (
             raw.options.linkText.trim()
               ? raw.options.linkText.trim().slice(0, 80)
               : "Weiterlesen",
+          href:
+            typeof raw.options?.href === "string"
+              ? raw.options.href.slice(0, 2_000)
+              : showcase.href,
         },
       });
-      usedProjectIds.add(project.id);
+      usedShowcaseIds.add(showcase.id);
       continue;
     }
 
@@ -435,7 +442,9 @@ const restoreItems = (
         id: raw.id,
         type: "button",
         title:
-          typeof raw.title === "string" ? raw.title.slice(0, 80) : "Mehr erfahren",
+          typeof raw.title === "string"
+            ? raw.title.slice(0, 80)
+            : "Mehr erfahren",
         href: typeof raw.href === "string" ? raw.href.slice(0, 1000) : "",
       });
       usedItemIds.add(raw.id);
@@ -476,53 +485,50 @@ function ItemControls({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <button
-        type="button"
+      <Button
+        kind="secondary"
+        iconOnly
+        icon={faArrowUp}
         onClick={() => onMove(-1)}
         disabled={index === 0}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Nach oben verschieben"
-      >
-        <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
+      />
+      <Button
+        kind="secondary"
+        iconOnly
+        icon={faArrowDown}
         onClick={() => onMove(1)}
         disabled={index === itemCount - 1}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Nach unten verschieben"
-      >
-        <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
+      />
+      <Button
+        kind="danger-secondary"
+        iconOnly
+        icon={faTrash}
         onClick={onRemove}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-destructive-border bg-card text-destructive transition hover:bg-destructive-soft"
         aria-label="Inhalt entfernen"
-      >
-        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-      </button>
+      />
     </div>
   );
 }
 
 export default function GenerateNewsletterClient({
   locale,
-  projects,
+  showcases,
   recipientLists,
   issueDefaults,
   rapidmailDefaults,
   rapidmailError,
 }: GenerateNewsletterClientProps) {
-  const projectMap = useMemo(
-    () => new Map(projects.map((project) => [project.id, project])),
-    [projects],
+  const showcaseMap = useMemo(
+    () => new Map(showcases.map((showcase) => [showcase.id, showcase])),
+    [showcases],
   );
   const [title, setTitle] = useState(issueDefaults.title);
   const [subject, setSubject] = useState(issueDefaults.subject);
   const [intro, setIntro] = useState(issueDefaults.intro);
   const [design, setDesign] = useState<NewsletterDesign>("konglomerat");
-  const [showProjectsHeading, setShowProjectsHeading] = useState(true);
+  const [showShowcasesHeading, setShowShowcasesHeading] = useState(true);
   const [items, setItems] = useState<BuilderItem[]>([]);
   const [query, setQuery] = useState("");
   const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
@@ -534,16 +540,15 @@ export default function GenerateNewsletterClient({
       ? String(rapidmailDefaults.recipientListId)
       : "",
   );
-  const [previewViewport, setPreviewViewport] = useState<
-    "desktop" | "mobile"
-  >("desktop");
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile">(
+    "desktop",
+  );
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
-  const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(
-    null,
-  );
+  const [previewHeight, setPreviewHeight] = useState(740);
+  const [busyAction, setBusyAction] = useState<"export" | "draft" | null>(null);
   const [status, setStatus] = useState<{
     kind: "success" | "error";
     text: string;
@@ -567,6 +572,34 @@ export default function GenerateNewsletterClient({
   const projectExcerptLatestValues = useRef<Map<string, string>>(new Map());
   const projectExcerptSavesInFlight = useRef<Set<string>>(new Set());
   const draggedItemId = useRef<string | null>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const previewResizeObserver = useRef<ResizeObserver | null>(null);
+
+  const handlePreviewFrameLoad = () => {
+    previewResizeObserver.current?.disconnect();
+
+    const frame = previewFrameRef.current;
+    const frameDocument = frame?.contentDocument;
+    if (!frame || !frameDocument) return;
+
+    const emailRoot =
+      frameDocument.querySelector<HTMLElement>(".email-center") ??
+      frameDocument.body;
+
+    const updatePreviewHeight = () => {
+      if (previewFrameRef.current?.contentDocument !== frameDocument) return;
+      const nextHeight = Math.ceil(emailRoot.getBoundingClientRect().height);
+      if (nextHeight > 0) setPreviewHeight(nextHeight);
+    };
+
+    updatePreviewHeight();
+
+    const observer = new ResizeObserver(updatePreviewHeight);
+    observer.observe(emailRoot);
+    previewResizeObserver.current = observer;
+
+    void frameDocument.fonts.ready.then(updatePreviewHeight);
+  };
 
   const currentDraftContent = useMemo<NewsletterDraftContent>(
     () => ({
@@ -574,7 +607,7 @@ export default function GenerateNewsletterClient({
       title,
       subject,
       intro,
-      showProjectsHeading,
+      showShowcasesHeading,
       items,
       previewViewport,
       fromName,
@@ -588,7 +621,7 @@ export default function GenerateNewsletterClient({
       items,
       previewViewport,
       recipientListId,
-      showProjectsHeading,
+      showShowcasesHeading,
       subject,
       title,
     ],
@@ -604,7 +637,7 @@ export default function GenerateNewsletterClient({
         title: issueDefaults.title,
         subject: issueDefaults.subject,
         intro: issueDefaults.intro,
-        showProjectsHeading: true,
+        showShowcasesHeading: true,
         items: [],
         previewViewport: "desktop",
         fromName: rapidmailDefaults.fromName,
@@ -632,10 +665,10 @@ export default function GenerateNewsletterClient({
           if (typeof config.draftName === "string") {
             setDraftName(config.draftName.slice(0, 160));
           }
-          if (typeof config.showProjectsHeading === "boolean") {
-            setShowProjectsHeading(config.showProjectsHeading);
+          if (typeof config.showShowcasesHeading === "boolean") {
+            setShowShowcasesHeading(config.showShowcasesHeading);
           }
-          setItems(restoreItems(config.items, projectMap));
+          setItems(restoreItems(config.items, showcaseMap));
           setPreviewViewport(
             config.previewViewport === "mobile" ? "mobile" : "desktop",
           );
@@ -655,7 +688,7 @@ export default function GenerateNewsletterClient({
     } finally {
       setIsConfigReady(true);
     }
-  }, [projectMap]);
+  }, [showcaseMap]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -732,52 +765,53 @@ export default function GenerateNewsletterClient({
       projectExcerptSaveTimers.current.forEach((timer) =>
         window.clearTimeout(timer),
       );
+      previewResizeObserver.current?.disconnect();
     },
     [],
   );
 
-  const selectedProjectIds = useMemo(
+  const selectedShowcaseIds = useMemo(
     () =>
       new Set(
         items
-          .filter((item): item is ProjectItem => item.type === "project")
-          .map((item) => item.projectId),
+          .filter((item): item is ShowcaseItem => item.type === "showcase")
+          .map((item) => item.showcaseId),
       ),
     [items],
   );
-  const selectedProjectCount = selectedProjectIds.size;
+  const selectedShowcaseCount = selectedShowcaseIds.size;
   const hasInvalidGif = items.some(
     (item) =>
-      item.type === "project" &&
+      item.type === "showcase" &&
       item.options.imageMode === "gif" &&
       item.options.gifImageUrls.length < 2,
   );
 
-  const filteredProjects = useMemo(() => {
+  const filteredShowcases = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase("de");
-    if (!normalized) return projects;
+    if (!normalized) return showcases;
 
-    return projects.filter((project) =>
+    return showcases.filter((showcase) =>
       [
-        project.name,
-        project.prettyTitle,
-        project.excerpt,
-        project.description,
+        showcase.name,
+        showcase.prettyTitle,
+        showcase.excerpt,
+        showcase.description,
       ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("de")
         .includes(normalized),
     );
-  }, [deferredQuery, projects]);
+  }, [deferredQuery, showcases]);
 
   const requestItems = useMemo(
     () =>
       items.map((item) => {
-        if (item.type === "project") {
+        if (item.type === "showcase") {
           return {
-            type: "project" as const,
-            projectId: item.projectId,
+            type: "showcase" as const,
+            showcaseId: item.showcaseId,
             ...item.options,
           };
         }
@@ -804,10 +838,10 @@ export default function GenerateNewsletterClient({
       title,
       subject,
       intro,
-      showProjectsHeading,
+      showShowcasesHeading,
       items: requestItems,
     }),
-    [design, intro, locale, requestItems, showProjectsHeading, subject, title],
+    [design, intro, locale, requestItems, showShowcasesHeading, subject, title],
   );
   const previewRequestBody = useMemo(
     () => JSON.stringify({ ...newsletterPayload, action: "preview" }),
@@ -817,7 +851,7 @@ export default function GenerateNewsletterClient({
   useEffect(() => {
     if (!isConfigReady) return;
     if (
-      selectedProjectCount === 0 ||
+      selectedShowcaseCount === 0 ||
       hasInvalidGif ||
       !title.trim() ||
       !subject.trim()
@@ -826,7 +860,7 @@ export default function GenerateNewsletterClient({
       setPreviewError(
         hasInvalidGif
           ? "Wähle für jedes GIF mindestens zwei Bilder aus."
-          : selectedProjectCount > 0 && (!title.trim() || !subject.trim())
+          : selectedShowcaseCount > 0 && (!title.trim() || !subject.trim())
             ? "Titel und Betreffzeile müssen ausgefüllt sein."
             : null,
       );
@@ -856,7 +890,8 @@ export default function GenerateNewsletterClient({
         }
         setPreviewHtml(raw);
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
         setPreviewError(
           error instanceof Error
             ? error.message
@@ -876,27 +911,25 @@ export default function GenerateNewsletterClient({
     hasInvalidGif,
     previewNonce,
     previewRequestBody,
-    selectedProjectCount,
+    selectedShowcaseCount,
     subject,
     title,
   ]);
 
-  const addProject = (project: NewsletterProject) => {
-    if (selectedProjectIds.has(project.id)) return;
-    if (
-      selectedProjectCount >= MAX_SELECTED_PROJECTS
-    ) {
+  const addShowcase = (showcase: NewsletterShowcase) => {
+    if (selectedShowcaseIds.has(showcase.id)) return;
+    if (selectedShowcaseCount >= MAX_SELECTED_SHOWCASES) {
       setStatus({
         kind: "error",
-        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_PROJECTS} Projekte möglich, damit die E-Mail nicht abgeschnitten wird.`,
+        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_SHOWCASES} Beiträge möglich, damit die E-Mail nicht abgeschnitten wird.`,
       });
       return;
     }
     setItems((current) => {
       const existing = current.find(
-        (item) => item.type === "project" && item.projectId === project.id,
+        (item) => item.type === "showcase" && item.showcaseId === showcase.id,
       );
-      return existing ? current : [...current, createProjectItem(project)];
+      return existing ? current : [...current, createShowcaseItem(showcase)];
     });
   };
 
@@ -917,122 +950,126 @@ export default function GenerateNewsletterClient({
       const source = current.find((item) => item.id === sourceId);
       if (!source) return current;
       const withoutSource = current.filter((item) => item.id !== sourceId);
-      const targetIndex = withoutSource.findIndex((item) => item.id === targetId);
+      const targetIndex = withoutSource.findIndex(
+        (item) => item.id === targetId,
+      );
       if (targetIndex < 0) return current;
       withoutSource.splice(targetIndex, 0, source);
       return withoutSource;
     });
   };
 
-  const updateProjectOptions = (
+  const updateShowcaseOptions = (
     id: string,
-    patch: Partial<ProjectOptions>,
+    patch: Partial<ShowcaseOptions>,
   ) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "project"
+        item.id === id && item.type === "showcase"
           ? { ...item, options: { ...item.options, ...patch } }
           : item,
       ),
     );
   };
 
-  const persistProjectExcerpt = async (projectId: string) => {
-    if (projectExcerptSavesInFlight.current.has(projectId)) return;
-    const excerpt = projectExcerptLatestValues.current.get(projectId);
+  const persistShowcaseExcerpt = async (showcaseId: string) => {
+    if (projectExcerptSavesInFlight.current.has(showcaseId)) return;
+    const excerpt = projectExcerptLatestValues.current.get(showcaseId);
     if (excerpt === undefined) return;
 
-    projectExcerptSavesInFlight.current.add(projectId);
+    projectExcerptSavesInFlight.current.add(showcaseId);
     try {
       const response = await fetch("/api/admin/newsletter/project-excerpt", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, excerpt }),
+        body: JSON.stringify({ showcaseId, excerpt }),
       });
       const data = (await response.json().catch(() => ({}))) as {
         error?: string;
       };
       if (!response.ok) {
         throw new Error(
-          data.error ?? "Projekttext konnte nicht gespeichert werden.",
+          data.error ?? "Beitragstext konnte nicht gespeichert werden.",
         );
       }
-      if (projectExcerptLatestValues.current.get(projectId) === excerpt) {
+      if (projectExcerptLatestValues.current.get(showcaseId) === excerpt) {
         setProjectExcerptSaveStates((current) => ({
           ...current,
-          [projectId]: {
+          [showcaseId]: {
             kind: "saved",
-            message: "Im Projekt gespeichert.",
+            message: "Im Beitrag gespeichert.",
           },
         }));
       }
     } catch (error) {
-      if (projectExcerptLatestValues.current.get(projectId) === excerpt) {
+      if (projectExcerptLatestValues.current.get(showcaseId) === excerpt) {
         setProjectExcerptSaveStates((current) => ({
           ...current,
-          [projectId]: {
+          [showcaseId]: {
             kind: "error",
             message:
               error instanceof Error
                 ? error.message
-                : "Projekttext konnte nicht gespeichert werden.",
+                : "Beitragstext konnte nicht gespeichert werden.",
           },
         }));
       }
     } finally {
-      projectExcerptSavesInFlight.current.delete(projectId);
-      if (projectExcerptLatestValues.current.get(projectId) !== excerpt) {
-        void persistProjectExcerpt(projectId);
+      projectExcerptSavesInFlight.current.delete(showcaseId);
+      if (projectExcerptLatestValues.current.get(showcaseId) !== excerpt) {
+        void persistShowcaseExcerpt(showcaseId);
       }
     }
   };
 
-  const updateProjectExcerpt = (
+  const updateShowcaseExcerpt = (
     itemId: string,
-    projectId: string,
+    showcaseId: string,
     value: string,
   ) => {
     const excerpt = value.slice(0, 5_000);
-    updateProjectOptions(itemId, { excerpt });
-    projectExcerptLatestValues.current.set(projectId, excerpt);
+    updateShowcaseOptions(itemId, { excerpt });
+    projectExcerptLatestValues.current.set(showcaseId, excerpt);
     setProjectExcerptSaveStates((current) => ({
       ...current,
-      [projectId]: {
+      [showcaseId]: {
         kind: "saving",
-        message: "Wird im Projekt gespeichert …",
+        message: "Wird im Beitrag gespeichert …",
       },
     }));
 
-    const previousTimer = projectExcerptSaveTimers.current.get(projectId);
+    const previousTimer = projectExcerptSaveTimers.current.get(showcaseId);
     if (previousTimer !== undefined) window.clearTimeout(previousTimer);
     const timer = window.setTimeout(() => {
-      projectExcerptSaveTimers.current.delete(projectId);
-      void persistProjectExcerpt(projectId);
+      projectExcerptSaveTimers.current.delete(showcaseId);
+      void persistShowcaseExcerpt(showcaseId);
     }, 650);
-    projectExcerptSaveTimers.current.set(projectId, timer);
+    projectExcerptSaveTimers.current.set(showcaseId, timer);
   };
 
-  const flushProjectExcerpt = (projectId: string) => {
-    const timer = projectExcerptSaveTimers.current.get(projectId);
+  const flushShowcaseExcerpt = (showcaseId: string) => {
+    const timer = projectExcerptSaveTimers.current.get(showcaseId);
     if (timer !== undefined) {
       window.clearTimeout(timer);
-      projectExcerptSaveTimers.current.delete(projectId);
+      projectExcerptSaveTimers.current.delete(showcaseId);
     }
-    void persistProjectExcerpt(projectId);
+    void persistShowcaseExcerpt(showcaseId);
   };
 
   const openImagePositionDialog = (
-    item: ProjectItem,
-    project: NewsletterProject,
+    item: ShowcaseItem,
+    showcase: NewsletterShowcase,
     imageUrl: string,
   ) => {
     if (item.options.aspect === "original") return;
-    const imageIndex = project.images.indexOf(imageUrl);
+    const imageIndex = showcase.images.indexOf(imageUrl);
     setImagePositionSession({
       itemId: item.id,
       imageUrl,
       imageLabel:
-        imageIndex >= 0 ? `${project.name} · Bild ${imageIndex + 1}` : project.name,
+        imageIndex >= 0
+          ? `${showcase.name} · Bild ${imageIndex + 1}`
+          : showcase.name,
       aspect: item.options.aspect,
       initialPosition:
         item.options.imagePositions[imageUrl] ?? CENTER_IMAGE_POSITION,
@@ -1044,7 +1081,7 @@ export default function GenerateNewsletterClient({
     const { itemId, imageUrl } = imagePositionSession;
     setItems((current) =>
       current.map((item) =>
-        item.id === itemId && item.type === "project"
+        item.id === itemId && item.type === "showcase"
           ? {
               ...item,
               options: {
@@ -1064,9 +1101,7 @@ export default function GenerateNewsletterClient({
   const updateButton = (id: string, patch: Partial<ButtonItem>) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "button"
-          ? { ...item, ...patch }
-          : item,
+        item.id === id && item.type === "button" ? { ...item, ...patch } : item,
       ),
     );
   };
@@ -1074,9 +1109,7 @@ export default function GenerateNewsletterClient({
   const updateBanner = (id: string, patch: Partial<BannerItem>) => {
     setItems((current) =>
       current.map((item) =>
-        item.id === id && item.type === "banner"
-          ? { ...item, ...patch }
-          : item,
+        item.id === id && item.type === "banner" ? { ...item, ...patch } : item,
       ),
     );
   };
@@ -1105,28 +1138,26 @@ export default function GenerateNewsletterClient({
     ]);
   };
 
-  const addFilteredProjects = () => {
+  const addFilteredShowcases = () => {
     const availableSlots = Math.max(
-      MAX_SELECTED_PROJECTS - selectedProjectCount,
+      MAX_SELECTED_SHOWCASES - selectedShowcaseCount,
       0,
     );
-    const additions = filteredProjects
-      .filter((project) => !selectedProjectIds.has(project.id))
+    const additions = filteredShowcases
+      .filter((showcase) => !selectedShowcaseIds.has(showcase.id))
       .slice(0, availableSlots);
     if (
-      filteredProjects.filter((project) => !selectedProjectIds.has(project.id))
-        .length > additions.length
+      filteredShowcases.filter(
+        (showcase) => !selectedShowcaseIds.has(showcase.id),
+      ).length > additions.length
     ) {
       setStatus({
         kind: "error",
-        text: `Die Auswahl wurde auf ${MAX_SELECTED_PROJECTS} Projekte begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
+        text: `Die Auswahl wurde auf ${MAX_SELECTED_SHOWCASES} Beiträge begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
       });
     }
     setItems((current) => {
-      return [
-        ...current,
-        ...additions.map(createProjectItem),
-      ];
+      return [...current, ...additions.map(createShowcaseItem)];
     });
   };
 
@@ -1140,7 +1171,7 @@ export default function GenerateNewsletterClient({
     setTitle(issueDefaults.title);
     setSubject(issueDefaults.subject);
     setIntro(issueDefaults.intro);
-    setShowProjectsHeading(true);
+    setShowShowcasesHeading(true);
     setItems([]);
     setPreviewViewport("desktop");
     setFromName(rapidmailDefaults.fromName);
@@ -1178,8 +1209,8 @@ export default function GenerateNewsletterClient({
         typeof raw.intro === "string"
           ? raw.intro.slice(0, 5_000)
           : issueDefaults.intro,
-      showProjectsHeading: raw.showProjectsHeading !== false,
-      items: restoreItems(raw.items, projectMap),
+      showShowcasesHeading: raw.showShowcasesHeading !== false,
+      items: restoreItems(raw.items, showcaseMap),
       previewViewport:
         raw.previewViewport === "mobile" ? "mobile" : "desktop",
       fromName:
@@ -1205,7 +1236,7 @@ export default function GenerateNewsletterClient({
     setTitle(normalizedContent.title);
     setSubject(normalizedContent.subject);
     setIntro(normalizedContent.intro);
-    setShowProjectsHeading(normalizedContent.showProjectsHeading);
+    setShowShowcasesHeading(normalizedContent.showShowcasesHeading);
     setItems(normalizedContent.items);
     setPreviewViewport(normalizedContent.previewViewport);
     setFromName(normalizedContent.fromName);
@@ -1290,7 +1321,7 @@ export default function GenerateNewsletterClient({
   };
 
   const handleExport = async () => {
-    if (selectedProjectCount === 0) return;
+    if (selectedShowcaseCount === 0) return;
     setBusyAction("export");
     setStatus(null);
     try {
@@ -1302,7 +1333,10 @@ export default function GenerateNewsletterClient({
       if (!response.ok) {
         const raw = await response.text();
         throw new Error(
-          errorMessageFromResponse(raw, "Newsletter konnte nicht exportiert werden."),
+          errorMessageFromResponse(
+            raw,
+            "Newsletter konnte nicht exportiert werden.",
+          ),
         );
       }
 
@@ -1358,7 +1392,7 @@ export default function GenerateNewsletterClient({
       }
       setStatus({
         kind: "success",
-        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.projects ?? selectedProjectCount} Projekten wurde erstellt.`,
+        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.showcases ?? selectedShowcaseCount} Beiträgen wurde erstellt.`,
       });
     } catch (error) {
       setStatus({
@@ -1374,7 +1408,7 @@ export default function GenerateNewsletterClient({
   };
 
   const canExport =
-    selectedProjectCount > 0 &&
+    selectedShowcaseCount > 0 &&
     !hasInvalidGif &&
     Boolean(title.trim()) &&
     Boolean(subject.trim()) &&
@@ -1392,36 +1426,65 @@ export default function GenerateNewsletterClient({
   const activeDraft = drafts.find((entry) => entry.id === activeDraftId);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-8">
-      <PageTitle eyebrow="Admin · Newsletter" title="Newsletter zusammenstellen" />
+    <div className="w-full space-y-6">
+      <SubPageTitle
+        ressort="oeffentlichkeitsarbeit"
+        title="Newsletter zusammenstellen"
+        subTitle="Wähle Beiträge aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
+      />
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <div className="knglmrt-border-section bg-card p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Verfügbare Beiträge
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {showcases.length}
+          </p>
+        </div>
+        <div className="rounded-lg border border-primary-border bg-primary-soft p-4 ">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
+            Im Newsletter
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {selectedShowcaseCount}
+          </p>
+        </div>
+        <div className="knglmrt-border-section bg-card p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Inhaltsblöcke
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {items.length}
+          </p>
+        </div>
+      </section>
 
       <FormSection title="Entwürfe" icon={faFloppyDisk}>
         <div className="grid gap-4 lg:grid-cols-[minmax(240px,1fr)_minmax(240px,1fr)_auto] lg:items-end">
-          <FormField label="Gespeicherter Entwurf">
-            <Select
-              value={activeDraftId}
-              disabled={isDraftsLoading}
-              onChange={(event) => handleDraftSelection(event.target.value)}
-            >
-              <option value="">
-                {isDraftsLoading
-                  ? "Entwürfe werden geladen …"
-                  : "Neuer, ungespeicherter Entwurf"}
+          <NativeSelect
+            label="Gespeicherter Entwurf"
+            value={activeDraftId}
+            disabled={isDraftsLoading}
+            onChange={(event) => handleDraftSelection(event.target.value)}
+          >
+            <option value="">
+              {isDraftsLoading
+                ? "Entwürfe werden geladen …"
+                : "Neuer, ungespeicherter Entwurf"}
+            </option>
+            {drafts.map((draft) => (
+              <option key={draft.id} value={draft.id}>
+                {draft.name} · {formatSavedAt(draft.updatedAt)}
               </option>
-              {drafts.map((draft) => (
-                <option key={draft.id} value={draft.id}>
-                  {draft.name} · {formatSavedAt(draft.updatedAt)}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Entwurfsname">
-            <Input
-              value={draftName}
-              maxLength={160}
-              onChange={(event) => setDraftName(event.target.value)}
-            />
-          </FormField>
+            ))}
+          </NativeSelect>
+          <Field
+            label="Entwurfsname"
+            value={draftName}
+            maxLength={160}
+            onChange={(event) => setDraftName(event.target.value)}
+          />
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -1445,8 +1508,8 @@ export default function GenerateNewsletterClient({
         <div className="mt-3 text-xs text-muted-foreground">
           {activeDraft ? (
             <span>
-              {isDraftDirty ? "Ungespeicherte Änderungen" : "Gespeichert"} · zuletzt
-              {" "}{formatSavedAt(activeDraft.updatedAt)}
+              {isDraftDirty ? "Ungespeicherte Änderungen" : "Gespeichert"} · zuletzt{" "}
+              {formatSavedAt(activeDraft.updatedAt)}
             </span>
           ) : (
             <span>Noch nicht in der Datenbank gespeichert.</span>
@@ -1516,46 +1579,40 @@ export default function GenerateNewsletterClient({
             description="Titel und Einstieg erscheinen im Newsletter. Die Betreffzeile wird an Rapidmail übergeben."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
+              <Field
                 label="Ausgabe / Titel"
                 required
                 error={!title.trim() ? "Titel fehlt." : undefined}
-              >
-                <Input
-                  value={title}
-                  maxLength={140}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </FormField>
-              <FormField
+                value={title}
+                maxLength={140}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <Field
                 label="Betreffzeile"
                 required
                 error={!subject.trim() ? "Betreffzeile fehlt." : undefined}
-              >
-                <Input
-                  value={subject}
-                  maxLength={200}
-                  onChange={(event) => setSubject(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Einstieg" className="md:col-span-2">
-                <Textarea
-                  value={intro}
-                  rows={6}
-                  maxLength={4000}
-                  onChange={(event) => setIntro(event.target.value)}
-                />
-              </FormField>
+                value={subject}
+                maxLength={200}
+                onChange={(event) => setSubject(event.target.value)}
+              />
+              <Textarea
+                label="Einstieg"
+                className="md:col-span-2"
+                value={intro}
+                rows={6}
+                maxLength={4000}
+                onChange={(event) => setIntro(event.target.value)}
+              />
               <div className="md:col-span-2">
-                <Checkbox
+                <Choice
                   label={`Überschrift „${
                     design === "volkshaus-cotta"
                       ? "Neues aus dem Haus"
                       : "Was so abgeht"
                   }“ anzeigen`}
-                  checked={showProjectsHeading}
+                  checked={showShowcasesHeading}
                   onChange={(event) =>
-                    setShowProjectsHeading(event.target.checked)
+                    setShowShowcasesHeading(event.target.checked)
                   }
                 />
               </div>
@@ -1564,7 +1621,7 @@ export default function GenerateNewsletterClient({
 
           <FormSection
             title="Inhalte und Reihenfolge"
-            description="Hier bearbeitest und sortierst du die Inhalte des Newsletters. Neue Projekte wählst du getrennt in der Projektbibliothek aus."
+            description="Hier bearbeitest und sortierst du Beiträge und freie Inhaltsblöcke. Neue Beiträge wählst du in der Beitragsbibliothek aus."
           >
             <div className="mb-5 flex flex-wrap gap-2">
               <Button
@@ -1573,7 +1630,7 @@ export default function GenerateNewsletterClient({
                 icon={faPlus}
                 onClick={() => setIsProjectLibraryOpen(true)}
               >
-                Projekte hinzufügen
+                Beiträge hinzufügen
               </Button>
               <Button type="button" kind="secondary" icon={faLink} onClick={addButton}>
                 Button
@@ -1604,7 +1661,7 @@ export default function GenerateNewsletterClient({
                   Noch keine Inhalte ausgewählt
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Öffne die Projektbibliothek und füge das erste Projekt hinzu.
+                  Öffne die Beitragsbibliothek und füge den ersten Beitrag hinzu.
                 </p>
                 <Button
                   type="button"
@@ -1613,18 +1670,18 @@ export default function GenerateNewsletterClient({
                   className="mt-4"
                   onClick={() => setIsProjectLibraryOpen(true)}
                 >
-                  Projektbibliothek öffnen
+                  Beitragsbibliothek öffnen
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 {items.map((item, index) => {
-                  const project =
-                    item.type === "project"
-                      ? projectMap.get(item.projectId)
+                  const showcase =
+                    item.type === "showcase"
+                      ? showcaseMap.get(item.showcaseId)
                       : null;
                   const imageUrl =
-                    item.type === "project"
+                    item.type === "showcase"
                       ? previewImage(
                           item.options.imageMode === "gif"
                             ? (item.options.gifImageUrls[0] ?? null)
@@ -1653,7 +1710,7 @@ export default function GenerateNewsletterClient({
                         draggedItemId.current = null;
                       }}
                       className={cn(
-                        "rounded-lg border p-4 shadow-sm",
+                        "rounded-lg border p-4 ",
                         item.type === "banner"
                           ? "border-primary-border bg-primary-soft"
                           : "border-border bg-card",
@@ -1673,7 +1730,7 @@ export default function GenerateNewsletterClient({
                           </span>
                         </span>
 
-                        {item.type === "project" ? (
+                        {item.type === "showcase" ? (
                           imageUrl ? (
                             <Image
                               src={imageUrl}
@@ -1685,7 +1742,7 @@ export default function GenerateNewsletterClient({
                             />
                           ) : (
                             <span className="flex h-16 w-20 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
-                              Projekt
+                              Beitrag
                             </span>
                           )
                         ) : (
@@ -1698,7 +1755,9 @@ export default function GenerateNewsletterClient({
                             )}
                           >
                             <FontAwesomeIcon
-                              icon={item.type === "banner" ? faBullhorn : faLink}
+                              icon={
+                                item.type === "banner" ? faBullhorn : faLink
+                              }
                               className="h-4 w-4"
                             />
                           </span>
@@ -1706,21 +1765,21 @@ export default function GenerateNewsletterClient({
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            {item.type === "project"
-                              ? "Projekt"
+                            {item.type === "showcase"
+                              ? "Beitrag"
                               : item.type === "banner"
                                 ? "Banner"
                                 : "Eigener Button"}
                           </p>
                           <h3 className="truncate font-semibold text-foreground">
-                            {item.type === "project"
-                              ? (project?.name ?? "Nicht verfügbares Projekt")
+                            {item.type === "showcase"
+                              ? (showcase?.name ?? "Nicht verfügbarer Beitrag")
                               : item.title || "Ohne Titel"}
                           </h3>
-                          {item.type === "project" && project ? (
+                          {item.type === "showcase" && showcase ? (
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {formatDate(
-                                project.publishDate ?? project.updatedAt,
+                                showcase.publishDate ?? showcase.updatedAt,
                               )}
                             </p>
                           ) : null}
@@ -1732,62 +1791,62 @@ export default function GenerateNewsletterClient({
                           onMove={(direction) => moveItem(item.id, direction)}
                           onRemove={() =>
                             setItems((current) =>
-                              current.filter((candidate) => candidate.id !== item.id),
+                              current.filter(
+                                (candidate) => candidate.id !== item.id,
+                              ),
                             )
                           }
                         />
                       </div>
 
-                      {item.type === "project" && project ? (
+                      {item.type === "showcase" && showcase ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
-                          <FormField
+                          <div className="space-y-2 sm:col-span-2 xl:col-span-4">
+                            <Textarea
                             label="Newslettertext / Excerpt (Markdown)"
-                            className="sm:col-span-2 xl:col-span-4"
                             error={
-                              projectExcerptSaveStates[project.id]?.kind ===
+                              projectExcerptSaveStates[showcase.id]?.kind ===
                               "error"
-                                ? projectExcerptSaveStates[project.id].message
+                                ? projectExcerptSaveStates[showcase.id].message
                                 : undefined
                             }
-                          >
-                            <Textarea
-                              value={item.options.excerpt}
-                              rows={5}
-                              maxLength={5_000}
-                              placeholder={
-                                project.description ||
-                                "Kurzen Projekttext für den Newsletter eingeben …"
-                              }
-                              onChange={(event) =>
-                                updateProjectExcerpt(
-                                  item.id,
-                                  project.id,
-                                  event.target.value,
-                                )
-                              }
-                              onBlur={() => flushProjectExcerpt(project.id)}
-                            />
+                            value={item.options.excerpt}
+                            rows={5}
+                            maxLength={5_000}
+                            placeholder={
+                              showcase.description ||
+                              "Kurzen Beitragstext für den Newsletter eingeben …"
+                            }
+                            onChange={(event) =>
+                              updateShowcaseExcerpt(
+                                item.id,
+                                showcase.id,
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() => flushShowcaseExcerpt(showcase.id)}
+                          />
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                               <span>
                                 Änderungen erscheinen live in der Vorschau und
-                                werden am Projekt gespeichert.
+                                werden am Beitrag gespeichert.
                               </span>
                               <span aria-live="polite" className="font-semibold">
-                                {projectExcerptSaveStates[project.id]?.kind ===
+                                {projectExcerptSaveStates[showcase.id]?.kind ===
                                 "saving"
-                                  ? projectExcerptSaveStates[project.id].message
-                                  : projectExcerptSaveStates[project.id]?.kind ===
+                                  ? projectExcerptSaveStates[showcase.id].message
+                                  : projectExcerptSaveStates[showcase.id]?.kind ===
                                       "saved"
-                                    ? projectExcerptSaveStates[project.id].message
+                                    ? projectExcerptSaveStates[showcase.id].message
                                     : null}
                               </span>
                             </div>
-                          </FormField>
-                          <FormField label="Layout">
-                            <Select
+                          </div>
+                          <NativeSelect
+                            label="Layout"
                               value={item.options.layout}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   layout: event.target.value as
                                     | "split"
                                     | "stacked",
@@ -1796,10 +1855,9 @@ export default function GenerateNewsletterClient({
                             >
                               <option value="split">Bild und Text</option>
                               <option value="stacked">Bild über Text</option>
-                            </Select>
-                          </FormField>
-                          <FormField label="Bildformat">
-                            <Select
+                          </NativeSelect>
+                          <NativeSelect
+                            label="Bildformat"
                               value={item.options.aspect}
                               disabled={
                                 item.options.imageMode === "gif"
@@ -1807,7 +1865,7 @@ export default function GenerateNewsletterClient({
                                   : !item.options.imageUrl
                               }
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   aspect: event.target.value as AspectRatio,
                                 })
                               }
@@ -1820,56 +1878,54 @@ export default function GenerateNewsletterClient({
                                   {aspect}
                                 </option>
                               ))}
-                            </Select>
-                          </FormField>
-                          <FormField
-                            label="Projektbild"
+                          </NativeSelect>
+                          <div className="space-y-2">
+                            <NativeSelect
+                            label="Beitragsbild"
                             error={
                               item.options.imageMode === "gif" &&
                               item.options.gifImageUrls.length < 2
                                 ? "Wähle mindestens zwei Bilder für das GIF aus."
                                 : undefined
                             }
-                          >
-                            <Select
                               value={
                                 item.options.imageMode === "gif"
                                   ? GIF_IMAGE_OPTION
                                   : (item.options.imageUrl ?? "")
                               }
-                              disabled={project.images.length === 0}
+                              disabled={showcase.images.length === 0}
                               onChange={(event) => {
                                 const value = event.target.value;
                                 if (value === GIF_IMAGE_OPTION) {
-                                  updateProjectOptions(item.id, {
+                                  updateShowcaseOptions(item.id, {
                                     imageMode: "gif",
                                     gifImageUrls:
                                       item.options.gifImageUrls.length >= 2
                                         ? item.options.gifImageUrls
-                                        : project.images.slice(0, 4),
+                                        : showcase.images.slice(0, 4),
                                   });
                                   return;
                                 }
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   imageMode: "single",
                                   imageUrl: value || null,
                                 });
                               }}
                             >
-                              {project.images.length === 0 ? (
+                              {showcase.images.length === 0 ? (
                                 <option value="">Kein Bild vorhanden</option>
                               ) : null}
-                              {project.images.map((image, imageIndex) => (
+                              {showcase.images.map((image, imageIndex) => (
                                 <option key={image} value={image}>
                                   Bild {imageIndex + 1}
                                 </option>
                               ))}
-                              {project.images.length >= 2 ? (
+                              {showcase.images.length >= 2 ? (
                                 <option value={GIF_IMAGE_OPTION}>
                                   GIF aus mehreren Bildern
                                 </option>
                               ) : null}
-                            </Select>
+                            </NativeSelect>
                             {item.options.imageMode === "single" &&
                             item.options.imageUrl &&
                             item.options.aspect !== "original" ? (
@@ -1878,7 +1934,7 @@ export default function GenerateNewsletterClient({
                                 onClick={() =>
                                   openImagePositionDialog(
                                     item,
-                                    project,
+                                    showcase,
                                     item.options.imageUrl!,
                                   )
                                 }
@@ -1891,19 +1947,32 @@ export default function GenerateNewsletterClient({
                                   : "Bildausschnitt wählen"}
                               </button>
                             ) : null}
-                          </FormField>
-                          <FormField label="Linktext">
-                            <Input
-                              value={item.options.linkText}
-                              disabled={!item.options.showLink}
-                              maxLength={80}
-                              onChange={(event) =>
-                                updateProjectOptions(item.id, {
-                                  linkText: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
+                          </div>
+                          <Field
+                            label="Linktext"
+                            value={item.options.linkText}
+                            disabled={!item.options.showLink}
+                            maxLength={80}
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                linkText: event.target.value,
+                              })
+                            }
+                          />
+                          <Field
+                            label="Ziel-URL"
+                            type="url"
+                            value={item.options.href}
+                            disabled={!item.options.showLink}
+                            maxLength={2_000}
+                            hint="Kann auf eine beliebige Webseite oder einen eigenen Pfad verweisen."
+                            className="sm:col-span-2 xl:col-span-3"
+                            onChange={(event) =>
+                              updateShowcaseOptions(item.id, {
+                                href: event.target.value,
+                              })
+                            }
+                          />
                           {item.options.imageMode === "gif" ? (
                             <div className="space-y-4 rounded-lg border border-primary-border bg-primary-soft/40 p-4 sm:col-span-2 xl:col-span-4">
                               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1922,7 +1991,7 @@ export default function GenerateNewsletterClient({
                               </div>
 
                               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
-                                {project.images.map((image, imageIndex) => {
+                                {showcase.images.map((image, imageIndex) => {
                                   const checked =
                                     item.options.gifImageUrls.includes(image);
                                   const limitReached =
@@ -1973,8 +2042,8 @@ export default function GenerateNewsletterClient({
                                               : item.options.gifImageUrls.filter(
                                                   (value) => value !== image,
                                                 );
-                                            updateProjectOptions(item.id, {
-                                              gifImageUrls: project.images.filter(
+                                            updateShowcaseOptions(item.id, {
+                                              gifImageUrls: showcase.images.filter(
                                                 (value) =>
                                                   selected.includes(value),
                                               ),
@@ -1991,7 +2060,7 @@ export default function GenerateNewsletterClient({
                                           onClick={() =>
                                             openImagePositionDialog(
                                               item,
-                                              project,
+                                              showcase,
                                               image,
                                             )
                                           }
@@ -2007,17 +2076,15 @@ export default function GenerateNewsletterClient({
                                 })}
                               </div>
 
-                              <FormField
+                              <NativeSelect
                                 label="Wechseltempo"
                                 className="max-w-xs"
                                 hint="Die Zeit gibt an, wie lange jedes Bild sichtbar bleibt."
-                              >
-                                <Select
                                   value={String(
                                     item.options.gifFrameDurationMs,
                                   )}
                                   onChange={(event) =>
-                                    updateProjectOptions(item.id, {
+                                    updateShowcaseOptions(item.id, {
                                       gifFrameDurationMs: Number(
                                         event.target.value,
                                       ),
@@ -2031,17 +2098,16 @@ export default function GenerateNewsletterClient({
                                         .replace(".", ",")} s pro Bild
                                     </option>
                                   ))}
-                                </Select>
-                              </FormField>
+                              </NativeSelect>
                             </div>
                           ) : null}
 
                           <div className="sm:col-span-2 xl:col-span-4">
-                            <Checkbox
-                              label="Link zum Projekt anzeigen"
+                            <Choice
+                              label="Link zum Beitrag anzeigen"
                               checked={item.options.showLink}
                               onChange={(event) =>
-                                updateProjectOptions(item.id, {
+                                updateShowcaseOptions(item.id, {
                                   showLink: event.target.checked,
                                 })
                               }
@@ -2052,56 +2118,54 @@ export default function GenerateNewsletterClient({
 
                       {item.type === "button" ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-                          <FormField label="Buttontext">
-                            <Input
-                              value={item.title}
-                              maxLength={80}
-                              onChange={(event) =>
-                                updateButton(item.id, {
-                                  title: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
-                          <FormField label="Ziel-URL">
-                            <Input
-                              type="url"
-                              value={item.href}
-                              maxLength={1000}
-                              placeholder="https://…"
-                              onChange={(event) =>
-                                updateButton(item.id, { href: event.target.value })
-                              }
-                            />
-                          </FormField>
+                          <Field
+                            label="Buttontext"
+                            value={item.title}
+                            maxLength={80}
+                            onChange={(event) =>
+                              updateButton(item.id, {
+                                title: event.target.value,
+                              })
+                            }
+                          />
+                          <Field
+                            label="Ziel-URL"
+                            type="url"
+                            value={item.href}
+                            maxLength={1000}
+                            placeholder="https://…"
+                            onChange={(event) =>
+                              updateButton(item.id, {
+                                href: event.target.value,
+                              })
+                            }
+                          />
                         </div>
                       ) : null}
 
                       {item.type === "banner" ? (
                         <div className="mt-4 grid gap-4 border-t border-primary-border pt-4 sm:grid-cols-2">
-                          <FormField label="Bannertitel">
-                            <Input
-                              value={item.title}
-                              maxLength={100}
-                              onChange={(event) =>
-                                updateBanner(item.id, {
-                                  title: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
-                          <FormField label="Bannertext">
-                            <Textarea
-                              value={item.content}
-                              rows={3}
-                              maxLength={1000}
-                              onChange={(event) =>
-                                updateBanner(item.id, {
-                                  content: event.target.value,
-                                })
-                              }
-                            />
-                          </FormField>
+                          <Field
+                            label="Bannertitel"
+                            value={item.title}
+                            maxLength={100}
+                            onChange={(event) =>
+                              updateBanner(item.id, {
+                                title: event.target.value,
+                              })
+                            }
+                          />
+                          <Textarea
+                            label="Bannertext"
+                            value={item.content}
+                            rows={3}
+                            maxLength={1000}
+                            onChange={(event) =>
+                              updateBanner(item.id, {
+                                content: event.target.value,
+                              })
+                            }
+                          />
                         </div>
                       ) : null}
                     </article>
@@ -2116,13 +2180,13 @@ export default function GenerateNewsletterClient({
             description="Diese Angaben werden nur beim Anlegen des Entwurfs benötigt. Versand und Terminierung bleiben in Rapidmail."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Absendername" required>
-                <Input
-                  value={fromName}
-                  onChange={(event) => setFromName(event.target.value)}
-                />
-              </FormField>
-              <FormField
+              <Field
+                label="Absendername"
+                required
+                value={fromName}
+                onChange={(event) => setFromName(event.target.value)}
+              />
+              <Field
                 label="Absender-E-Mail"
                 required
                 error={
@@ -2130,27 +2194,25 @@ export default function GenerateNewsletterClient({
                     ? "Bitte eine gültige E-Mail-Adresse eingeben."
                     : undefined
                 }
+                type="email"
+                value={fromEmail}
+                onChange={(event) => setFromEmail(event.target.value)}
+              />
+              <NativeSelect
+                label="Empfängerliste"
+                required
+                className="md:col-span-2"
+                value={recipientListId}
+                disabled={recipientLists.length === 0}
+                onChange={(event) => setRecipientListId(event.target.value)}
               >
-                <Input
-                  type="email"
-                  value={fromEmail}
-                  onChange={(event) => setFromEmail(event.target.value)}
-                />
-              </FormField>
-              <FormField label="Empfängerliste" required className="md:col-span-2">
-                <Select
-                  value={recipientListId}
-                  disabled={recipientLists.length === 0}
-                  onChange={(event) => setRecipientListId(event.target.value)}
-                >
-                  <option value="">Empfängerliste wählen</option>
-                  {recipientLists.map((list) => (
-                    <option key={list.id} value={list.id}>
-                      {list.name}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                <option value="">Empfängerliste wählen</option>
+                {recipientLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
 
             {rapidmailError ? (
@@ -2161,16 +2223,16 @@ export default function GenerateNewsletterClient({
             ) : null}
           </FormSection>
 
-          <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <section className="knglmrt-border-section bg-card p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="font-semibold text-foreground">
                   Newsletter fertigstellen
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {selectedProjectCount === 0
-                    ? "Wähle mindestens ein Projekt aus."
-                    : `${selectedProjectCount} ${selectedProjectCount === 1 ? "Projekt" : "Projekte"} im Entwurf.`}
+                  {selectedShowcaseCount === 0
+                    ? "Wähle mindestens einen Beitrag aus."
+                    : `${selectedShowcaseCount} ${selectedShowcaseCount === 1 ? "Beitrag" : "Beiträge"} im Entwurf.`}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2212,59 +2274,57 @@ export default function GenerateNewsletterClient({
           </section>
         </div>
 
-        <aside className="min-w-0 xl:sticky xl:top-6">
-          <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <aside className="min-w-0">
+          <section className="knglmrt-border-section overflow-hidden bg-card">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
-                <h2 className="font-semibold text-foreground">E-Mail-Vorschau</h2>
+                <h2 className="font-semibold text-foreground">
+                  E-Mail-Vorschau
+                </h2>
                 <p className="text-xs text-muted-foreground">
                   {previewViewport === "mobile" ? "390 px" : "580 px"}
                 </p>
               </div>
-              <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-1">
-                <button
-                  type="button"
-                  onClick={() => setPreviewViewport("desktop")}
-                  aria-pressed={previewViewport === "desktop"}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
-                    previewViewport === "desktop"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <FontAwesomeIcon icon={faDesktop} className="h-3.5 w-3.5" />
-                  Desktop
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewViewport("mobile")}
-                  aria-pressed={previewViewport === "mobile"}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded px-2.5 text-xs font-semibold transition",
-                    previewViewport === "mobile"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <FontAwesomeIcon
-                    icon={faMobileScreen}
-                    className="h-3.5 w-3.5"
-                  />
-                  Mobil
-                </button>
-                <button
-                  type="button"
+              <div className="flex items-center gap-2">
+                <SegmentedControl
+                  value={previewViewport}
+                  onChange={setPreviewViewport}
+                  options={[
+                    {
+                      value: "desktop" as const,
+                      label: (
+                        <>
+                          <FontAwesomeIcon
+                            icon={faDesktop}
+                            className="h-3.5 w-3.5"
+                          />
+                          Desktop
+                        </>
+                      ),
+                    },
+                    {
+                      value: "mobile" as const,
+                      label: (
+                        <>
+                          <FontAwesomeIcon
+                            icon={faMobileScreen}
+                            className="h-3.5 w-3.5"
+                          />
+                          Mobil
+                        </>
+                      ),
+                    },
+                  ]}
+                />
+                <Button
+                  kind="ghost"
+                  iconOnly
+                  icon={faRotate}
                   onClick={() => setPreviewNonce((current) => current + 1)}
-                  disabled={selectedProjectCount === 0 || isPreviewLoading}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={selectedShowcaseCount === 0}
+                  loading={isPreviewLoading}
                   aria-label="Vorschau neu laden"
-                >
-                  <FontAwesomeIcon
-                    icon={faRotate}
-                    className={cn("h-3.5 w-3.5", isPreviewLoading && "animate-spin")}
-                  />
-                </button>
+                />
               </div>
             </header>
 
@@ -2274,7 +2334,7 @@ export default function GenerateNewsletterClient({
               </div>
             ) : null}
 
-            <div className="min-h-[760px] overflow-x-auto bg-muted/50 p-3 sm:p-5">
+            <div className="overflow-x-auto bg-muted/50 p-3 sm:p-5">
               {previewHtml ? (
                 <div
                   className="mx-auto overflow-hidden rounded-md bg-white shadow-lg transition-[width] duration-200"
@@ -2284,25 +2344,32 @@ export default function GenerateNewsletterClient({
                   }}
                 >
                   <iframe
+                    ref={previewFrameRef}
                     title={`Newsletter-Vorschau – ${
                       previewViewport === "mobile" ? "Mobil" : "Desktop"
                     }`}
                     srcDoc={previewHtml}
                     sandbox="allow-same-origin"
-                    className="h-[740px] w-full border-0 bg-white"
+                    scrolling="no"
+                    onLoad={handlePreviewFrameLoad}
+                    className="block w-full border-0 bg-white"
+                    style={{ height: previewHeight }}
                   />
                 </div>
               ) : (
                 <div className="flex min-h-[720px] items-center justify-center rounded-md border border-dashed border-input bg-card px-8 text-center">
                   <div>
                     <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
-                      <FontAwesomeIcon icon={faPaperPlane} className="h-5 w-5" />
+                      <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        className="h-5 w-5"
+                      />
                     </span>
                     <p className="mt-4 font-semibold text-foreground">
                       Vorschau wartet auf Inhalte
                     </p>
                     <p className="mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                      Sobald du ein Projekt auswählst, wird die echte
+                      Sobald du einen Beitrag auswählst, wird die echte
                       E-Mail-Vorschau automatisch erzeugt.
                     </p>
                   </div>
@@ -2325,23 +2392,23 @@ export default function GenerateNewsletterClient({
           <section
             role="dialog"
             aria-modal="true"
-            aria-labelledby="project-library-title"
-            aria-describedby="project-library-description"
+            aria-labelledby="showcase-library-title"
+            aria-describedby="showcase-library-description"
             className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl sm:max-h-[calc(100vh-3rem)]"
           >
             <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
               <div>
                 <h2
-                  id="project-library-title"
+                  id="showcase-library-title"
                   className="text-xl font-semibold text-foreground"
                 >
-                  Projektbibliothek
+                  Beitragsbibliothek
                 </h2>
                 <p
-                  id="project-library-description"
+                  id="showcase-library-description"
                   className="mt-1 text-sm text-muted-foreground"
                 >
-                  Wähle Projekte aus KongloDigital aus. Sie werden am Ende des
+                  Wähle Beiträge aus KongloDigital aus. Sie werden am Ende des
                   Newsletters eingefügt und anschließend dort bearbeitet.
                 </p>
               </div>
@@ -2349,7 +2416,7 @@ export default function GenerateNewsletterClient({
                 type="button"
                 onClick={() => setIsProjectLibraryOpen(false)}
                 className="shrink-0 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label="Projektbibliothek schließen"
+                aria-label="Beitragsbibliothek schließen"
               >
                 Schließen
               </button>
@@ -2357,24 +2424,24 @@ export default function GenerateNewsletterClient({
 
             <div className="border-b border-border bg-muted/30 px-5 py-4 sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <FormField label="Projekte durchsuchen" className="flex-1">
-                  <Input
-                    autoFocus
-                    type="search"
-                    value={query}
-                    placeholder="Name oder Beschreibung"
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </FormField>
+                <Field
+                  label="Beiträge durchsuchen"
+                  className="flex-1"
+                  autoFocus
+                  type="search"
+                  value={query}
+                  placeholder="Name oder Beschreibung"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
                 <Button
                   type="button"
                   kind="secondary"
-                  onClick={addFilteredProjects}
+                  onClick={addFilteredShowcases}
                   disabled={
-                    selectedProjectCount >= MAX_SELECTED_PROJECTS ||
-                    filteredProjects.length === 0 ||
-                    filteredProjects.every((project) =>
-                      selectedProjectIds.has(project.id),
+                    selectedShowcaseCount >= MAX_SELECTED_SHOWCASES ||
+                    filteredShowcases.length === 0 ||
+                    filteredShowcases.every((showcase) =>
+                      selectedShowcaseIds.has(showcase.id),
                     )
                   }
                 >
@@ -2385,48 +2452,48 @@ export default function GenerateNewsletterClient({
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
-                  {filteredProjects.length}{" "}
-                  {filteredProjects.length === 1 ? "Projekt" : "Projekte"}
+                  {filteredShowcases.length}{" "}
+                  {filteredShowcases.length === 1 ? "Beitrag" : "Beiträge"}
                   {query.trim() ? " gefunden" : " verfügbar"}
                 </span>
                 <span>
-                  {selectedProjectCount} von {MAX_SELECTED_PROJECTS} im Newsletter
+                  {selectedShowcaseCount} von {MAX_SELECTED_SHOWCASES} im Newsletter
                 </span>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-              {filteredProjects.length === 0 ? (
+              {filteredShowcases.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-input bg-muted/40 px-5 py-10 text-center text-sm text-muted-foreground">
-                  Keine passenden Projekte gefunden.
+                  Keine passenden Beiträge gefunden.
                 </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {filteredProjects.map((project) => {
-                    const selected = selectedProjectIds.has(project.id);
+                  {filteredShowcases.map((showcase) => {
+                    const selected = selectedShowcaseIds.has(showcase.id);
                     const limitReached =
                       !selected &&
-                      selectedProjectCount >= MAX_SELECTED_PROJECTS;
+                      selectedShowcaseCount >= MAX_SELECTED_SHOWCASES;
                     const imageUrl = previewImage(
-                      project.images[0] ?? null,
+                      showcase.images[0] ?? null,
                       260,
                       180,
                     );
                     const description = stripText(
-                      project.excerpt || project.description,
+                      showcase.excerpt || showcase.description,
                     );
 
                     return (
                       <button
-                        key={project.id}
+                        key={showcase.id}
                         type="button"
-                        onClick={() => addProject(project)}
+                        onClick={() => addShowcase(showcase)}
                         disabled={selected || limitReached}
                         aria-pressed={selected}
                         aria-label={
                           selected
-                            ? `${project.name} ist bereits im Newsletter`
-                            : `${project.name} zum Newsletter hinzufügen`
+                            ? `${showcase.name} ist bereits im Newsletter`
+                            : `${showcase.name} zum Newsletter hinzufügen`
                         }
                         className={cn(
                           "group flex min-h-32 overflow-hidden rounded-lg border text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-ring/30",
@@ -2455,7 +2522,7 @@ export default function GenerateNewsletterClient({
                         <span className="flex min-w-0 flex-1 flex-col p-4">
                           <span className="flex items-start justify-between gap-3">
                             <span className="font-semibold leading-snug text-foreground">
-                              {project.name}
+                              {showcase.name}
                             </span>
                             <span
                               className={cn(
@@ -2473,7 +2540,7 @@ export default function GenerateNewsletterClient({
                             </span>
                           </span>
                           <span className="mt-1 block text-xs text-muted-foreground">
-                            {formatDate(project.publishDate ?? project.updatedAt)}
+                            {formatDate(showcase.publishDate ?? showcase.updatedAt)}
                           </span>
                           <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
                             {description
@@ -2492,7 +2559,7 @@ export default function GenerateNewsletterClient({
 
             <footer className="flex flex-col gap-3 border-t border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="text-sm text-muted-foreground">
-                Maximal {MAX_SELECTED_PROJECTS} Projekte, damit Footer und
+                Maximal {MAX_SELECTED_SHOWCASES} Beiträge, damit Footer und
                 Abmeldelink in E-Mail-Programmen sichtbar bleiben.
               </p>
               <Button

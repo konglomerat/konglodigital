@@ -9,7 +9,7 @@
     "lint": "eslint",
     "storage:video-previews": "node scripts/backfill-resource-video-previews.mjs",
     "storage:png-to-jpg": "node scripts/convert-supabase-png-to-jpg.mjs",
-    "openinary:migrate-project-images": "node scripts/migrate-resource-images-to-openinary.mjs --type=project",
+    "openinary:migrate-showcase-images": "node scripts/migrate-resource-images-to-openinary.mjs --type=project",
     "openinary:migrate-resource-images": "node scripts/migrate-resource-images-to-openinary.mjs",
     "supabase:smoke": "node scripts/supabase-cutover-smoke.mjs",
     "i18n:extract": "node scripts/i18n-extract.mjs",
@@ -17,7 +17,9 @@
     "i18n:sync": "npm run i18n:extract && node scripts/i18n-autotranslate.mjs",
     "supabase:compare": "node scripts/supabase-cutover-compare.mjs",
     "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
-    "supabase:table-sync": "node scripts/supabase-table-sync.mjs"
+    "supabase:table-sync": "node scripts/supabase-table-sync.mjs",
+    "test": "vitest run",
+    "access:seed-admin": "node --env-file=.env.local scripts/seed-bootstrap-admin.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
@@ -59,6 +61,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3"
   }
 }

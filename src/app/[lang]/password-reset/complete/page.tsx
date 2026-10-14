@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import PasswordInput from "../../components/PasswordInput";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -134,7 +134,7 @@ export default function PasswordResetCompletePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="knglmrt-border-section w-full max-w-md bg-card p-8">
         <h1 className="text-2xl font-semibold text-foreground">
           Neues Passwort setzen
         </h1>
@@ -204,9 +204,10 @@ export default function PasswordResetCompletePage() {
             ) : null}
 
             <Button
+              fullWidth
+              size="small"
               type="submit"
               kind="primary"
-              className="w-full px-4 py-2 text-sm"
               disabled={isSaving}
             >
               {isSaving

@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { resilientSupabaseFetch } from "./fetch";
+
 const requiredEnv = (name: string) => {
   const value = process.env[name];
   if (!value) {
@@ -16,6 +18,7 @@ export const createSupabaseRouteClient = (request: NextRequest) => {
   const supabaseAnonKey = requiredEnv("SUPABASE_ANON_KEY");
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    global: { fetch: resilientSupabaseFetch },
     cookies: {
       getAll() {
         return request.cookies.getAll();

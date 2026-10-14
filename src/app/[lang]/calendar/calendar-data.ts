@@ -187,15 +187,28 @@ const normalizeEvent = (
   } satisfies CalendarEvent;
 };
 
-export const getUpcomingEvents = async () => {
+/**
+ * Termine ab heute. `daysAhead` weitet das Fenster (die Vereinsseite zeigt
+ * die nächsten Wochen, die Kalenderseite nur eine Woche); ohne
+ * `revalidateSeconds` bleibt es beim ungecachten Abruf wie bisher.
+ */
+export const getUpcomingEvents = async (
+  daysAhead: number = DAYS_AHEAD,
+  { revalidateSeconds }: { revalidateSeconds?: number } = {},
+) => {
   const now = new Date();
   const rangeStart = new Date(now);
   rangeStart.setHours(0, 0, 0, 0);
   const rangeEnd = new Date(
-    rangeStart.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000,
+    rangeStart.getTime() + daysAhead * 24 * 60 * 60 * 1000,
   );
 
-  const response = await fetch(ICAL_URL, { cache: "no-store" });
+  const response = await fetch(
+    ICAL_URL,
+    revalidateSeconds === undefined
+      ? { cache: "no-store" }
+      : { next: { revalidate: revalidateSeconds } },
+  );
   if (!response.ok) {
     throw new Error("Kalender konnte nicht geladen werden.");
   }

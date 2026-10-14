@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import Button from "./Button";
+import Button from "@/components/knglmrt/Button";
 import { useI18n } from "@/i18n/client";
 import { RESOURCES_NAMESPACE } from "@/i18n/config";
 
@@ -372,18 +372,14 @@ export default function ImageCropDialog({
                     ["square", tx("Quadrat", "de")],
                   ] as Array<[CropAspect, string]>
                 ).map(([value, label]) => (
-                  <button
+                  <Button
                     key={value}
-                    type="button"
+                    kind={aspect === value ? "primary" : "secondary"}
+                    aria-pressed={aspect === value}
                     onClick={() => setAspect(value)}
-                    className={
-                      aspect === value
-                        ? "rounded-lg border border-primary bg-primary-soft px-3 py-2 text-sm font-semibold text-primary"
-                        : "rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground/80 transition hover:border-input hover:bg-accent"
-                    }
                   >
                     {label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

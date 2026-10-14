@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 import type { StoryDraftSlide, StorySource } from "@/lib/story-drafts";
 import {
   STORY_CONTENT_FONT_FAMILY,
@@ -434,7 +434,7 @@ export default function FabricStorySlideEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-muted/50 shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-muted/50 ">
       <div
         ref={canvasHostRef}
         className="relative aspect-[9/16] w-full overflow-hidden bg-accent"

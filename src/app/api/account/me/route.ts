@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { getCampaiMemberContactById } from "@/lib/campai-contacts";
 import {
   getMemberProfileByUserId,
   mergeUserMetadataWithMemberProfile,
 } from "@/lib/member-profiles";
-import { getUserRightsFromAppMetadata } from "@/lib/user-access";
-import { getLegacyUserRole, getUserRoles } from "@/lib/roles";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const GET = async (request: NextRequest) => {
@@ -19,21 +17,15 @@ export const GET = async (request: NextRequest) => {
   }
 
   const user = data.user;
-  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
-  const roles = await getUserRoles(supabase, user);
-  let liveCampaiName: string | null = null;
+  // Profil und Zuweisungen hängen nicht voneinander ab — parallel abfragen
+  // spart eine komplette Roundtrip-Zeit auf der Kontoseite.
+  const [memberProfile, access] = await Promise.all([
+    getMemberProfileByUserId(supabase, user.id),
+    loadUserAccess(supabase, user),
+  ]);
 
-  if (memberProfile?.campaiContactId) {
-    try {
-      const linkedContact = await getCampaiMemberContactById(
-        memberProfile.campaiContactId,
-      );
-      liveCampaiName = linkedContact?.name?.trim() || null;
-    } catch {
-      liveCampaiName = null;
-    }
-  }
-
+  // Bewusst ohne Campai-Aufruf — die Live-Daten des Kontakts holt die
+  // Kontoseite nach dem ersten Paint über /api/account/campai-profile.
   const metadata = mergeUserMetadataWithMemberProfile(
     user.user_metadata ?? {},
     memberProfile,
@@ -42,13 +34,8 @@ export const GET = async (request: NextRequest) => {
   return NextResponse.json({
     user: {
       email: user.email ?? "",
-      metadata: {
-        ...metadata,
-        ...(liveCampaiName ? { campai_name: liveCampaiName } : {}),
-        roles,
-        role: getLegacyUserRole(roles),
-        rights: getUserRightsFromAppMetadata(user),
-      },
+      metadata,
+      roleAssignments: access?.assignments ?? [],
     },
   });
 };

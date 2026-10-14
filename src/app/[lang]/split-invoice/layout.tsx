@@ -1,18 +1,15 @@
-import { redirect } from "next/navigation";
+import AccessGuard from "../admin/AccessGuard";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export default async function MaterialbestellungLayout({
+// Materialbestellungen werden als Rechnungen in Campai gebucht — das ist
+// Buchhaltung.
+export default function MaterialbestellungLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const { data } = await supabase.auth.getUser();
-
-  if (!data.user) {
-    redirect("/login?redirectedFrom=/split-invoice");
-  }
-
-  return children;
+  return (
+    <AccessGuard permissions="receipts.edit" anywhere>
+      {children}
+    </AccessGuard>
+  );
 }

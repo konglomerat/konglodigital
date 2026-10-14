@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -56,14 +57,14 @@ const serializeDraft = (row: NewsletterDraftRow) => ({
   updatedAt: row.updated_at,
 });
 
-const requireAdmin = async (request: NextRequest) => {
+const requireNewsletterAccess = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
 
   if (!data.user) {
     return { response: unauthorized(), userId: null };
   }
-  if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return { response: forbidden(), userId: null };
   }
 
@@ -72,7 +73,7 @@ const requireAdmin = async (request: NextRequest) => {
 
 export const GET = async (request: NextRequest) => {
   try {
-    const auth = await requireAdmin(request);
+    const auth = await requireNewsletterAccess(request);
     if (auth.response) return auth.response;
     if (!auth.userId) return unauthorized();
 
@@ -104,7 +105,7 @@ export const GET = async (request: NextRequest) => {
 
 export const POST = async (request: NextRequest) => {
   try {
-    const auth = await requireAdmin(request);
+    const auth = await requireNewsletterAccess(request);
     if (auth.response) return auth.response;
     if (!auth.userId) return unauthorized();
 

@@ -13,13 +13,16 @@ import {
   type CampaiConfig,
 } from "@/lib/campai-receipts/config";
 import { parsePositiveInt } from "@/lib/campai-receipts/parsers";
-import { userCanAccessModule } from "@/lib/roles";
+import {
+  costCenterForbiddenResponse,
+  getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import { canEditReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
 import {
   addCampaiReceiptNotes,
   buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type AddressPayload = {
   country: string;
@@ -300,15 +303,11 @@ const resolvePositionAccount = (body: InvoiceBody): number => {
 };
 
 export const POST = async (request: NextRequest) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
-
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { supabase, user } = routeAccess;
 
   let config: CampaiConfig;
   try {
@@ -319,9 +318,9 @@ export const POST = async (request: NextRequest) => {
   }
 
   const tags = mergeCampaiTags(["API"]);
-  const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
   const creatorNote = buildCampaiReceiptCreatorNote({
-    user: data.user,
+    user,
     memberProfile,
   });
 
@@ -342,6 +341,14 @@ export const POST = async (request: NextRequest) => {
       { error: "All positions have zero amount." },
       { status: 400 },
     );
+  }
+  if (
+    !canEditReceiptCostCenters(
+      rawPositions.map((position) => parsePositiveInt(position.costCenter2)),
+      routeAccess.allowedCostCenters,
+    )
+  ) {
+    return costCenterForbiddenResponse();
   }
 
   let defaultPositionAccount: number;

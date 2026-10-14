@@ -6,10 +6,10 @@ import {
   faPlus,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import Button from "../Button";
-import { FormField, FormSection } from "./form";
+import Button from "@/components/knglmrt/Button";
+import FieldShell from "@/components/knglmrt/FieldShell";
+import FormSection from "@/components/knglmrt/FormSection";
 
 type ReceiptUploadSectionProps = {
   files: File[];
@@ -46,7 +46,7 @@ export default function ReceiptUploadSection({
 
   return (
     <FormSection title="Beleg hochladen" icon={faFolderOpen}>
-      <FormField label="Belegdatei" required={required} hint={hint}>
+      <FieldShell as="div" label="Belegdatei" required={required} hint={hint}>
         <input
           ref={inputRef}
           type="file"
@@ -61,20 +61,21 @@ export default function ReceiptUploadSection({
             {files.map((file, index) => (
               <li
                 key={`${file.name}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+                className="flex items-center justify-between gap-2 border border-border bg-card px-3 py-2 text-foreground"
               >
                 <span className="truncate">
                   {files.length > 1 ? `${index + 1}. ` : ""}
                   {file.name}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  kind="ghost"
+                  size="chip"
+                  iconOnly
+                  icon={faXmark}
                   onClick={() => removeFile(index)}
-                  className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-rose-600"
+                  className="shrink-0 text-muted-foreground"
                   aria-label="Datei entfernen"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-                </button>
+                />
               </li>
             ))}
           </ul>
@@ -87,18 +88,16 @@ export default function ReceiptUploadSection({
             icon={faPlus}
             onClick={() => inputRef.current?.click()}
           >
-            {files.length === 0
-              ? "Datei auswählen"
-              : "Weitere Datei auswählen"}
+            {files.length === 0 ? "Datei auswählen" : "Weitere Datei auswählen"}
           </Button>
         </div>
 
         {files.length > 1 ? (
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className="mt-2 text-[13px] leading-[18px] text-muted-foreground">
             {files.length} Dateien werden zu einer PDF zusammengefügt.
           </p>
         ) : null}
-      </FormField>
+      </FieldShell>
     </FormSection>
   );
 }

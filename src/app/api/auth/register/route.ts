@@ -10,15 +10,8 @@ import {
   buildCampaiProfileData,
   getCampaiActiveMemberContactByEmail,
   splitCampaiContactName,
-} from "@/lib/campai-contacts";
+} from "@/lib/campai-contact-directory";
 import { upsertMemberProfile } from "@/lib/member-profiles";
-import { getInitialUserRoles } from "@/lib/roles";
-import {
-  getUserAccessByUserId,
-  getUserRightsFromAppMetadata,
-  syncUserAccessToAuthMetadata,
-  upsertUserAccess,
-} from "@/lib/user-access";
 
 const findExistingUserByEmail = async (
   adminClient: ReturnType<typeof createSupabaseAdminClient>,
@@ -81,7 +74,6 @@ export const POST = async (request: NextRequest) => {
 
   const adminClient = createSupabaseAdminClient();
   const splitName = splitCampaiContactName(linkedContact.name);
-  const initialRoles = getInitialUserRoles(linkedContact.tags);
   const userMetadata = {
     first_name: splitName.firstName,
     last_name: splitName.lastName,
@@ -113,19 +105,6 @@ export const POST = async (request: NextRequest) => {
     }
 
     await upsertMemberProfile(adminClient, existingUser.id, memberProfile);
-
-    const existingAccess = await getUserAccessByUserId(
-      adminClient,
-      existingUser.id,
-    );
-    const nextAccess =
-      existingAccess ??
-      (await upsertUserAccess(adminClient, {
-        userId: existingUser.id,
-        roles: initialRoles,
-        rights: getUserRightsFromAppMetadata(existingUser),
-      }));
-    await syncUserAccessToAuthMetadata(adminClient, existingUser, nextAccess);
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       normalizedEmail,
@@ -160,13 +139,8 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
+  // Rollen gibt es erst über role_assignments; neue Mitglieder starten ohne.
   await upsertMemberProfile(adminClient, invitedUser.id, memberProfile);
-  const createdAccess = await upsertUserAccess(adminClient, {
-    userId: invitedUser.id,
-    roles: initialRoles,
-    rights: getUserRightsFromAppMetadata(invitedUser),
-  });
-  await syncUserAccessToAuthMetadata(adminClient, invitedUser, createdAccess);
 
   return withSupabaseCookies(NextResponse.json({ ok: true }), response);
 };

@@ -11,18 +11,19 @@ const createSharedStyles = <
   IsMulti extends boolean,
   Group extends GroupBase<Option>,
 >(): StylesConfig<Option, IsMulti, Group> => ({
+  // Die Kontur des Systems: 2px, kein Radius, kein Ring. Fokus färbt die
+  // Kante pink — wie bei jedem anderen Feld auch.
   control: (base, state) => ({
     ...base,
-    minHeight: 40,
-    borderRadius: 12,
-    borderColor: state.isFocused ? "var(--ring)" : "var(--border)",
+    minHeight: 42,
+    borderRadius: 0,
+    borderWidth: "var(--hairline-width)",
+    borderColor: state.isFocused ? "var(--primary)" : "var(--hairline-color)",
     backgroundColor: "var(--card)",
-    boxShadow: state.isFocused
-      ? "0 0 0 2px color-mix(in srgb, var(--ring) 28%, transparent)"
-      : "none",
-    transition: "border-color 150ms ease, box-shadow 150ms ease",
+    boxShadow: "none",
+    transition: "border-color 150ms ease",
     ":hover": {
-      borderColor: state.isFocused ? "var(--ring)" : "var(--input)",
+      borderColor: state.isFocused ? "var(--primary)" : "var(--hairline-color)",
     },
   }),
   valueContainer: (base) => ({
@@ -41,26 +42,28 @@ const createSharedStyles = <
     ...base,
     color: "var(--foreground)",
   }),
+  // Die offene Liste hängt am Feld und trägt die pinke Kontur.
   menu: (base) => ({
     ...base,
-    border: "1px solid var(--border)",
-    borderRadius: 12,
+    marginTop: "calc(var(--hairline-width) * -1)",
+    border: "var(--hairline-width) solid var(--primary)",
+    borderRadius: 0,
     backgroundColor: "var(--popover)",
-    boxShadow:
-      "0 18px 44px color-mix(in srgb, var(--foreground) 14%, transparent)",
+    boxShadow: "none",
     overflow: "hidden",
   }),
   menuList: (base) => ({
     ...base,
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 0,
+    paddingBottom: 0,
   }),
   option: (base, state) => ({
     ...base,
+    borderTop: "1px solid var(--border)",
     backgroundColor: state.isSelected
       ? "var(--primary-soft)"
       : state.isFocused
-        ? "var(--muted)"
+        ? "var(--ui-tint-zebra)"
         : "transparent",
     color: "var(--foreground)",
     cursor: "pointer",
@@ -68,9 +71,10 @@ const createSharedStyles = <
       backgroundColor: "var(--primary-soft)",
     },
   }),
+  // Marken sind im System eckig — auch die im Mehrfachfeld.
   multiValue: (base) => ({
     ...base,
-    borderRadius: 9999,
+    borderRadius: 0,
     backgroundColor: "var(--muted)",
   }),
   multiValueLabel: (base) => ({
@@ -80,7 +84,7 @@ const createSharedStyles = <
   }),
   multiValueRemove: (base) => ({
     ...base,
-    borderRadius: 9999,
+    borderRadius: 0,
     color: "var(--muted-foreground)",
     ":hover": {
       backgroundColor: "var(--destructive-soft)",

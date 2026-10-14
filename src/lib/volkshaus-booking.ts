@@ -71,7 +71,38 @@ export type VolkshausPriceLine = {
   taxRate: number;
 };
 
+export type VolkshausInvoiceDetails = {
+  recipient: string;
+  title: string;
+  intro: string;
+  serviceDate: string;
+};
+
+export type VolkshausAdminChange = {
+  at: string;
+  by: string;
+  reason: string;
+  changes: Array<{ label: string; before: string; after: string }>;
+};
+
+export type VolkshausArchivedContract = {
+  version: number;
+  archivedAt: string;
+  snapshot: VolkshausContractSnapshot;
+  hash: string | null;
+  customerSignature: VolkshausSignature | null;
+  staffSignature: VolkshausSignature | null;
+};
+
 export type VolkshausPriceSnapshot = {
+  // Private editorial data lives with the persisted quote, never in customer prices.
+  admin?: {
+    originalPrice?: Omit<VolkshausPriceSnapshot, "admin">;
+    invoice?: VolkshausInvoiceDetails;
+    changes?: VolkshausAdminChange[];
+    archivedContracts?: VolkshausArchivedContract[];
+    invoiceCorrection?: { required: boolean; invoiceId: string; note: string };
+  };
   tariffVersion: string;
   currency: "EUR";
   lines: VolkshausPriceLine[];
@@ -570,15 +601,17 @@ export const calculateVolkshausPrice = (
 export const applyPriceAdjustment = (
   snapshot: VolkshausPriceSnapshot,
   adjustmentCents: number,
-  reason?: string | null,
+  _reason?: string | null,
 ): VolkshausPriceSnapshot => {
+  // Kept for backwards-compatible callers; internal reasons are never public text.
+  void _reason;
   const normalizedAdjustment = Math.trunc(adjustmentCents || 0);
   const lines = snapshot.lines.filter((line) => line.code !== "adjustment");
 
   if (normalizedAdjustment !== 0) {
     lines.push({
       code: "adjustment",
-      description: reason?.trim() || "Individuelle Preisanpassung",
+      description: "Individuelle Preisanpassung",
       quantity: 1,
       unitNetCents: normalizedAdjustment,
       totalNetCents: normalizedAdjustment,
@@ -592,8 +625,10 @@ export const applyPriceAdjustment = (
   );
   const taxCents = roundTax(netCents);
 
+  const publicSnapshot = { ...snapshot };
+  delete publicSnapshot.admin;
   return {
-    ...snapshot,
+    ...publicSnapshot,
     lines,
     netCents,
     taxCents,

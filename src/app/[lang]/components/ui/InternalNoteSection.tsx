@@ -2,7 +2,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import type { ReactNode } from "react";
 import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 
-import { FormField, FormSection, Textarea } from "./form";
+import FormSection from "@/components/knglmrt/FormSection";
+import Textarea from "@/components/knglmrt/Textarea";
 
 type InternalNoteSectionProps = {
   error?: string;
@@ -24,9 +25,14 @@ export default function InternalNoteSection({
   return (
     <FormSection title="Interne Notiz" icon={faPenToSquare}>
       {children}
-      <FormField label={fieldLabel} hint={hint} error={error}>
-        <Textarea rows={3} placeholder={placeholder} {...textareaProps} />
-      </FormField>
+      <Textarea
+        label={fieldLabel}
+        hint={hint}
+        error={error}
+        rows={3}
+        placeholder={placeholder}
+        {...textareaProps}
+      />
     </FormSection>
   );
 }

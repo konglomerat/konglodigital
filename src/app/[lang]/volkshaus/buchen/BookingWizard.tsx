@@ -41,7 +41,7 @@ import {
   faVolumeHigh,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Button from "../../components/Button";
+import Button from "@/components/knglmrt/Button";
 import attendeesOneIllustration from "./assets/volkshaus-attendees-1.webp";
 import attendeesTenIllustration from "./assets/volkshaus-attendees-10.webp";
 import attendeesTwentyIllustration from "./assets/volkshaus-attendees-20.webp";
@@ -54,6 +54,10 @@ import contactIllustration from "./assets/volkshaus-step-contact.webp";
 import reviewIllustration from "./assets/volkshaus-step-review.webp";
 import usageIllustration from "./assets/volkshaus-step-usage.webp";
 import styles from "./BookingWizard.module.css";
+import Choice from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Textarea from "@/components/knglmrt/Textarea";
 import {
   VOLKSHAUS_EQUIPMENT,
   VOLKSHAUS_ROOMS,
@@ -69,6 +73,39 @@ import {
   type VolkshausRoomId,
   type VolkshausUsageType,
 } from "@/lib/volkshaus-booking";
+import {
+  isVolkshausFutureRequest,
+  VOLKSHAUS_FUTURE_REQUEST_PARAGRAPHS,
+  VOLKSHAUS_WAITLIST_EMAIL,
+} from "@/lib/volkshaus-request-messages";
+
+function FutureRequestNotice() {
+  return (
+    <div
+      role="status"
+      className="mt-5 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning"
+    >
+      <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>
+        <p className="font-black">Terminanfragen ab 2027</p>
+        {VOLKSHAUS_FUTURE_REQUEST_PARAGRAPHS.map((paragraph) => (
+          <p key={paragraph} className="mt-2 leading-relaxed">
+            {paragraph.split(VOLKSHAUS_WAITLIST_EMAIL).map((part, index) => (
+              <span key={index}>
+                {index > 0 ? (
+                  <a className="underline" href={`mailto:${VOLKSHAUS_WAITLIST_EMAIL}`}>
+                    {VOLKSHAUS_WAITLIST_EMAIL}
+                  </a>
+                ) : null}
+                {part}
+              </span>
+            ))}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type WizardState = Omit<
   VolkshausBookingRequestInput,
@@ -177,7 +214,7 @@ const EQUIPMENT_VISUALS: Record<
   pa_system: {
     icon: faVolumeHigh,
     className:
-      "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+      "bg-warning-soft text-amber-800 dark:bg-amber-950 dark:text-amber-300",
   },
   mixer: {
     icon: faSliders,
@@ -186,7 +223,7 @@ const EQUIPMENT_VISUALS: Record<
   },
   microphone: {
     icon: faMicrophone,
-    className: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+    className: "bg-rose-100 text-destructive dark:bg-rose-950 dark:text-rose-300",
   },
   laptop: {
     icon: faLaptop,
@@ -195,7 +232,7 @@ const EQUIPMENT_VISUALS: Record<
   tablet: {
     icon: faTabletScreenButton,
     className:
-      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+      "bg-emerald-100 text-foreground dark:bg-emerald-950 dark:text-emerald-300",
   },
   pavilion: {
     icon: faTent,
@@ -208,8 +245,6 @@ const EQUIPMENT_VISUALS: Record<
   },
 };
 
-const inputClassName =
-  "w-full rounded-md border-0 bg-muted/45 px-3.5 py-3 text-sm text-foreground ring-1 ring-inset ring-border/70 transition placeholder:text-muted-foreground/70 hover:bg-muted/60 focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/35";
 const labelClassName = "mb-1.5 block text-sm font-semibold text-foreground";
 const cardClassName =
   "rounded-lg bg-card p-5 shadow-[0_10px_30px_rgba(23,21,25,0.07)] ring-1 ring-foreground/5 md:p-7";
@@ -315,33 +350,6 @@ const buildInitialState = (initialDate: string): WizardState => ({
   acceptedPrivacy: false,
   acceptedHouseRules: false,
   website: "",
-});
-
-const buildTestState = (initialDate: string): WizardState => ({
-  ...buildInitialState(initialDate),
-  customerName: "Max Mustermann",
-  organization: "Testverein Dresden e. V.",
-  email: `volkshaus-test-${initialDate.replaceAll("-", "")}@example.com`,
-  phone: "+49 351 1234567",
-  billingAddressLine: "Musterstraße 12",
-  billingZip: "01159",
-  eventTitle: "Testveranstaltung im Volkshaus",
-  eventDescription:
-    "Dies ist eine automatisch ausgefüllte Testanfrage für die Prüfung des Buchungsablaufs.",
-  usageType: "neighborhood",
-  expectedAttendees: 20,
-  startTime: "09:00",
-  endTime: "11:00",
-  setupStartTime: "08:30",
-  teardownEndTime: "11:30",
-  equipment: {
-    projector: 1,
-    cable_reel: 1,
-  },
-  specialRequirements:
-    "Testhinweis: Bitte die gewünschte Bestuhlung und den Technikaufbau prüfen.",
-  acceptedPrivacy: true,
-  acceptedHouseRules: true,
 });
 
 export default function BookingWizard({
@@ -539,12 +547,6 @@ export default function BookingWizard({
     setStep((current) => Math.max(0, current - 1));
   };
 
-  const fillTestForm = () => {
-    setForm(buildTestState(initialDate));
-    setStepError(null);
-    setSubmitError(null);
-  };
-
   const submit = async () => {
     for (let currentStep = 0; currentStep < 3; currentStep += 1) {
       const error = validateStep(currentStep);
@@ -586,7 +588,7 @@ export default function BookingWizard({
   if (submission) {
     return (
       <div className="mx-auto max-w-3xl space-y-6 py-4 md:py-10">
-        <section className="overflow-hidden rounded-lg border border-success-border bg-card shadow-sm">
+        <section className="overflow-hidden rounded-lg border border-success-border bg-card ">
           <div className="bg-success-soft p-8 text-center md:p-12">
             <Image
               src={bookingSuccessIllustration}
@@ -601,11 +603,14 @@ export default function BookingWizard({
               Danke für deine Anfrage
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Die Anfrage ist noch keine verbindliche Reservierung. Das
-              Volkshaus-Team prüft Termin, Nutzung und Preis.
+              Die Anfrage ist noch keine verbindliche Reservierung.
+              {!isVolkshausFutureRequest(form.bookingDate)
+                ? " Das Volkshaus-Team prüft Termin, Nutzung und Preis."
+                : null}
             </p>
           </div>
           <div className="space-y-5 p-6 md:p-8">
+            {isVolkshausFutureRequest(form.bookingDate) ? <FutureRequestNotice /> : null}
             <div className="rounded-lg border border-border bg-muted/40 p-5 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Deine Referenz
@@ -671,16 +676,6 @@ export default function BookingWizard({
             wenn alles geprüft ist und du die bereits von uns unterschriebene
             Vereinbarung unterschrieben hast.
           </p>
-          <div className="mt-5">
-            <Button
-              kind="secondary"
-              size="medium"
-              icon={faClipboardCheck}
-              onClick={fillTestForm}
-            >
-              Testformular ausfüllen
-            </Button>
-          </div>
         </div>
         <Image
           key={step}
@@ -696,7 +691,7 @@ export default function BookingWizard({
         className="max-w-4xl lg:hidden"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground ">
             <FontAwesomeIcon icon={STEPS[step].icon} className="h-4 w-4" />
           </span>
           <div>
@@ -772,7 +767,7 @@ export default function BookingWizard({
           {step === 3 ? <ReviewStep form={form} price={price} /> : null}
 
           {stepError ? (
-            <div className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+            <div role="alert" className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
               <FontAwesomeIcon
                 icon={faTriangleExclamation}
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -782,7 +777,7 @@ export default function BookingWizard({
           ) : null}
 
           {submitError ? (
-            <div className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+            <div role="alert" className="flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
               <FontAwesomeIcon
                 icon={faTriangleExclamation}
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -945,7 +940,6 @@ function BookingTimeStep({
     parseIsoDate(`${visibleMonth}-01`) ??
     new Date(`${minimumMonth}-01T12:00:00Z`);
   const hasValidBookingDate = Boolean(parseIsoDate(form.bookingDate));
-  const is2027BookingDate = form.bookingDate.startsWith("2027-");
 
   return (
     <>
@@ -967,6 +961,7 @@ function BookingTimeStep({
                 key={room.id}
                 type="button"
                 onClick={() => toggleRoom(room.id)}
+                aria-pressed={selected}
                 className={`relative rounded-md p-4 text-left ring-1 ring-inset transition ${
                   selected
                     ? "bg-primary-soft/70 ring-primary/30"
@@ -1038,46 +1033,41 @@ function BookingTimeStep({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                kind="secondary"
+                size="medium"
+                iconOnly
+                icon={faChevronLeft}
                 aria-label="Vorheriger Monat"
                 title="Vorheriger Monat"
                 disabled={visibleMonth <= minimumMonth}
                 onClick={() =>
                   setVisibleMonth((current) => shiftMonth(current, -1))
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-card text-foreground shadow-sm ring-1 ring-foreground/5 transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                <FontAwesomeIcon icon={faChevronLeft} className="h-3.5 w-3.5" />
-              </button>
-              <label className="relative">
-                <span className="sr-only">Monat direkt auswählen</span>
-                <input
-                  type="month"
-                  min={minimumMonth}
-                  value={visibleMonth}
-                  onChange={(event) => {
-                    if (event.target.value) {
-                      setVisibleMonth(event.target.value);
-                    }
-                  }}
-                  className="h-10 rounded-md border-0 bg-card px-3 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-foreground/10 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
-              <button
-                type="button"
+              />
+              <Field
+                type="month"
+                aria-label="Monat direkt auswählen"
+                min={minimumMonth}
+                value={visibleMonth}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setVisibleMonth(event.target.value);
+                  }
+                }}
+                inputClassName="font-semibold"
+              />
+              <Button
+                kind="secondary"
+                size="medium"
+                iconOnly
+                icon={faChevronRight}
                 aria-label="Nächster Monat"
                 title="Nächster Monat"
                 onClick={() =>
                   setVisibleMonth((current) => shiftMonth(current, 1))
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-card text-foreground shadow-sm ring-1 ring-foreground/5 transition hover:text-primary"
-              >
-                <FontAwesomeIcon
-                  icon={faChevronRight}
-                  className="h-3.5 w-3.5"
-                />
-              </button>
+              />
             </div>
           </div>
 
@@ -1132,9 +1122,9 @@ function BookingTimeStep({
                   }}
                   className={`group flex min-h-16 flex-col items-center justify-center px-1 py-2 text-center transition ${
                     isSelected
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-primary text-primary-foreground "
                       : isCurrentMonth
-                        ? "bg-card text-foreground shadow-sm hover:bg-primary-soft hover:text-primary"
+                        ? "bg-card text-foreground hover:bg-primary-soft hover:text-primary"
                         : "bg-transparent text-muted-foreground hover:bg-primary-soft"
                   } rounded-md disabled:cursor-not-allowed disabled:bg-transparent disabled:text-muted-foreground/30 disabled:shadow-none`}
                 >
@@ -1181,41 +1171,33 @@ function BookingTimeStep({
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-5">
-          <label className="md:col-span-2">
-            <span className={labelClassName}>Datum</span>
-            <input
-              className={inputClassName}
-              type="date"
-              min={minimumDate}
-              value={form.bookingDate}
-              onChange={(event) => {
-                const value = event.target.value;
-                setField("bookingDate", value);
-                const selectedMonth = getMonthValue(value);
-                if (selectedMonth) {
-                  setVisibleMonth(selectedMonth);
-                }
-              }}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>Beginn</span>
-            <input
-              className={inputClassName}
-              type="time"
-              value={form.startTime}
-              onChange={(event) => setField("startTime", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>Ende</span>
-            <input
-              className={inputClassName}
-              type="time"
-              value={form.endTime}
-              onChange={(event) => setField("endTime", event.target.value)}
-            />
-          </label>
+          <Field
+            label="Datum"
+            className="md:col-span-2"
+            type="date"
+            min={minimumDate}
+            value={form.bookingDate}
+            onChange={(event) => {
+              const value = event.target.value;
+              setField("bookingDate", value);
+              const selectedMonth = getMonthValue(value);
+              if (selectedMonth) {
+                setVisibleMonth(selectedMonth);
+              }
+            }}
+          />
+          <Field
+            label="Beginn"
+            type="time"
+            value={form.startTime}
+            onChange={(event) => setField("startTime", event.target.value)}
+          />
+          <Field
+            label="Ende"
+            type="time"
+            value={form.endTime}
+            onChange={(event) => setField("endTime", event.target.value)}
+          />
           <div className="flex items-end">
             <div className="flex w-full items-center justify-center gap-2 rounded-md bg-muted/45 px-3 py-3 text-center text-sm font-semibold text-foreground ring-1 ring-inset ring-border/70">
               <FontAwesomeIcon
@@ -1233,30 +1215,7 @@ function BookingTimeStep({
           </div>
         </div>
 
-        {is2027BookingDate ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-5 flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning"
-          >
-            <FontAwesomeIcon
-              icon={faCircleInfo}
-              className="mt-0.5 h-4 w-4 shrink-0"
-            />
-            <div>
-              <p className="font-black">Terminanfragen für 2027</p>
-              <p className="mt-1 leading-relaxed">
-                Es tut uns leid, euch mitteilen zu müssen, dass wir aktuell noch
-                keine verbindlichen Terminanfragen für 2027 annehmen können,
-                weil sich die Trägerschaft des Neuen Volkshauses Cotta derzeit
-                in einer Übergangsphase befindet. Wir freuen uns, wenn ihr euch
-                im kommenden Jahr erneut bei uns meldet. Wenn es für euch in
-                Ordnung ist, könnt ihr diese Anfrage trotzdem absenden – wir
-                setzen euch damit gern auf unsere Warteliste für 2027.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        {isVolkshausFutureRequest(form.bookingDate) ? <FutureRequestNotice /> : null}
 
         <details className="mt-4 rounded-md bg-muted/35 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-foreground">
@@ -1267,28 +1226,22 @@ function BookingTimeStep({
             Zusätzliche Zeit für Aufbau und Rückgabe
           </summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className={labelClassName}>Aufbau ab</span>
-              <input
-                className={inputClassName}
-                type="time"
-                value={form.setupStartTime ?? ""}
-                onChange={(event) =>
-                  setField("setupStartTime", event.target.value || null)
-                }
-              />
-            </label>
-            <label>
-              <span className={labelClassName}>Rückgabe bis</span>
-              <input
-                className={inputClassName}
-                type="time"
-                value={form.teardownEndTime ?? ""}
-                onChange={(event) =>
-                  setField("teardownEndTime", event.target.value || null)
-                }
-              />
-            </label>
+            <Field
+              label="Aufbau ab"
+              type="time"
+              value={form.setupStartTime ?? ""}
+              onChange={(event) =>
+                setField("setupStartTime", event.target.value || null)
+              }
+            />
+            <Field
+              label="Rückgabe bis"
+              type="time"
+              value={form.teardownEndTime ?? ""}
+              onChange={(event) =>
+                setField("teardownEndTime", event.target.value || null)
+              }
+            />
           </div>
         </details>
       </section>
@@ -1424,85 +1377,68 @@ function UsageStep({
           Was hast du vor?
         </h2>
         <div className="mt-6 grid gap-5">
-          <label>
-            <span className={labelClassName}>Titel der Veranstaltung</span>
-            <input
-              className={inputClassName}
-              value={form.eventTitle}
-              maxLength={180}
-              placeholder="z. B. Nachbarschaftscafé oder Workshop"
-              onChange={(event) => setField("eventTitle", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>Beschreibung und Zweck</span>
-            <textarea
-              className={`${inputClassName} min-h-32 resize-y`}
-              value={form.eventDescription}
-              maxLength={4_000}
-              placeholder="Was findet statt, für wen ist das Angebot und ist es öffentlich zugänglich?"
-              onChange={(event) =>
-                setField("eventDescription", event.target.value)
-              }
-            />
-          </label>
+          <Field
+            label="Titel der Veranstaltung"
+            value={form.eventTitle}
+            maxLength={180}
+            placeholder="z. B. Nachbarschaftscafé oder Workshop"
+            onChange={(event) => setField("eventTitle", event.target.value)}
+          />
+          <Textarea
+            label="Beschreibung und Zweck"
+            textareaClassName="min-h-32 resize-y"
+            value={form.eventDescription}
+            maxLength={4_000}
+            placeholder="Was findet statt, für wen ist das Angebot und ist es öffentlich zugänglich?"
+            onChange={(event) =>
+              setField("eventDescription", event.target.value)
+            }
+          />
           <div className="grid gap-5 md:grid-cols-2">
-            <label>
-              <span className={labelClassName}>Art der Nutzung</span>
-              <select
-                className={inputClassName}
-                value={form.usageType}
-                onChange={(event) =>
-                  setField(
-                    "usageType",
-                    event.target.value as VolkshausUsageType,
-                  )
-                }
-              >
-                <option value="commercial">
-                  Privat, kommerziell oder gewerblich
-                </option>
-                <option value="neighborhood">
-                  Nichtkommerziell und nachbarschaftlich
-                </option>
-              </select>
-            </label>
-            <label>
-              <span className={labelClassName}>Häufigkeit</span>
-              <select
-                className={inputClassName}
-                value={form.frequency}
-                onChange={(event) =>
-                  setField(
-                    "frequency",
-                    event.target.value as VolkshausBookingFrequency,
-                  )
-                }
-              >
-                <option value="one_time">Einmalige Nutzung</option>
-                <option value="recurring">Regelmäßiges Angebot</option>
-              </select>
-            </label>
+            <NativeSelect
+              label="Art der Nutzung"
+              value={form.usageType}
+              onChange={(event) =>
+                setField("usageType", event.target.value as VolkshausUsageType)
+              }
+            >
+              <option value="commercial">
+                Privat, kommerziell oder gewerblich
+              </option>
+              <option value="neighborhood">
+                Nichtkommerziell und nachbarschaftlich
+              </option>
+            </NativeSelect>
+            <NativeSelect
+              label="Häufigkeit"
+              value={form.frequency}
+              onChange={(event) =>
+                setField(
+                  "frequency",
+                  event.target.value as VolkshausBookingFrequency,
+                )
+              }
+            >
+              <option value="one_time">Einmalige Nutzung</option>
+              <option value="recurring">Regelmäßiges Angebot</option>
+            </NativeSelect>
             {form.frequency === "recurring" ? (
-              <label>
-                <span className={labelClassName}>Termine pro Monat</span>
-                <select
-                  className={inputClassName}
-                  value={form.recurringOccurrences}
-                  onChange={(event) =>
-                    setField(
-                      "recurringOccurrences",
-                      Number.parseInt(event.target.value, 10),
-                    )
-                  }
-                >
-                  {[1, 2, 3, 4].map((count) => (
-                    <option key={count} value={count}>
-                      {count} × pro Monat
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <NativeSelect
+                label="Termine pro Monat"
+                value={form.recurringOccurrences}
+                onChange={(event) =>
+                  setField(
+                    "recurringOccurrences",
+                    Number.parseInt(event.target.value, 10),
+                  )
+                }
+              >
+                {[1, 2, 3, 4].map((count) => (
+                  <option key={count} value={count}>
+                    {count} × pro Monat
+                  </option>
+                ))}
+              </NativeSelect>
             ) : null}
           </div>
           <div className="rounded-lg border border-border bg-muted/35 p-4 md:p-5">
@@ -1522,7 +1458,7 @@ function UsageStep({
                   </div>
                   <output
                     htmlFor="expected-attendees"
-                    className="min-w-20 rounded-md bg-primary px-3 py-2 text-center text-primary-foreground shadow-sm"
+                    className="min-w-20 rounded-md bg-primary px-3 py-2 text-center text-primary-foreground "
                   >
                     <span className="block text-2xl font-black leading-none">
                       {attendeeCount}
@@ -1561,7 +1497,7 @@ function UsageStep({
                   <span>400</span>
                 </div>
               </div>
-              <figure className="flex min-h-36 flex-col items-center justify-center rounded-md bg-card px-3 py-2 text-center shadow-sm">
+              <figure className="flex min-h-36 flex-col items-center justify-center rounded-md bg-card px-3 py-2 text-center ">
                 <Image
                   key={attendeePreview.min}
                   src={attendeePreview.src}
@@ -1645,31 +1581,33 @@ function UsageStep({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
+                      iconOnly
+                      icon={faMinus}
+                      className="shrink-0"
                       aria-label={`${item.label} verringern`}
                       disabled={quantity <= 0}
                       onClick={() =>
                         setEquipmentQuantity(item.id, quantity - 1)
                       }
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-inset ring-border transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <FontAwesomeIcon icon={faMinus} className="h-3 w-3" />
-                    </button>
+                    />
                     <span className="w-8 text-center font-mono font-bold text-foreground">
                       {quantity}
                     </span>
-                    <button
-                      type="button"
+                    <Button
+                      kind="secondary"
+                      size="medium"
+                      iconOnly
+                      icon={faPlus}
+                      className="shrink-0"
                       aria-label={`${item.label} erhöhen`}
                       disabled={quantity >= item.maxQuantity}
                       onClick={() =>
                         setEquipmentQuantity(item.id, quantity + 1)
                       }
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-inset ring-border transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-                    </button>
+                    />
                   </div>
                 </div>
               );
@@ -1699,18 +1637,17 @@ function UsageStep({
             />
           </span>
         </summary>
-        <label className="mt-5 block">
-          <span className={labelClassName}>Was sollen wir noch wissen?</span>
-          <textarea
-            className={`${inputClassName} min-h-28 resize-y`}
-            value={form.specialRequirements ?? ""}
-            maxLength={4_000}
-            placeholder="z. B. Bestuhlung, Grill, Feuerschale, Getränkekühlung oder benötigte Einweisung"
-            onChange={(event) =>
-              setField("specialRequirements", event.target.value)
-            }
-          />
-        </label>
+        <Textarea
+          label="Was sollen wir noch wissen?"
+          className="mt-5 block"
+          textareaClassName="min-h-28 resize-y"
+          value={form.specialRequirements ?? ""}
+          maxLength={4_000}
+          placeholder="z. B. Bestuhlung, Grill, Feuerschale, Getränkekühlung oder benötigte Einweisung"
+          onChange={(event) =>
+            setField("specialRequirements", event.target.value)
+          }
+        />
       </details>
     </>
   );
@@ -1734,44 +1671,32 @@ function ContactStep({
           Wie können wir dich erreichen?
         </h2>
         <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <label>
-            <span className={labelClassName}>Vollständiger Name *</span>
-            <input
-              className={inputClassName}
-              autoComplete="name"
-              value={form.customerName}
-              onChange={(event) => setField("customerName", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>Organisation</span>
-            <input
-              className={inputClassName}
-              autoComplete="organization"
-              value={form.organization ?? ""}
-              onChange={(event) => setField("organization", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>E-Mail-Adresse *</span>
-            <input
-              className={inputClassName}
-              type="email"
-              autoComplete="email"
-              value={form.email}
-              onChange={(event) => setField("email", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className={labelClassName}>Telefonnummer</span>
-            <input
-              className={inputClassName}
-              type="tel"
-              autoComplete="tel"
-              value={form.phone ?? ""}
-              onChange={(event) => setField("phone", event.target.value)}
-            />
-          </label>
+          <Field
+            label="Vollständiger Name *"
+            autoComplete="name"
+            value={form.customerName}
+            onChange={(event) => setField("customerName", event.target.value)}
+          />
+          <Field
+            label="Organisation"
+            autoComplete="organization"
+            value={form.organization ?? ""}
+            onChange={(event) => setField("organization", event.target.value)}
+          />
+          <Field
+            label="E-Mail-Adresse *"
+            type="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={(event) => setField("email", event.target.value)}
+          />
+          <Field
+            label="Telefonnummer"
+            type="tel"
+            autoComplete="tel"
+            value={form.phone ?? ""}
+            onChange={(event) => setField("phone", event.target.value)}
+          />
         </div>
       </section>
 
@@ -1781,35 +1706,29 @@ function ContactStep({
           Wohin soll später die Rechnung?
         </p>
         <div className="mt-5 grid gap-5 md:grid-cols-6">
-          <label className="md:col-span-6">
-            <span className={labelClassName}>Straße und Hausnummer *</span>
-            <input
-              className={inputClassName}
-              autoComplete="street-address"
-              value={form.billingAddressLine}
-              onChange={(event) =>
-                setField("billingAddressLine", event.target.value)
-              }
-            />
-          </label>
-          <label className="md:col-span-2">
-            <span className={labelClassName}>Postleitzahl *</span>
-            <input
-              className={inputClassName}
-              autoComplete="postal-code"
-              value={form.billingZip}
-              onChange={(event) => setField("billingZip", event.target.value)}
-            />
-          </label>
-          <label className="md:col-span-4">
-            <span className={labelClassName}>Ort *</span>
-            <input
-              className={inputClassName}
-              autoComplete="address-level2"
-              value={form.billingCity}
-              onChange={(event) => setField("billingCity", event.target.value)}
-            />
-          </label>
+          <Field
+            label="Straße und Hausnummer *"
+            className="md:col-span-6"
+            autoComplete="street-address"
+            value={form.billingAddressLine}
+            onChange={(event) =>
+              setField("billingAddressLine", event.target.value)
+            }
+          />
+          <Field
+            label="Postleitzahl *"
+            className="md:col-span-2"
+            autoComplete="postal-code"
+            value={form.billingZip}
+            onChange={(event) => setField("billingZip", event.target.value)}
+          />
+          <Field
+            label="Ort *"
+            className="md:col-span-4"
+            autoComplete="address-level2"
+            value={form.billingCity}
+            onChange={(event) => setField("billingCity", event.target.value)}
+          />
         </div>
       </section>
 
@@ -1819,35 +1738,31 @@ function ContactStep({
           Kurz noch bestätigen
         </p>
         <div className="space-y-4">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-input accent-primary"
-              checked={form.acceptedHouseRules}
-              onChange={(event) =>
-                setField("acceptedHouseRules", event.target.checked)
-              }
-            />
-            <span className="text-sm leading-relaxed text-foreground">
-              Ich habe zur Kenntnis genommen, dass Leitbild sowie Haus- und
-              Raumordnung Voraussetzung für die Nutzung sind und die Räume
-              besenrein im ursprünglichen Zustand zurückgegeben werden müssen.
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-input accent-primary"
-              checked={form.acceptedPrivacy}
-              onChange={(event) =>
-                setField("acceptedPrivacy", event.target.checked)
-              }
-            />
-            <span className="text-sm leading-relaxed text-foreground">
-              Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung der
-              Raumanfrage, Vertragserstellung und Rechnungsstellung zu.
-            </span>
-          </label>
+          <Choice
+            label={
+              <>
+                Ich habe zur Kenntnis genommen, dass Leitbild sowie Haus- und
+                Raumordnung Voraussetzung für die Nutzung sind und die Räume
+                besenrein im ursprünglichen Zustand zurückgegeben werden müssen.
+              </>
+            }
+            checked={form.acceptedHouseRules}
+            onChange={(event) =>
+              setField("acceptedHouseRules", event.target.checked)
+            }
+          />
+          <Choice
+            label={
+              <>
+                Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung der
+                Raumanfrage, Vertragserstellung und Rechnungsstellung zu.
+              </>
+            }
+            checked={form.acceptedPrivacy}
+            onChange={(event) =>
+              setField("acceptedPrivacy", event.target.checked)
+            }
+          />
           <label className="absolute -left-[10000px]" aria-hidden="true">
             Website
             <input
@@ -1964,7 +1879,7 @@ function ReviewBlock({
   return (
     <div className="rounded-md bg-muted/25 p-4">
       <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-card text-primary shadow-sm">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-card text-primary ">
           <FontAwesomeIcon icon={icon} className="h-3 w-3" />
         </span>
         {title}

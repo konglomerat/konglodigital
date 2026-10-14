@@ -3,7 +3,8 @@ import type { NextRequest } from "next/server";
 
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 import { createOpenAIClient } from "@/lib/openai";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   createFallbackStoryDraft,
   loadStorySource,
@@ -80,7 +81,7 @@ const buildPrompt = ({
   firstName: string | null;
   name: string;
   description: string;
-  contentKind: "project" | "resource";
+  contentKind: "showcase" | "resource";
   resourceType: string | null;
   workshopName: string | null;
   tags: string[];
@@ -91,7 +92,7 @@ const buildPrompt = ({
   const tagLine = tags.length > 0 ? tags.join(", ") : "keine";
   const infoText = [
     `Titel: ${name}`,
-    `Typ: ${contentKind === "project" ? "Projekt" : "Ressource"}`,
+    `Typ: ${contentKind === "showcase" ? "Beitrag" : "Ressource"}`,
     `Ressourcentyp: ${resourceType?.trim() || "unbekannt"}`,
     `Werkstatt: ${workshopName || "keine Angabe"}`,
     `Tags: ${tagLine}`,
@@ -151,7 +152,7 @@ export const POST = async (request: NextRequest) => {
       return createUnauthorizedResponse();
     }
 
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "stories.manage")) {
       return createForbiddenResponse();
     }
 
@@ -173,7 +174,7 @@ export const POST = async (request: NextRequest) => {
 
     if (!itemId) {
       return NextResponse.json(
-        { error: "Waehle eine Ressource oder ein Projekt aus." },
+        { error: "Waehle eine Ressource oder einen Beitrag aus." },
         { status: 400 },
       );
     }

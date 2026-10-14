@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-import Button from "@/app/[lang]/components/Button";
+import Button from "@/components/knglmrt/Button";
 
 export type NewsletterImagePosition = {
   x: number;
