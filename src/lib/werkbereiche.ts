@@ -11,11 +11,14 @@ export type Werkbereich = {
   description: string;
   mark?: string;
   markExt?: "svg" | "png";
+  /** Ruht derzeit — auf der Übersicht unter „Inaktiv“ einsortiert. */
+  inaktiv?: boolean;
 };
 
 export type Vereinsprojekt = {
   slug: string;
   name: string;
+  inaktiv?: boolean;
 };
 
 export const WERKBEREICHE: Werkbereich[] = [
@@ -40,6 +43,7 @@ export const WERKBEREICHE: Werkbereich[] = [
     name: "Neuweltbib",
     description:
       "Bibliothek und Leseraum mit Nachschlagewerken, Zeitschriften und dem Archiv des Vereins.",
+    inaktiv: true,
   },
   {
     slug: "buchdruck",
@@ -48,6 +52,7 @@ export const WERKBEREICHE: Werkbereich[] = [
       "Bleisatz, Handsatz und Andruckpresse — Buchdruck im ursprünglichen Verfahren.",
     mark: "buchdruck",
     markExt: "svg",
+    inaktiv: true,
   },
   {
     slug: "holz",
@@ -150,7 +155,7 @@ export const findWerkbereich = (slug: string) =>
 
 export const VEREINSPROJEKTE: Vereinsprojekt[] = [
   { slug: "forum", name: "FOR:UM" },
-  { slug: "tools2go", name: "Tools2Go" },
+  { slug: "tools2go", name: "Tools2Go", inaktiv: true },
   { slug: "aenderei", name: "Änderei" },
   { slug: "vhc", name: "VHC" },
 ];
