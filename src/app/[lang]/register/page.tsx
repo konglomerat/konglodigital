@@ -38,7 +38,7 @@ export default function RegisterPage() {
         setError(tx(body.error ?? "Registrierung konnte nicht gestartet werden."));
         return;
       }
-      setSuccess(tx("Wenn zu dieser Mail ein aktives Mitgliedskonto existiert, wurde eine Nachricht versendet."));
+      setSuccess(tx("Wenn zu dieser Mail ein aktives Mitgliedskonto existiert, wurde eine Nachricht versendet. Falls nichts ankam war es entweder die falsche Adresse oder es ist im Spam gelandet."));
       form.reset();
     } catch {
       setError(tx("Verbindung fehlgeschlagen. Bitte versuche es erneut."));
@@ -51,10 +51,10 @@ export default function RegisterPage() {
     <div className="flex items-center justify-center py-6 md:py-12">
       <div className="knglmrt-border-section w-full max-w-md bg-card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold text-foreground">
-          {tx("Konto für Mitglieder aktivieren")}
+          {tx("Konto aktivieren")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {tx("Du bist bereits Mitglied? Gib die E-Mail-Adresse deiner Mitgliedschaft ein, um dein digitales Konto zu aktivieren.")}
+          {tx("Gib die E-Mail-Adresse mit der du beim Verein registriert bist, um dein Konto für Konglo Digital zu aktivieren. Du bekommst dann an diese Adresse eine Mail mit einem Aktivierungslink. Falls du nicht mehr weißt, welche Adresse das war, schreib bitte eine kurze Nachricht an den Vorstand.")}
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Field
@@ -64,7 +64,7 @@ export default function RegisterPage() {
             type="email"
             required
             autoComplete="email"
-            hint={tx("Den Aktivierungslink erhältst du nur für eine aktive Mitgliedschaft.")}
+            hint= "Falls du nicht mehr weißt, mit welcher Adresse du registriert bist, schreib bitte eine kurze Nachricht an den Vorstand."
           />
           {error ? (
             <p role="alert" className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
@@ -91,7 +91,7 @@ export default function RegisterPage() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {tx("Noch kein Mitglied?")} {" "}
-          <Link className="font-semibold text-primary underline" href={localizePathname("/mitglied-werden", locale)}>
+          <Link className="font-semibold text-primary underline" href={localizePathname("/registration", locale)}>
             {tx("Mitglied werden")}
           </Link>
         </p>
