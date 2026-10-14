@@ -71,6 +71,7 @@ export default async function TopNav({
               <Link
                 href={localizePathname("/account", locale)}
                 title={currentUserDisplayName ?? tx("Profil")}
+                data-tour="profil"
                 className="flex items-center gap-2.5 py-1 transition hover:text-primary"
               >
                 <span
@@ -89,6 +90,7 @@ export default async function TopNav({
                   kind="admin"
                   size="chip"
                   icon={<Face number={6} size={24} />}
+                  data-tour="verwaltung"
                 >
                   {tx("Verwaltung")}
                 </Button>

@@ -38,6 +38,11 @@ import {
 
 config.autoAddCss = false;
 
+// Release des neuen UI ohne Seitenmenü. Nur wer vorher registriert war, kennt
+// das alte Menü und bekommt die Tour zur neuen Navigation (NavTour) — einmal,
+// danach steht nav_tour_seen in user_metadata.
+const NAV_TOUR_REGISTERED_BEFORE = new Date("2026-10-15T00:00:00+02:00");
+
 const geistSans = Fira_Sans_Condensed({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -128,6 +133,11 @@ export default async function RootLayout({
   const adminAreaHref =
     getVerwaltungEntryHref(await getServerAccess()) ??
     (user && canPreviewAccess(await getServerRealAccess()) ? "/admin" : null);
+  const showNavTour = Boolean(
+    user &&
+      !user.user_metadata?.nav_tour_seen &&
+      new Date(user.created_at) < NAV_TOUR_REGISTERED_BEFORE,
+  );
   const navigation = await navigationPromise;
   const headerLinks = localizeNavigationItems(navigation.header ?? DEFAULT_HEADER_LINKS, locale);
   const footerLinks = localizeNavigationItems(navigation.footer ?? DEFAULT_FOOTER_LINKS, locale);
@@ -169,6 +179,7 @@ export default async function RootLayout({
                 adminAreaHref={adminAreaHref}
                 links={headerLinks}
                 inventoryHref={inventoryHref}
+                showNavTour={showNavTour}
               />
             }
             desktopNavigation={

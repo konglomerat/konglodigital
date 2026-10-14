@@ -481,3 +481,14 @@ input[type="search"]::-webkit-search-cancel-button {
 .dark .invert-in-dark {
   filter: invert(1);
 }
+
+/* Schrittwechsel der Navigations-Tour (NavTour): nur Überblenden, kein
+   Skalieren. */
+@keyframes nav-tour-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

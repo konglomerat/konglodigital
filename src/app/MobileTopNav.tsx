@@ -16,6 +16,8 @@ import { localizePathname, stripLocalePrefix } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
 import type { SiteNavItem } from "@/lib/payload-navigation";
 
+import NavTour from "./NavTour";
+
 import {
   getInitials,
   getTopNavSections,
@@ -30,6 +32,8 @@ type MobileTopNavProps = {
   adminAreaHref: string | null;
   links: SiteNavItem[];
   inventoryHref: string;
+  /** Ob dieser Nutzer die Tour zur neuen Navigation (noch) sehen soll. */
+  showNavTour: boolean;
 };
 
 export default function MobileTopNav({
@@ -38,6 +42,7 @@ export default function MobileTopNav({
   adminAreaHref,
   links,
   inventoryHref,
+  showNavTour,
 }: MobileTopNavProps) {
   const { locale, tx } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -80,6 +85,7 @@ export default function MobileTopNav({
           type="button"
           aria-expanded={isOpen}
           aria-controls="hauptnavigation-mobil"
+          data-tour="menu"
           aria-label={isOpen ? tx("Menü schließen") : tx("Menü öffnen")}
           onClick={() => setIsOpen((open) => !open)}
           className="flex items-center gap-2.5 knglmrt-border-l pl-4 text-[length:var(--ui-size-body)] font-bold text-foreground transition hover:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ring)]"
@@ -152,6 +158,7 @@ export default function MobileTopNav({
                   <Link
                     href={localizePathname("/account", locale)}
                     onClick={close}
+                    data-tour="profil"
                     className="flex items-center gap-2.5 py-1 transition hover:text-primary"
                   >
                     <span
@@ -171,6 +178,7 @@ export default function MobileTopNav({
                       fullWidth
                       icon={<Face number={6} size={24} />}
                       onClick={close}
+                      data-tour="verwaltung"
                     >
                       {tx("Verwaltung")}
                     </Button>
@@ -199,6 +207,16 @@ export default function MobileTopNav({
             </div>
           </div>
         </>
+      ) : null}
+
+      {/* Die Tour lebt hier, weil sie mobil das Menü auf- und zuklappt; am
+      Desktop zeigt sie auf die Ziele in TopNav. */}
+      {showNavTour ? (
+        <NavTour
+          hasAdminAccess={Boolean(adminAreaHref)}
+          menuOpen={isOpen}
+          onMenuOpenChange={setIsOpen}
+        />
       ) : null}
     </header>
   );
