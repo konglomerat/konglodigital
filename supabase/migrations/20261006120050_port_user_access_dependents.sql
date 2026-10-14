@@ -10,6 +10,18 @@ from public.user_access
 where roles @> array['backend']::text[]
 on conflict do nothing;
 
+-- Die vorbereitete Rolle „cms“ entfällt zugunsten von „backend“, das nur
+-- global vergeben wird. Globale CMS-Zuweisungen werden zu Backend,
+-- bereichsgebundene hatten keine Wirkung und fallen weg.
+insert into public.role_assignments (user_id, role, scope_id, can_grant, granted_by)
+select user_id, 'backend', null, false, granted_by
+from public.role_assignments
+where role = 'cms' and scope_id is null
+on conflict do nothing;
+
+delete from public.role_assignments
+where role = 'cms';
+
 -- Newsletter-Entwürfe: newsletter.manage prüft die App, die RLS erlaubt
 -- jedem nur die eigenen Entwürfe.
 drop policy if exists "Admins can read own newsletter drafts"

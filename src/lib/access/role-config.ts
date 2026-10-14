@@ -25,8 +25,6 @@ export const PERMISSIONS = [
   "receipts.view",
   /** Belege, Rechnungen, Erstattungen und Eigenbelege anlegen und ändern. */
   "receipts.edit",
-  /** Inhalte eines Werkbereichs oder Projekts pflegen (vorbereitet). */
-  "content.edit",
   /** Raumbuchungen im Volkshaus bearbeiten — Geltungsbereich `vhc`. */
   "volkshaus.bookings.manage",
   /** Alle Inventar-Einträge bearbeiten (eigene darf jedes Mitglied). */
@@ -83,12 +81,6 @@ export const ROLE_CONFIG = {
     scoping: "global_or_scope",
     permissions: ["receipts.view", "receipts.edit", "kofi.view"],
   },
-  cms: {
-    label: "CMS",
-    description: "Inhalte von Werkbereichen und Projekten pflegen.",
-    scoping: "global_or_scope",
-    permissions: ["content.edit"],
-  },
   tools: {
     label: "Tools",
     description: "Die Werkzeuge eines Bereichs, z. B. die Raumbuchung im VHC.",
@@ -110,7 +102,8 @@ export const ROLE_CONFIG = {
   },
   backend: {
     label: "Backend",
-    description: "Anmeldung im Payload-Backend (CMS) über OAuth.",
+    description:
+      "Anmeldung im Payload-Backend (CMS) über OAuth, um Seiten und Inhalte zu pflegen.",
     scoping: "global",
     permissions: ["backend.login"],
   },

@@ -69,6 +69,6 @@ describe("Verwaltungsmenü", () => {
   });
 
   it("zeigt Admin ohne Rolle Admin nicht", () => {
-    expect(visibleIds(accessWith(["cms", "holz"]))).toEqual([]);
+    expect(visibleIds(accessWith(["tools", "holz"]))).toEqual([]);
   });
 });

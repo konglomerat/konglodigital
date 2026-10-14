@@ -82,9 +82,11 @@ describe("can", () => {
   });
 
   it("ignoriert Zuweisungen anderer Rollen im selben Bereich", () => {
-    const access = accessWith(assignment("cms", "holz"));
+    const access = accessWith(assignment("tools", "holz"));
     expect(can(access, "receipts.view", { scope: "holz" })).toBe(false);
-    expect(can(access, "content.edit", { scope: "holz" })).toBe(true);
+    expect(
+      can(access, "volkshaus.bookings.manage", { scope: "holz" }),
+    ).toBe(true);
   });
 });
 
@@ -101,10 +103,12 @@ describe("allowedScopes", () => {
     const access = accessWith(
       assignment("buchhaltung", "riso"),
       assignment("buchhaltung", "holz"),
-      assignment("cms", "laser"),
+      assignment("tools", "laser"),
     );
     expect(allowedScopes(access, "receipts.view")).toEqual(["holz", "riso"]);
-    expect(allowedScopes(access, "content.edit")).toEqual(["laser"]);
+    expect(allowedScopes(access, "volkshaus.bookings.manage")).toEqual([
+      "laser",
+    ]);
   });
 
   it("liefert eine leere Liste ohne passende Zuweisung", () => {
@@ -118,7 +122,7 @@ describe("allowedScopes", () => {
     expect(
       canAnywhere(accessWith(assignment("buchhaltung", "holz")), "receipts.view"),
     ).toBe(true);
-    expect(canAnywhere(accessWith(assignment("cms")), "receipts.view")).toBe(
+    expect(canAnywhere(accessWith(assignment("backend")), "receipts.view")).toBe(
       false,
     );
   });
