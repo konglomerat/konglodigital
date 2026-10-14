@@ -87,7 +87,7 @@ export default function NewBookingMenu() {
     <div className="relative shrink-0" ref={containerRef}>
       <Button
         kind="emphasis"
-        size="large"
+        size="medium"
         className="whitespace-nowrap"
         icon={faPlus}
         aria-haspopup="menu"

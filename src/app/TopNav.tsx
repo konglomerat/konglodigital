@@ -87,6 +87,7 @@ export default async function TopNav({
                 <Button
                   href={localizePathname(adminAreaHref, locale)}
                   kind="admin"
+                  size="chip"
                   icon={<Face number={6} size={24} />}
                 >
                   {tx("Verwaltung")}

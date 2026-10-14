@@ -1,6 +1,5 @@
-// Die Buchhaltung hat keine eigene Übersicht mehr: jeder Werkbereich ist eine
-// Unterseite. Hier geht es weiter zum zuletzt geöffneten, sonst zum ersten —
-// jeweils nur unter denen, die der Nutzer sehen darf.
+// Startseite der Buchhaltung: je Werkbereich, den der Nutzer sehen darf, eine
+// Kachel auf seine Belegseite. Bei nur einem geht es direkt dorthin.
 import { redirect } from "next/navigation";
 
 import Notice from "@/components/knglmrt/Notice";
@@ -10,26 +9,14 @@ import { loadAllowedCostCenters } from "@/lib/access/server";
 import {
   type BuchhaltungWerkbereich,
   filterAllowedWerkbereiche,
-  findBuchhaltungWerkbereich,
   getWerkbereichHref,
 } from "@/lib/buchhaltung-werkbereiche";
 import { getBuchhaltungWerkbereiche } from "@/lib/buchhaltung-werkbereiche-server";
-import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { getServerAccess, getServerSession } from "@/lib/server-session";
 
+import RessortPage from "../admin/RessortPage";
+
 export const dynamic = "force-dynamic";
-
-const getLastWerkbereichValue = async (): Promise<string | null> => {
-  const { supabase, user } = await getServerSession();
-  if (!user) {
-    return null;
-  }
-
-  const profile = await getMemberProfileByUserId(supabase, user.id).catch(
-    () => null,
-  );
-  return profile?.preferences?.balance?.costCenter2?.[0] ?? null;
-};
 
 export default async function ReceiptsPage() {
   let werkbereiche: BuchhaltungWerkbereich[] = [];
@@ -49,22 +36,28 @@ export default async function ReceiptsPage() {
         : "Werkbereiche konnten nicht geladen werden.";
   }
 
-  const lastValue = werkbereiche.length > 0 ? await getLastWerkbereichValue() : null;
-  const target =
-    (lastValue ? findBuchhaltungWerkbereich(werkbereiche, lastValue) : null) ??
-    werkbereiche[0];
-
-  if (target) {
-    redirect(localizePathname(getWerkbereichHref(target), await getRequestLocale()));
+  if (werkbereiche.length === 1) {
+    redirect(
+      localizePathname(getWerkbereichHref(werkbereiche[0]), await getRequestLocale()),
+    );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2>Buchhaltung</h2>
-      <Notice tone="rosa">
-        {loadError ??
-          "Für dich ist in Campai kein Werkbereich freigegeben oder angelegt."}
-      </Notice>
-    </div>
+    <RessortPage
+      title="Buchhaltung"
+      subTitle="Belege und Salden je Werkbereich."
+      wrapLinks
+      links={werkbereiche.map((werkbereich) => ({
+        href: getWerkbereichHref(werkbereich),
+        label: werkbereich.label,
+      }))}
+    >
+      {werkbereiche.length === 0 ? (
+        <Notice tone="rosa">
+          {loadError ??
+            "Für dich ist in Campai kein Werkbereich freigegeben oder angelegt."}
+        </Notice>
+      ) : null}
+    </RessortPage>
   );
 }
