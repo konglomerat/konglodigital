@@ -23,12 +23,11 @@ import PayloadPageContent, {
 } from "../components/PayloadPageContent";
 import VereinCalendar, { VereinCalendarSkeleton } from "./VereinCalendar";
 
-// TODO: Sobald die Dokumente als PDF liegen (public/ oder CMS), hier die
-// Direktlinks eintragen — bis dahin führt jede Zeile auf die Vereinsseite.
-const WICHTIGE_LINKS = [
-  { label: "Vereinssatzung", href: "https://konglomerat.org" },
-  { label: "Beitragsordnung", href: "https://konglomerat.org" },
-  { label: "Merkblatt Datenschutz", href: "https://konglomerat.org" },
+// Die PDFs liegen unter public/dokumente/ und öffnen in einem neuen Tab.
+const WICHTIGE_DOKUMENTE = [
+  { label: "Vereinssatzung", href: "/dokumente/satzung.pdf" },
+  { label: "Beitragsordnung", href: "/dokumente/beitragsordnung.pdf" },
+  { label: "Geschäftsordnung", href: "/dokumente/geschaeftsordnung.pdf" },
 ];
 
 // Die Logodateien liegen unter public/branding/foerderer/ — siehe das
@@ -138,9 +137,9 @@ async function StaticVereinPage() {
           </p>
 
           <div>
-            <h3 className={captionClassName}>Wichtige Links</h3>
+            <h3 className={captionClassName}>Wichtige Dokumente</h3>
             <div className="flex flex-wrap gap-3">
-              {WICHTIGE_LINKS.map((link) => (
+              {WICHTIGE_DOKUMENTE.map((link) => (
                 <Button
                   key={link.label}
                   href={link.href}

@@ -142,7 +142,8 @@ function isExternalHref(href: string) {
     /^[a-z][a-z0-9+.-]*:/i.test(href) ||
     href.startsWith("//") ||
     href.startsWith("/api/") ||
-    href.startsWith("#")
+    href.startsWith("#") ||
+    /\.[a-z0-9]+$/i.test(href)
   );
 }
 
