@@ -69,7 +69,15 @@ function elements(node) {
   if (!node || typeof node !== "object") return [];
   return [node, ...elements(node.props?.children)];
 }
-function home(page) {
+const stripEnglish = (pathname) => ({ pathname: pathname.replace(/^\/en(?=\/|$)/, "") || "/" });
+const topNavSections = () => {
+  const config = { stripLocalePrefix: stripEnglish };
+  return compile("src/app/topNavSections.ts", {
+    "@/i18n/config": config,
+    "@/lib/coming-soon": compile("src/lib/coming-soon.ts", { "@/i18n/config": config }),
+  });
+};
+function home(page, user = { id: "member" }) {
   return compile("src/app/page.tsx", {
     "next/image": { default: "image" },
     "@fortawesome/free-solid-svg-icons": { faArrowRight: {} },
@@ -83,6 +91,7 @@ function home(page) {
     "./hero-hello.jpg": { default: "hero.jpg" },
     "@/i18n/config": { localizePathname: localize },
     "@/i18n/server": i18n,
+    "@/lib/server-session": { getServerSession: async () => ({ user }) },
     "@/lib/payload-cms": {
       loadPayloadPage: async () => page,
       payloadPageHasAppSlot: (value, slot) => value.slots.includes(slot),
@@ -104,6 +113,14 @@ test("home fallback combines Vincent's four membership steps with localized link
   assert.ok(links.includes("/en/werkbereiche"));
 });
 
+test("home fallback hides the work-in-progress Werkbereiche when logged out", async () => {
+  const fallback = await home(null, null).default();
+  const nodes = elements(await fallback.type());
+  const links = nodes.filter(({ type }) => type === "button").map(({ props }) => props.href);
+  assert.ok(!links.some((href) => href.includes("/werkbereiche")));
+  assert.ok(links.includes("/en/verein"));
+});
+
 test("published CMS home keeps live feeds without duplicating CMS app slots", async () => {
   const page = { slots: ["news"] };
   const nodes = elements(await home(page).default());
@@ -121,9 +138,7 @@ test("CMS navigation keeps Vincent's admin button and avoids duplicate inventory
     "next/image": { default: "image" }, "next/link": { default: "link" },
     "@/components/knglmrt/Face": { default: "face" },
     "./TopNavLink": { default: "nav-link" },
-    "./topNavSections": compile("src/app/topNavSections.ts", {
-      "@/i18n/config": { stripLocalePrefix: (pathname) => ({ pathname }) },
-    }),
+    "./topNavSections": topNavSections(),
     "@/components/knglmrt/Button": { default: "button" },
   });
   const nodes = elements(await TopNav({
@@ -136,4 +151,17 @@ test("CMS navigation keeps Vincent's admin button and avoids duplicate inventory
   const links = nodes.filter(({ type }) => type === "nav-link");
   assert.equal(links.filter(({ props }) => props.href === "/en/resources").length, 1);
   assert.ok(links.some(({ props }) => props.href === "/en/custom"));
+});
+
+test("Werkbereiche stay hidden when logged out and are marked Coming Soon after login", () => {
+  const { getTopNavSections } = topNavSections();
+  const links = [
+    { href: "/en/verein", label: "Verein" },
+    { href: "/en/werkbereiche", label: "Werkbereiche" },
+  ];
+  const loggedOut = getTopNavSections(links, false, "/en/resources");
+  assert.deepEqual(Array.from(loggedOut, ({ href }) => href), ["/en/verein"]);
+  const loggedIn = getTopNavSections(links, true, "/en/resources");
+  assert.equal(loggedIn.find(({ href }) => href === "/en/werkbereiche").comingSoon, true);
+  assert.equal(loggedIn.find(({ href }) => href === "/en/verein").comingSoon, undefined);
 });

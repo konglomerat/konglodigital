@@ -1,18 +1,24 @@
 // Hauptpunkte der Topnav, gemeinsam für Desktop und Telefon, damit beide
 // dieselbe Struktur zeigen.
 import { stripLocalePrefix } from "@/i18n/config";
+import { isComingSoonHref } from "@/lib/coming-soon";
 import type { SiteNavItem } from "@/lib/payload-navigation";
 
-export type TopNavSection = SiteNavItem;
+export type TopNavSection = SiteNavItem & { comingSoon?: boolean };
 
 // Die Links kommen aus der Payload-Navigation. Login-pflichtige Bereiche
-// erscheinen ausgeloggt gar nicht.
+// erscheinen ausgeloggt gar nicht — auch die, die noch in Arbeit sind und
+// angemeldet „Coming Soon“ tragen.
 export const getTopNavSections = (
   links: SiteNavItem[],
   isAuthenticated: boolean,
   inventoryHref: string,
 ): TopNavSection[] => [
-  ...links,
+  ...links.flatMap((link) => {
+    const comingSoon = isComingSoonHref(link.href);
+    if (comingSoon && !isAuthenticated) return [];
+    return [comingSoon ? { ...link, comingSoon } : link];
+  }),
   ...(isAuthenticated && !links.some((link) => link.href === inventoryHref)
     ? [{ href: inventoryHref, label: "Inventar" }]
     : []),

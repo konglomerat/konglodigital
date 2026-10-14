@@ -12,6 +12,7 @@ import Badge from "@/components/knglmrt/Badge";
 import Button from "@/components/knglmrt/Button";
 import { cn } from "@/components/knglmrt/FieldShell";
 import Face from "@/components/knglmrt/Face";
+import { getServerSession } from "@/lib/server-session";
 import { findWerkbereich } from "@/lib/werkbereiche";
 import PageTitle from "../components/PageTitle";
 import WerkbereichMark from "../components/WerkbereichMark";
@@ -195,7 +196,9 @@ function PriceCell({
   );
 }
 
-export default function TarifePage() {
+export default async function TarifePage() {
+  // Werkbereiche sind noch in Arbeit und nur angemeldet erreichbar.
+  const { user } = await getServerSession();
   const areas = AREA_SLUGS.map(findWerkbereich).filter(
     (area) => area !== undefined,
   );
@@ -359,12 +362,14 @@ export default function TarifePage() {
             bestimmte Maschinen eine Einweisung und/oder zahlst zusätzliche
             Gebühren.
           </p>
-          <Link
-            href="/werkbereiche"
-            className="text-xs text-primary underline hover:text-knglmrt-brown-100"
-          >
-            Einweisungen und Gebühren je Werkbereich
-          </Link>
+          {user ? (
+            <Link
+              href="/werkbereiche"
+              className="text-xs text-primary underline hover:text-knglmrt-brown-100"
+            >
+              Einweisungen und Gebühren je Werkbereich
+            </Link>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           {areas.map((area) => (

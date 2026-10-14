@@ -57,6 +57,7 @@ export default async function TopNav({
                 href={section.href}
                 label={tx(section.label)}
                 newTab={section.newTab}
+                comingSoon={section.comingSoon}
               />
             ))}
           </nav>

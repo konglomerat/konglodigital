@@ -8,6 +8,7 @@ import {
   localizePathname,
   stripLocalePrefix,
 } from "@/i18n/config";
+import { COMING_SOON_PREFIXES } from "@/lib/coming-soon";
 import { resilientSupabaseFetch } from "@/lib/supabase/fetch";
 
 const protectedPagePrefixes = [
@@ -22,6 +23,8 @@ const protectedPagePrefixes = [
   "/budget",
   "/balance",
   "/receipts",
+  // Noch in Arbeit, vorerst nur angemeldet.
+  ...COMING_SOON_PREFIXES,
 ];
 
 const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;

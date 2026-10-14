@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 
+import Badge from "@/components/knglmrt/Badge";
 import Button from "@/components/knglmrt/Button";
 import Divider from "@/components/knglmrt/Divider";
 import Face from "@/components/knglmrt/Face";
@@ -117,7 +118,7 @@ export default function MobileTopNav({
                     rel={section.newTab ? "noopener noreferrer" : undefined}
                     onClick={close}
                     aria-current={isActive ? "page" : undefined}
-                    className="px-4 py-3 font-display text-[21px] text-foreground transition hover:text-primary"
+                    className="flex items-center gap-2 px-4 py-3 font-display text-[21px] text-foreground transition hover:text-primary"
                   >
                     <span className="relative inline-block w-max">
                       <span
@@ -137,6 +138,9 @@ export default function MobileTopNav({
                         </span>
                       ) : null}
                     </span>
+                    {section.comingSoon ? (
+                      <Badge tone="neu">Coming Soon</Badge>
+                    ) : null}
                   </Element>
                 );
               })}

@@ -11,6 +11,7 @@ import TerrazzoParallax from "./TerrazzoParallax";
 import heroHelloImage from "./hero-hello.jpg";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
+import { getServerSession } from "@/lib/server-session";
 import {
   loadPayloadPage,
   payloadPageHasAppSlot,
@@ -46,6 +47,8 @@ function HomeFeeds({ page }: { page?: PayloadPage }) {
 
 async function StaticHome() {
   const { tx, locale } = await getServerI18n();
+  // Werkbereiche sind noch in Arbeit und nur angemeldet erreichbar.
+  const { user } = await getServerSession();
   return (
     <>
       <TerrazzoParallax />
@@ -65,10 +68,16 @@ async function StaticHome() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <Button href={localizePathname("/werkbereiche", locale)} kind="primary" size="large">
-                  {tx("Werkbereiche ansehen", "de")}
-                </Button>
-                <Button href={localizePathname("/verein", locale)} kind="secondary" size="large">
+                {user ? (
+                  <Button href={localizePathname("/werkbereiche", locale)} kind="primary" size="large">
+                    {tx("Werkbereiche ansehen", "de")}
+                  </Button>
+                ) : null}
+                <Button
+                  href={localizePathname("/verein", locale)}
+                  kind={user ? "secondary" : "primary"}
+                  size="large"
+                >
                   {tx("Über uns", "de")}
                 </Button>
               </div>
