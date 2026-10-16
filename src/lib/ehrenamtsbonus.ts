@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { BadgeTone } from "@/components/knglmrt/Badge";
 import { isMissingRelationError } from "@/lib/supabase-errors";
-import { WERKBEREICHE } from "@/lib/werkbereiche";
+import { VEREINSPROJEKTE, WERKBEREICHE } from "@/lib/werkbereiche";
 
 export const EHRENAMTSBONUS_TABLE = "ehrenamtsbonus_requests";
 
@@ -466,20 +466,52 @@ const readOptionalText = (value: unknown) => {
 
 const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-const WERKBEREICH_SLUGS = new Set(WERKBEREICHE.map((entry) => entry.slug));
+// ---------------------------------------------------------------------------
+// Bereiche, in denen jemand aktiv war
+// ---------------------------------------------------------------------------
 
-/** Werkbereiche einer Zeile: nur bekannte Slugs, ohne Dubletten. */
+/**
+ * Wählbar sind Werkbereiche und Vereinsprojekte; was in keine Schublade
+ * passt, steht als „Sonstige“ mit Freitext in derselben Liste — als Eintrag
+ * `sonstige:<Text>`, damit die Spalte `werkbereiche` ein text[] bleibt.
+ */
+export const EHRENAMT_BEREICHE: { slug: string; name: string }[] = [
+  ...WERKBEREICHE.map(({ slug, name }) => ({ slug, name })),
+  ...VEREINSPROJEKTE.map(({ slug, name }) => ({ slug, name })),
+];
+
+export const SONSTIGE_PREFIX = "sonstige:";
+export const SONSTIGE_MAX_LENGTH = 120;
+
+const BEREICH_SLUGS = new Set(EHRENAMT_BEREICHE.map((entry) => entry.slug));
+
+export const isSonstigeEntry = (entry: string) =>
+  entry.startsWith(SONSTIGE_PREFIX);
+
+export const toSonstigeEntry = (text: string) =>
+  `${SONSTIGE_PREFIX}${text.trim()}`;
+
+export const bereichLabel = (entry: string) =>
+  isSonstigeEntry(entry)
+    ? `Sonstige: ${entry.slice(SONSTIGE_PREFIX.length)}`
+    : (EHRENAMT_BEREICHE.find((bereich) => bereich.slug === entry)?.name ??
+      entry);
+
+const readBereichEntry = (value: unknown) => {
+  const text = readText(value);
+  if (isSonstigeEntry(text)) {
+    const detail = text.slice(SONSTIGE_PREFIX.length).trim();
+    return detail ? toSonstigeEntry(detail.slice(0, SONSTIGE_MAX_LENGTH)) : "";
+  }
+  return BEREICH_SLUGS.has(text) ? text : "";
+};
+
+/** Bereiche einer Zeile: nur bekannte Slugs oder Sonstige, ohne Dubletten. */
 const readSlugList = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return [];
   }
-  return Array.from(
-    new Set(
-      value
-        .map((entry) => readText(entry))
-        .filter((slug) => WERKBEREICH_SLUGS.has(slug)),
-    ),
-  );
+  return Array.from(new Set(value.map(readBereichEntry).filter(Boolean)));
 };
 
 const parseFromList = <T extends string>(
@@ -557,7 +589,7 @@ export const parseEhrenamtsbonusInput = (
 
   const werkbereiche = readSlugList(body.werkbereiche);
   if (werkbereiche.length === 0) {
-    fail("Bitte mindestens einen Werkbereich wählen, in dem du aktiv warst.");
+    fail("Bitte mindestens einen Bereich wählen, in dem du aktiv warst.");
   }
 
   const validFrom = readText(body.validFrom);

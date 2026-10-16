@@ -21,6 +21,7 @@ import {
   BONUS_OPTION_LABELS,
   EHRENAMTSBONUS_STATUS_LABELS,
   EHRENAMTSBONUS_STATUS_TONES,
+  bereichLabel,
   formatEuro,
   isOpenStatus,
   quarterLabelForDate,
@@ -28,7 +29,6 @@ import {
   type EhrenamtsbonusAdminAction,
   type EhrenamtsbonusAdminRequest,
 } from "@/lib/ehrenamtsbonus";
-import { findWerkbereich } from "@/lib/werkbereiche";
 
 const FILTERS = [
   { value: "open", label: "Offen" },
@@ -47,10 +47,8 @@ const formatDate = (value: string | null) => {
   return parsed.toLocaleDateString("de-DE");
 };
 
-const werkbereichLabel = (slug: string) => findWerkbereich(slug)?.name ?? slug;
-
 const werkbereicheLabel = (slugs: readonly string[]) =>
-  slugs.length === 0 ? "—" : slugs.map(werkbereichLabel).join(", ");
+  slugs.length === 0 ? "—" : slugs.map(bereichLabel).join(", ");
 
 const applicantLabel = (request: EhrenamtsbonusAdminRequest) =>
   request.applicantName ?? `Mitglied ${request.userId.slice(0, 8)}`;
@@ -452,7 +450,9 @@ export default function VorstandEhrenamtsbonusClient() {
                               void decide(entry, "cancel");
                             }}
                           >
-                            {busy ? "Wird gespeichert …" : "Stornierung absenden"}
+                            {busy
+                              ? "Wird gespeichert …"
+                              : "Stornierung absenden"}
                           </Button>
                           <Button
                             type="button"

@@ -13,6 +13,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import Badge from "@/components/knglmrt/Badge";
 import Button from "@/components/knglmrt/Button";
 import Choice, { ChoiceGroup } from "@/components/knglmrt/Choice";
+import Field from "@/components/knglmrt/Field";
 import FieldShell from "@/components/knglmrt/FieldShell";
 import FormSection from "@/components/knglmrt/FormSection";
 import Notice from "@/components/knglmrt/Notice";
@@ -23,8 +24,11 @@ import {
   BONUS_OPTIONS,
   BONUS_OPTION_HINTS,
   BONUS_OPTION_LABELS,
+  EHRENAMT_BEREICHE,
   EHRENAMTSBONUS_STATUS_LABELS,
   EHRENAMTSBONUS_STATUS_TONES,
+  SONSTIGE_MAX_LENGTH,
+  bereichLabel,
   blockedMessage,
   findBlockingRequest,
   nextQuarterStart,
@@ -32,11 +36,11 @@ import {
   quarterLabelForDate,
   resolveDisplayStatus,
   resolveOutcome,
+  toSonstigeEntry,
   type BonusOption,
   type EhrenamtsbonusRequest,
 } from "@/lib/ehrenamtsbonus";
 import type { EhrenamtsbonusContext } from "@/lib/ehrenamtsbonus-context";
-import { WERKBEREICHE, findWerkbereich } from "@/lib/werkbereiche";
 
 const panelClassName = "knglmrt-border bg-card p-[18px]";
 
@@ -47,14 +51,19 @@ const formatDate = (value: string) => {
   return parsed.toLocaleDateString("de-DE");
 };
 
-const werkbereichLabel = (slug: string) => findWerkbereich(slug)?.name ?? slug;
-
 type WerkbereichOption = { value: string; label: string };
 
-const WERKBEREICH_OPTIONS: WerkbereichOption[] = WERKBEREICHE.map((entry) => ({
-  value: entry.slug,
-  label: entry.name,
-}));
+// „Sonstige“ ist nur ein Schalter im Auswahlfeld — der eigentliche Eintrag
+// entsteht beim Absenden aus dem Freitext darunter.
+const SONSTIGE_OPTION_VALUE = "sonstige";
+
+const WERKBEREICH_OPTIONS: WerkbereichOption[] = [
+  ...EHRENAMT_BEREICHE.map((entry) => ({
+    value: entry.slug,
+    label: entry.name,
+  })),
+  { value: SONSTIGE_OPTION_VALUE, label: "Sonstige" },
+];
 
 type EhrenamtsbonusClientProps = {
   context: EhrenamtsbonusContext;
@@ -73,11 +82,13 @@ export default function EhrenamtsbonusClient({
     useState<EhrenamtsbonusRequest[]>(initialRequests);
   const [option, setOption] = useState<BonusOption>("tage_10");
   const [werkbereiche, setWerkbereiche] = useState<string[]>([]);
+  const [sonstige, setSonstige] = useState("");
   const [reason, setReason] = useState("");
 
   const [werkbereicheError, setWerkbereicheError] = useState<string | null>(
     null,
   );
+  const [sonstigeError, setSonstigeError] = useState<string | null>(null);
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formStatus, setFormStatus] = useState<string | null>(null);
@@ -102,7 +113,7 @@ export default function EhrenamtsbonusClient({
     () =>
       werkbereiche.map((slug) => ({
         value: slug,
-        label: werkbereichLabel(slug),
+        label: slug === SONSTIGE_OPTION_VALUE ? "Sonstige" : bereichLabel(slug),
       })),
     [werkbereiche],
   );
@@ -112,13 +123,21 @@ export default function EhrenamtsbonusClient({
     if (selected.length > 0) {
       setWerkbereicheError(null);
     }
+    if (!selected.some((option) => option.value === SONSTIGE_OPTION_VALUE)) {
+      setSonstige("");
+      setSonstigeError(null);
+    }
   };
+
+  const sonstigeSelected = werkbereiche.includes(SONSTIGE_OPTION_VALUE);
 
   const resetForm = () => {
     setOption("tage_10");
     setWerkbereiche([]);
+    setSonstige("");
     setReason("");
     setWerkbereicheError(null);
+    setSonstigeError(null);
     setReasonError(null);
     setFormError(null);
     setFormStatus(null);
@@ -130,7 +149,11 @@ export default function EhrenamtsbonusClient({
     setFormStatus(null);
 
     if (werkbereiche.length === 0) {
-      setWerkbereicheError("Bitte mindestens einen Werkbereich wählen.");
+      setWerkbereicheError("Bitte mindestens einen Bereich wählen.");
+      return;
+    }
+    if (sonstigeSelected && !sonstige.trim()) {
+      setSonstigeError("Bitte angeben, wo du sonst aktiv warst.");
       return;
     }
     if (reason.trim().length < 20) {
@@ -148,7 +171,9 @@ export default function EhrenamtsbonusClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestedOption: option,
-          werkbereiche,
+          werkbereiche: werkbereiche.map((slug) =>
+            slug === SONSTIGE_OPTION_VALUE ? toSonstigeEntry(sonstige) : slug,
+          ),
           validFrom,
           reason,
         }),
@@ -250,7 +275,7 @@ export default function EhrenamtsbonusClient({
                   options={WERKBEREICH_OPTIONS}
                   value={selectedWerkbereichOptions}
                   onChange={handleWerkbereicheChange}
-                  placeholder="Werkbereiche wählen …"
+                  placeholder="Bereiche oder Projekte wählen …"
                   noOptionsMessage={() => "Alle Bereiche gewählt"}
                   classNamePrefix="eab-werkbereiche-select"
                   styles={
@@ -265,6 +290,24 @@ export default function EhrenamtsbonusClient({
                   }
                 />
               </FieldShell>
+
+              {sonstigeSelected ? (
+                <Field
+                  id="eab-sonstige"
+                  label="Sonstige: wo genau?"
+                  required
+                  maxLength={SONSTIGE_MAX_LENGTH}
+                  value={sonstige}
+                  error={sonstigeError ?? undefined}
+                  onChange={(event) => {
+                    setSonstige(event.target.value);
+                    if (sonstigeError && event.target.value.trim()) {
+                      setSonstigeError(null);
+                    }
+                  }}
+                  placeholder="z. B. Hoffest, Website, Putzaktion"
+                />
+              ) : null}
 
               {/* Nichts zu wählen: beantragt wird immer das kommende Quartal,
                 deshalb steht der Zeitraum hier nur noch da. */}
