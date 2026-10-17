@@ -32,7 +32,7 @@ import PageTitle from "@/app/[lang]/components/PageTitle";
 import {
   type BuchhaltungWerkbereich,
   belongsToWerkbereich,
-  isUnterprojektOf,
+  getWerkbereichCostCenterCandidates,
 } from "@/lib/buchhaltung-werkbereiche";
 import type {
   CampaiBalanceReceipt,
@@ -606,7 +606,6 @@ export default function WerkbereichReceipts({
   const [costCenter1Labels, setCostCenter1Labels] = useState<
     CostCenterOption[]
   >([]);
-  const [costCentersReady, setCostCentersReady] = useState(false);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
@@ -662,8 +661,6 @@ export default function WerkbereichReceipts({
           ? error.message
           : "Kostenstellen konnten nicht geladen werden.",
       );
-    } finally {
-      setCostCentersReady(true);
     }
   }, []);
 
@@ -775,19 +772,13 @@ export default function WerkbereichReceipts({
       .filter((column): column is TableColumn => Boolean(column));
   }, [columnOrder, hiddenColumnKeys]);
 
-  // Der Werkbereich selbst und alle Unterprojekte mit seinen beiden Ziffern.
-  const werkbereichCostCenterValues = useMemo(() => {
-    const values = new Set([werkbereich.value]);
-
-    for (const option of allCostCenters) {
-      const value = option.value.trim();
-      if (isUnterprojektOf(value, werkbereich.value)) {
-        values.add(value);
-      }
-    }
-
-    return Array.from(values);
-  }, [allCostCenters, werkbereich.value]);
+  // Der Werkbereich selbst und alle Unterprojekte mit seinen beiden Ziffern —
+  // aus dem Muster statt aus der Kostenstellenliste, damit die Belege nicht
+  // erst auf deren Abruf warten.
+  const werkbereichCostCenterValues = useMemo(
+    () => getWerkbereichCostCenterCandidates(werkbereich.value),
+    [werkbereich.value],
+  );
 
   const loadReceipts = useCallback(async (values: string[]) => {
     setLoadingReceipts(true);
@@ -820,14 +811,9 @@ export default function WerkbereichReceipts({
     }
   }, []);
 
-  // Erst wenn die Unterprojekte bekannt sind — sonst lädt die Seite zweimal.
   useEffect(() => {
-    if (!costCentersReady) {
-      return;
-    }
-
     void loadReceipts(werkbereichCostCenterValues);
-  }, [costCentersReady, loadReceipts, werkbereichCostCenterValues]);
+  }, [loadReceipts, werkbereichCostCenterValues]);
 
   // Der Kassenbestand ist ein Stand, keine Bewegung: er hängt nicht an den
   // Filtern der Tabelle.

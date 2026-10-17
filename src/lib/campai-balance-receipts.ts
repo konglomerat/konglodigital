@@ -183,8 +183,13 @@ const fetchReceiptsPage = async (params: {
     returnCount: true,
   };
 
+  // Campai erwartet userFilter als JSON-String — ein Objekt wird ohne Fehler
+  // angenommen, aber ignoriert, und die Liste enthält dann alle Belege.
+  // Je Kostenstelle ein eigenes equals: between auf positions.costCenter2
+  // träfe auch Belege, bei denen nur verschiedene Positionen die Grenzen
+  // erfüllen.
   if (costCenter2Values.length > 0) {
-    requestBody.userFilter = {
+    requestBody.userFilter = JSON.stringify({
       operator: "or",
       groups: costCenter2Values.map((value) => ({
         operator: "and",
@@ -196,7 +201,7 @@ const fetchReceiptsPage = async (params: {
           },
         ],
       })),
-    };
+    });
   }
 
   const response = await fetch(`${baseUrl}/finance/receipts/list`, {
@@ -220,9 +225,46 @@ const fetchReceiptsPage = async (params: {
   const count =
     typeof payload.count === "number" && Number.isFinite(payload.count)
       ? Math.max(0, Math.trunc(payload.count))
-      : receipts.length;
+      : null;
 
   return { receipts, count };
+};
+
+// Die erste Seite nennt die Gesamtzahl, der Rest kommt dann parallel. Fehlt
+// count, wird wie früher Seite für Seite geblättert.
+const fetchAllReceipts = async (params: {
+  apiKey: string;
+  baseUrl: string;
+  costCenter2Values: number[];
+}): Promise<RawReceipt[]> => {
+  const limit = CAMPAI_RECEIPTS_PAGE_SIZE;
+  const first = await fetchReceiptsPage({ ...params, offset: 0, limit });
+  if (first.receipts.length < limit) {
+    return first.receipts;
+  }
+
+  const maxOffset = CAMPAI_RECEIPTS_MAX_PAGES * limit;
+
+  if (first.count !== null) {
+    const offsets: number[] = [];
+    for (let offset = limit; offset < Math.min(first.count, maxOffset); offset += limit) {
+      offsets.push(offset);
+    }
+    const pages = await Promise.all(
+      offsets.map((offset) => fetchReceiptsPage({ ...params, offset, limit })),
+    );
+    return [first, ...pages].flatMap((page) => page.receipts);
+  }
+
+  const collected = [...first.receipts];
+  for (let offset = limit; offset < maxOffset; offset += limit) {
+    const page = await fetchReceiptsPage({ ...params, offset, limit });
+    collected.push(...page.receipts);
+    if (page.receipts.length < limit) {
+      break;
+    }
+  }
+  return collected;
 };
 
 // --- Kassenbuchungen ------------------------------------------------------
@@ -399,54 +441,29 @@ export const listCampaiReceiptsByCostCenter2 = async (
     return [];
   }
 
-  const [cashAccounts, accountingAccounts, cashPostings] = await Promise.all([
-    fetchCampaiCashAccounts(),
-    fetchCampaiAccountingAccounts(),
-    fetchCashRegisterPostings({
-      apiKey,
-      baseUrl,
-      costCenter2Values: uniqueValues,
-    }),
-  ]);
+  const [cashAccounts, accountingAccounts, cashPostings, rawReceipts] =
+    await Promise.all([
+      fetchCampaiCashAccounts(),
+      fetchCampaiAccountingAccounts(),
+      fetchCashRegisterPostings({
+        apiKey,
+        baseUrl,
+        costCenter2Values: uniqueValues,
+      }),
+      fetchAllReceipts({ apiKey, baseUrl, costCenter2Values: uniqueValues }),
+    ]);
 
   const cashAccountLabelMap = createCampaiCashAccountLabelMap(cashAccounts);
   const accountingAccountLabelMap = createCampaiAccountingAccountLabelMap(
     accountingAccounts,
   );
 
-  const collected: CampaiBalanceReceipt[] = [];
-  let offset = 0;
-  let totalCount: number | null = null;
+  const collected = rawReceipts
+    .map(normalizeReceipt)
+    .filter((receipt): receipt is CampaiBalanceReceipt => receipt !== null);
 
-  for (let pageIndex = 0; pageIndex < CAMPAI_RECEIPTS_MAX_PAGES; pageIndex += 1) {
-    const { receipts: page, count } = await fetchReceiptsPage({
-      apiKey,
-      baseUrl,
-      costCenter2Values: uniqueValues,
-      offset,
-      limit: CAMPAI_RECEIPTS_PAGE_SIZE,
-    });
-
-    for (const raw of page) {
-      const normalized = normalizeReceipt(raw);
-      if (normalized) {
-        collected.push(normalized);
-      }
-    }
-
-    totalCount = totalCount ?? count;
-    if (page.length < CAMPAI_RECEIPTS_PAGE_SIZE) {
-      break;
-    }
-
-    offset += CAMPAI_RECEIPTS_PAGE_SIZE;
-    if (totalCount !== null && offset >= totalCount) {
-      break;
-    }
-  }
-
-  // Defensive: ensure every returned receipt actually matches one of the
-  // requested costCenter2 values, in case userFilter behaves unexpectedly.
+  // Der userFilter trifft Belege mit mindestens einer passenden Position; hier
+  // noch einmal lokal nachprüfen, falls Campai den Filter wieder anders liest.
   const valueSet = new Set(uniqueValues);
   const cashRegisterEntries = cashPostings
     .map((raw) => normalizeCashRegisterPosting(raw, valueSet))
