@@ -430,8 +430,12 @@ function TariffChangeDone({
 
       {result.cardRequested ? (
         <p>
-          Deine Zugangskarte ist beantragt. Wir melden uns, sobald du sie
-          abholen kannst.
+          Deine Zugangskarte ist beantragt. Falls noch nicht geschehen,
+          registriere dich bitte bei Roseguarden — erst dann können wir dir
+          eine Karte ausstellen. Wir melden uns, sobald du sie abholen kannst.
+          {result.instructionsMailSent
+            ? ` Beides schicken wir dir auch noch per Mail${email ? ` an ${email}` : ""}.`
+            : ""}
         </p>
       ) : null}
     </>

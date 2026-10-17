@@ -12,6 +12,8 @@ import {
   type TariffPaymentMethod,
 } from "@/lib/campai-tariff-change";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import { sendTemplateMessage } from "@/lib/membership-applications/campai";
+import { CARD_TARIFF_INSTRUCTIONS_TEMPLATE_ID } from "@/lib/membership-applications/config";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 // Tarifwechsel der Zugangskarte als Self-Service. GET liefert, was die
@@ -155,6 +157,21 @@ export const POST = async (request: NextRequest) => {
       isInstitution: profile.isInstitution,
       debtorMethod: profile.debtor?.paymentMethod ?? null,
     });
+
+    // Wer neu eine Karte will und per Überweisung zahlt, bekommt die
+    // Anleitung (Dauerauftrag, Roseguarden) zusätzlich per Mail. Scheitert
+    // der Versand, steht der Wechsel trotzdem.
+    if (result.cardRequested && result.transfer) {
+      result.instructionsMailSent = await sendTemplateMessage(
+        member.contactId,
+        CARD_TARIFF_INSTRUCTIONS_TEMPLATE_ID,
+      )
+        .then(() => true)
+        .catch((error: unknown) => {
+          console.error("Campai: Mail zum Tarifwechsel nicht verschickt", error);
+          return false;
+        });
+    }
 
     return NextResponse.json<AccountTariffChangeResponse>({ result });
   } catch (error) {
