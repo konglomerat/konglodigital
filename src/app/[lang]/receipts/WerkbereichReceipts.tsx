@@ -23,12 +23,11 @@ import {
   faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
-import Breadcrumbs from "@/components/knglmrt/Breadcrumbs";
 import Button from "@/components/knglmrt/Button";
 import Choice from "@/components/knglmrt/Choice";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import SegmentedControl from "@/components/knglmrt/SegmentedControl";
-import PageTitle from "@/app/[lang]/components/PageTitle";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import {
   type BuchhaltungWerkbereich,
   belongsToWerkbereich,
@@ -530,6 +529,8 @@ const getPaidYear = (receipt: CampaiBalanceReceipt): string | null => {
     : String(new Date(timestamp).getFullYear());
 };
 
+const FILTER_SEGMENT_CLASS_NAME = "min-h-0! h-9 py-0";
+
 // Auswahlliste statt Segmenten, wenn die Filterzeile schmal wird.
 function FilterSelect<T extends string>({
   label,
@@ -592,10 +593,13 @@ function SummaryFigure({
 
 type WerkbereichReceiptsProps = {
   werkbereich: BuchhaltungWerkbereich;
+  /** Einziger freigegebener Werkbereich: /receipts leitet direkt hierher. */
+  isOnlyWerkbereich?: boolean;
 };
 
 export default function WerkbereichReceipts({
   werkbereich,
+  isOnlyWerkbereich = false,
 }: WerkbereichReceiptsProps) {
   const [isColumnPanelOpen, setIsColumnPanelOpen] = useState(false);
   const [columnOrder, setColumnOrder] =
@@ -1514,24 +1518,19 @@ export default function WerkbereichReceipts({
     </tr>
   );
 
-  const isProject = werkbereich.label.startsWith("#");
   const showSummary = !loadingReceipts && !receiptsError;
 
   return (
     // Ab md füllt die Ansicht die Höhe: die Tabelle scrollt in sich, die
     // Saldo-Zeile steht immer unten.
     <div className="flex w-full flex-col gap-4 md:h-full">
-      <div className="flex shrink-0 items-start justify-between gap-4">
-        <div className="min-w-0">
-          <Breadcrumbs
-            items={[
-              { label: "Buchhaltung" },
-              { label: isProject ? "Projekt" : "Werkbereich" },
-            ]}
-          />
-          <PageTitle headingLevel={2} title={werkbereich.label} />
-        </div>
-        <NewBookingMenu />
+      <div className="shrink-0">
+        <SubPageTitle
+          ressort="buchhaltung"
+          title={werkbereich.label}
+          hideBack={isOnlyWerkbereich}
+          customActions={<NewBookingMenu />}
+        />
       </div>
 
       {costCentersError ? (
@@ -1553,6 +1552,7 @@ export default function WerkbereichReceipts({
             <SegmentedControl
               tone="ink"
               size="medium"
+              segmentClassName={FILTER_SEGMENT_CLASS_NAME}
               value={kindFilter}
               options={KIND_FILTER_OPTIONS}
               onChange={setKindFilter}
@@ -1570,6 +1570,7 @@ export default function WerkbereichReceipts({
               <SegmentedControl
                 tone="ink"
                 size="medium"
+                segmentClassName={FILTER_SEGMENT_CLASS_NAME}
                 value={selectedYear}
                 options={yearOptions}
                 onChange={setSelectedYear}
@@ -1634,6 +1635,7 @@ export default function WerkbereichReceipts({
                 kind="ghost"
                 iconOnly
                 icon={faColumns}
+                className="h-[38px]! w-[38px]!"
                 onClick={() => setIsColumnPanelOpen((current) => !current)}
                 aria-haspopup="dialog"
                 aria-expanded={isColumnPanelOpen}

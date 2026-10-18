@@ -5,9 +5,8 @@
 // Willkommensmails anstoßen. Links die Liste, rechts der gewählte Antrag.
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import PageTitle from "@/app/[lang]/components/PageTitle";
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import Badge from "@/components/knglmrt/Badge";
-import Breadcrumbs from "@/components/knglmrt/Breadcrumbs";
 import Notice from "@/components/knglmrt/Notice";
 import SearchField from "@/components/knglmrt/SearchField";
 import SegmentedControl from "@/components/knglmrt/SegmentedControl";
@@ -232,9 +231,8 @@ export default function AntraegeClient() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Breadcrumbs items={[{ label: "Vorstand", href: "/admin/vorstand" }, { label: "Anträge" }]} />
-        <PageTitle
-          headingLevel={1}
+        <SubPageTitle
+          ressort="vorstand"
           title="Mitgliedschaftsanträge"
           subTitle="Neue Anträge prüfen, annehmen und die Aufnahme Schritt für Schritt nachhalten, bis aus dem Antrag ein Mitglied geworden ist."
         />

@@ -1,6 +1,7 @@
 "use client";
-// Dunkle Ressort-Leiste: Hauptpunkte mit ausklappbaren Unterpunkten. Das
-// aktive Ressort steht offen, die übrigen klappt der Pfeil daneben auf.
+// Dunkle Ressort-Leiste: Hauptpunkte mit ausklappbaren Unterpunkten. Ein
+// Klick auf den Hauptpunkt öffnet nur dessen Seite, aufgeklappt wird über den
+// Pfeil daneben. Steht man auf einem Unterpunkt, ist sein Ressort offen.
 // Unter 1024px (Telefon und Tablet) liegt sie als Schublade über dem Inhalt.
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -52,7 +53,8 @@ export default function VerwaltungSideNav({
   accessPreview = null,
 }: VerwaltungSideNavProps) {
   const [isOpen, setIsOpen] = useState(false);
-  // Nur was von Hand auf- oder zugeklappt wurde; sonst entscheidet „aktiv".
+  // Nur was von Hand auf- oder zugeklappt wurde; sonst entscheidet, ob ein
+  // Unterpunkt aktiv ist.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const pathname = usePathname() ?? "/";
   const current =
@@ -103,8 +105,9 @@ export default function VerwaltungSideNav({
       {items.map((item) => {
         const active = item.href === activeHref;
         const hasChildren = (item.children ?? []).length > 0;
-        const expanded = hasChildren && (toggled[item.href] ?? active);
         const activeChild = active ? activeChildHref(item) : null;
+        const expanded =
+          hasChildren && (toggled[item.href] ?? activeChild !== null);
         const listId = `ressort-${item.href.replace(/\W+/g, "-")}`;
 
         return (
