@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSpinner,
   faXmark,
   faDownload,
+  faFileArrowUp,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "@/components/knglmrt/Button";
 import ReactSelect from "@/app/[lang]/components/ui/react-select";
+import Dialog from "@/components/knglmrt/Dialog";
 import Field from "@/components/knglmrt/Field";
 import Textarea from "@/components/knglmrt/Textarea";
+import { buildReceiptFile } from "@/lib/merge-receipt-files";
 
 type CostCenterOption = {
   value: string;
@@ -63,6 +66,9 @@ type ReceiptDetail = {
   notes: ReceiptNoteDetail[];
   positions: ReceiptPositionDetail[];
   isCashLinked: boolean;
+  hasPayments: boolean;
+  canceledAt: string | null;
+  receiptFileName: string | null;
   raw: Record<string, unknown>;
 };
 
@@ -198,8 +204,21 @@ const normalizeReceipt = (raw: Record<string, unknown>): ReceiptDetail => {
         unitAmount: toNumberOrNull(position.unitAmount),
       })),
     isCashLinked,
+    hasPayments: paymentsRaw.length > 0,
+    canceledAt: toStringOrNull(raw.canceledAt),
+    receiptFileName: toStringOrNull(raw.receiptFileName),
     raw,
   };
+};
+
+const bytesToBase64 = (bytes: Uint8Array) => {
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
 };
 
 type ReceiptDetailDrawerProps = {
@@ -263,6 +282,12 @@ export default function ReceiptDetailDrawer({
   const [newNote, setNewNote] = useState("");
   const [creatingNote, setCreatingNote] = useState(false);
   const [createNoteError, setCreateNoteError] = useState<string | null>(null);
+  const [replacementFiles, setReplacementFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [canceling, setCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const isOpen = receiptId !== null;
 
@@ -285,6 +310,11 @@ export default function ReceiptDetailDrawer({
       setNewNote("");
       setCreatingNote(false);
       setCreateNoteError(null);
+      setReplacementFiles([]);
+      setCancelDialogOpen(false);
+      setCancelReason("");
+      setCanceling(false);
+      setCancelError(null);
       return;
     }
 
@@ -298,6 +328,8 @@ export default function ReceiptDetailDrawer({
     setSaveError(null);
     setCreateNoteError(null);
     setDetail(null);
+    setReplacementFiles([]);
+    setCancelError(null);
 
     const load = async () => {
       try {
@@ -350,7 +382,8 @@ export default function ReceiptDetailDrawer({
   }, [costCenterOptions, isOpen, receiptId]);
 
   useEffect(() => {
-    if (!isOpen) {
+    // Solange der Storno-Dialog offen ist, schließt Escape nur den Dialog.
+    if (!isOpen || cancelDialogOpen) {
       return;
     }
     const handleEscape = (event: KeyboardEvent) => {
@@ -362,7 +395,7 @@ export default function ReceiptDetailDrawer({
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [cancelDialogOpen, isOpen, onClose]);
 
   const costCenterOptionMap = useMemo(() => {
     const map = new Map<string, CostCenterOption>();
@@ -378,11 +411,26 @@ export default function ReceiptDetailDrawer({
   );
 
   const editable =
-    detail !== null && isEditableType(detail.type) && !detail.isCashLinked;
+    detail !== null &&
+    isEditableType(detail.type) &&
+    !detail.isCashLinked &&
+    !detail.canceledAt;
+
+  // Rechnungs-PDFs erzeugt Campai selbst, nur hochgeladene Belege sind tauschbar.
+  const fileReplaceable =
+    editable && (detail.type === "expense" || detail.type === "revenue");
+
+  const cancelable =
+    editable &&
+    detail.paymentStatus?.toLowerCase() === "unpaid" &&
+    !detail.hasPayments;
 
   const isDirty = useMemo(() => {
     if (!detail) {
       return false;
+    }
+    if (replacementFiles.length > 0) {
+      return true;
     }
     if (description !== detail.description) {
       return true;
@@ -398,7 +446,7 @@ export default function ReceiptDetailDrawer({
       if (edit.costCenter2 !== original.costCenter2) return true;
       return false;
     });
-  }, [description, detail, positionEdits]);
+  }, [description, detail, positionEdits, replacementFiles]);
 
   const handleSave = useCallback(async () => {
     if (!detail || !receiptId || !editable) {
@@ -407,6 +455,21 @@ export default function ReceiptDetailDrawer({
     setSaving(true);
     setSaveError(null);
     try {
+      let receiptFile: {
+        base64: string;
+        name: string;
+        contentType: string;
+      } | null = null;
+      if (fileReplaceable && replacementFiles.length > 0) {
+        const file = await buildReceiptFile(replacementFiles);
+        if (file) {
+          receiptFile = {
+            base64: bytesToBase64(new Uint8Array(await file.arrayBuffer())),
+            name: file.name,
+            contentType: file.type || "application/octet-stream",
+          };
+        }
+      }
       const response = await fetch(
         `/api/campai/balance/receipts/${receiptId}`,
         {
@@ -418,6 +481,7 @@ export default function ReceiptDetailDrawer({
               description: edit.description,
               costCenter2: edit.costCenter2,
             })),
+            receiptFile,
           }),
         },
       );
@@ -439,6 +503,7 @@ export default function ReceiptDetailDrawer({
           })),
         );
       }
+      setReplacementFiles([]);
       onSaved?.(receiptId);
     } catch (saveErr) {
       setSaveError(
@@ -449,7 +514,57 @@ export default function ReceiptDetailDrawer({
     } finally {
       setSaving(false);
     }
-  }, [description, detail, editable, onSaved, positionEdits, receiptId]);
+  }, [
+    description,
+    detail,
+    editable,
+    fileReplaceable,
+    onSaved,
+    positionEdits,
+    receiptId,
+    replacementFiles,
+  ]);
+
+  const handleCancelReceipt = useCallback(async () => {
+    if (!receiptId || !cancelable) {
+      return;
+    }
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setCancelError("Bitte einen Grund angeben.");
+      return;
+    }
+    setCanceling(true);
+    setCancelError(null);
+    try {
+      const response = await fetch(
+        `/api/campai/balance/receipts/${receiptId}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(data.error ?? "Storno fehlgeschlagen.");
+      }
+      // Stornierte Belege tauchen in der Liste nicht mehr auf.
+      setCancelDialogOpen(false);
+      onSaved?.(receiptId);
+      onClose();
+    } catch (cancelErr) {
+      setCancelError(
+        cancelErr instanceof Error
+          ? cancelErr.message
+          : "Storno fehlgeschlagen.",
+      );
+    } finally {
+      setCanceling(false);
+    }
+  }, [cancelReason, cancelable, onClose, onSaved, receiptId]);
 
   const handleCreateCostCenter = useCallback(async () => {
     if (creatingCostCenterForIndex === null) {
@@ -730,6 +845,16 @@ export default function ReceiptDetailDrawer({
                 </div>
               ) : null}
 
+              {detail.canceledAt ? (
+                <div className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-2 text-destructive">
+                  Storniert am {formatDate(detail.canceledAt)}
+                  {typeof detail.raw.canceledReason === "string" &&
+                  detail.raw.canceledReason
+                    ? ` · ${detail.raw.canceledReason}`
+                    : ""}
+                </div>
+              ) : null}
+
               <section>
                 <SectionTitle>Beschreibung</SectionTitle>
                 {editable ? (
@@ -745,6 +870,90 @@ export default function ReceiptDetailDrawer({
                     {detail.description || "—"}
                   </p>
                 )}
+              </section>
+
+              <section>
+                <SectionTitle>Belegdatei</SectionTitle>
+                <div className="space-y-2">
+                  <p
+                    className={`truncate rounded-md border border-border bg-secondary/30 px-3 py-2 text-foreground ${replacementFiles.length > 0 ? "line-through opacity-60" : ""}`}
+                    title={detail.receiptFileName ?? undefined}
+                  >
+                    {detail.receiptFileName ?? "Keine Datei hinterlegt"}
+                  </p>
+                  {fileReplaceable ? (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(event) => {
+                          const added = event.target.files
+                            ? Array.from(event.target.files)
+                            : [];
+                          if (added.length > 0) {
+                            setReplacementFiles((current) => [
+                              ...current,
+                              ...added,
+                            ]);
+                          }
+                          event.target.value = "";
+                        }}
+                      />
+                      {replacementFiles.length > 0 ? (
+                        <ul className="space-y-1">
+                          {replacementFiles.map((file, index) => (
+                            <li
+                              key={`${file.name}-${index}`}
+                              className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-foreground"
+                            >
+                              <span className="truncate">
+                                {replacementFiles.length > 1
+                                  ? `${index + 1}. `
+                                  : ""}
+                                {file.name}
+                              </span>
+                              <Button
+                                kind="ghost"
+                                size="chip"
+                                iconOnly
+                                icon={faXmark}
+                                onClick={() =>
+                                  setReplacementFiles((current) =>
+                                    current.filter((_, i) => i !== index),
+                                  )
+                                }
+                                className="shrink-0 text-muted-foreground"
+                                aria-label="Datei entfernen"
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          kind="secondary"
+                          size="chip"
+                          icon={faFileArrowUp}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          {replacementFiles.length === 0
+                            ? "Neue Datei hochladen"
+                            : "Weitere Datei hinzufügen"}
+                        </Button>
+                        <span className="text-muted-foreground">
+                          {replacementFiles.length > 1
+                            ? `${replacementFiles.length} Dateien werden zu einer PDF zusammengefügt.`
+                            : replacementFiles.length === 1
+                              ? "Ersetzt die bisherige Datei beim Speichern."
+                              : "PDF, JPG oder PNG"}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </section>
 
               <section>
@@ -1034,9 +1243,24 @@ export default function ReceiptDetailDrawer({
 
         {detail && editable ? (
           <footer className="flex items-center justify-between gap-3 border-t border-border bg-card/50 px-6 py-3">
-            <p className="min-w-0 truncate text-destructive">
-              {saveError ?? ""}
-            </p>
+            <div className="flex min-w-0 items-center gap-3">
+              {cancelable ? (
+                <Button
+                  kind="danger-secondary"
+                  onClick={() => {
+                    setCancelReason("");
+                    setCancelError(null);
+                    setCancelDialogOpen(true);
+                  }}
+                  disabled={saving}
+                >
+                  Stornieren
+                </Button>
+              ) : null}
+              <p className="min-w-0 truncate text-destructive">
+                {saveError ?? ""}
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Button kind="secondary" onClick={onClose} disabled={saving}>
                 Schließen
@@ -1053,6 +1277,54 @@ export default function ReceiptDetailDrawer({
           </footer>
         ) : null}
       </aside>
+
+      <Dialog
+        open={cancelDialogOpen}
+        title="Beleg stornieren?"
+        tone="danger"
+        width={460}
+        onCancel={() => {
+          if (!canceling) setCancelDialogOpen(false);
+        }}
+        actions={
+          <>
+            <Button
+              kind="secondary"
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={canceling}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              kind="danger-primary"
+              onClick={handleCancelReceipt}
+              disabled={cancelReason.trim().length === 0}
+              loading={canceling}
+            >
+              Stornieren
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p>
+            {detail?.receiptNumber ? `${detail.receiptNumber} wird` : "Der Beleg wird"}{" "}
+            in Campai storniert und verschwindet aus der Übersicht. Das lässt
+            sich nicht rückgängig machen.
+          </p>
+          <Textarea
+            label="Grund"
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            maxLength={240}
+            rows={2}
+            placeholder="z. B. doppelt erfasst"
+          />
+          {cancelError ? (
+            <p className="text-destructive">{cancelError}</p>
+          ) : null}
+        </div>
+      </Dialog>
     </div>
   );
 }

@@ -46,6 +46,11 @@ import type { CampaiCashRegisterBalanceSummary } from "@/lib/campai-cash-registe
 import type { MemberProfilePreferences } from "@/lib/member-profiles";
 
 import NewBookingMenu from "./NewBookingMenu";
+import PeriodFilter, {
+  toIsoDate,
+  yearPeriod,
+  type Period,
+} from "./PeriodFilter";
 import ProjectFilter, { type ProjectFilterOption } from "./ProjectFilter";
 import ReceiptDetailDrawer from "./receipt-detail-drawer";
 
@@ -95,8 +100,6 @@ const KIND_FILTER_OPTIONS: { value: KindFilter; label: string }[] = [
 ];
 
 const CURRENT_YEAR = String(new Date().getFullYear());
-// Mehr Jahre passen nicht als Segmente in die Zeile — dann immer als Liste.
-const MAX_YEAR_SEGMENTS = 3;
 
 // In der schmalsten Stufe scrollt die Filterzeile seitlich und würde ein
 // absolut gesetztes Popover abschneiden. `fixed` ohne `top` bleibt an seiner
@@ -522,11 +525,10 @@ const compareNullableValues = (
   return direction === "asc" ? left - right : right - left;
 };
 
-const getPaidYear = (receipt: CampaiBalanceReceipt): string | null => {
+// Zahlungsdatum als YYYY-MM-DD in Ortszeit — vergleichbar mit <input type="date">.
+const getPaidDate = (receipt: CampaiBalanceReceipt): string | null => {
   const timestamp = receipt.paidAt ? Date.parse(receipt.paidAt) : Number.NaN;
-  return Number.isNaN(timestamp)
-    ? null
-    : String(new Date(timestamp).getFullYear());
+  return Number.isNaN(timestamp) ? null : toIsoDate(new Date(timestamp));
 };
 
 const FILTER_SEGMENT_CLASS_NAME = "min-h-0! h-9 py-0";
@@ -613,7 +615,7 @@ export default function WerkbereichReceipts({
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
-  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [period, setPeriod] = useState<Period>(() => yearPeriod(CURRENT_YEAR));
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [groupByProject, setGroupByProject] = useState(false);
   const [cashRegisterSummary, setCashRegisterSummary] =
@@ -924,26 +926,24 @@ export default function WerkbereichReceipts({
     [receipts],
   );
 
-  const yearOptions = useMemo(() => {
-    const years = new Set<string>([CURRENT_YEAR, selectedYear]);
+  const yearsWithReceipts = useMemo(() => {
+    const years = new Set<string>();
 
     for (const receipt of visibleReceipts) {
-      const year = getPaidYear(receipt);
+      const year = getPaidDate(receipt)?.slice(0, 4);
       if (year) {
         years.add(year);
       }
     }
 
-    return Array.from(years)
-      .sort((left, right) => Number(left) - Number(right))
-      .map((year) => ({ value: year, label: year }));
-  }, [selectedYear, visibleReceipts]);
+    return Array.from(years).sort((left, right) => Number(right) - Number(left));
+  }, [visibleReceipts]);
 
-  // Belege ohne Zahlungsdatum bleiben in jedem Jahr stehen — sie sind offen.
+  // Belege ohne Zahlungsdatum bleiben in jedem Zeitraum stehen — sie sind offen.
   const receiptsMatchingToolbarFilters = useMemo(() => {
     return visibleReceipts.filter((receipt) => {
-      const year = getPaidYear(receipt);
-      if (year && year !== selectedYear) {
+      const paidDate = getPaidDate(receipt);
+      if (paidDate && (paidDate < period.from || paidDate > period.to)) {
         return false;
       }
 
@@ -961,7 +961,7 @@ export default function WerkbereichReceipts({
 
       return true;
     });
-  }, [kindFilter, selectedYear, visibleReceipts]);
+  }, [kindFilter, period, visibleReceipts]);
 
   const projectOptions = useMemo<ProjectFilterOption[]>(() => {
     const projects = new Map<string, ProjectFilterOption>();
@@ -1565,26 +1565,12 @@ export default function WerkbereichReceipts({
             options={KIND_FILTER_OPTIONS}
             onChange={setKindFilter}
           />
-          {yearOptions.length <= MAX_YEAR_SEGMENTS ? (
-            <div className="hidden shrink-0 @min-[1180px]:block">
-              <SegmentedControl
-                tone="ink"
-                size="medium"
-                segmentClassName={FILTER_SEGMENT_CLASS_NAME}
-                value={selectedYear}
-                options={yearOptions}
-                onChange={setSelectedYear}
-              />
-            </div>
-          ) : null}
-          <FilterSelect
-            className={
-              yearOptions.length <= MAX_YEAR_SEGMENTS ? "@min-[1180px]:hidden" : ""
-            }
-            label="Jahr"
-            value={selectedYear}
-            options={yearOptions}
-            onChange={setSelectedYear}
+          <PeriodFilter
+            value={period}
+            onChange={setPeriod}
+            years={yearsWithReceipts}
+            captionClassName="hidden @min-[600px]:inline"
+            panelClassName={NARROW_POPOVER_CLASS_NAME}
           />
           <span
             aria-hidden="true"

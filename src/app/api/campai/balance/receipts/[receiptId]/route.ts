@@ -10,6 +10,7 @@ import {
   canEditReceiptCostCenters,
   canViewReceiptCostCenters,
 } from "@/lib/buchhaltung-werkbereiche";
+import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import { addCampaiReceiptNote } from "@/lib/campai-receipt-notes";
 
 const requiredEnv = (name: string) => {
@@ -226,7 +227,14 @@ export const PATCH = async (
   const body = (await request.json().catch(() => ({}))) as {
     description?: string | null;
     positions?: EditablePositionPatch[];
+    receiptFile?: {
+      base64?: string;
+      name?: string;
+      contentType?: string;
+    } | null;
   };
+  const newFileBase64 =
+    typeof body.receiptFile?.base64 === "string" ? body.receiptFile.base64 : "";
 
   try {
     const detailResult = await fetchReceiptDetail(receiptId);
@@ -243,6 +251,22 @@ export const PATCH = async (
     if (!isEditableType(type)) {
       return NextResponse.json(
         { error: `Belegtyp "${String(type)}" kann nicht bearbeitet werden.` },
+        { status: 400 },
+      );
+    }
+
+    // Rechnungen erzeugt Campai selbst als PDF — dort gibt es keine Datei,
+    // die sich austauschen ließe.
+    if (newFileBase64 && type === "invoice") {
+      return NextResponse.json(
+        { error: "Bei Rechnungen kann die Belegdatei nicht ersetzt werden." },
+        { status: 400 },
+      );
+    }
+
+    if (typeof receipt.canceledAt === "string" && receipt.canceledAt) {
+      return NextResponse.json(
+        { error: "Stornierte Belege können nicht bearbeitet werden." },
         { status: 400 },
       );
     }
@@ -309,6 +333,28 @@ export const PATCH = async (
       )
     ) {
       return costCenterForbiddenResponse();
+    }
+
+    if (newFileBase64) {
+      const fileName = body.receiptFile?.name?.trim() || "beleg.pdf";
+      const { receiptFileId } = await uploadCampaiReceiptFile({
+        apiKey,
+        baseUrl,
+        endpointOverride:
+          process.env.CAMPAI_RECEIPT_FILE_UPLOAD_ENDPOINT?.trim() || undefined,
+        fileBase64: newFileBase64,
+        fileName,
+        fileContentType:
+          body.receiptFile?.contentType?.trim() || "application/octet-stream",
+      });
+      if (!receiptFileId) {
+        return NextResponse.json(
+          { error: "Datei-Upload zu Campai fehlgeschlagen. Beleg wurde nicht geändert." },
+          { status: 502 },
+        );
+      }
+      payload.receiptFileId = receiptFileId;
+      payload.receiptFileName = fileName;
     }
 
     const updateResponse = await fetch(
