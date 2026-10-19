@@ -19,6 +19,8 @@ export const PERMISSIONS = [
   "members.onboarding",
   /** KoFi-Auswertung über alle Kostenstellen. */
   "kofi.view",
+  /** Aufgabenlisten der Verwaltung (zuerst die des Vorstands). */
+  "tasks.manage",
   "newsletter.manage",
   "stories.manage",
   /** Belege, Kassen und Rechnungen der Buchhaltung einsehen. */
@@ -60,13 +62,14 @@ export const ROLE_CONFIG = {
   },
   vorstand: {
     label: "Vorstand",
-    description: "Ehrenamtsbonus, Mitgliedsanträge und KoFi.",
+    description: "Ehrenamtsbonus, Mitgliedsanträge, KoFi und Aufgaben.",
     scoping: "global",
     permissions: [
       "ressort.vorstand",
       "ehrenamtsbonus.manage",
       "members.onboarding",
       "kofi.view",
+      "tasks.manage",
     ],
   },
   oeffentlichkeitsarbeit: {

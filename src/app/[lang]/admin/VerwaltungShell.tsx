@@ -24,6 +24,8 @@ import {
 import { can } from "@/lib/access/access";
 import { countOpenApplications } from "@/lib/membership-applications/store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { accessibleBoards } from "@/lib/tasks/boards";
+import TaskRailSlot from "@/components/tasks/TaskRailSlot";
 
 import type { AccessPreviewState } from "./AccessPreviewSwitch";
 
@@ -132,6 +134,7 @@ export default async function VerwaltungShell({
         ) : null}
         {children}
       </div>
+      <TaskRailSlot boards={accessibleBoards(access)} />
     </div>
   );
 }
