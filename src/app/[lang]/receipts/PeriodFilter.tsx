@@ -3,12 +3,13 @@
 // Zeitraum der Buchungstabelle: Schnellzugriffe links, eigener Zeitraum
 // rechts — das übliche Muster von Datumsbereichs-Pickern. Ein Zeitraum ist
 // ein geschlossenes Intervall zweier Tage im Format YYYY-MM-DD.
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 
 import Button from "@/components/knglmrt/Button";
 import Field from "@/components/knglmrt/Field";
+import FieldShell from "@/components/knglmrt/FieldShell";
 
 export type Period = { from: string; to: string };
 
@@ -106,8 +107,6 @@ type PeriodFilterProps = {
   onChange: (value: Period) => void;
   /** Jahre mit Buchungen, absteigend — als weitere Schnellzugriffe. */
   years: string[];
-  /** Klasse an der Beschriftung „Zeitraum" — zum Ausblenden in schmalen Zeilen. */
-  captionClassName?: string;
   /** Zusatzklasse am aufgeklappten Feld. */
   panelClassName?: string;
 };
@@ -116,9 +115,9 @@ export default function PeriodFilter({
   value,
   onChange,
   years,
-  captionClassName,
   panelClassName,
 }: PeriodFilterProps) {
+  const buttonId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<Period>(value);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -202,89 +201,96 @@ export default function PeriodFilter({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
-      <button
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-controls="period-filter-panel"
-        aria-label={`Zeitraum: ${buttonLabel}`}
-        onClick={toggle}
-        className="inline-flex h-[38px] shrink-0 items-center gap-3 whitespace-nowrap knglmrt-border bg-card px-4 transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-      >
-        <span className={`knglmrt-label ${captionClassName ?? ""}`}>
-          Zeitraum
-        </span>
-        <span className="knglmrt-num font-bold!">{buttonLabel}</span>
-        <FontAwesomeIcon
-          icon={faChevronDown}
-          aria-hidden="true"
-          className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {isOpen ? (
-        <div
-          id="period-filter-panel"
-          role="dialog"
-          aria-label="Zeitraum wählen"
-          className={`absolute left-0 top-full z-30 mt-2 flex w-[min(520px,calc(100vw-2rem))] flex-col border border-primary bg-popover text-popover-foreground sm:flex-row ${panelClassName ?? ""}`}
+    <FieldShell
+      as="div"
+      htmlFor={buttonId}
+      label="Zeitraum"
+      className="relative shrink-0"
+    >
+      <div ref={containerRef}>
+        <button
+          id={buttonId}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          aria-controls="period-filter-panel"
+          onClick={toggle}
+          className="inline-flex h-[38px] shrink-0 items-center gap-3 whitespace-nowrap knglmrt-border bg-card px-4 transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
         >
-          <ul className="max-h-[320px] shrink-0 overflow-y-auto border-b border-border py-2 sm:w-48 sm:border-r sm:border-b-0">
-            {presets.map((preset) =>
-              renderShortcut(preset.label, preset.period),
-            )}
-            {yearShortcuts.length > 0 ? (
-              <li
-                aria-hidden="true"
-                className="mx-5 my-2 border-t border-border"
-              />
-            ) : null}
-            {yearShortcuts.map((year) =>
-              renderShortcut(year, yearPeriod(year)),
-            )}
-          </ul>
+          <span className="knglmrt-num font-bold!">{buttonLabel}</span>
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            aria-hidden="true"
+            className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          />
+        </button>
 
-          <form
-            onSubmit={handleSubmit}
-            className="flex min-w-0 flex-1 flex-col gap-4 px-5 py-4"
+        {isOpen ? (
+          <div
+            id="period-filter-panel"
+            role="dialog"
+            aria-label="Zeitraum wählen"
+            className={`absolute left-0 top-full z-30 mt-2 flex w-[min(520px,calc(100vw-2rem))] flex-col border border-primary bg-popover text-popover-foreground sm:flex-row ${panelClassName ?? ""}`}
           >
-            <span className="knglmrt-label">Eigener Zeitraum</span>
-            <Field
-              label="Von"
-              type="date"
-              kind="mono"
-              value={draft.from}
-              max={draft.to || undefined}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  from: event.target.value,
-                }))
-              }
-            />
-            <Field
-              label="Bis"
-              type="date"
-              kind="mono"
-              value={draft.to}
-              min={draft.from || undefined}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, to: event.target.value }))
-              }
-            />
-            <Button
-              type="submit"
-              kind="secondary"
-              size="small"
-              disabled={!isDraftValid}
-              className="self-end"
+            <ul className="max-h-[320px] shrink-0 overflow-y-auto border-b border-border py-2 sm:w-48 sm:border-r sm:border-b-0">
+              {presets.map((preset) =>
+                renderShortcut(preset.label, preset.period),
+              )}
+              {yearShortcuts.length > 0 ? (
+                <li
+                  aria-hidden="true"
+                  className="mx-5 my-2 border-t border-border"
+                />
+              ) : null}
+              {yearShortcuts.map((year) =>
+                renderShortcut(year, yearPeriod(year)),
+              )}
+            </ul>
+
+            <form
+              onSubmit={handleSubmit}
+              className="flex min-w-0 flex-1 flex-col gap-4 px-5 py-4"
             >
-              Anwenden
-            </Button>
-          </form>
-        </div>
-      ) : null}
-    </div>
+              <span className="knglmrt-label">Eigener Zeitraum</span>
+              <Field
+                label="Von"
+                type="date"
+                kind="mono"
+                value={draft.from}
+                max={draft.to || undefined}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    from: event.target.value,
+                  }))
+                }
+              />
+              <Field
+                label="Bis"
+                type="date"
+                kind="mono"
+                value={draft.to}
+                min={draft.from || undefined}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    to: event.target.value,
+                  }))
+                }
+              />
+              <Button
+                type="submit"
+                kind="secondary"
+                size="small"
+                disabled={!isDraftValid}
+                className="self-end"
+              >
+                Anwenden
+              </Button>
+            </form>
+          </div>
+        ) : null}
+      </div>
+    </FieldShell>
   );
 }

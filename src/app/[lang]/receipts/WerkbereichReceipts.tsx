@@ -5,6 +5,7 @@
 // unter der Tabelle.
 import {
   Fragment,
+  type CSSProperties,
   type ReactNode,
   useCallback,
   useEffect,
@@ -15,8 +16,12 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowDown,
+  faArrowLeft,
   faArrowUp,
+  faCheck,
   faColumns,
+  faEllipsis,
+  faRotateLeft,
   faSort,
   faSortDown,
   faSortUp,
@@ -25,6 +30,7 @@ import {
 
 import Button from "@/components/knglmrt/Button";
 import Choice from "@/components/knglmrt/Choice";
+import FieldShell from "@/components/knglmrt/FieldShell";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import SegmentedControl from "@/components/knglmrt/SegmentedControl";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
@@ -43,7 +49,10 @@ import {
   isCashRegisterAccount,
 } from "@/lib/campai-cash-register-balances";
 import type { CampaiCashRegisterBalanceSummary } from "@/lib/campai-cash-register-balances";
-import type { MemberProfilePreferences } from "@/lib/member-profiles";
+import type {
+  BalanceTableDensity,
+  MemberProfilePreferences,
+} from "@/lib/member-profiles";
 
 import NewBookingMenu from "./NewBookingMenu";
 import PeriodFilter, {
@@ -52,6 +61,7 @@ import PeriodFilter, {
   type Period,
 } from "./PeriodFilter";
 import ProjectFilter, { type ProjectFilterOption } from "./ProjectFilter";
+import ReceiptSearch from "./ReceiptSearch";
 import ReceiptDetailDrawer from "./receipt-detail-drawer";
 
 type CostCenterOption = {
@@ -80,6 +90,16 @@ type PaymentStatusTone = "paid" | "partial" | "unpaid" | "default";
 type SortKey = "paidAt" | "receiptDate" | "createdAt" | "income" | "expense";
 type SortDirection = "asc" | "desc";
 type KindFilter = "all" | "income" | "expense" | "open";
+type SearchScope =
+  | "all"
+  | "receiptNumber"
+  | "description"
+  | "accountName"
+  | "amount"
+  | "project"
+  | "paymentAccounts"
+  | "tags"
+  | "date";
 
 type TableColumn = {
   key: ColumnKey;
@@ -99,6 +119,18 @@ const KIND_FILTER_OPTIONS: { value: KindFilter; label: string }[] = [
   { value: "open", label: "Offen" },
 ];
 
+const SEARCH_SCOPE_OPTIONS: { value: SearchScope; label: string }[] = [
+  { value: "all", label: "Alle Felder" },
+  { value: "receiptNumber", label: "Beleg" },
+  { value: "description", label: "Beschreibung" },
+  { value: "accountName", label: "Sender/Empfänger" },
+  { value: "amount", label: "Betrag" },
+  { value: "project", label: "Sphäre/Projekt" },
+  { value: "paymentAccounts", label: "Zahlkonto" },
+  { value: "tags", label: "Tags" },
+  { value: "date", label: "Datum" },
+];
+
 const CURRENT_YEAR = String(new Date().getFullYear());
 
 // In der schmalsten Stufe scrollt die Filterzeile seitlich und würde ein
@@ -106,6 +138,10 @@ const CURRENT_YEAR = String(new Date().getFullYear());
 // statischen Stelle unter dem Auslöser, entkommt aber dem Scrollcontainer.
 const NARROW_POPOVER_CLASS_NAME =
   "@max-[559px]:fixed @max-[559px]:inset-x-4 @max-[559px]:top-auto @max-[559px]:w-auto";
+// Dasselbe für die Filter links, deren Container nur den Platz neben Suche
+// und Drei-Punkte-Menü bekommt.
+const FILTERS_NARROW_POPOVER_CLASS_NAME =
+  "@max-[419px]:fixed @max-[419px]:inset-x-4 @max-[419px]:top-auto @max-[419px]:w-auto";
 
 
 const INCOME_TYPES = new Set(["revenue", "invoice", "donation", "deposit"]);
@@ -305,11 +341,55 @@ const PAYMENT_STATUS_CHIP_CLASS_NAMES: Record<PaymentStatusTone, string> = {
 const isOpenReceipt = (receipt: CampaiBalanceReceipt): boolean =>
   OPEN_PAYMENT_STATUSES.has(receipt.paymentStatus?.trim().toLowerCase() ?? "");
 
-const CELL_CLASS_NAME = "whitespace-nowrap px-4 py-3 text-foreground";
+// Zeilenabstand der Tabelle. Die Zellen lesen ihn aus CSS-Variablen, die
+// <table> setzt — „Komfortabel" ist das ursprüngliche Maß, die beiden
+// anderen bringen mehr Zeilen auf kleine Bildschirme.
+const DENSITY_OPTIONS: {
+  value: BalanceTableDensity;
+  label: string;
+  style: Record<string, string>;
+}[] = [
+  {
+    value: "comfortable",
+    label: "Komfortabel",
+    style: {
+      "--cell-py": "0.75rem",
+      "--chip-py": "3px",
+      "--action-cell-py": "0.5rem",
+      "--action-size": "2rem",
+    },
+  },
+  {
+    value: "standard",
+    label: "Standard",
+    style: {
+      "--cell-py": "0.5rem",
+      "--chip-py": "2px",
+      "--action-cell-py": "0.25rem",
+      "--action-size": "1.75rem",
+    },
+  },
+  {
+    value: "compact",
+    label: "Kompakt",
+    style: {
+      "--cell-py": "0.25rem",
+      "--chip-py": "0px",
+      "--action-cell-py": "0.125rem",
+      "--action-size": "1.5rem",
+    },
+  },
+];
+
+const isDensity = (value: unknown): value is BalanceTableDensity =>
+  DENSITY_OPTIONS.some((option) => option.value === value);
+
+const CELL_CLASS_NAME =
+  "whitespace-nowrap px-4 py-[var(--cell-py)] text-foreground";
 const CELL_TEXT_CLASS_NAME =
   "block overflow-hidden text-ellipsis whitespace-nowrap";
 const CHIP_CLASS_NAME =
-  "inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap px-[7px] py-[3px] knglmrt-tag text-foreground";
+  "inline-block max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap px-[7px] py-[var(--chip-py)] knglmrt-tag text-foreground";
 
 const TABLE_COLUMNS: TableColumn[] = [
   { key: "receiptNumber", label: "Beleg" },
@@ -466,6 +546,7 @@ const serializeBalancePreferences = (
   costCenter2: string[],
   columnOrder: ColumnKey[],
   hiddenColumnKeys: ColumnKey[],
+  density: BalanceTableDensity = "comfortable",
 ) => {
   return JSON.stringify({
     costCenter2,
@@ -473,6 +554,7 @@ const serializeBalancePreferences = (
       order: columnOrder,
       hidden: hiddenColumnKeys,
     },
+    density,
   });
 };
 
@@ -603,7 +685,12 @@ export default function WerkbereichReceipts({
   werkbereich,
   isOnlyWerkbereich = false,
 }: WerkbereichReceiptsProps) {
-  const [isColumnPanelOpen, setIsColumnPanelOpen] = useState(false);
+  // Drei-Punkte-Menü: zu, Menü oder die Seite „Spalten verwalten".
+  const [viewMenu, setViewMenu] = useState<null | "menu" | "columns">(null);
+  const [density, setDensity] = useState<BalanceTableDensity>("comfortable");
+  const densityStyle = (DENSITY_OPTIONS.find(
+    (option) => option.value === density,
+  ) ?? DENSITY_OPTIONS[0]).style as CSSProperties;
   const [columnOrder, setColumnOrder] =
     useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [hiddenColumnKeys, setHiddenColumnKeys] = useState<ColumnKey[]>([]);
@@ -617,6 +704,8 @@ export default function WerkbereichReceipts({
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [period, setPeriod] = useState<Period>(() => yearPeriod(CURRENT_YEAR));
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchScope, setSearchScope] = useState<SearchScope>("all");
   const [groupByProject, setGroupByProject] = useState(false);
   const [cashRegisterSummary, setCashRegisterSummary] =
     useState<CampaiCashRegisterBalanceSummary | null>(null);
@@ -634,7 +723,7 @@ export default function WerkbereichReceipts({
     key: SortKey;
     direction: SortDirection;
   } | null>({ key: "paidAt", direction: "desc" });
-  const columnPanelRef = useRef<HTMLDivElement | null>(null);
+  const viewMenuRef = useRef<HTMLDivElement | null>(null);
   const savedBalancePreferencesRef = useRef<string>(
     serializeBalancePreferences([], DEFAULT_COLUMN_ORDER, []),
   );
@@ -692,12 +781,18 @@ export default function WerkbereichReceipts({
           nextColumnOrder,
         );
 
+        const nextDensity = isDensity(balancePreferences?.density)
+          ? balancePreferences.density
+          : "comfortable";
+
         setColumnOrder(nextColumnOrder);
         setHiddenColumnKeys(nextHiddenColumnKeys);
+        setDensity(nextDensity);
         savedBalancePreferencesRef.current = serializeBalancePreferences(
           balancePreferences?.costCenter2 ?? [],
           nextColumnOrder,
           nextHiddenColumnKeys,
+          nextDensity,
         );
       } catch {
         if (!active) {
@@ -721,19 +816,19 @@ export default function WerkbereichReceipts({
   }, []);
 
   useEffect(() => {
-    if (!isColumnPanelOpen) {
+    if (viewMenu === null) {
       return;
     }
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!columnPanelRef.current?.contains(event.target as Node)) {
-        setIsColumnPanelOpen(false);
+      if (!viewMenuRef.current?.contains(event.target as Node)) {
+        setViewMenu(null);
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsColumnPanelOpen(false);
+        setViewMenu(null);
       }
     };
 
@@ -744,7 +839,7 @@ export default function WerkbereichReceipts({
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isColumnPanelOpen]);
+  }, [viewMenu]);
 
   useEffect(() => {
     void loadCostCenters();
@@ -859,8 +954,8 @@ export default function WerkbereichReceipts({
     };
   }, []);
 
-  // Merkt sich den zuletzt geöffneten Werkbereich (für /receipts) und die
-  // Spaltenauswahl.
+  // Merkt sich den zuletzt geöffneten Werkbereich (für /receipts), die
+  // Spaltenauswahl und den Zeilenabstand.
   useEffect(() => {
     if (!hasLoadedPreferences) {
       return;
@@ -870,6 +965,7 @@ export default function WerkbereichReceipts({
       [werkbereich.value],
       columnOrder,
       hiddenColumnKeys,
+      density,
     );
 
     if (savedBalancePreferencesRef.current === nextSerializedPreferences) {
@@ -886,6 +982,7 @@ export default function WerkbereichReceipts({
             order: columnOrder,
             hidden: hiddenColumnKeys,
           },
+          density,
         },
       };
 
@@ -916,7 +1013,13 @@ export default function WerkbereichReceipts({
     return () => {
       active = false;
     };
-  }, [columnOrder, hasLoadedPreferences, hiddenColumnKeys, werkbereich.value]);
+  }, [
+    columnOrder,
+    density,
+    hasLoadedPreferences,
+    hiddenColumnKeys,
+    werkbereich.value,
+  ]);
 
   const visibleReceipts = useMemo(
     () =>
@@ -1014,7 +1117,7 @@ export default function WerkbereichReceipts({
     return selectedProjects.filter((key) => available.has(key));
   }, [projectOptions, selectedProjects]);
 
-  const filteredReceipts = useMemo(() => {
+  const receiptsMatchingProjects = useMemo(() => {
     if (activeProjectKeys.length === 0) {
       return receiptsMatchingToolbarFilters;
     }
@@ -1026,6 +1129,127 @@ export default function WerkbereichReceipts({
       ),
     );
   }, [activeProjectKeys, receiptsMatchingToolbarFilters]);
+
+  // Durchsuchbarer Text je Bereich — so, wie er in der Tabelle steht, plus
+  // Beträge ohne Tausenderpunkt und mit Dezimalpunkt.
+  const getSearchText = useCallback(
+    (receipt: CampaiBalanceReceipt, scope: SearchScope): string => {
+      const formatAmountVariants = (cents: number | null) => {
+        if (cents === null) {
+          return "";
+        }
+        const plain = (Math.abs(cents) / 100).toFixed(2);
+        return `${formatCents(cents)} ${plain} ${plain.replace(".", ",")}`;
+      };
+
+      switch (scope) {
+        case "receiptNumber":
+          return receipt.receiptNumber ?? "";
+        case "description":
+          return [
+            receipt.description,
+            ...receipt.positions.map((position) => position.description),
+          ]
+            .filter(Boolean)
+            .join(" ");
+        case "accountName":
+          return receipt.accountName ?? "";
+        case "amount":
+          return [
+            formatAmountVariants(receipt.totalGrossAmount),
+            ...receipt.positions.map((position) =>
+              formatAmountVariants(position.amount),
+            ),
+          ].join(" ");
+        case "project":
+          return receipt.positions
+            .flatMap((position) => [
+              position.costCenter1 !== null
+                ? `${position.costCenter1} ${costCenterLabelMap.get(String(position.costCenter1)) ?? ""}`
+                : null,
+              getProjectLabel(getPositionCostCenter2Key(position)),
+              position.costCenter2 !== null ? String(position.costCenter2) : null,
+            ])
+            .filter(Boolean)
+            .join(" ");
+        case "paymentAccounts":
+          return [
+            ...receipt.paymentAccountNames,
+            ...receipt.paymentAccounts.map(String),
+          ].join(" ");
+        case "tags":
+          return receipt.tags.join(" ");
+        case "date":
+          return [receipt.paidAt, receipt.receiptDate, receipt.createdAt]
+            .filter(Boolean)
+            .map((value) => formatDate(value))
+            .join(" ");
+        case "all":
+          return [
+            ...SEARCH_SCOPE_OPTIONS.filter((option) => option.value !== "all").map(
+              (option) => getSearchText(receipt, option.value),
+            ),
+            receipt.type ? (TYPE_LABELS[receipt.type] ?? receipt.type) : "",
+            getPaymentStatusLabel(receipt.paymentStatus) ?? "",
+          ].join(" ");
+      }
+    },
+    [costCenterLabelMap, getProjectLabel],
+  );
+
+  const searchTerms = useMemo(
+    () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
+    [searchQuery],
+  );
+
+  // Mehrere Wörter müssen alle vorkommen, egal in welcher Reihenfolge.
+  const filteredReceipts = useMemo(() => {
+    if (searchTerms.length === 0) {
+      return receiptsMatchingProjects;
+    }
+
+    return receiptsMatchingProjects.filter((receipt) => {
+      const text = getSearchText(receipt, searchScope).toLowerCase();
+      return searchTerms.every((term) => text.includes(term));
+    });
+  }, [getSearchText, receiptsMatchingProjects, searchScope, searchTerms]);
+
+  // Markiert die Suchwörter in einer Zelle — nur in Spalten, die zum
+  // gewählten Suchbereich gehören. `all` heißt: nur bei „Alle Felder".
+  const searchPattern = useMemo(
+    () =>
+      searchTerms.length > 0
+        ? new RegExp(
+            `(${searchTerms
+              .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+              .join("|")})`,
+            "gi",
+          )
+        : null,
+    [searchTerms],
+  );
+
+  const highlight = useCallback(
+    (text: string, cellScope: SearchScope): ReactNode => {
+      if (
+        !searchPattern ||
+        (searchScope !== "all" && searchScope !== cellScope)
+      ) {
+        return text;
+      }
+
+      return text.split(searchPattern).map((part, index) =>
+        index % 2 === 1 ? (
+          <mark key={index} className="bg-primary-soft text-inherit">
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      );
+    },
+    [searchPattern, searchScope],
+  );
 
   const sortedReceipts = useMemo(() => {
     if (!sortConfig) {
@@ -1214,7 +1438,7 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={receipt.receiptNumber ?? "—"}
               >
-                {receipt.receiptNumber ?? "—"}
+                {highlight(receipt.receiptNumber ?? "—", "receiptNumber")}
               </span>
             </td>
           );
@@ -1227,7 +1451,7 @@ export default function WerkbereichReceipts({
                   className={`${CHIP_CLASS_NAME} ${PAYMENT_STATUS_CHIP_CLASS_NAMES[normalizePaymentStatusTone(receipt.paymentStatus)]}`}
                   title={statusLabel}
                 >
-                  {statusLabel}
+                  {highlight(statusLabel, "all")}
                 </span>
               ) : (
                 "—"
@@ -1242,7 +1466,7 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={formatDate(receipt.paidAt)}
               >
-                {formatDate(receipt.paidAt)}
+                {highlight(formatDate(receipt.paidAt), "date")}
               </span>
             </td>
           );
@@ -1257,7 +1481,10 @@ export default function WerkbereichReceipts({
                   costCenterLabelMap,
                 )}
               >
-                {getFirstPositionValue(receipt.positions, "costCenter1")}
+                {highlight(
+                  getFirstPositionValue(receipt.positions, "costCenter1"),
+                  "project",
+                )}
               </span>
             </td>
           );
@@ -1271,7 +1498,7 @@ export default function WerkbereichReceipts({
                 className={`${CELL_TEXT_CLASS_NAME} max-w-[300px]`}
                 title={receiptDescription}
               >
-                {receiptDescription}
+                {highlight(receiptDescription, "description")}
               </span>
             </td>
           );
@@ -1285,7 +1512,7 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={receipt.accountName ?? "—"}
               >
-                {receipt.accountName ?? "—"}
+                {highlight(receipt.accountName ?? "—", "accountName")}
               </span>
             </td>
           );
@@ -1313,7 +1540,7 @@ export default function WerkbereichReceipts({
               className={`${CELL_CLASS_NAME} knglmrt-num text-right font-bold!`}
             >
               <span className={CELL_TEXT_CLASS_NAME} title={incomeCell}>
-                {incomeCell}
+                {highlight(incomeCell, "amount")}
               </span>
             </td>
           );
@@ -1324,7 +1551,7 @@ export default function WerkbereichReceipts({
               className={`${CELL_CLASS_NAME} knglmrt-num text-right font-bold!`}
             >
               <span className={CELL_TEXT_CLASS_NAME} title={expenseCell}>
-                {expenseCell}
+                {highlight(expenseCell, "amount")}
               </span>
             </td>
           );
@@ -1335,7 +1562,7 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={paymentAccountsLabel}
               >
-                {paymentAccountsLabel}
+                {highlight(paymentAccountsLabel, "paymentAccounts")}
               </span>
             </td>
           );
@@ -1364,7 +1591,7 @@ export default function WerkbereichReceipts({
                       />
                       <span className="knglmrt-num">
                         {position.amount !== null
-                          ? formatCents(position.amount)
+                          ? highlight(formatCents(position.amount), "amount")
                           : "—"}
                       </span>
                     </span>
@@ -1389,7 +1616,7 @@ export default function WerkbereichReceipts({
                   className={`${CHIP_CLASS_NAME} bg-muted`}
                   title={typeLabel}
                 >
-                  {typeLabel}
+                  {highlight(typeLabel, "all")}
                 </span>
               ) : (
                 "—"
@@ -1404,7 +1631,7 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={formatDate(receipt.receiptDate)}
               >
-                {formatDate(receipt.receiptDate)}
+                {highlight(formatDate(receipt.receiptDate), "date")}
               </span>
             </td>
           );
@@ -1415,13 +1642,13 @@ export default function WerkbereichReceipts({
                 className={CELL_TEXT_CLASS_NAME}
                 title={formatDate(receipt.createdAt)}
               >
-                {formatDate(receipt.createdAt)}
+                {highlight(formatDate(receipt.createdAt), "date")}
               </span>
             </td>
           );
         case "tags":
           return (
-            <td key={cellKey} className="px-4 py-3">
+            <td key={cellKey} className="px-4 py-[var(--cell-py)]">
               {receipt.tags.length > 0 ? (
                 <div
                   className="inline-flex max-w-full flex-nowrap gap-1 overflow-hidden align-middle"
@@ -1429,7 +1656,7 @@ export default function WerkbereichReceipts({
                 >
                   {receipt.tags.map((tag) => (
                     <span key={tag} className={`${CHIP_CLASS_NAME} bg-muted`}>
-                      {tag}
+                      {highlight(tag, "tags")}
                     </span>
                   ))}
                 </div>
@@ -1442,16 +1669,22 @@ export default function WerkbereichReceipts({
           // Kassenbuchungen haben keinen Beleg zum Herunterladen.
           if (receipt.source === "cashRegister") {
             return (
-              <td key={cellKey} className="px-4 py-2 text-center">
+              <td
+                key={cellKey}
+                className="px-4 py-[var(--action-cell-py)] text-center"
+              >
                 —
               </td>
             );
           }
           return (
-            <td key={cellKey} className="px-4 py-2 text-center">
+            <td
+                key={cellKey}
+                className="px-4 py-[var(--action-cell-py)] text-center"
+              >
               <a
                 href={`/api/campai/balance/receipts/${receipt.id}/download`}
-                className="inline-flex h-8 w-8 items-center justify-center knglmrt-border bg-card text-foreground transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                className="inline-flex h-[var(--action-size)] w-[var(--action-size)] items-center justify-center knglmrt-border bg-card text-foreground transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
                 aria-label={`PDF für ${receipt.receiptNumber || "diesen Beleg"} herunterladen`}
                 title="PDF herunterladen"
               >
@@ -1475,7 +1708,7 @@ export default function WerkbereichReceipts({
           );
       }
     },
-    [costCenterLabelMap],
+    [costCenterLabelMap, highlight],
   );
 
   // Kassenbuchungen sind keine Belege — die Detailansicht hätte nichts zu laden.
@@ -1539,107 +1772,182 @@ export default function WerkbereichReceipts({
         </div>
       ) : null}
 
-      {/* Eine Zeile, die mit der verfügbaren Breite schrumpft (Container-
-          Queries, weil die Sidebar die Breite mitbestimmt):
-          ≥1180px Segmente und volle Beschriftungen, darunter Auswahllisten;
-          die Beschriftungen fallen nacheinander weg („Gruppieren" <800px,
-          „Buchungen" <720px, „Projekt" <600px). Unter 560px scrollt die Zeile
-          seitlich, die Popover hängen dann fest unter ihr, statt abgeschnitten
-          zu werden. */}
+      {/* Eine Zeile, nie breiter als die Seite; Beschriftungen stehen über
+          den Feldern, alles sitzt auf der Unterkante. Rechts Suche und
+          Drei-Punkte-Menü in voller Größe; die Filter links stehen in einem
+          eigenen Container, der nur den Rest bekommt — klappt die Suche auf,
+          rücken sie also zusammen. Ihre Stufen (Container-Queries auf den
+          linken Teil): ≥720px „Art" als Segmente, darunter als Auswahlliste.
+          Unter 420px scrollen die Filter seitlich, die Popover hängen dann
+          fest unter ihnen, statt abgeschnitten zu werden. */}
       <div className="@container shrink-0">
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto @min-[560px]:gap-3 @min-[560px]:overflow-visible">
-          <div className="hidden shrink-0 @min-[1180px]:block">
-            <SegmentedControl
-              tone="ink"
-              size="medium"
-              segmentClassName={FILTER_SEGMENT_CLASS_NAME}
-              value={kindFilter}
-              options={KIND_FILTER_OPTIONS}
-              onChange={setKindFilter}
-            />
-          </div>
-          <FilterSelect
-            className="@min-[1180px]:hidden"
-            label="Art"
-            value={kindFilter}
-            options={KIND_FILTER_OPTIONS}
-            onChange={setKindFilter}
-          />
-          <PeriodFilter
-            value={period}
-            onChange={setPeriod}
-            years={yearsWithReceipts}
-            captionClassName="hidden @min-[600px]:inline"
-            panelClassName={NARROW_POPOVER_CLASS_NAME}
-          />
-          <span
-            aria-hidden="true"
-            className="mx-1 hidden h-8 w-px shrink-0 bg-border @min-[1180px]:block"
-          />
-          <ProjectFilter
-            options={projectOptions}
-            value={activeProjectKeys}
-            onChange={setSelectedProjects}
-            formatAmount={formatCents}
-            captionClassName="hidden @min-[600px]:inline"
-            panelClassName={NARROW_POPOVER_CLASS_NAME}
-          />
-          <Choice
-            kind="switch"
-            className="shrink-0 whitespace-nowrap"
-            checked={groupByProject}
-            onChange={(event) => setGroupByProject(event.target.checked)}
-            aria-label="Nach Projekt gruppieren"
-            title="Nach Projekt gruppieren"
-            label={
-              <>
-                <span className="hidden @min-[1180px]:inline">
-                  Nach Projekt gruppieren
-                </span>
-                <span className="hidden @min-[800px]:inline @min-[1180px]:hidden">
-                  Gruppieren
-                </span>
-              </>
-            }
-          />
-
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {showSummary ? (
-              <span
-                className="knglmrt-num whitespace-nowrap text-muted-foreground"
-                title={`${sortedReceipts.length} ${sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}`}
-              >
-                {sortedReceipts.length}
-                <span className="hidden @min-[720px]:inline">
-                  {" "}
-                  {sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}
-                </span>
-              </span>
-            ) : null}
-            <div className="relative" ref={columnPanelRef}>
-              <Button
-                kind="ghost"
-                iconOnly
-                icon={faColumns}
-                className="h-[38px]! w-[38px]!"
-                onClick={() => setIsColumnPanelOpen((current) => !current)}
-                aria-haspopup="dialog"
-                aria-expanded={isColumnPanelOpen}
-                aria-label="Spalten verwalten"
-                title="Spalten verwalten"
+        <div className="flex flex-nowrap items-end gap-2 @min-[560px]:gap-3">
+          <div className="@container min-w-0 flex-1">
+            <div className="flex flex-nowrap items-end gap-2 overflow-x-auto @min-[420px]:gap-3 @min-[420px]:overflow-visible">
+              <FieldShell as="div" label="Art" className="shrink-0">
+                <div className="hidden @min-[720px]:block">
+                  <SegmentedControl
+                    tone="ink"
+                    size="medium"
+                    segmentClassName={FILTER_SEGMENT_CLASS_NAME}
+                    value={kindFilter}
+                    options={KIND_FILTER_OPTIONS}
+                    onChange={setKindFilter}
+                  />
+                </div>
+                <FilterSelect
+                  className="@min-[720px]:hidden"
+                  label="Art"
+                  value={kindFilter}
+                  options={KIND_FILTER_OPTIONS}
+                  onChange={setKindFilter}
+                />
+              </FieldShell>
+              <PeriodFilter
+                value={period}
+                onChange={setPeriod}
+                years={yearsWithReceipts}
+                panelClassName={FILTERS_NARROW_POPOVER_CLASS_NAME}
               />
+              <ProjectFilter
+                options={projectOptions}
+                value={activeProjectKeys}
+                onChange={setSelectedProjects}
+                formatAmount={formatCents}
+                groupByProject={groupByProject}
+                onGroupByProjectChange={setGroupByProject}
+                panelClassName={FILTERS_NARROW_POPOVER_CLASS_NAME}
+              />
+            </div>
+          </div>
 
-              {isColumnPanelOpen ? (
+          <div className="flex shrink-0 items-end gap-2">
+            <ReceiptSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              scope={searchScope}
+              scopes={SEARCH_SCOPE_OPTIONS}
+              onScopeChange={setSearchScope}
+            />
+            <div className="relative" ref={viewMenuRef}>
+              <button
+                type="button"
+                onClick={() =>
+                  setViewMenu((current) => (current === null ? "menu" : null))
+                }
+                aria-haspopup="menu"
+                aria-expanded={viewMenu !== null}
+                aria-label="Ansicht und Einstellungen"
+                title="Ansicht und Einstellungen"
+                className="inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center knglmrt-border bg-card transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+              >
+                <FontAwesomeIcon
+                  icon={faEllipsis}
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
+              </button>
+
+              {viewMenu === "menu" ? (
+                <ul
+                  role="menu"
+                  aria-label="Ansicht und Einstellungen"
+                  className={`absolute right-0 top-full z-20 mt-2 w-[260px] border border-primary bg-popover py-2 text-popover-foreground ${NARROW_POPOVER_CLASS_NAME}`}
+                >
+                  <li
+                    role="presentation"
+                    className="knglmrt-label px-5 pt-1 pb-1.5"
+                  >
+                    Zeilenabstand
+                  </li>
+                  {DENSITY_OPTIONS.map((option) => {
+                    const isActive = option.value === density;
+                    return (
+                      <li key={option.value} role="none">
+                        <button
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={isActive}
+                          onClick={() => setDensity(option.value)}
+                          className={`flex w-full items-center gap-3 px-5 py-2 text-left transition hover:bg-primary-soft ${isActive ? "font-bold" : ""}`}
+                        >
+                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                            {isActive ? (
+                              <FontAwesomeIcon
+                                icon={faCheck}
+                                aria-hidden="true"
+                                className="h-3 w-3"
+                              />
+                            ) : null}
+                          </span>
+                          {option.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                  <li
+                    role="separator"
+                    className="mx-5 my-2 border-t border-border"
+                  />
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => setViewMenu("columns")}
+                      className="flex w-full items-center gap-3 px-5 py-2 text-left transition hover:bg-primary-soft"
+                    >
+                      <FontAwesomeIcon
+                        icon={faColumns}
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 shrink-0"
+                      />
+                      Spalten verwalten …
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setColumnOrder(DEFAULT_COLUMN_ORDER);
+                        setHiddenColumnKeys([]);
+                        setViewMenu(null);
+                      }}
+                      className="flex w-full items-center gap-3 px-5 py-2 text-left transition hover:bg-primary-soft"
+                    >
+                      <FontAwesomeIcon
+                        icon={faRotateLeft}
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 shrink-0"
+                      />
+                      Spalten zurücksetzen
+                    </button>
+                  </li>
+                </ul>
+              ) : null}
+
+              {viewMenu === "columns" ? (
                 <div
-                  className={`absolute right-0 top-full z-20 mt-2 w-[320px] knglmrt-border bg-popover p-3 text-popover-foreground ${NARROW_POPOVER_CLASS_NAME}`}
+                  className={`absolute right-0 top-full z-20 mt-2 w-[320px] border border-primary bg-popover p-3 text-popover-foreground ${NARROW_POPOVER_CLASS_NAME}`}
                   role="dialog"
                   aria-label="Spalten verwalten"
                 >
-                  <div className="mb-2">
-                    <p className="font-semibold">Spalten verwalten</p>
-                    <p className="text-muted-foreground">
-                      Spalten ein- oder ausblenden und ihre Reihenfolge anpassen.
-                    </p>
+                  <div className="mb-2 flex items-start gap-2">
+                    <Button
+                      kind="ghost"
+                      iconOnly
+                      icon={faArrowLeft}
+                      onClick={() => setViewMenu("menu")}
+                      aria-label="Zurück zum Menü"
+                      title="Zurück"
+                    />
+                    <div>
+                      <p className="font-semibold">Spalten verwalten</p>
+                      <p className="text-muted-foreground">
+                        Spalten ein- oder ausblenden und ihre Reihenfolge
+                        anpassen.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -1711,7 +2019,10 @@ export default function WerkbereichReceipts({
       />
 
       <div className="@container max-h-[70vh] min-h-0 overflow-auto knglmrt-border bg-card md:max-h-none">
-        <table className="min-w-full table-fixed border-collapse">
+        <table
+          className="min-w-full table-fixed border-collapse"
+          style={densityStyle}
+        >
           <thead className="sticky top-0 z-10 bg-muted shadow-[inset_0_-1px_0_var(--hairline-color)]">
             <tr>
               {visibleColumns.map((column) => {
@@ -1729,7 +2040,7 @@ export default function WerkbereichReceipts({
                 return (
                   <th
                     key={column.key}
-                    className={`whitespace-nowrap px-4 py-3 font-bold text-foreground ${column.headerWidthClassName ?? ""} ${getHeaderAlignmentClassName(
+                    className={`whitespace-nowrap px-4 py-[var(--cell-py)] font-bold text-foreground ${column.headerWidthClassName ?? ""} ${getHeaderAlignmentClassName(
                       column.align,
                     )}`}
                     title={column.title ?? column.label}
@@ -1802,7 +2113,7 @@ export default function WerkbereichReceipts({
                           <td colSpan={visibleColumnCount} className="p-0">
                             {/* Bleibt beim seitlichen Scrollen im Blick:
                                 so breit wie der sichtbare Tabellenausschnitt. */}
-                            <div className="sticky left-0 flex w-[100cqw] items-baseline justify-between gap-4 px-4 py-3">
+                            <div className="sticky left-0 flex w-[100cqw] items-baseline justify-between gap-4 px-4 py-[var(--cell-py)]">
                               <span className="flex items-baseline gap-3">
                                 <span className="font-bold">{group.label}</span>
                                 <span className="text-muted-foreground">
@@ -1842,6 +2153,16 @@ export default function WerkbereichReceipts({
               Werten, und Schrift, Abstände und Innenränder wachsen mit der
               Breite der Zeile (cqw) — so passt sie bis auf Telefonbreite. */}
           <div className="flex flex-nowrap items-stretch justify-end gap-2 @min-[640px]:gap-3">
+            <span
+              className="knglmrt-num mr-auto self-center whitespace-nowrap text-muted-foreground"
+              title={`${sortedReceipts.length} ${sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}`}
+            >
+              {sortedReceipts.length}
+              <span className="hidden @min-[640px]:inline">
+                {" "}
+                {sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}
+              </span>
+            </span>
             <div className="flex flex-nowrap items-center gap-x-[clamp(8px,2.5cqw,32px)] knglmrt-border bg-muted px-[clamp(8px,2.5cqw,20px)] py-2 @min-[1100px]:py-3">
               {cashRegisterAccount !== undefined ? (
                 <SummaryFigure

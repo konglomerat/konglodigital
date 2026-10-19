@@ -22,6 +22,14 @@ export type MemberProfileFormDefaultValue =
   | null
   | Array<string | number | boolean | null>;
 
+export const BALANCE_TABLE_DENSITIES = [
+  "comfortable",
+  "standard",
+  "compact",
+] as const;
+
+export type BalanceTableDensity = (typeof BALANCE_TABLE_DENSITIES)[number];
+
 export type MemberProfilePreferences = {
   balance?: {
     costCenter2?: string[];
@@ -29,6 +37,7 @@ export type MemberProfilePreferences = {
       order?: string[];
       hidden?: string[];
     };
+    density?: BalanceTableDensity;
   };
   formDefaults?: Record<string, Record<string, MemberProfileFormDefaultValue>>;
 };
@@ -175,6 +184,14 @@ export const normalizeMemberProfilePreferences = (
           ...(hasHiddenField ? { hidden } : {}),
         };
       }
+    }
+
+    if (
+      BALANCE_TABLE_DENSITIES.includes(
+        value.balance.density as BalanceTableDensity,
+      )
+    ) {
+      balance.density = value.balance.density as BalanceTableDensity;
     }
 
     if (Object.keys(balance).length > 0) {
