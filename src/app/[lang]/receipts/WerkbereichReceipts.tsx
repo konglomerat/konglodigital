@@ -21,6 +21,9 @@ import {
   faCheck,
   faColumns,
   faEllipsis,
+  faFileCsv,
+  faFileExcel,
+  faFilePdf,
   faRotateLeft,
   faSort,
   faSortDown,
@@ -56,6 +59,7 @@ import type {
 
 import NewBookingMenu from "./NewBookingMenu";
 import PeriodFilter, {
+  describePeriod,
   toIsoDate,
   yearPeriod,
   type Period,
@@ -63,6 +67,12 @@ import PeriodFilter, {
 import ProjectFilter, { type ProjectFilterOption } from "./ProjectFilter";
 import ReceiptSearch from "./ReceiptSearch";
 import ReceiptDetailDrawer from "./receipt-detail-drawer";
+import {
+  exportTable,
+  type ExportCell,
+  type ExportColumn,
+  type ExportFormat,
+} from "./receipts-export";
 
 type CostCenterOption = {
   value: string;
@@ -380,6 +390,29 @@ const DENSITY_OPTIONS: {
     },
   },
 ];
+
+const EXPORT_OPTIONS: {
+  value: ExportFormat;
+  label: string;
+  icon: typeof faFileCsv;
+}[] = [
+  { value: "xlsx", label: "Excel (XLSX)", icon: faFileExcel },
+  { value: "csv", label: "CSV", icon: faFileCsv },
+  { value: "pdf", label: "PDF", icon: faFilePdf },
+];
+
+// Spaltenbreiten im Export (Zeichen in XLSX, Gewicht im PDF).
+const EXPORT_COLUMN_WIDTHS: Partial<Record<ColumnKey, number>> = {
+  receiptNumber: 14,
+  paymentStatus: 12,
+  Sphäre: 16,
+  description: 40,
+  accountName: 26,
+  paymentAccounts: 18,
+  "positions.account": 34,
+  type: 14,
+  tags: 18,
+};
 
 const isDensity = (value: unknown): value is BalanceTableDensity =>
   DENSITY_OPTIONS.some((option) => option.value === value);
@@ -723,6 +756,10 @@ export default function WerkbereichReceipts({
     key: SortKey;
     direction: SortDirection;
   } | null>({ key: "paidAt", direction: "desc" });
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(
+    null,
+  );
+  const [exportError, setExportError] = useState<string | null>(null);
   const viewMenuRef = useRef<HTMLDivElement | null>(null);
   const savedBalancePreferencesRef = useRef<string>(
     serializeBalancePreferences([], DEFAULT_COLUMN_ORDER, []),
@@ -1740,6 +1777,145 @@ export default function WerkbereichReceipts({
       </tr>
     );
 
+  // Exportiert, was die Tabelle gerade zeigt: gefilterte und sortierte
+  // Belege, sichtbare Spalten in ihrer Reihenfolge (ohne PDF-Link).
+  const getExportCell = useCallback(
+    (columnKey: ColumnKey, receipt: CampaiBalanceReceipt): ExportCell => {
+      const amount = receipt.totalGrossAmount;
+      const isIncome = receipt.type ? INCOME_TYPES.has(receipt.type) : false;
+      const isExpense = receipt.type ? EXPENSE_TYPES.has(receipt.type) : false;
+
+      switch (columnKey) {
+        case "receiptNumber":
+          return receipt.receiptNumber;
+        case "paymentStatus":
+          return getPaymentStatusLabel(receipt.paymentStatus);
+        case "paidAt":
+          return receipt.paidAt;
+        case "Sphäre": {
+          const label = formatFirstPositionField(
+            receipt.positions,
+            "costCenter1",
+            costCenterLabelMap,
+          );
+          return label === "—" ? null : label;
+        }
+        case "description": {
+          const description = getReceiptDescription(receipt);
+          return description === "—" ? null : description;
+        }
+        case "accountName":
+          return receipt.accountName;
+        case "Einnahmen":
+          // Eröffnungsbestand als Text, damit er in keiner Summe mitzählt.
+          if (receipt.type === OPENING_BALANCE_TYPE && amount !== null) {
+            return `(${formatCents(amount)})`;
+          }
+          return isIncome ? amount : null;
+        case "Ausgaben":
+          return isExpense && amount !== null ? -amount : null;
+        case "paymentAccounts":
+          return receipt.paymentAccountNames.length > 0
+            ? receipt.paymentAccountNames.join(", ")
+            : receipt.paymentAccounts.length > 0
+              ? receipt.paymentAccounts
+                  .map((account) => `Konto ${account}`)
+                  .join(", ")
+              : null;
+        case "positions.account":
+          return receipt.positions.length > 0
+            ? formatCostCentersWithAmounts(receipt.positions, costCenterLabelMap)
+            : null;
+        case "type":
+          return receipt.source === "cashRegister" &&
+            receipt.type !== OPENING_BALANCE_TYPE
+            ? CASH_REGISTER_TYPE_LABEL
+            : receipt.type
+              ? (TYPE_LABELS[receipt.type] ?? receipt.type)
+              : null;
+        case "receiptDate":
+          return receipt.receiptDate;
+        case "createdAt":
+          return receipt.createdAt;
+        case "tags":
+          return receipt.tags.length > 0 ? receipt.tags.join(", ") : null;
+        case "pdf":
+          return null;
+      }
+    },
+    [costCenterLabelMap],
+  );
+
+  const handleExport = async (format: ExportFormat) => {
+    const columns = visibleColumns.filter((column) => column.key !== "pdf");
+    const exportColumns: ExportColumn[] = columns.map((column) => ({
+      label: column.label,
+      kind:
+        column.key === "Einnahmen" || column.key === "Ausgaben"
+          ? "amount"
+          : column.key === "paidAt" ||
+              column.key === "receiptDate" ||
+              column.key === "createdAt"
+            ? "date"
+            : "text",
+      width: EXPORT_COLUMN_WIDTHS[column.key],
+    }));
+
+    const filterLabels = [
+      describePeriod(period),
+      kindFilter !== "all"
+        ? KIND_FILTER_OPTIONS.find((option) => option.value === kindFilter)
+            ?.label
+        : null,
+      activeProjectKeys.length > 0
+        ? activeProjectKeys.map((key) => getProjectLabel(key)).join(", ")
+        : null,
+      searchQuery.trim() ? `Suche „${searchQuery.trim()}"` : null,
+      `${sortedReceipts.length} ${sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}`,
+    ].filter(Boolean);
+
+    const fileSlug = `${werkbereich.label}-${describePeriod(period)}`
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+
+    setExportingFormat(format);
+    setExportError(null);
+    try {
+      await exportTable(
+        {
+          fileName: `belege-${fileSlug}`,
+          title: `Belege · ${werkbereich.label}`,
+          subtitle: filterLabels.join(" · "),
+          columns: exportColumns,
+          rows: sortedReceipts.map((receipt) =>
+            columns.map((column) => getExportCell(column.key, receipt)),
+          ),
+          summary: [
+            ...(cashRegisterAccount !== undefined && cashRegisterBalance !== null
+              ? [{ label: "Barkasse", value: formatCents(cashRegisterBalance) }]
+              : []),
+            { label: "Einnahmen", value: formatSignedCents(totalIncome) },
+            { label: "Ausgaben", value: formatCents(-totalExpense) },
+            { label: "Guthaben", value: formatCents(availableSaldo) },
+          ],
+        },
+        format,
+      );
+      setViewMenu(null);
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : "Export fehlgeschlagen.",
+      );
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
   const renderMessageRow = (content: ReactNode) => (
     <tr>
       <td
@@ -1923,6 +2099,51 @@ export default function WerkbereichReceipts({
                       Spalten zurücksetzen
                     </button>
                   </li>
+                  <li
+                    role="separator"
+                    className="mx-5 my-2 border-t border-border"
+                  />
+                  <li
+                    role="presentation"
+                    className="knglmrt-label px-5 pt-1 pb-1.5"
+                  >
+                    Exportieren
+                  </li>
+                  {EXPORT_OPTIONS.map((option) => (
+                    <li key={option.value} role="none">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={
+                          exportingFormat !== null ||
+                          loadingReceipts ||
+                          sortedReceipts.length === 0
+                        }
+                        onClick={() => void handleExport(option.value)}
+                        className="flex w-full items-center gap-3 px-5 py-2 text-left transition hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                      >
+                        <FontAwesomeIcon
+                          icon={
+                            exportingFormat === option.value
+                              ? faSpinner
+                              : option.icon
+                          }
+                          spin={exportingFormat === option.value}
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 shrink-0"
+                        />
+                        {option.label}
+                      </button>
+                    </li>
+                  ))}
+                  {exportError ? (
+                    <li
+                      role="presentation"
+                      className="px-5 pt-1 text-destructive"
+                    >
+                      {exportError}
+                    </li>
+                  ) : null}
                 </ul>
               ) : null}
 
