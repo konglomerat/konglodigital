@@ -32,19 +32,19 @@ export default async function MemberServicesSection() {
     {
       title: tx("Ehrenamtsbonus beantragen", "de"),
       description: tx(
-        "Stunden für den Verein auf den Beitrag anrechnen.",
+        "Kostenlosen Zugang bekommen für ehrenamtliche Arbeit im Verein",
         "de",
       ),
       href: href("/account/ehrenamtsbonus"),
     },
     {
       title: tx("Rückerstattung einreichen", "de"),
-      description: tx("Beleg hochladen, Geld zurück.", "de"),
+      description: tx("Beleg hochladen und Geld zurückbekommen", "de"),
       href: href("/account/rueckerstattung"),
     },
     {
       title: tx("Werkzeug ausleihen", "de"),
-      description: tx("Aus dem Inventar mit nach Hause.", "de"),
+      description: tx("Hier kannst du dich eintragen wenn du mal was ausleihen möchtest", "de"),
       href: href("/resources"),
     },
     {

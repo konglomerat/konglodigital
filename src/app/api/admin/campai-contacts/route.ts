@@ -35,6 +35,7 @@ export const GET = async (request: NextRequest) => {
 				id: contact.id,
 				name: contact.name,
 				email: contact.email,
+				alternativeEmails: contact.alternativeEmails,
 				memberNumber: contact.memberNumber,
 				tags: contact.tags,
 				types: contact.types,

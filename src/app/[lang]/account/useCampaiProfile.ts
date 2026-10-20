@@ -22,6 +22,8 @@ export type CampaiProfileState = {
   /** Tarif und Jahresbeitrag aus den Verträgen. */
   membership: CampaiMembership | null;
   loading: boolean;
+  /** `false`, sobald feststeht, dass das Konto keinen Campai-Kontakt hat. */
+  linked: boolean;
   /** Ein Satz, warum gerade nichts zu sehen und zu ändern ist, sonst `null`. */
   unavailableHint: string | null;
   /** Gesperrt, solange es keinen Kontakt gibt, an dem etwas zu ändern wäre. */
@@ -98,6 +100,7 @@ export default function useCampaiProfile(): CampaiProfileState {
     profile,
     membership,
     loading,
+    linked,
     unavailableHint,
     locked: loading || !profile,
     save,

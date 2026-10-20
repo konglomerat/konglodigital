@@ -12,6 +12,7 @@
 // das Passwort, das als einziges nicht nach Campai geht, sondern zum
 // Supabase-Konto.
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faAddressBook,
@@ -88,13 +89,20 @@ export type AccountProfileSectionsProps = {
   campai: CampaiProfileState;
   /** Die E-Mail des Supabase-Kontos — davon unabhängig ist die in Campai. */
   accountEmail: string;
+  /** Der Name aus den Nutzer-Metadaten — gilt nur ohne Campai-Kontakt. */
+  accountName: { firstName: string; lastName: string };
 };
 
 export default function AccountProfileSections({
   campai,
   accountEmail,
+  accountName,
 }: AccountProfileSectionsProps) {
-  const { profile, loading, unavailableHint, locked, save } = campai;
+  const { profile, loading, linked, unavailableHint, locked, save } = campai;
+  const router = useRouter();
+  // Ohne Campai-Kontakt gibt es keine Stammdaten — nur den Namen, und der
+  // steht am Supabase-Konto.
+  const nameOnly = !loading && !linked;
 
   const [openEditor, setOpenEditor] = useState<EditorKey | null>(null);
   const [saving, setSaving] = useState(false);
@@ -119,6 +127,14 @@ export default function AccountProfileSections({
   // nicht erst beim Öffnen: kommt Campai später als der erste Klick, stünde im
   // Dialog sonst ein leeres Formular.
   useEffect(() => {
+    if (nameOnly) {
+      setPersonal({ ...EMPTY_PERSONAL, ...accountName });
+    }
+    // Nur die Werte, nicht das jedes Mal neue Objekt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameOnly, accountName.firstName, accountName.lastName]);
+
+  useEffect(() => {
     if (!profile) {
       return;
     }
@@ -132,6 +148,8 @@ export default function AccountProfileSections({
       setPersonal(toPersonalDraft(profile));
       setAddress({ ...profile.address });
       setContact(toContactDraft(profile));
+    } else if (nameOnly) {
+      setPersonal({ ...EMPTY_PERSONAL, ...accountName });
     }
     setPassword("");
     setPasswordConfirm("");
@@ -171,6 +189,30 @@ export default function AccountProfileSections({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleNameSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    void runSave(
+      "daten",
+      async () => {
+        const response = await fetch("/api/account/name", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: personal.firstName,
+            lastName: personal.lastName,
+          }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(data.error ?? "Speichern fehlgeschlagen.");
+        }
+        // Kopf und Begrüßung lesen den Namen aus den Server-Props.
+        router.refresh();
+      },
+      "Dein Name ist gespeichert.",
+    );
   };
 
   const handlePersonalSubmit = (event: FormEvent) => {
@@ -246,7 +288,9 @@ export default function AccountProfileSections({
   const placeholder = loading ? "…" : "";
   const fullName = profile
     ? [profile.firstName, profile.lastName].filter(Boolean).join(" ")
-    : "";
+    : nameOnly
+      ? [accountName.firstName, accountName.lastName].filter(Boolean).join(" ")
+      : "";
 
   // Die Adresse steht zweizeilig wie auf einem Briefumschlag — Straße, dann
   // PLZ und Ort.
@@ -269,10 +313,10 @@ export default function AccountProfileSections({
               open={openEditor === "daten"}
               controls="account-editor-daten"
               icon={faPen}
-              disabled={locked}
+              disabled={locked && !nameOnly}
               onClick={() => toggleEditor("daten")}
             >
-              Daten anpassen
+              {nameOnly ? "Name ändern" : "Daten anpassen"}
             </EditToggle>
             <EditToggle
               open={openEditor === "passwort"}
@@ -310,10 +354,10 @@ export default function AccountProfileSections({
         {openEditor === "daten" ? (
           <InlineEditor
             id="account-editor-daten"
-            title="Daten anpassen"
+            title={nameOnly ? "Name ändern" : "Daten anpassen"}
             saving={saving}
             error={error}
-            onSubmit={handlePersonalSubmit}
+            onSubmit={nameOnly ? handleNameSubmit : handlePersonalSubmit}
             onCancel={closeEditor}
           >
             <Field
@@ -345,88 +389,99 @@ export default function AccountProfileSections({
                 }))
               }
             />
-            <Field
-              id="account-organization"
-              label="Name der Organisation"
-              type="text"
-              value={personal.organizationName}
-              maxLength={200}
-              autoComplete="organization"
-              hint="Nur nötig, wenn die Mitgliedschaft über eine Firma oder einen Verein läuft."
-              onChange={(event) =>
-                setPersonal((current) => ({
-                  ...current,
-                  organizationName: event.target.value,
-                }))
-              }
-            />
-            <NativeSelect
-              id="account-language"
-              label="Sprache"
-              value={personal.language}
-              hint="In dieser Sprache schreibt der Verein dich an."
-              onChange={(event) =>
-                setPersonal((current) => ({
-                  ...current,
-                  language: event.target.value as CampaiContactLanguage,
-                }))
-              }
-            >
-              {(Object.keys(LANGUAGE_LABELS) as CampaiContactLanguage[]).map(
-                (language) => (
-                  <option key={language} value={language}>
-                    {LANGUAGE_LABELS[language]}
-                  </option>
-                ),
-              )}
-            </NativeSelect>
-            {/* Land, Bundesland und der zweite Zusatz stehen nicht im
-                Formular — sie bleiben im Entwurf, wie Campai sie führt, und
-                gehen unverändert zurück. */}
-            <Field
-              id="account-address-line"
-              label="Straße und Hausnummer"
-              type="text"
-              value={address.addressLine}
-              maxLength={45}
-              autoComplete="street-address"
-              onChange={(event) =>
-                setAddressField("addressLine", event.target.value)
-              }
-            />
-            <Field
-              id="account-address-details1"
-              label="Adresszusatz"
-              type="text"
-              value={address.details1}
-              maxLength={45}
-              onChange={(event) =>
-                setAddressField("details1", event.target.value)
-              }
-            />
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,120px)_minmax(0,1fr)]">
-              <Field
-                id="account-address-zip"
-                label="PLZ"
-                kind="mono"
-                type="text"
-                value={address.zip}
-                maxLength={10}
-                autoComplete="postal-code"
-                onChange={(event) => setAddressField("zip", event.target.value)}
-              />
-              <Field
-                id="account-address-city"
-                label="Ort"
-                type="text"
-                value={address.city}
-                maxLength={45}
-                autoComplete="address-level2"
-                onChange={(event) =>
-                  setAddressField("city", event.target.value)
-                }
-              />
-            </div>
+            {nameOnly ? (
+              <p className="text-[13px] leading-[18px] text-muted-foreground">
+                Adresse und Sprache kommen dazu, sobald dein Konto mit Campai
+                verknüpft ist.
+              </p>
+            ) : (
+              <>
+                <Field
+                  id="account-organization"
+                  label="Name der Organisation"
+                  type="text"
+                  value={personal.organizationName}
+                  maxLength={200}
+                  autoComplete="organization"
+                  hint="Nur nötig, wenn die Mitgliedschaft über eine Firma oder einen Verein läuft."
+                  onChange={(event) =>
+                    setPersonal((current) => ({
+                      ...current,
+                      organizationName: event.target.value,
+                    }))
+                  }
+                />
+                <NativeSelect
+                  id="account-language"
+                  label="Sprache"
+                  value={personal.language}
+                  hint="In dieser Sprache schreibt der Verein dich an."
+                  onChange={(event) =>
+                    setPersonal((current) => ({
+                      ...current,
+                      language: event.target.value as CampaiContactLanguage,
+                    }))
+                  }
+                >
+                  {(
+                    Object.keys(LANGUAGE_LABELS) as CampaiContactLanguage[]
+                  ).map((language) => (
+                    <option key={language} value={language}>
+                      {LANGUAGE_LABELS[language]}
+                    </option>
+                  ))}
+                </NativeSelect>
+                {/* Land, Bundesland und der zweite Zusatz stehen nicht im
+                  Formular — sie bleiben im Entwurf, wie Campai sie führt, und
+                  gehen unverändert zurück. */}
+                <Field
+                  id="account-address-line"
+                  label="Straße und Hausnummer"
+                  type="text"
+                  value={address.addressLine}
+                  maxLength={45}
+                  autoComplete="street-address"
+                  onChange={(event) =>
+                    setAddressField("addressLine", event.target.value)
+                  }
+                />
+                <Field
+                  id="account-address-details1"
+                  label="Adresszusatz"
+                  type="text"
+                  value={address.details1}
+                  maxLength={45}
+                  onChange={(event) =>
+                    setAddressField("details1", event.target.value)
+                  }
+                />
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,120px)_minmax(0,1fr)]">
+                  <Field
+                    id="account-address-zip"
+                    label="PLZ"
+                    kind="mono"
+                    type="text"
+                    value={address.zip}
+                    maxLength={10}
+                    autoComplete="postal-code"
+                    onChange={(event) =>
+                      setAddressField("zip", event.target.value)
+                    }
+                  />
+                  <Field
+                    id="account-address-city"
+                    label="Ort"
+                    type="text"
+                    value={address.city}
+                    maxLength={45}
+                    autoComplete="address-level2"
+                    onChange={(event) =>
+                      setAddressField("city", event.target.value)
+                    }
+                  />
+                </div>
+              </>
+            )}
           </InlineEditor>
         ) : null}
 

@@ -16,6 +16,7 @@ import {
   type CampaiMembership,
 } from "@/lib/campai-member-tariff";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 // Alles, was die Kontoseite aus Campai zeigt: der CRM-Kontakt (Stammdaten,
@@ -67,6 +68,46 @@ const readAddress = (value: unknown): CampaiContactAddress | null => {
     details1: toText(raw.details1, 45) ?? "",
     details2: toText(raw.details2, 45) ?? "",
   };
+};
+
+// Der Rest der App liest den Namen nicht live aus Campai, sondern aus zwei
+// Kopien: `member_profiles.campai_name` und den Nutzer-Metadaten. Nach einer
+// Namensänderung ziehen beide nach — scheitert das, steht der Name trotzdem
+// in Campai und die Kopien holt das nächste Verknüpfen nach.
+const syncCachedName = async (
+  user: { id: string; user_metadata?: Record<string, unknown> },
+  profile: CampaiContactProfile,
+) => {
+  const name = profile.isInstitution
+    ? profile.organizationName
+    : [profile.firstName, profile.lastName].filter(Boolean).join(" ");
+  if (!name) {
+    return;
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const [profileUpdate, metadataUpdate] = await Promise.all([
+    adminClient
+      .from("member_profiles")
+      .update({ campai_name: name, updated_at: new Date().toISOString() })
+      .eq("user_id", user.id),
+    profile.isInstitution
+      ? Promise.resolve({ error: null })
+      : adminClient.auth.admin.updateUserById(user.id, {
+          user_metadata: {
+            ...(user.user_metadata ?? {}),
+            first_name: profile.firstName,
+            last_name: profile.lastName,
+          },
+        }),
+  ]);
+
+  if (profileUpdate.error || metadataUpdate.error) {
+    console.error(
+      "Name konnte nicht in die Kopien übernommen werden:",
+      profileUpdate.error ?? metadataUpdate.error,
+    );
+  }
 };
 
 const getContactId = async (request: NextRequest) => {
@@ -272,6 +313,16 @@ export const POST = async (request: NextRequest) => {
         },
         { status: 404 },
       );
+    }
+
+    const nameChanged =
+      patch.firstName !== undefined ||
+      patch.lastName !== undefined ||
+      patch.organizationName !== undefined;
+    if (nameChanged) {
+      await syncCachedName(user, profile).catch((syncError) => {
+        console.error("Name konnte nicht in die Kopien übernommen werden:", syncError);
+      });
     }
 
     return NextResponse.json({ profile, linked: true });

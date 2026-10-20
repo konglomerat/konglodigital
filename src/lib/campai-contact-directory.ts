@@ -5,6 +5,8 @@ export type CampaiDirectoryContact = {
   id: string;
   name: string;
   email: string | null;
+  /** Weitere Adressen aus „Alternative Kommunikation", kleingeschrieben. */
+  alternativeEmails: string[];
   memberNumber: string | null;
   debtorAccount: number | null;
   /** Kontostand in Euro, negativ = schuldet dem Verein. */
@@ -83,6 +85,15 @@ const normalizeBalance = (debtor: Record<string, unknown> | null) => {
   return cents / 100;
 };
 
+const normalizeAlternativeEmails = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => toStringValue(toRecord(entry)?.email)?.toLowerCase())
+    .filter((entry): entry is string => Boolean(entry));
+};
+
 const normalizeCampaiContact = (
   record: Record<string, unknown>,
 ): CampaiDirectoryContact | null => {
@@ -102,6 +113,9 @@ const normalizeCampaiContact = (
     id,
     name,
     email: toStringValue(communication?.email)?.toLowerCase() ?? null,
+    alternativeEmails: normalizeAlternativeEmails(
+      record.alternativeCommunications,
+    ),
     memberNumber: toStringValue(contactNumbers?.member),
     debtorAccount: toInteger(debtor?.account),
     balance: normalizeBalance(debtor),

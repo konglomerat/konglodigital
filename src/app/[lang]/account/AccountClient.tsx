@@ -758,7 +758,14 @@ export default function AccountClient({
             )}
           </AccountSection>
 
-          <AccountProfileSections campai={campai} accountEmail={user.email} />
+          <AccountProfileSections
+            campai={campai}
+            accountEmail={user.email}
+            accountName={{
+              firstName: text(user.metadata.first_name),
+              lastName: text(user.metadata.last_name),
+            }}
+          />
 
           {/* Gelistet wird jeder Beleg des Debitorenkontos, nicht nur
               Rechnungen: Spenden, Angebote und Einnahmen laufen über dasselbe

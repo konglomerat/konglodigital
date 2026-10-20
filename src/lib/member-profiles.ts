@@ -533,6 +533,36 @@ export const upsertMemberProfile = async (
   return mapped;
 };
 
+/**
+ * Setzt oder löst die Campai-Verknüpfung. Avatar, Kurzbio und Einstellungen
+ * bleiben, wie sie sind — nur die Campai-Felder wechseln.
+ */
+export const setMemberProfileCampaiLink = async (
+  client: SupabaseClient,
+  userId: string,
+  link: Pick<
+    MemberProfileInput,
+    | "campai_contact_id"
+    | "campai_member_number"
+    | "campai_debtor_account"
+    | "campai_segments"
+    | "campai_name"
+  > | null,
+): Promise<MemberProfile> => {
+  const existingProfile = await getMemberProfileByUserId(client, userId);
+
+  return upsertMemberProfile(client, userId, {
+    campai_contact_id: link?.campai_contact_id ?? null,
+    campai_member_number: link?.campai_member_number ?? null,
+    campai_debtor_account: link?.campai_debtor_account ?? null,
+    campai_segments: link?.campai_segments ?? [],
+    campai_name: link?.campai_name ?? null,
+    avatar_url: existingProfile?.avatarUrl ?? null,
+    short_bio: existingProfile?.shortBio ?? null,
+    preferences: existingProfile?.preferences,
+  });
+};
+
 export const upsertMemberProfilePreferences = async (
   client: SupabaseClient,
   userId: string,
