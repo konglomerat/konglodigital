@@ -193,7 +193,6 @@
   --ui-line-card: 27px;
   --ui-size-lead: 26px;    /* Fira Sans Extra Condensed SemiBold */
   --ui-line-lead: 34px;
-  --ui-size-eyebrow: 27px; /* Fira Sans, uppercase, .13em — die Augenbraue */
 }
 
 
@@ -290,15 +289,6 @@
   a { text-underline-offset: 2px; }
 }
 
-.knglmrt-eyebrow {
-  font-family: var(--font-wide);
-  font-weight: 400;
-  font-size: var(--ui-size-eyebrow);
-  line-height: 16px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--primary);
-}
 .knglmrt-lead {
   font-family: var(--font-narrow);
   font-weight: 600;
@@ -321,7 +311,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-/* Karten-Label: 12px, uppercase, .13em */
+/* Augenbraue / Karten-Label: uppercase, .13em (Größe: --ui-size-caption) */
 .knglmrt-caption {
   font-family: var(--font-core);
   font-weight: 700;
@@ -330,7 +320,7 @@
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
-/* Statusmarke: 10px Fira Sans (wide), .08em — enger getrackt als das Label */
+/* Statusmarke: Fira Sans (wide), .08em — enger getrackt als das Label (Größe: --ui-size-tag) */
 .knglmrt-tag {
   font-family: var(--font-wide);
   font-weight: 700;

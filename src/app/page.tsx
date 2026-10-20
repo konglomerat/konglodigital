@@ -8,6 +8,8 @@ import ShowcaseOfTheMonthSection from "./ShowcaseOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
 import NewsSection from "./NewsSection";
 import TerrazzoParallax from "./TerrazzoParallax";
+import MemberHomeHero from "./MemberHomeHero";
+import MemberServicesSection from "./MemberServicesSection";
 import heroHelloImage from "./hero-hello.jpg";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
@@ -45,10 +47,28 @@ function HomeFeeds({ page }: { page?: PayloadPage }) {
   );
 }
 
+// Der gelbe Schlussbalken über dem Footer — auf Gast- wie Mitglieder-Startseite.
+async function HomeClosing() {
+  const { tx } = await getServerI18n();
+  return (
+    <section className="knglmrt-terrazzo-hellgelb relative left-1/2 w-[100dvw] -translate-x-1/2 knglmrt-border-t px-3 py-9 text-center md:px-7">
+      <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
+        {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
+      </p>
+      <a
+        href="https://konglomerat.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-display text-[23px] leading-[26px] text-primary transition hover:text-[var(--knglmrt-brown-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        konglomerat.org
+      </a>
+    </section>
+  );
+}
+
 async function StaticHome() {
   const { tx, locale } = await getServerI18n();
-  // Werkbereiche sind noch in Arbeit und nur angemeldet erreichbar.
-  const { user } = await getServerSession();
   return (
     <>
       <TerrazzoParallax />
@@ -56,7 +76,7 @@ async function StaticHome() {
         <div className="mx-auto w-full max-w-[1600px] px-3 md:px-7">
           <div className="knglmrt-panel grid h-fit gap-8 p-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center md:gap-10 md:p-10">
             <div className="min-w-0 order-2 lg:order-1">
-              <p className="knglmrt-eyebrow">{tx("Willkommen", "de")}</p>
+              <p className="knglmrt-caption text-primary">{tx("Willkommen", "de")}</p>
               <h1 className="mt-3 text-[clamp(28px,5vw,56px)] leading-[1.05]">
                 Konglomerat e.V.
               </h1>
@@ -68,14 +88,9 @@ async function StaticHome() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                {user ? (
-                  <Button href={localizePathname("/werkbereiche", locale)} kind="primary" size="large">
-                    {tx("Werkbereiche ansehen", "de")}
-                  </Button>
-                ) : null}
                 <Button
                   href={localizePathname("/verein", locale)}
-                  kind={user ? "secondary" : "primary"}
+                  kind="primary"
                   size="large"
                 >
                   {tx("Über uns", "de")}
@@ -131,7 +146,7 @@ async function StaticHome() {
             {
               title: tx("Kennenlernen", "de"),
               description: tx(
-                "Komm zur offenen Werkstatt oder zur Intro-Safari, schau dich um und stell uns alle Fragen, die du hast.",
+                "Komm zur offenen Werkstatt oder zum Intro Termin, dort kannst du dich umschauen und Fragen stellen",
                 "de",
               ),
               cta: {
@@ -143,7 +158,7 @@ async function StaticHome() {
             {
               title: tx("Antrag ausfüllen", "de"),
               description: tx(
-                "Füll den Online-Antrag aus und such dir deinen Tarif aus. Für den Werkstattzugang brauchst du zusätzlich zum Jahresbeitrag ein Abo oder die 10er-Karte.",
+                "Füll den Online-Antrag aus und entscheide dich für einen Tarif",
                 "de",
               ),
               cta: {
@@ -155,15 +170,15 @@ async function StaticHome() {
             {
               title: tx("Beitrag zahlen", "de"),
               description: tx(
-                "Du bekommst eine Mail mit deiner ersten Beitragsrechnung. Sobald die Zahlung da ist, bekommst du eine Bestätigung und bist offiziell Mitglied.",
+                "Du bekommst eine Willkommensmail mit den Zahlungsdaten für die Überweisung",
                 "de",
               ),
               cta: null,
             },
             {
-              title: tx("Willkommen im Rosenwerk!", "de"),
+              title: tx("Willkommen!", "de"),
               description: tx(
-                "Hol dir deine Zugangskarte ab und frag direkt bei den Werkbereichen deiner Wahl nach, wo du noch eine Einweisung brauchst. Dann kann’s losgehen!",
+                "Hol dir deine Zugangskarte ab und frag direkt bei den Werkbereichen deiner Wahl nach wie du loslegen kannst",
                 "de",
               ),
               cta: null,
@@ -183,7 +198,7 @@ async function StaticHome() {
                 <h3 className="knglmrt-caption text-[var(--knglmrt-brown-100)]">
                   {step.title}
                 </h3>
-                <p>{step.description}</p>
+                <p className="text-[16px] leading-[22px]">{step.description}</p>
                 {step.cta ? (
                   <div className="mt-auto pt-3">
                     <Button
@@ -205,25 +220,30 @@ async function StaticHome() {
 
       <HomeFeeds />
 
-      <section className="knglmrt-terrazzo-hellgelb relative left-1/2 w-[100dvw] -translate-x-1/2 knglmrt-border-t px-3 py-9 text-center md:px-7">
-        <p className="knglmrt-caption mb-2 text-[var(--knglmrt-brown-100)]">
-          {tx("Mit ❤️ im Ehrenamt entwickelt", "de")}
-        </p>
-        <a
-          href="https://konglomerat.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-display text-[23px] leading-[26px] text-primary transition hover:text-[var(--knglmrt-brown-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          konglomerat.org
-        </a>
-      </section>
+      <HomeClosing />
     </>
   );
 }
 
 export default async function Home() {
-  const page = await loadHomePage();
+  // Angemeldete sind schon Mitglied: statt Vereinsvorstellung und Weg zur
+  // Mitgliedschaft (statisch wie aus dem CMS) bekommen sie Begrüßung und
+  // Profil, darunter die Live-Bereiche.
+  const [page, { user }] = await Promise.all([
+    loadHomePage(),
+    getServerSession(),
+  ]);
+  if (user) {
+    return (
+      <>
+        <TerrazzoParallax />
+        <MemberHomeHero user={user} />
+        <MemberServicesSection />
+        <HomeFeeds />
+        <HomeClosing />
+      </>
+    );
+  }
   if (!page) return <StaticHome />;
 
   return (
