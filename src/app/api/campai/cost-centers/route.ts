@@ -15,6 +15,25 @@ import {
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const GET = async (request: NextRequest) => {
+  // Rückerstattungen darf jedes Mitglied einreichen und dabei jede buchbare
+  // Kostenstelle wählen — die Liste ist nicht vertraulich. Angemeldet reicht.
+  if (request.nextUrl.searchParams.get("forReimbursement") === "1") {
+    const { supabase } = createSupabaseRouteClient(request);
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    try {
+      return NextResponse.json({ costCenters: await fetchCampaiCostCenters() });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load Campai cost centers.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
   const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.view");
   if (!routeAccess.ok) {
     return routeAccess.response;
