@@ -99,12 +99,14 @@ export default async function WorkshopsPage() {
         className={`${BLEED} ${SCROLL_MARGIN} bg-[var(--knglmrt-paper-pink)] dark:bg-primary-soft`}
       >
         <div className={`${INNER} py-16 md:py-[72px]`}>
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-end gap-x-1 gap-y-3">
             <h2 id="gruppen-titel" className="m-0 text-[40px] leading-[1.05]">
               {tx("Workshop anfragen", "de")}
             </h2>
-            {/* Handschriftliche Notiz mit Pfeil, wie im Entwurf. */}
-            <span className="flex min-w-0 max-w-full -translate-y-3.5 items-start gap-0.5 text-primary">
+            {/* Handschriftliche Notiz mit Pfeil, wie im Entwurf. Ab md steht sie
+                rechts neben dem Titel und ist so weit angehoben, dass der Pfeil
+                auf das Wortende zeigt; darunter steht sie über dem Titel. */}
+            <span className="order-first flex min-w-0 max-w-full items-start gap-0.5 pl-6 text-primary md:order-none md:-translate-y-[34px] md:pl-0">
               <svg
                 aria-hidden="true"
                 width="56"
@@ -120,7 +122,7 @@ export default async function WorkshopsPage() {
                 <path d="M54 6 C 40 2, 22 6, 9 22" />
                 <path d="M4 14 L 8 23 L 17 21" />
               </svg>
-              <span className="min-w-0 -rotate-[4deg] font-[family-name:var(--font-hand)] sm:whitespace-nowrap text-[20px] leading-6 tracking-[0.04em]">
+              <span className="min-w-0 -rotate-[4deg] font-[family-name:var(--font-hand)] md:whitespace-nowrap text-[20px] leading-6 tracking-[0.04em]">
                 {tx("für Schulen, Vereine & Teams", "de")}
               </span>
             </span>

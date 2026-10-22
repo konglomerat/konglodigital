@@ -1,11 +1,12 @@
 // Platzhalter-Inhalte für die Workshops für Gruppen, bis sie aus dem CMS
 // kommen. Der Aufbau entspricht GroupWorkshop in group-workshops.ts.
+//
+// Auch die Fotos sind nur Beispiele: Sie liegen in
+// public/workshops/gruppen-platzhalter/ und werden durch die Bilder aus dem
+// CMS ersetzt. Ordner und Datei danach löschen.
 import type { GroupWorkshop } from "./group-workshops";
 
 const LOCATION = "Konglomerat";
-
-const photos = (...captions: string[]) =>
-  captions.map((alt) => ({ src: null, alt }));
 
 export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
   {
@@ -19,14 +20,13 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
     audience: "ab Klasse 5",
     duration: "3 h",
     location: LOCATION,
-    price: "ab 15 € p. P.",
+    price: "ab 15 € pro Person",
     groupSize: { min: 8, max: 16 },
     terrazzo: "knglmrt-terrazzo-grob-rosa",
-    images: photos(
-      "Foto: Schulklasse am Löttisch",
-      "Foto: Nahaufnahme Lötpunkt",
-      "Foto: fertige Anstecker",
-    ),
+    images: [
+      { src: "/workshops/gruppen-platzhalter/platzhalter-blinkender-anstecker-1.webp", alt: "Ein Kind schneidet Bauteilbeinchen an einer bestückten Platine ab" },
+      { src: "/workshops/gruppen-platzhalter/platzhalter-blinkender-anstecker-2.webp", alt: "Nahaufnahme: Eine Platine wird gelötet, daneben der Bauplan" },
+    ],
     schedule: [
       {
         time: "0:00",
@@ -79,14 +79,13 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
     audience: "ab Klasse 3",
     duration: "4 h",
     location: LOCATION,
-    price: "ab 20 € p. P.",
+    price: "ab 20 € pro Person",
     groupSize: { min: 8, max: 14 },
     terrazzo: "knglmrt-terrazzo-hellgelb",
-    images: photos(
-      "Foto: Vogelhäuser auf der Werkbank",
-      "Foto: Kinder beim Sägen",
-      "Foto: fertiges Vogelhaus",
-    ),
+    images: [
+      { src: "/workshops/gruppen-platzhalter/platzhalter-vogelhaus-bauen-1.webp", alt: "Mehrere Gruppen arbeiten gleichzeitig in der Holzwerkstatt" },
+      { src: "/workshops/gruppen-platzhalter/platzhalter-vogelhaus-bauen-2.webp", alt: "Bohren an der Bohrständer-Werkbank im Freien" },
+    ],
     schedule: [
       {
         time: "0:00",
@@ -127,14 +126,12 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
     audience: "ab 12 Jahren",
     duration: "2,5 h",
     location: LOCATION,
-    price: "ab 15 € p. P.",
+    price: "ab 15 € pro Person",
     groupSize: { min: 6, max: 12 },
     terrazzo: "knglmrt-terrazzo-grob-blau",
-    images: photos(
-      "Foto: gelaserte Anhänger",
-      "Foto: Lasercutter im Betrieb",
-      "Foto: Entwurf am Bildschirm",
-    ),
+    images: [
+      { src: "/workshops/gruppen-platzhalter/platzhalter-schluesselanhaenger-gestalten-1.webp", alt: "Materialien und kleine Zuschnitte auf dem Werktisch" },
+    ],
     schedule: [
       {
         time: "0:00",
@@ -160,7 +157,7 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
   },
   {
     slug: "beutel-bedrucken",
-    area: "textil",
+    area: "siebdruck",
     title: "Beutel bedrucken",
     summary:
       "Motiv entwerfen, auf Stoff bringen, mitnehmen. Gut für Vereine und Jugendgruppen.",
@@ -169,14 +166,14 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
     audience: "ab 10 Jahren",
     duration: "3 h",
     location: LOCATION,
-    price: "ab 12 € p. P.",
+    price: "ab 12 € pro Person",
     groupSize: { min: 8, max: 20 },
     terrazzo: "knglmrt-terrazzo-grob-grau",
-    images: photos(
-      "Foto: bedruckte Stoffbeutel",
-      "Foto: Siebdruck in Aktion",
-      "Foto: Motive zum Trocknen",
-    ),
+    images: [
+      { src: "/workshops/gruppen-platzhalter/platzhalter-beutel-bedrucken-1.webp", alt: "Gruppe an der Siebdruckmaschine mit frisch gedrucktem Shirt" },
+      { src: "/workshops/gruppen-platzhalter/platzhalter-beutel-bedrucken-2.webp", alt: "Ein bedruckter Beutel wird mit dem Heißluftfön getrocknet" },
+      { src: "/workshops/gruppen-platzhalter/platzhalter-beutel-bedrucken-3.webp", alt: "Ein Cyanotypie-Druck wird im Wasserbad entwickelt" },
+    ],
     schedule: [
       {
         time: "0:00",
@@ -201,41 +198,50 @@ export const GROUP_WORKSHOP_PLACEHOLDERS: GroupWorkshop[] = [
     ],
   },
   {
-    slug: "erste-schritte-3d-druck",
-    area: "3d-druck",
-    title: "Erste Schritte im 3D-Druck",
+    slug: "kissenhuelle-naehen",
+    area: "textil",
+    title: "Kissenhülle nähen",
     summary:
-      "Einfache Formen modellieren und ausdrucken. Ein Einstieg in CAD für Oberstufe und Ausbildung.",
+      "Stoff aussuchen, zuschneiden, an der Nähmaschine nähen. Der Einstieg ins Nähen für Gruppen.",
     intro:
-      "Einfache Formen modellieren und ausdrucken: In zwei Terminen führen wir in CAD und 3D-Druck ein. Passend für die Oberstufe, Ausbildungsgruppen und AGs.",
-    audience: "ab Klasse 8",
-    duration: "2 × 3 h",
+      "Stoff aussuchen, zuschneiden, an der Nähmaschine nähen: Jede:r näht eine eigene Kissenhülle mit Hotelverschluss und nimmt sie mit. Ein entspannter Einstieg ins Nähen – passend für Schulklassen, Jugendgruppen und Teams.",
+    audience: "ab 10 Jahren",
+    duration: "3 h",
     location: LOCATION,
-    price: "ab 25 € p. P.",
-    groupSize: { min: 6, max: 12 },
+    price: "ab 18 € pro Person",
+    groupSize: { min: 6, max: 10 },
     terrazzo: "knglmrt-terrazzo-grob-rosa",
-    images: photos(
-      "Foto: 3D-Drucker in Aktion",
-      "Foto: Modell am Bildschirm",
-      "Foto: gedruckte Teile",
-    ),
+    images: [
+      { src: "/workshops/gruppen-platzhalter/platzhalter-kissenhuelle-naehen-1.webp", alt: "Nähen an der Nähmaschine in der Textilwerkstatt" },
+    ],
     schedule: [
       {
-        time: "Tag 1",
-        title: "Modellieren",
-        text: "Grundformen am Rechner kombinieren, Maße und Toleranzen verstehen.",
+        time: "0:00",
+        title: "Ankommen & Nähmaschine kennenlernen",
+        text: "Einfädeln, Spule wechseln, ein paar gerade Nähte auf Probestoff.",
       },
       {
-        time: "Tag 2",
-        title: "Drucken & Nacharbeiten",
-        text: "Slicen, drucken, Stützen entfernen und das fertige Teil mitnehmen.",
+        time: "0:30",
+        title: "Stoff aussuchen & zuschneiden",
+        text: "Aus unserer Stoffkiste wählen, Maße übertragen und mit Schere oder Rollschneider zuschneiden.",
+      },
+      {
+        time: "1:15",
+        title: "Nähen",
+        text: "Säume umbügeln, Hotelverschluss legen, rundherum nähen. Wir gehen von Platz zu Platz und helfen.",
+      },
+      {
+        time: "2:30",
+        title: "Wenden & Abschluss",
+        text: "Ecken ausformen, bügeln, Kissen rein – und ein Gruppenfoto mit allen Ergebnissen.",
       },
     ],
-    scheduleNote: "Die beiden Termine liegen idealerweise im Abstand von einer Woche.",
+    scheduleNote: "So kann es aussehen – den genauen Ablauf stimmen wir mit euch ab.",
     infos: [
-      { label: "Material", text: "Filament ist im Preis enthalten." },
-      { label: "Vorkenntnisse", text: "Keine, Laptops stellen wir." },
-      { label: "Mitbringen", text: "Nichts." },
+      { label: "Material", text: "Stoff, Garn und Kisseninlett sind im Preis enthalten." },
+      { label: "Vorkenntnisse", text: "Keine. Wer schon nähen kann, probiert einen Reißverschluss." },
+      { label: "Mitbringen", text: "Gern einen Lieblingsstoff oder ein altes Hemd zum Umnähen." },
+      { label: "Barrierefreiheit", text: "Textilwerkstatt im Erdgeschoss, stufenlos erreichbar." },
     ],
   },
 ];

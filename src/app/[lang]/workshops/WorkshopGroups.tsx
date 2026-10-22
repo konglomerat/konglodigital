@@ -44,7 +44,7 @@ export default function WorkshopGroups({ workshops }: { workshops: GroupWorkshop
               "de",
             )}
           </p>
-          <div className="mt-auto flex pt-2.5">
+          <div className="mt-auto flex justify-end pt-2.5">
             <Button
               kind="primary"
               aria-expanded={open}

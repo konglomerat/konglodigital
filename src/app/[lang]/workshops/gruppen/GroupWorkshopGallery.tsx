@@ -55,7 +55,11 @@ export default function GroupWorkshopGallery({ workshop }: { workshop: GroupWork
           className={`aspect-[16/10] ${side.length ? "md:col-span-2" : "md:col-span-3"}`}
         />
         {side.length ? (
-          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1 md:grid-rows-2">
+          <div
+            className={`grid min-w-0 grid-cols-1 gap-4 md:grid-cols-1 ${
+              side.length > 1 ? "sm:grid-cols-2 md:grid-rows-2" : "md:grid-rows-1"
+            }`}
+          >
             {side.map((image) => (
               <Tile
                 key={image.alt}
