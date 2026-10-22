@@ -39,6 +39,16 @@ export const POST = async (
   context: { params: Promise<{ eventId: string }> },
 ) => {
   const { eventId } = await context.params;
+
+  // Workshops sind noch „Coming Soon“ und nur angemeldet erreichbar.
+  const member = await loadMember(request);
+  if (!member) {
+    return NextResponse.json(
+      { error: "Bitte melde dich an, um zu buchen." },
+      { status: 401 },
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as Record<
     string,
     unknown
@@ -61,10 +71,7 @@ export const POST = async (
   }
 
   try {
-    const [event, member] = await Promise.all([
-      getWorkshop(eventId),
-      loadMember(request),
-    ]);
+    const event = await getWorkshop(eventId);
     if (!event) {
       return NextResponse.json(
         { error: "Diesen Termin gibt es nicht (mehr)." },

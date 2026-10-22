@@ -1,3 +1,4 @@
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../components/PageTitle";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
@@ -112,7 +113,9 @@ export default async function ShowcasesPage() {
                 {
                   href: localizePathname("/showcase/new", locale),
                   label: tx("Neuer Beitrag", "de"),
-                  kind: "primary",
+                  // Wie „Neue Ressource“ im Inventar.
+                  kind: "emphasis",
+                  icon: faPlus,
                 },
               ]
             : undefined

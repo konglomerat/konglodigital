@@ -3,6 +3,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getGroupWorkshop } from "@/lib/group-workshops";
+import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { SmtpConfigurationError, sendSmtpMail } from "@/lib/smtp-mail";
 import { WORKSHOP_REQUEST_EMAIL } from "@/lib/workshops";
 
@@ -17,6 +18,16 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', "&quot;");
 
 export const POST = async (request: NextRequest) => {
+  // Workshops sind noch „Coming Soon“ und nur angemeldet erreichbar.
+  const { supabase } = createSupabaseRouteClient(request);
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return NextResponse.json(
+      { error: "Bitte melde dich an, um anzufragen." },
+      { status: 401 },
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as Record<
     string,
     unknown

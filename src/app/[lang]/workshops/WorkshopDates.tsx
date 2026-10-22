@@ -1,7 +1,8 @@
 "use client";
 
 // „Anstehende Termine“: Filter nach Werkbereich und eine waagerecht
-// scrollende Reihe Karten („Kartenstil D · Ruhig mit Bild“ aus dem Entwurf).
+// scrollende Reihe Karten („Kartenstil D · Ruhig mit Bild“ aus dem Entwurf),
+// mit dem Bild aus Campai.
 // Jede Karte führt auf die Buchungsseite.
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
@@ -83,23 +84,38 @@ export default function WorkshopDates({
             const note = status.tone !== "offen" && !waitlist ? tx(status.label, "de") : null;
             return (
               <li key={event.id} className="flex w-[288px] flex-none snap-start">
-                {/* Die ganze Karte ist der Link zur Buchungsseite. */}
+                {/* Die ganze Karte ist der Link zur Buchungsseite. Hover wie bei
+                    den Ressourcen: ein Rahmen in Primärfarbe. Er liegt als
+                    Ebene über der Karte, sonst verdeckt ihn das Bild. */}
                 <Link
                   href={href}
                   aria-label={`${event.title}, ${formatWeekdayShort(event.start)} ${formatDayMonth(event.start)}${
                     waitlist ? ` – ${tx("Warteliste", "de")}` : ""
                   }`}
-                  className="group flex w-full flex-col bg-muted text-foreground no-underline transition-colors duration-200 hover:bg-[var(--knglmrt-paper-pink)] focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] dark:hover:bg-primary-soft"
+                  className="relative flex w-full flex-col bg-muted text-foreground no-underline focus-visible:outline-none after:pointer-events-none after:absolute after:inset-0 after:content-[''] after:transition-shadow after:duration-200 after:ease-[cubic-bezier(.2,0,0,1)] hover:after:shadow-[inset_0_0_0_3px_var(--primary)] focus-visible:after:shadow-[inset_0_0_0_3px_var(--primary)]"
                 >
-                  <div className="flex aspect-[2/1] items-center justify-center bg-[var(--knglmrt-paper-pink)] dark:bg-primary-soft">
-                    <WorkshopAreaMark area={event.area} height={64} />
-                  </div>
+                  {event.imageUrl ? (
+                    // Campai liefert signierte S3-Adressen (24 h gültig) —
+                    // kein next/image-Proxy.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={event.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="block aspect-[2/1] w-full object-cover"
+                    />
+                  ) : (
+                    // Ohne Bild in Campai: das Zeichen des Werkbereichs.
+                    <div className="flex aspect-[2/1] items-center justify-center bg-[var(--knglmrt-paper-pink)] dark:bg-primary-soft">
+                      <WorkshopAreaMark area={event.area} height={64} />
+                    </div>
+                  )}
                   <div className="flex flex-1 flex-col gap-1.5 px-[18px] pb-4 pt-4">
-                    <div className="knglmrt-num whitespace-nowrap text-muted-foreground">
+                    <div className="knglmrt-tag text-primary">
                       {formatWeekdayShort(event.start)} {formatDayMonth(event.start)} ·{" "}
                       {formatTimeRange(event.start, event.end)}
                     </div>
-                    <h3 className="knglmrt-card-title m-0 min-h-[54px] text-pretty transition-colors duration-200 group-hover:text-primary">
+                    <h3 className="knglmrt-card-title m-0 min-h-[54px] text-pretty">
                       {event.title}
                     </h3>
                     {note ? (

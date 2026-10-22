@@ -13,8 +13,8 @@ export type SiteNavItem = {
 export const DEFAULT_HEADER_LINKS: SiteNavItem[] = [
   { href: "/verein", label: "Verein" },
   { href: "/werkbereiche", label: "Werkbereiche" },
-  { href: "/workshops", label: "Workshops" },
   { href: "/showcase", label: "Beiträge" },
+  { href: "/workshops", label: "Workshops" },
 ];
 
 export const DEFAULT_FOOTER_LINKS: SiteNavItem[] = [
