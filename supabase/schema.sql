@@ -373,16 +373,9 @@ on public.member_profiles
 for select
 using (auth.uid() = user_id);
 
-create policy "Users can insert own member profile"
-on public.member_profiles
-for insert
-with check (auth.uid() = user_id);
-
-create policy "Users can update own member profile"
-on public.member_profiles
-for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+-- Schreiben nur serverseitig (Service-Role): sonst könnten Mitglieder
+-- Campai-Kontakt und -Namen selbst setzen.
+revoke insert, update, delete on public.member_profiles from anon, authenticated;
 
 -- Rollen mit Geltungsbereich. Welche Rolle was darf, steht im Code
 -- (src/lib/access/role-config.ts) — hier nur, wer welche Rolle wo hat.

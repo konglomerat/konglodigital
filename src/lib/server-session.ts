@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { UserAccess } from "@/lib/access/access";
 import { loadAccessOf, loadUserAccess } from "@/lib/access/server";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Layout und Seite rendern im selben Request und brauchen beide Session und
@@ -12,6 +13,13 @@ export const getServerSession = cache(async () => {
   const supabase = await createSupabaseServerClient({ readOnly: true });
   const { data } = await supabase.auth.getUser();
   return { supabase, user: data.user };
+});
+
+/** Das eigene Mitgliedsprofil, einmal pro Request — `null` ohne Login. */
+export const getServerMemberProfile = cache(async () => {
+  const { supabase, user } = await getServerSession();
+  if (!user) return null;
+  return getMemberProfileByUserId(supabase, user.id).catch(() => null);
 });
 
 export const getServerAccess = cache(async (): Promise<UserAccess | null> => {

@@ -18,6 +18,7 @@ import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
 import { canPreviewAccess } from "@/lib/access/server";
 import {
   getServerAccess,
+  getServerMemberProfile,
   getServerRealAccess,
   getServerSession,
 } from "@/lib/server-session";
@@ -125,8 +126,13 @@ export default async function RootLayout({
   const navigationPromise = loadPayloadNavigation();
   const { user } = await getServerSession();
   const isAuthenticated = Boolean(user);
+  const memberProfile = user ? await getServerMemberProfile() : null;
   const currentUserDisplayName = user
-    ? getCampaiBookingDisplayName(user)
+    ? getCampaiBookingDisplayName(user, memberProfile?.campaiName) ||
+      [user.user_metadata?.first_name, user.user_metadata?.last_name]
+        .filter((part) => typeof part === "string" && part.trim())
+        .join(" ") ||
+      null
     : null;
   // Ohne sichtbares Ressort keine Verwaltung — außer für Admins in einer
   // Rechte-Vorschau, die sonst nicht mehr an den Schalter zum Beenden kämen.

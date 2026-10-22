@@ -7,6 +7,7 @@ import {
   normalizeMemberProfilePreferences,
   upsertMemberProfilePreferences,
 } from "@/lib/member-profiles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const GET = async (request: NextRequest) => {
@@ -46,8 +47,12 @@ export const POST = async (request: NextRequest) => {
       incomingPreferences,
     );
 
+    // Mitglieder dürfen `member_profiles` nicht selbst schreiben — sonst
+    // könnten sie Campai-Kontakt und -Namen umbiegen. Geschrieben wird mit dem
+    // Service-Role-Client, für den oben geprüften Nutzer und nur die
+    // Einstellungen; die Campai-Felder übernimmt der Upsert unverändert.
     const updatedProfile = await upsertMemberProfilePreferences(
-      supabase,
+      createSupabaseAdminClient(),
       data.user.id,
       mergedPreferences,
     );

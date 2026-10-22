@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
-import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
+import { loadCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 
 import type { CampaiConfig } from "./config";
 import { compactText } from "./parsers";
@@ -58,7 +58,7 @@ export const writeReceiptNotes = async (params: {
   internalNote: string;
 }): Promise<string | undefined> => {
   const { config, receiptId, user, internalNote } = params;
-  const displayName = getCampaiBookingDisplayName(user);
+  const displayName = await loadCampaiBookingDisplayName(user);
   const userEmail = compactText(user.email);
   const userLabel = resolveUserDisplayLabel(displayName, userEmail);
   const noteAuthor = displayName || userEmail || "Unbekannt";

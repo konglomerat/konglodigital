@@ -10,16 +10,15 @@ import Face from "@/components/knglmrt/Face";
 import { localizePathname } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { fetchCampaiContactProfile } from "@/lib/campai-contact-profile";
-import { getMemberProfileByUserId } from "@/lib/member-profiles";
-import { getServerSession } from "@/lib/server-session";
+import { getServerMemberProfile } from "@/lib/server-session";
 
 const text = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
 // Wie auf der Kontoseite: der Rufname, nicht der ganze Name.
-const greetingNameOf = (user: User) =>
+const greetingNameOf = (user: User, campaiName: string | null) =>
   text(user.user_metadata?.first_name) ||
-  text(user.user_metadata?.campai_name).split(/\s+/)[0] ||
+  (text(campaiName) || text(user.user_metadata?.campai_name)).split(/\s+/)[0] ||
   "";
 
 // „03/2024" — Campai liefert das Eintrittsdatum als ISO-Datum.
@@ -44,12 +43,11 @@ async function MemberSince({
 }
 
 export default async function MemberHomeHero({ user }: { user: User }) {
-  const [{ tx, locale }, { supabase }] = await Promise.all([
+  const [{ tx, locale }, memberProfile] = await Promise.all([
     getServerI18n(),
-    getServerSession(),
+    getServerMemberProfile(),
   ]);
-  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
-  const greetingName = greetingNameOf(user);
+  const greetingName = greetingNameOf(user, memberProfile?.campaiName ?? null);
   const memberNumber = memberProfile?.campaiMemberNumber ?? null;
   const contactId = memberProfile?.campaiContactId ?? null;
 

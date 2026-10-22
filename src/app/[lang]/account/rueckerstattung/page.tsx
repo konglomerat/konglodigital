@@ -5,7 +5,10 @@ import type { Metadata } from "next";
 
 import Button from "@/components/knglmrt/Button";
 import PageTitle from "@/app/[lang]/components/PageTitle";
-import { getServerSession } from "@/lib/server-session";
+import {
+  getServerMemberProfile,
+  getServerSession,
+} from "@/lib/server-session";
 
 import ReimbursementForm from "../../receipts/reimbursement/ReimbursementForm";
 
@@ -48,7 +51,9 @@ export default async function MemberReimbursementPage() {
   // Vorbelegt mit dem Namen aus dem Profil; die Kontoinhaber*in kann
   // trotzdem jemand anderes sein, deshalb bleibt das Feld editierbar.
   const metadata = user.user_metadata ?? {};
+  const memberProfile = await getServerMemberProfile();
   const defaultName =
+    text(memberProfile?.campaiName) ||
     text(metadata.campai_name) ||
     [text(metadata.first_name), text(metadata.last_name)]
       .filter(Boolean)
