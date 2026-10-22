@@ -1,24 +1,28 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import type { MouseEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { motion } from "motion/react";
 import {
-  faCamera,
-  faClone,
   faChevronLeft,
   faChevronRight,
   faFilePdf,
-  faXmark,
+  faGrip,
   faList,
-  faMagnifyingGlass,
   faMap,
   faPlus,
-  faLayerGroup,
+  faSliders,
+  faWrench,
 } from "@fortawesome/free-solid-svg-icons";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
@@ -30,17 +34,11 @@ import {
   type Locale,
 } from "@/i18n/config";
 import Button from "@/components/knglmrt/Button";
+import Notice from "@/components/knglmrt/Notice";
+import SearchField from "@/components/knglmrt/SearchField";
 import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
-import PageTitle from "../components/PageTitle";
-import Field from "@/components/knglmrt/Field";
-import NativeSelect from "@/components/knglmrt/NativeSelect";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../components/ui/tooltip";
 import ResourcesMapView from "./ResourcesMapView";
+import ResourcesTable, { ResourcesTableSkeleton } from "./ResourcesTable";
 import { RESOURCE_TYPES } from "./resource-types";
 import {
   getResourcePosterUrl,
@@ -49,21 +47,24 @@ import {
 } from "@/lib/resource-media";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 import { can } from "@/lib/access/access";
-import { canEditResource } from "@/lib/access/resource-access";
 import { useAccess } from "@/lib/access/use-access";
 import Choice from "@/components/knglmrt/Choice";
 
 type Resource = ResourcePayload;
 
-type ResourceCardProps = {
+type ViewMode = "grid" | "list" | "map";
+
+// Raster, Zeile neben der Karte. Die Liste ist eine Tabelle (ResourcesTable).
+type ResourceItemLayout = "grid" | "compact";
+
+type ResourceItemProps = {
   resource: Resource;
+  layout: ResourceItemLayout;
   normalizedSearchTerm: string;
   locale: Locale;
   tx: (key: string, sourceLocale?: Locale) => string;
   onHover: (resourceId: string | null) => void;
   onNavigate?: () => void;
-  /** Nur mit Bearbeitungsrecht steht „Bearbeiten" an der Karte. */
-  canEdit: boolean;
 };
 
 type ResourcesDataPayload = {
@@ -144,246 +145,306 @@ const getSupabaseThumbnailUrl = (url: string, width = 700) => {
   }
 };
 
-const ResourceCard = ({
+const getResourceSlides = (resource: Resource) => {
+  const media = resource.images?.length
+    ? resource.images
+    : resource.image
+      ? [resource.image]
+      : [];
+  return media.map((url) => {
+    const kind = getResourceMediaKindFromUrl(url);
+    if (kind === "document") {
+      return { kind, url };
+    }
+    if (kind === "image") {
+      return { kind, url: getSupabaseThumbnailUrl(url, 700) };
+    }
+    if (kind === "video") {
+      return {
+        kind,
+        url:
+          getResourcePosterUrl(url, resource.mediaPosters) ??
+          getResourcePreviewUrl(url, resource.mediaPreviews) ??
+          url,
+      };
+    }
+    return {
+      kind,
+      url: getResourcePreviewUrl(url, resource.mediaPreviews) ?? url,
+    };
+  });
+};
+
+const THUMB_CLASSNAME: Record<ResourceItemLayout, string> = {
+  grid: "w-full",
+  compact: "w-24 shrink-0",
+};
+
+// Blätterpfeile bleiben leise: erst beim Hover, klein, halbtransparent.
+const slideButtonClassName =
+  "relative z-10 flex h-7 w-7 cursor-pointer items-center justify-center bg-card/80 text-foreground opacity-0 transition-opacity duration-200 hover:bg-card focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-[var(--ring)] group-hover:opacity-100";
+
+// Kompakte Karte nach dem Inventar-Entwurf: quadratisches Foto (die Quellen
+// sind quadratisch), darunter Titel und eine Zeile Beschreibung; Hover legt eine pinke Kontur innen an. Der Link liegt
+// über der ganzen Karte, die Blätterpfeile darüber.
+const ResourceItem = ({
   resource,
+  layout,
   normalizedSearchTerm,
   locale,
   tx,
   onHover,
   onNavigate,
-  canEdit,
-}: ResourceCardProps) => {
-  const typeConfig =
-    resource.type &&
-    RESOURCE_TYPES[
-      resource.type.trim().toLowerCase() as keyof typeof RESOURCE_TYPES
-    ]
-      ? RESOURCE_TYPES[
-          resource.type.trim().toLowerCase() as keyof typeof RESOURCE_TYPES
-        ]
-      : null;
-  const images = resource.images?.length
-    ? resource.images
-    : resource.image
-      ? [resource.image]
-      : [];
+}: ResourceItemProps) => {
+  const slides = getResourceSlides(resource);
   const [activeIndex, setActiveIndex] = useState(0);
-  const hasCarousel = images.length > 1;
-  const displayImages = images.map((image) => {
-    const mediaKind = getResourceMediaKindFromUrl(image);
-    if (mediaKind === "image") {
-      return getSupabaseThumbnailUrl(image, 900);
-    }
-    if (mediaKind === "video") {
-      return (
-        getResourcePosterUrl(image, resource.mediaPosters) ??
-        getResourcePreviewUrl(image, resource.mediaPreviews) ??
-        image
-      );
-    }
-    return getResourcePreviewUrl(image, resource.mediaPreviews) ?? image;
-  });
-  const slideWidth = "100%";
-  const slideGap = "0rem";
-  const trackOffset = `calc(-${activeIndex} * (${slideWidth} + ${slideGap}))`;
+  const canBrowse = slides.length > 1 && layout !== "compact";
   const resourcePath = localizePathname(buildResourcePath(resource), locale);
-  const editPath = localizePathname(
-    `/resources/features?resourceId=${resource.id}`,
-    locale,
-  );
 
-  const handlePrev = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActiveIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
-
-  const handleNext = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActiveIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const handleDotClick = (
-    event: MouseEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActiveIndex(index);
+  const step = (direction: 1 | -1) => {
+    setActiveIndex(
+      (previous) => (previous + direction + slides.length) % slides.length,
+    );
   };
 
   return (
     <article
       onMouseEnter={() => onHover(resource.id)}
       onMouseLeave={() => onHover(null)}
-      className="group cursor-pointer overflow-hidden rounded-lg"
+      className={`group relative bg-card transition-shadow duration-200 ease-[cubic-bezier(.2,0,0,1)] hover:shadow-[inset_0_0_0_3px_var(--primary)] has-[a:focus-visible]:shadow-[inset_0_0_0_3px_var(--primary)] ${
+        layout === "grid"
+          ? "flex flex-col gap-2.5 p-2.5"
+          : "flex items-center gap-3 p-2"
+      }`}
     >
-      <div className="relative aspect-[4/3.7] w-full overflow-hidden">
-        {typeConfig ? (
-          <FontAwesomeIcon
-            icon={typeConfig.icon}
-            className={`${typeConfig.color} absolute top-2 right-2 z-10 p-1 text-xs opacity-60`}
-          />
-        ) : null}
-        <Link
-          href={resourcePath}
-          className="block h-full w-full"
-          onClick={onNavigate}
-        >
-          {displayImages.length > 0 ? (
-            <motion.div
-              className="flex h-full"
-              animate={{ x: trackOffset }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              {displayImages.map((image, index) => (
-                <div
-                  key={`${resource.id}-slide-${index}`}
-                  className="h-full min-w-full w-full flex-shrink-0 overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800"
-                >
-                  {getResourceMediaKindFromUrl(images[index]) === "document" ? (
-                    <div className="flex h-full w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
-                      <FontAwesomeIcon icon={faFilePdf} className="h-9 w-9" />
-                      <span className="mt-3 text-xs font-semibold uppercase tracking-[0.2em]">
-                        PDF
-                      </span>
-                    </div>
-                  ) : getResourceMediaKindFromUrl(images[index]) === "video" ? (
-                    <img
-                      src={image}
-                      alt={resource.name}
-                      className="block h-full w-full object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={image}
-                      alt={resource.name}
-                      className="block h-full w-full object-cover"
-                    />
-                  )}
-                </div>
-              ))}
-            </motion.div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-accent">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                {tx("No image")}
-              </span>
-            </div>
-          )}
-        </Link>
-
-        {hasCarousel ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <Button
-              kind="secondary"
-              iconOnly
-              icon={faChevronLeft}
-              aria-label={tx("Previous image")}
-              onClick={handlePrev}
-              className="pointer-events-auto"
-            />
-            <Button
-              kind="secondary"
-              iconOnly
-              icon={faChevronRight}
-              aria-label={tx("Next image")}
-              onClick={handleNext}
-              className="pointer-events-auto"
-            />
-          </div>
-        ) : null}
-
-        {hasCarousel ? (
-          <div className="pointer-events-none absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5">
-            {images.map((_, index) => (
-              <button
-                key={`${resource.id}-dot-${index}`}
-                type="button"
-                aria-label={`${tx("Image")} ${index + 1}`}
-                onClick={(event) => handleDotClick(event, index)}
-                className={`pointer-events-auto h-1.5 w-1.5 transition ${
-                  index === activeIndex ? "bg-card" : "bg-card/50"
-                }`}
-              />
+      <div
+        className={`${THUMB_CLASSNAME[layout]} relative aspect-square overflow-hidden`}
+      >
+        {slides.length > 0 ? (
+          <div
+            className="flex h-full transition-transform duration-200 ease-[cubic-bezier(.2,0,0,1)]"
+            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+          >
+            {slides.map((slide, index) => (
+              <div
+                key={`${resource.id}-slide-${index}`}
+                className="h-full w-full shrink-0"
+              >
+                {slide.kind === "document" ? (
+                  <div className="flex h-full w-full flex-col items-center justify-center bg-destructive-soft text-destructive">
+                    <FontAwesomeIcon icon={faFilePdf} className="h-8 w-8" />
+                    <span className="knglmrt-tag mt-2">PDF</span>
+                  </div>
+                ) : (
+                  <img
+                    src={slide.url}
+                    alt=""
+                    loading="lazy"
+                    className="block h-full w-full object-contain"
+                  />
+                )}
+              </div>
             ))}
           </div>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center knglmrt-border border-border">
+            <span className="knglmrt-tag text-muted-foreground">
+              {tx("No image")}
+            </span>
+          </div>
+        )}
+
+        {canBrowse ? (
+          <>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-1.5">
+              <button
+                type="button"
+                aria-label={tx("Previous image")}
+                onClick={() => step(-1)}
+                className={`${slideButtonClassName} pointer-events-auto`}
+              >
+                <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                aria-label={tx("Next image")}
+                onClick={() => step(1)}
+                className={`${slideButtonClassName} pointer-events-auto`}
+              >
+                <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
+              </button>
+            </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute bottom-1.5 left-0 right-0 flex justify-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            >
+              {slides.map((_, index) => (
+                <span
+                  key={`${resource.id}-dot-${index}`}
+                  className={`h-1.5 w-1.5 ${
+                    index === activeIndex ? "bg-foreground" : "bg-foreground/25"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
         ) : null}
       </div>
-
-      <div className="flex flex-col gap-3 p-2">
-        <div>
-          <h3 className="flex items-center justify-between gap-4 text-md font-semibold text-foreground">
-            <Link
-              href={resourcePath}
-              className="font-semibold text-foreground hover:underline"
-              onClick={onNavigate}
-            >
-              {highlightText(resource.name, normalizedSearchTerm)}
-            </Link>
-
-            {canEdit ? (
-              <Link
-                href={editPath}
-                className="font-normal text-muted-foreground hover:text-foreground"
-              >
-                {tx("Edit")}
-              </Link>
-            ) : null}
-          </h3>
-
-          {resource.description ? (
-            <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
-              {highlightText(
-                truncateText(resource.description, 100),
-                normalizedSearchTerm,
-              )}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-1 text-[11px] text-muted-foreground">
-          {resource.tags?.slice(0, 3).map((tag) => (
-            <span
-              key={`${resource.id}-${tag}`}
-              className="rounded-full border border-border bg-card px-2 py-1 text-foreground"
-            >
-              {highlightText(tag, normalizedSearchTerm)}
-            </span>
-          ))}
-        </div>
-        {resource.categories && resource.categories.length > 0 ? (
-          <div className="text-[11px] text-muted-foreground">
-            {tx("Categories")}:{" "}
-            {resource.categories
-              .map((category) =>
-                category.name
-                  ? highlightText(category.name, normalizedSearchTerm)
-                  : null,
-              )
-              .filter(Boolean)
-              .flatMap((node, index, array) =>
-                index === array.length - 1 ? [node] : [node, ", "],
-              )}
-          </div>
+      <div
+        className={`flex min-w-0 flex-col gap-0.5 ${
+          layout === "grid" ? "px-0.5" : ""
+        }`}
+      >
+        <h3
+          className={`text-pretty text-foreground ${
+            layout === "compact"
+              ? "text-[length:var(--ui-size-body)] font-semibold leading-[var(--ui-line-body)]"
+              : "knglmrt-card-title"
+          }`}
+        >
+          <Link
+            href={resourcePath}
+            onClick={onNavigate}
+            onFocus={() => onHover(resource.id)}
+            onBlur={() => onHover(null)}
+            className="focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
+          >
+            {highlightText(resource.name, normalizedSearchTerm)}
+          </Link>
+        </h3>
+        {resource.description ? (
+          <p className="line-clamp-1 text-muted-foreground">
+            {highlightText(
+              truncateText(resource.description, 80),
+              normalizedSearchTerm,
+            )}
+          </p>
         ) : null}
       </div>
     </article>
   );
 };
 
-const RESOURCE_SKELETON_COUNT = 6;
+type ToolsMenuItem = { label: string; hint: string } & (
+  | { href: string }
+  | { onClick: () => void; disabled?: boolean }
+);
 
-const ResourceCardSkeleton = () => (
-  <div className="animate-pulse overflow-hidden rounded-lg border border-border bg-card">
-    <div className="aspect-[4/3.7] w-full bg-muted" />
-    <div className="space-y-3 p-4">
-      <div className="h-4 w-2/3 rounded bg-muted" />
-      <div className="h-3 w-full rounded bg-muted" />
-      <div className="h-3 w-4/5 rounded bg-muted" />
+// Werkzeuge hinter dem Schraubenschlüssel: alles, was nur Pflegende brauchen.
+const ToolsMenu = ({
+  label,
+  items,
+}: {
+  label: string;
+  items: ToolsMenuItem[];
+}) => {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const itemClassName =
+    "flex w-full cursor-pointer flex-col gap-0.5 border-b-[length:var(--hairline-width)] border-border px-3.5 py-2.5 text-left last:border-b-0 hover:bg-primary-soft focus-visible:bg-primary-soft focus-visible:outline-none disabled:cursor-default disabled:opacity-45";
+  const itemBody = (item: ToolsMenuItem) => (
+    <>
+      <span className="font-semibold text-foreground">{item.label}</span>
+      <span className="text-[15px] leading-5 text-muted-foreground">
+        {item.hint}
+      </span>
+    </>
+  );
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        title={label}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((previous) => !previous)}
+        className={`flex h-11 w-11 cursor-pointer items-center justify-center knglmrt-border text-foreground transition-colors hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${
+          open ? "bg-primary-soft" : "bg-card"
+        }`}
+      >
+        <FontAwesomeIcon icon={faWrench} className="h-4 w-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+4px)] z-30 flex min-w-[280px] flex-col knglmrt-border bg-card"
+        >
+          {items.map((item) =>
+            "href" in item ? (
+              <Link
+                key={item.label}
+                role="menuitem"
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={itemClassName}
+              >
+                {itemBody(item)}
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                disabled={item.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  item.onClick();
+                }}
+                className={itemClassName}
+              >
+                {itemBody(item)}
+              </button>
+            ),
+          )}
+        </div>
+      ) : null}
     </div>
+  );
+};
+
+const RESOURCE_SKELETON_COUNT = 8;
+
+const ResourceItemSkeleton = () => (
+  <div className="flex animate-pulse flex-col gap-2.5 p-2.5">
+    <div className="aspect-square w-full bg-muted" />
+    <div className="h-5 w-2/3 bg-muted" />
+    <div className="h-4 w-full bg-muted" />
   </div>
 );
+
+// Ab 1100px steht die Karte im Raster gleich daneben.
+const WIDE_QUERY = "(min-width: 1100px)";
+
+function subscribeToWide(onChange: () => void) {
+  const query = window.matchMedia(WIDE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
 
 export default function ResourcesPageClient({
   resourcesPromise,
@@ -400,13 +461,15 @@ export default function ResourcesPageClient({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const hasInitializedRef = useRef(false);
+  const resultsScrollRef = useRef<HTMLDivElement>(null);
   const lastQueryRef = useRef<string>("");
   const lastTypeRef = useRef<string>("");
   const lastMapRef = useRef<string>("");
   const lastWithinRef = useRef<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResourceType, setSelectedResourceType] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [hoveredResourceId, setHoveredResourceId] = useState<string | null>(
     null,
   );
@@ -591,7 +654,7 @@ export default function ResourcesPageClient({
       const parsed = JSON.parse(stored) as {
         searchTerm?: string;
         selectedResourceType?: string;
-        viewMode?: "list" | "map";
+        viewMode?: ViewMode;
         includeWithinPolygons?: boolean;
         filterByMapView?: boolean;
         scrollY?: number;
@@ -616,7 +679,11 @@ export default function ResourcesPageClient({
       } else if (typeof parsed.includeWithinPolygons === "boolean") {
         setIncludeWithinPolygons(parsed.includeWithinPolygons);
       }
-      if (parsed.viewMode === "list" || parsed.viewMode === "map") {
+      if (
+        parsed.viewMode === "grid" ||
+        parsed.viewMode === "list" ||
+        parsed.viewMode === "map"
+      ) {
         setViewMode(parsed.viewMode);
       }
       if (typeof parsed.scrollY === "number") {
@@ -695,13 +762,26 @@ export default function ResourcesPageClient({
     searchParams,
   ]);
 
+  // Ab lg scrollt nur die Ergebnisliste, darunter die ganze Seite.
+  const getScrollContainer = useCallback(() => {
+    const list = resultsScrollRef.current;
+    return list && window.getComputedStyle(list).overflowY !== "visible"
+      ? list
+      : null;
+  }, []);
+
   const persistOverviewState = useCallback(
     (scrollYOverride?: number) => {
       if (typeof window === "undefined") {
         return;
       }
+      const container = getScrollContainer();
       const scrollY =
-        typeof scrollYOverride === "number" ? scrollYOverride : window.scrollY;
+        typeof scrollYOverride === "number"
+          ? scrollYOverride
+          : container
+            ? container.scrollTop
+            : window.scrollY;
       const payload = {
         searchTerm,
         selectedResourceType,
@@ -715,6 +795,7 @@ export default function ResourcesPageClient({
     },
     [
       filterByMapView,
+      getScrollContainer,
       includeWithinPolygons,
       overviewStorageKey,
       searchTerm,
@@ -874,9 +955,13 @@ export default function ResourcesPageClient({
         ticking = false;
       });
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Capture fängt auch das Scrollen der Liste, das nicht hochblubbert.
+    document.addEventListener("scroll", handleScroll, {
+      capture: true,
+      passive: true,
+    });
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("scroll", handleScroll, { capture: true });
     };
   }, [hasRestoredState, persistOverviewState]);
 
@@ -898,12 +983,19 @@ export default function ResourcesPageClient({
         return;
       }
 
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
+      const container = getScrollContainer();
+      const maxScroll = container
+        ? container.scrollHeight - container.clientHeight
+        : document.documentElement.scrollHeight - window.innerHeight;
       const target = Math.max(0, Math.min(pendingScrollY, maxScroll));
-      window.scrollTo({ top: target, behavior: "auto" });
+      if (container) {
+        container.scrollTop = target;
+      } else {
+        window.scrollTo({ top: target, behavior: "auto" });
+      }
 
-      const closeEnough = Math.abs(window.scrollY - target) < 2;
+      const current = container ? container.scrollTop : window.scrollY;
+      const closeEnough = Math.abs(current - target) < 2;
       if (closeEnough || attempts >= 6 || maxScroll <= 0) {
         setHasAppliedScroll(true);
         setPendingScrollY(null);
@@ -919,7 +1011,13 @@ export default function ResourcesPageClient({
       cancelled = true;
       window.cancelAnimationFrame(animationId);
     };
-  }, [hasAppliedScroll, hasRestoredState, loading, pendingScrollY]);
+  }, [
+    getScrollContainer,
+    hasAppliedScroll,
+    hasRestoredState,
+    loading,
+    pendingScrollY,
+  ]);
 
   const normalizedResources = useMemo(
     () =>
@@ -960,8 +1058,16 @@ export default function ResourcesPageClient({
     [visibleMapResourceIds],
   );
 
+  const isWide = useSyncExternalStore(
+    subscribeToWide,
+    () => window.matchMedia(WIDE_QUERY).matches,
+    () => false,
+  );
+  // Der Kartenausschnitt filtert nur, solange die Karte auch zu sehen ist.
+  const mapShown = viewMode === "map" || (viewMode === "grid" && isWide);
+
   const visibleResources = useMemo(() => {
-    if (!filterByMapView) {
+    if (!filterByMapView || !mapShown) {
       return searchAndTypeFilteredResources;
     }
     if (!hasMapVisibilitySnapshot) {
@@ -973,6 +1079,7 @@ export default function ResourcesPageClient({
   }, [
     filterByMapView,
     hasMapVisibilitySnapshot,
+    mapShown,
     searchAndTypeFilteredResources,
     visibleMapResourceIdSet,
   ]);
@@ -1082,306 +1189,404 @@ export default function ResourcesPageClient({
     }
   }, [tx]);
 
-  return (
-    <div className="flex flex-col gap-8">
-      <PageTitle
-        title={tx("Inventar", "de")}
-        subTitle={tx(
-          "Tools & Ressourcen, die im Konglomerat zur Verfügung stehen.",
-          "de",
-        )}
-        links={[
-          ...(can(access, "resources.edit")
-            ? [
-                {
-                  href: localizePathname("/resources/features", locale),
-                  label: tx("Map features"),
-                  icon: faLayerGroup,
-                },
-              ]
-            : []),
-          ...(can(access, "resources.delete")
-            ? [
-                {
-                  href: localizePathname("/resources/duplicates", locale),
-                  label: tx("Duplicates"),
-                  icon: faClone,
-                },
-              ]
-            : []),
-          // Anlegen darf jedes angemeldete Mitglied.
-          ...(access
-            ? [
-                {
-                  href: localizePathname("/resources/batch", locale),
-                  label: tx("Batch capture"),
-                  icon: faCamera,
-                },
-                {
-                  href: localizePathname("/resources/new", locale),
-                  label: tx("New resource"),
-                  icon: faPlus,
-                  kind: "primary" as const,
-                },
-              ]
-            : []),
-          ...(can(access, "resources.edit")
-            ? [
-                {
-                  label: syncingCampai
-                    ? tx("Syncing…", "en")
-                    : tx("Sync all to Campai", "en"),
-                  onClick: syncAllToCampai,
-                  disabled: syncingCampai,
-                },
-              ]
-            : []),
-        ]}
-      />
+  const handleIncludeWithinChange = (nextValue: boolean) => {
+    setIncludeWithinPolygons(nextValue);
+    replaceFilterParamsInUrl(
+      searchTerm.trim(),
+      selectedResourceType,
+      filterByMapView,
+      nextValue,
+    );
+  };
 
-      <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <SegmentedControl
-          value={viewMode}
-          size="small"
-          onChange={setViewMode}
-          options={[
-            {
-              value: "list" as const,
-              label: (
-                <>
-                  <FontAwesomeIcon icon={faList} className="text-[10px]" />
-                  {tx("List view")}
-                </>
-              ),
-            },
-            {
-              value: "map" as const,
-              label: (
-                <>
-                  <FontAwesomeIcon icon={faMap} className="text-[10px]" />
-                  {tx("Map view")}
-                </>
-              ),
-            },
-          ]}
-        />
+  const handleFilterByMapViewChange = (nextValue: boolean) => {
+    setFilterByMapView(nextValue);
+    replaceFilterParamsInUrl(
+      searchTerm.trim(),
+      selectedResourceType,
+      nextValue,
+      includeWithinPolygons,
+    );
+  };
+
+  const handleResetFilters = () => {
+    setSelectedResourceType("");
+    setIncludeWithinPolygons(false);
+    replaceFilterParamsInUrl(searchTerm.trim(), "", filterByMapView, false);
+  };
+
+  const selectedTypeLabel =
+    resourceTypeOptions.find((option) => option.value === selectedResourceType)
+      ?.label ?? selectedResourceType;
+  const activeFilterLabels = [
+    selectedResourceType ? selectedTypeLabel : null,
+    includeWithinPolygons ? tx("inkl. Ressourcen in Räumen", "de") : null,
+  ].filter((label): label is string => Boolean(label));
+
+  const isFiltered =
+    normalizedSearchTerm.length > 0 ||
+    Boolean(selectedResourceType) ||
+    (filterByMapView && mapShown);
+  const countLabel = loading
+    ? "…"
+    : isFiltered
+      ? `${visibleResources.length} ${tx("Treffer", "de")}`
+      : `${count ?? visibleResources.length} ${tx("gesamt", "de")}`;
+  const isUnfilteredServerCount = !initialQueryText && !initialResourceType;
+
+  const toolsMenuItems: ToolsMenuItem[] = [
+    // Anlegen darf jedes angemeldete Mitglied.
+    ...(access
+      ? [
+          {
+            href: localizePathname("/resources/batch", locale),
+            label: tx("Batch capture"),
+            hint: tx("Mehrere Ressourcen nacheinander fotografieren", "de"),
+          },
+        ]
+      : []),
+    ...(can(access, "resources.delete")
+      ? [
+          {
+            href: localizePathname("/resources/duplicates", locale),
+            label: tx("Duplicates"),
+            hint: tx("Doppelte Einträge finden und zusammenführen", "de"),
+          },
+        ]
+      : []),
+    ...(can(access, "resources.edit")
+      ? [
+          {
+            href: localizePathname("/resources/features", locale),
+            label: tx("Map features"),
+            hint: tx("Räume und Standorte auf der Karte pflegen", "de"),
+          },
+          {
+            label: syncingCampai
+              ? tx("Syncing…", "en")
+              : tx("Sync all to Campai", "en"),
+            hint: tx("Alle Ressourcen abgleichen", "de"),
+            onClick: syncAllToCampai,
+            disabled: syncingCampai,
+          },
+        ]
+      : []),
+  ];
+
+  const renderResults = (
+    layout: ResourceItemLayout | "table",
+    className: string,
+  ) => {
+    if (visibleResources.length === 0 && loading && layout === "table") {
+      return <ResourcesTableSkeleton />;
+    }
+    if (visibleResources.length === 0 && loading) {
+      return (
+        <div
+          className={className}
+          aria-busy="true"
+          aria-label={tx("Loading resources...")}
+        >
+          {Array.from({ length: RESOURCE_SKELETON_COUNT }).map((_, index) => (
+            <ResourceItemSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+    if (visibleResources.length === 0) {
+      return (
+        <Notice faceNumber={12}>
+          {tx(
+            "Nichts gefunden. Vielleicht heißt es anders – oder es fehlt noch im Inventar.",
+            "de",
+          )}
+        </Notice>
+      );
+    }
+    return (
+      <div
+        ref={resultsScrollRef}
+        className="lg:h-full lg:overflow-y-auto lg:pb-6 lg:pr-2 lg:[scrollbar-gutter:stable]"
+      >
+        {layout === "table" ? (
+          <ResourcesTable
+            resources={visibleResources}
+            placeResources={normalizedMapBasemapResources}
+            locale={locale}
+            tx={tx}
+            highlight={(text) => highlightText(text, normalizedSearchTerm)}
+            onNavigate={() => persistOverviewState()}
+          />
+        ) : (
+          <div className={className}>
+            {visibleResources.map((resource) => (
+              <ResourceItem
+                key={resource.id}
+                resource={resource}
+                layout={layout}
+                normalizedSearchTerm={normalizedSearchTerm}
+                locale={locale}
+                tx={tx}
+                onHover={setHoveredResourceId}
+                onNavigate={() => persistOverviewState()}
+              />
+            ))}
+          </div>
+        )}
+        {canLoadMore ? (
+          <div className="mt-6 flex justify-center">
+            <Button
+              kind="secondary"
+              size="medium"
+              onClick={handleLoadMore}
+              loading={loadingMore}
+            >
+              {loadingMore ? tx("Loading more...") : tx("Load more")}
+            </Button>
+          </div>
+        ) : null}
       </div>
+    );
+  };
+
+  // Ab lg füllt die Karte ihre Spalte, während nur die Liste daneben scrollt.
+  // In der Kartenansicht steht der Schalter unter der Karte, neben dem Raster
+  // darüber.
+  const renderMapPanel = (placement: "fixed" | "stretch") => {
+    const mapViewportChoice = (
+      <Choice
+        label={tx("Nur Ressourcen im Kartenausschnitt", "de")}
+        checked={filterByMapView}
+        onChange={(event) => handleFilterByMapViewChange(event.target.checked)}
+      />
+    );
+    return (
+      <div
+        className={`flex flex-col gap-2.5 ${
+          placement === "fixed" ? "lg:h-full" : "h-full"
+        }`}
+      >
+        {placement === "stretch" ? mapViewportChoice : null}
+        <ResourcesMapView
+          resources={mapOverlayResources}
+          pointResources={searchAndTypeFilteredResources}
+          highlightedResourceId={hoveredResourceId}
+          onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
+          className={`w-full overflow-hidden knglmrt-border ${
+            placement === "fixed"
+              ? "h-[60vh] min-h-[24rem] lg:h-auto lg:min-h-0 lg:flex-1"
+              : "min-h-[24rem] flex-1"
+          }`}
+        />
+        {placement === "fixed" ? mapViewportChoice : null}
+      </div>
+    );
+  };
+
+  const viewIconClassName = "h-4 w-4";
+
+  return (
+    <div className="flex flex-col gap-7 pb-10 lg:min-h-0 lg:flex-1 lg:pb-0">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-6">
+        <div className="flex items-baseline gap-3">
+          <h1 className="m-0 text-foreground">{tx("Inventar", "de")}</h1>
+          {!loading && count !== null && isUnfilteredServerCount ? (
+            <span className="knglmrt-num text-muted-foreground">
+              {count} {tx("Ressourcen", "de")}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          {access ? (
+            <Button
+              kind="emphasis"
+              icon={faPlus}
+              href={localizePathname("/resources/new", locale)}
+            >
+              {tx("New resource")}
+            </Button>
+          ) : null}
+          {toolsMenuItems.length > 0 ? (
+            <ToolsMenu label={tx("Werkzeuge", "de")} items={toolsMenuItems} />
+          ) : null}
+        </div>
+      </header>
+
+      <section className="-mt-2 flex shrink-0 flex-col gap-3">
+        <div className="flex flex-wrap items-stretch gap-2">
+          <div className="min-w-0 flex-[1_1_360px]">
+            <SearchField
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              onClear={handleClearSearch}
+              onBlur={commitSearchToUrl}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  commitSearchToUrl();
+                }
+              }}
+              aria-label={tx("Search resources")}
+              placeholder={tx("Search by name, tag, or category")}
+              count={countLabel}
+              className="h-full"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setFilterOpen((previous) => !previous)}
+            aria-expanded={filterOpen}
+            aria-controls="resource-filters"
+            className={`flex min-h-11 cursor-pointer items-center gap-2 knglmrt-border px-3 text-[15px] font-bold text-foreground transition-colors hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${
+              filterOpen ? "bg-muted" : "bg-card"
+            }`}
+          >
+            <FontAwesomeIcon icon={faSliders} className="h-4 w-4" />
+            <span>{tx("Filter", "de")}</span>
+            {activeFilterLabels.length > 0 ? (
+              <span className="knglmrt-num flex h-5 min-w-5 items-center justify-center bg-primary px-1 text-primary-foreground">
+                {activeFilterLabels.length}
+              </span>
+            ) : null}
+          </button>
+          <SegmentedControl
+            value={viewMode}
+            size="small"
+            tone="ink"
+            onChange={setViewMode}
+            segmentClassName="w-11 px-0"
+            options={[
+              {
+                value: "grid" as const,
+                label: (
+                  <FontAwesomeIcon
+                    icon={faGrip}
+                    className={viewIconClassName}
+                    title={tx("Raster", "de")}
+                  />
+                ),
+              },
+              {
+                value: "list" as const,
+                label: (
+                  <FontAwesomeIcon
+                    icon={faList}
+                    className={viewIconClassName}
+                    title={tx("List view")}
+                  />
+                ),
+              },
+              {
+                value: "map" as const,
+                label: (
+                  <FontAwesomeIcon
+                    icon={faMap}
+                    className={viewIconClassName}
+                    title={tx("Map view")}
+                  />
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        {filterOpen ? (
+          <div
+            id="resource-filters"
+            className="grid grid-cols-1 items-center gap-x-5 gap-y-3.5 bg-muted p-4 sm:grid-cols-[auto_minmax(0,1fr)]"
+          >
+            <span className="knglmrt-label">{tx("Typ", "de")}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { value: "", label: tx("All types") },
+                ...resourceTypeOptions,
+              ].map((option) => {
+                const isActive = option.value === selectedResourceType;
+                return (
+                  <button
+                    key={option.value || "all"}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => handleResourceTypeChange(option.value)}
+                    className={`cursor-pointer knglmrt-border px-2.5 py-1 text-[15px] leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${
+                      isActive
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-card text-foreground hover:bg-primary-soft"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <span className="knglmrt-label">{tx("Räume", "de")}</span>
+            <Choice
+              kind="switch"
+              label={tx("Show resources in rooms")}
+              hint={
+                normalizedSearchTerm.length === 0
+                  ? tx("Wirkt, sobald du nach einem Raum suchst.", "de")
+                  : undefined
+              }
+              checked={includeWithinPolygons}
+              onChange={(event) =>
+                handleIncludeWithinChange(event.target.checked)
+              }
+              disabled={normalizedSearchTerm.length === 0}
+            />
+          </div>
+        ) : activeFilterLabels.length > 0 ? (
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span className="text-muted-foreground">
+              {tx("Gefiltert:", "de")}
+            </span>
+            <span className="font-semibold">
+              {activeFilterLabels.join(" · ")}
+            </span>
+            <Button kind="tertiary" size="chip" onClick={handleResetFilters}>
+              {tx("Zurücksetzen", "de")}
+            </Button>
+          </div>
+        ) : null}
+      </section>
 
       {errorMessage ? (
-        <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
+        <section className="shrink-0 border border-destructive-border bg-destructive-soft p-4 text-destructive">
           {errorMessage}
         </section>
       ) : null}
 
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,40%)]">
-        <div className={`${viewMode === "list" ? "block" : "hidden"} lg:block`}>
-          <section className="space-y-4">
-            <div className="relative">
-              <label htmlFor="resource-search" className="sr-only">
-                {tx("Search")}
-              </label>
-              <FontAwesomeIcon
-                icon={faMagnifyingGlass}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
-              />
-              <Field
-                id="resource-search"
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                onBlur={commitSearchToUrl}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    commitSearchToUrl();
-                  }
-                }}
-                aria-label={tx("Search resources")}
-                placeholder={tx("Search by name, tag, or category")}
-                inputClassName="pl-9 pr-10 py-3 text-base"
-              />
-              {searchTerm.trim().length > 0 ? (
-                <Button
-                  kind="ghost"
-                  iconOnly
-                  icon={faXmark}
-                  aria-label={tx("Clear search")}
-                  onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-              ) : null}
-            </div>
-
-            <TooltipProvider delayDuration={200}>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="w-full sm:w-auto sm:min-w-30">
-                  <NativeSelect
-                    value={selectedResourceType}
-                    onChange={(event) =>
-                      handleResourceTypeChange(event.target.value)
-                    }
-                    aria-label={tx("Filter by resource type")}
-                    selectClassName="py-2 text-xs font-semibold text-foreground"
-                  >
-                    <option value="">{tx("All types")}</option>
-                    {resourceTypeOptions.map((resourceType) => (
-                      <option
-                        key={resourceType.value}
-                        value={resourceType.value}
-                      >
-                        {resourceType.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
-
-                <span className="inline-flex">
-                  <Choice
-                    className="items-center"
-                    label={
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>{tx("Filter by map viewport")}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {tx(
-                            "Only show resources that are currently visible in the map area.",
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    }
-                    checked={filterByMapView}
-                    onChange={(event) => {
-                      const nextValue = event.target.checked;
-                      setFilterByMapView(nextValue);
-                      replaceFilterParamsInUrl(
-                        searchTerm.trim(),
-                        selectedResourceType,
-                        nextValue,
-                        includeWithinPolygons,
-                      );
-                    }}
-                  />
-                </span>
-
-                <span className="inline-flex">
-                  <Choice
-                    className="items-center"
-                    label={
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>{tx("Show resources in rooms")}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {tx(
-                            "Also include resources that are placed inside mapped room areas when searching for rooms.",
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    }
-                    checked={includeWithinPolygons}
-                    onChange={(event) => {
-                      const nextValue = event.target.checked;
-                      setIncludeWithinPolygons(nextValue);
-                      replaceFilterParamsInUrl(
-                        searchTerm.trim(),
-                        selectedResourceType,
-                        filterByMapView,
-                        nextValue,
-                      );
-                    }}
-                    disabled={normalizedSearchTerm.length === 0}
-                  />
-                </span>
-
-                <div className="ml-auto hidden text-right md:block">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {tx("Results")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {loading
-                      ? tx("Loading...")
-                      : `${visibleResources.length} ${tx("of")} ${count ?? searchAndTypeFilteredResources.length}`}
-                  </p>
-                </div>
-              </div>
-            </TooltipProvider>
-          </section>
-
-          <section className="relative mt-6">
-            {visibleResources.length === 0 && loading ? (
-              <div
-                className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3"
-                aria-busy="true"
-                aria-label={tx("Loading resources...")}
-              >
-                {Array.from({ length: RESOURCE_SKELETON_COUNT }).map(
-                  (_, index) => (
-                    <ResourceCardSkeleton key={index} />
-                  ),
-                )}
-              </div>
-            ) : visibleResources.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {tx("No resources found.")}
-              </p>
-            ) : (
-              <>
-                <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
-                  {visibleResources.map((resource) => (
-                    <ResourceCard
-                      key={resource.id}
-                      resource={resource}
-                      normalizedSearchTerm={normalizedSearchTerm}
-                      locale={locale}
-                      tx={tx}
-                      onHover={setHoveredResourceId}
-                      onNavigate={() => persistOverviewState(window.scrollY)}
-                      canEdit={canEditResource(access, {
-                        ownerId: resource.ownerId,
-                        type: resource.type,
-                      })}
-                    />
-                  ))}
-                </div>
-
-                {canLoadMore ? (
-                  <div className="mt-6 flex justify-center">
-                    <Button
-                      kind="secondary"
-                      size="medium"
-                      onClick={handleLoadMore}
-                      loading={loadingMore}
-                    >
-                      {loadingMore ? tx("Loading more...") : tx("Load more")}
-                    </Button>
-                  </div>
-                ) : null}
-              </>
+      <section className="relative lg:min-h-0 lg:flex-1">
+        {viewMode === "grid" ? (
+          <div
+            className={`grid gap-6 lg:h-full lg:grid-rows-[minmax(0,1fr)] ${
+              isWide
+                ? "grid-cols-[minmax(0,1fr)_minmax(380px,36%)]"
+                : "grid-cols-1"
+            }`}
+          >
+            {renderResults(
+              "grid",
+              "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-1.5 gap-y-2",
             )}
-            {loading ? (
-              <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-muted-foreground ">
-                {tx("Loading...")}
-              </div>
-            ) : null}
-          </section>
-        </div>
-
-        <aside
-          className={`${viewMode === "map" ? "block" : "hidden"} lg:block`}
-        >
-          <div className="flex flex-col lg:sticky lg:top-[86px] lg:h-[calc(100vh-102px)]">
-            <ResourcesMapView
-              resources={mapOverlayResources}
-              pointResources={searchAndTypeFilteredResources}
-              highlightedResourceId={hoveredResourceId}
-              onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
-              className="h-[70vh] min-h-[24rem] w-full overflow-hidden rounded-lg lg:h-auto lg:min-h-0 lg:flex-1"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {tx("Showing resources with saved locations.")}
-            </p>
+            {isWide ? renderMapPanel("stretch") : null}
           </div>
-        </aside>
+        ) : viewMode === "list" ? (
+          renderResults("table", "")
+        ) : (
+          <div className="grid grid-cols-1 items-start gap-6 lg:h-full lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch">
+            <div className="order-2 lg:order-1 lg:min-h-0">
+              {renderResults("compact", "flex flex-col gap-0.5")}
+            </div>
+            <div className="order-1 lg:order-2 lg:min-h-0">
+              {renderMapPanel("fixed")}
+            </div>
+          </div>
+        )}
+        {loading && visibleResources.length > 0 ? (
+          <div className="knglmrt-num pointer-events-none absolute right-3 top-3 knglmrt-border bg-card px-3 py-1 text-muted-foreground">
+            {tx("Loading...")}
+          </div>
+        ) : null}
       </section>
     </div>
   );

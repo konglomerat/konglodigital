@@ -18,6 +18,10 @@ const FULLSCREEN_PATHNAMES = new Set(["/resources/batch"]);
 // Ressort-Leiste bis an den Bildschirmrand reicht.
 const FULL_BLEED_PREFIXES = ["/admin", "/receipts", "/kofi"];
 
+// Ab lg füllt die Seite genau den Bildschirm; scrollen lässt die Seite selbst
+// nur ihre Liste. Darunter bleibt alles wie gewohnt, samt Footer.
+const VIEWPORT_PATHNAMES = new Set(["/resources"]);
+
 export default function AppShell({
   children,
   desktopNavigation,
@@ -52,9 +56,14 @@ export default function AppShell({
   }
 
   const isHome = normalizedPathname === "/";
+  const isViewport = VIEWPORT_PATHNAMES.has(normalizedPathname);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div
+      className={`flex min-h-screen flex-col bg-background text-foreground ${
+        isViewport ? "lg:h-screen lg:overflow-hidden" : ""
+      }`}
+    >
       {mobileNavigation}
       {desktopNavigation}
       <main
@@ -62,11 +71,11 @@ export default function AppShell({
           isHome
             ? "flex flex-col gap-8 pt-4 md:gap-10 md:pt-10"
             : "py-4 md:py-10"
-        }`}
+        } ${isViewport ? "lg:flex lg:min-h-0 lg:flex-col lg:py-6" : ""}`}
       >
         {children}
       </main>
-      {footer}
+      {isViewport ? <div className="lg:hidden">{footer}</div> : footer}
     </div>
   );
 }

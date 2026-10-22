@@ -30,6 +30,7 @@ type ResourceRow = {
   tags: string[] | null;
   categories: StoredCategory[] | null;
   map_features?: unknown;
+  updated_at?: string | null;
 };
 
 const MAP_BASE_RESOURCE_TYPES = ["place", "furniture"] as const;
@@ -59,6 +60,7 @@ const toResourcePayload = (row: ResourceRow): ResourcePayload => ({
       }))
     : undefined,
   mapFeatures: normalizeResourceMapFeatures(row.map_features ?? null),
+  updatedAt: row.updated_at ?? null,
   relatedResources: undefined,
 });
 

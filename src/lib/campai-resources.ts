@@ -51,6 +51,8 @@ export type ResourcePayload = {
   mediaPreviews?: ResourceMediaPreviewMap | null;
   mediaPosters?: ResourceMediaPosterMap | null;
   publishDate?: string | null;
+  /** Letzte Änderung am Eintrag (ISO). */
+  updatedAt?: string | null;
   gpsLatitude?: number | null;
   gpsLongitude?: number | null;
   gpsAltitude?: number | null;

@@ -1643,5 +1643,222 @@
     "namespace": "resources",
     "sourceLocale": "en",
     "sourceText": "We detected a location from the image. Please confirm or adjust it on the map."
+  },
+  "resources::Alle Ressourcen abgleichen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Alle Ressourcen abgleichen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Alle Ressourcen abgleichen"
+  },
+  "resources::Ausgeliehen": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Ausgeliehen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Ausgeliehen"
+  },
+  "resources::Ausleihstatus": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Ausleihstatus",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Ausleihstatus"
+  },
+  "resources::Campai sync failed.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Campai sync failed.",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Campai sync failed."
+  },
+  "resources::Doppelte Einträge finden und zusammenführen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Doppelte Einträge finden und zusammenführen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Doppelte Einträge finden und zusammenführen"
+  },
+  "resources::Filter": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Filter",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Filter"
+  },
+  "resources::Frei": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Frei",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Frei"
+  },
+  "resources::Geändert": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Geändert",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Geändert"
+  },
+  "resources::Gefiltert:": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Gefiltert:",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Gefiltert:"
+  },
+  "resources::gesamt": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "gesamt",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "gesamt"
+  },
+  "resources::Gesperrt": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Gesperrt",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Gesperrt"
+  },
+  "resources::inkl. Ressourcen in Räumen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "inkl. Ressourcen in Räumen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "inkl. Ressourcen in Räumen"
+  },
+  "resources::Mehrere Ressourcen nacheinander fotografieren": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Mehrere Ressourcen nacheinander fotografieren",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Mehrere Ressourcen nacheinander fotografieren"
+  },
+  "resources::nicht verbunden": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "nicht verbunden",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "nicht verbunden"
+  },
+  "resources::Nichts gefunden. Vielleicht heißt es anders – oder es fehlt noch im Inventar.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Nichts gefunden. Vielleicht heißt es anders – oder es fehlt noch im Inventar.",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Nichts gefunden. Vielleicht heißt es anders – oder es fehlt noch im Inventar."
+  },
+  "resources::Nur Ressourcen im Kartenausschnitt": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Nur Ressourcen im Kartenausschnitt",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Nur Ressourcen im Kartenausschnitt"
+  },
+  "resources::Raster": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Raster",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Raster"
+  },
+  "resources::Räume": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Räume",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Räume"
+  },
+  "resources::Räume und Standorte auf der Karte pflegen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Räume und Standorte auf der Karte pflegen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Räume und Standorte auf der Karte pflegen"
+  },
+  "resources::Ressourcen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Ressourcen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Ressourcen"
+  },
+  "resources::Standort": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Standort",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Standort"
+  },
+  "resources::Sync all to Campai": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Sync all to Campai",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Sync all to Campai"
+  },
+  "resources::Syncing…": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Syncing…",
+    "namespace": "resources",
+    "sourceLocale": "en",
+    "sourceText": "Syncing…"
+  },
+  "resources::Treffer": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Treffer",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Treffer"
+  },
+  "resources::Typ": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "Typ",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Typ"
+  },
+  "resources::unbekannt": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "unbekannt",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "unbekannt"
+  },
+  "resources::vergeben ab": {
+    "filePath": "src/app/[lang]/resources/ResourcesTable.tsx",
+    "key": "vergeben ab",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "vergeben ab"
+  },
+  "resources::Werkzeuge": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Werkzeuge",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Werkzeuge"
+  },
+  "resources::Wirkt, sobald du nach einem Raum suchst.": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Wirkt, sobald du nach einem Raum suchst.",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Wirkt, sobald du nach einem Raum suchst."
+  },
+  "resources::Zurücksetzen": {
+    "filePath": "src/app/[lang]/resources/ResourcesPageClient.tsx",
+    "key": "Zurücksetzen",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "Zurücksetzen"
+  },
+  "resources::bis": {
+    "filePath": "src/app/[lang]/resources/[id]/ResourceLoan.tsx",
+    "key": "bis",
+    "namespace": "resources",
+    "sourceLocale": "de",
+    "sourceText": "bis"
   }
 }
