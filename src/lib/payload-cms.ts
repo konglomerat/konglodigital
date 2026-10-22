@@ -180,6 +180,9 @@ const fetchPayloadJson = async <T>(url: URL): Promise<T | null> => {
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
       next: { revalidate: 60, tags: ["payload-cms"] },
+      // Ein hängendes CMS soll die Seite nicht festhalten: nach fünf
+      // Sekunden greift der statische Inhalt (wie in payload-navigation).
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return null;
     return (await response.json()) as T;

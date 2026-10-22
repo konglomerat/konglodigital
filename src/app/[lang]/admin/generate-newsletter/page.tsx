@@ -14,8 +14,7 @@ import {
 } from "@/lib/rapidmail";
 import { isImageUrl } from "@/lib/resource-media";
 import { can } from "@/lib/access/access";
-import { loadUserAccess } from "@/lib/access/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 
 type NewsletterShowcase = {
   id: string;
@@ -81,10 +80,9 @@ const RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS = 8_000;
 
 export default async function GenerateNewsletterPage() {
   const locale = await getRequestLocale();
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const { data } = await supabase.auth.getUser();
+  const { user } = await getServerSession();
 
-  if (!data.user) {
+  if (!user) {
     redirect(
       `${localizePathname("/login", locale)}?redirectedFrom=${encodeURIComponent(
         localizePathname("/admin/generate-newsletter", locale),
@@ -92,7 +90,7 @@ export default async function GenerateNewsletterPage() {
     );
   }
 
-  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
+  if (!can(await getServerAccess(), "newsletter.manage")) {
     return null;
   }
 

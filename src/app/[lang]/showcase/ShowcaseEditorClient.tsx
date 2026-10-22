@@ -624,6 +624,8 @@ export default function ShowcaseEditorClient({
           ? tx("Beitrag aktualisiert.", "de")
           : tx("Beitrag erstellt.", "de"),
       );
+      // Die Taste bleibt gesperrt, bis die neue Seite da ist — sonst legt ein
+      // zweiter Klick den Beitrag doppelt an.
       router.push(localizePathname(buildShowcasePath(targetShowcase), locale));
     } catch (error) {
       setFormError(
@@ -631,7 +633,6 @@ export default function ShowcaseEditorClient({
           ? error.message
           : tx("Beitrag konnte nicht gespeichert werden.", "de"),
       );
-    } finally {
       setSaving(false);
     }
   };

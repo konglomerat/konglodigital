@@ -123,7 +123,18 @@ const campaiErrorMessage = (raw: string, fallback: string) => {
   return raw.trim() || fallback;
 };
 
-const campaiFetch = async <T>(path: string, body?: unknown): Promise<T> => {
+/**
+ * Lesende Abrufe tragen ein Zeitlimit, damit eine hängende Campai-API die
+ * Workshop-Seiten nicht mitnimmt. Buchungen bewusst ohne: bricht der Abruf
+ * ab, obwohl Campai schon gebucht hat, bucht ein zweiter Versuch doppelt.
+ */
+const READ_TIMEOUT_MS = 8000;
+
+const campaiFetch = async <T>(
+  path: string,
+  body?: unknown,
+  { timeoutMs }: { timeoutMs?: number } = {},
+): Promise<T> => {
   const response = await fetch(`${campaiBaseUrl()}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
@@ -132,6 +143,7 @@ const campaiFetch = async <T>(path: string, body?: unknown): Promise<T> => {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
+    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
   });
   const text = await response.text().catch(() => "");
   if (!response.ok) {
@@ -348,6 +360,7 @@ const fetchUpcomingEvents = async (): Promise<WorkshopEvent[]> => {
         offset: page * LIST_PAGE_SIZE,
         returnCount: true,
       },
+      { timeoutMs: READ_TIMEOUT_MS },
     );
     const batch = result?.events ?? [];
     events.push(...batch);
@@ -372,7 +385,11 @@ export const listUpcomingWorkshops = unstable_cache(
 export const getWorkshop = async (eventId: string) => {
   if (!/^[a-f0-9]{24}$/i.test(eventId)) return null;
   try {
-    const event = await campaiFetch<CampaiEvent>(`/booking/events/${eventId}`);
+    const event = await campaiFetch<CampaiEvent>(
+      `/booking/events/${eventId}`,
+      undefined,
+      { timeoutMs: READ_TIMEOUT_MS },
+    );
     if (!event?._id || !VISIBLE_OFFER_MODES.includes(event.offer?.mode ?? "")) {
       return null;
     }

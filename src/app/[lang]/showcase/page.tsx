@@ -2,9 +2,8 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../components/PageTitle";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { can } from "@/lib/access/access";
-import { loadUserAccess } from "@/lib/access/server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 import ShowcaseCard from "./ShowcaseCard";
 import ShowcaseOfTheMonthCard from "./ShowcaseOfTheMonthCard";
 import ShowcaseUploadPromptCard from "./ShowcaseUploadPromptCard";
@@ -18,19 +17,18 @@ const hasShowcaseOfTheMonthTag = (tags?: string[] | null) =>
   false;
 
 export default async function ShowcasesPage() {
-  const [{ tx, locale }, supabase] = await Promise.all([
+  // Die öffentlichen Beiträge (gecacht) laden schon, während die Rechte
+  // geprüft werden. Session und Rechte kommen aus dem Request-Cache, den
+  // auch das Layout nutzt — kein zweiter Weg zu Supabase.
+  const publicShowcasesPromise = loadShowcases();
+  const [{ tx, locale }, { user }, access] = await Promise.all([
     getServerI18n(),
-    createSupabaseServerClient({ readOnly: true }),
+    getServerSession(),
+    getServerAccess(),
   ]);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const canSeePrivate = can(
-    await loadUserAccess(supabase, user),
-    "showcase.private",
-  );
+  const canSeePrivate = can(access, "showcase.private");
   const [publicShowcases, privateShowcases] = await Promise.all([
-    loadShowcases(),
+    publicShowcasesPromise,
     canSeePrivate ? loadPrivateShowcasesForAdmin() : Promise.resolve([]),
   ]);
   const showcases = [...publicShowcases, ...privateShowcases].sort(

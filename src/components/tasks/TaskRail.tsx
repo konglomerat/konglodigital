@@ -3,7 +3,7 @@
 // Aufgabenleiste rechts in der Verwaltung: Projekte als Karten, darin die
 // offenen Aufgaben, Erledigte auf Wunsch. Für jedes Board gleich — welches,
 // sagt `board` (src/lib/tasks/boards.ts). Einklappen merkt sich der Browser.
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import Button from "@/components/knglmrt/Button";
 import Choice from "@/components/knglmrt/Choice";
@@ -293,6 +293,10 @@ export default function TaskRail({ board }: { board: string }) {
   const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => null);
   const [addingIn, setAddingIn] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
+  // Enter und Klick können kurz hintereinander feuern: der Ref sperrt sofort,
+  // der State zeigt den Spinner.
+  const creatingProjectRef = useRef(false);
+  const [creatingProject, setCreatingProject] = useState(false);
   const [projectDraft, setProjectDraft] = useState("");
   const today = startOfDay(new Date());
 
@@ -366,7 +370,9 @@ export default function TaskRail({ board }: { board: string }) {
 
   const addProject = async () => {
     const name = projectDraft.trim();
-    if (!name) return;
+    if (!name || creatingProjectRef.current) return;
+    creatingProjectRef.current = true;
+    setCreatingProject(true);
     try {
       const { project } = await request<{ project: TaskProject }>("/api/tasks/projects", {
         method: "POST",
@@ -380,6 +386,9 @@ export default function TaskRail({ board }: { board: string }) {
       setError(null);
     } catch (addError) {
       setError((addError as Error).message);
+    } finally {
+      creatingProjectRef.current = false;
+      setCreatingProject(false);
     }
   };
 
@@ -475,7 +484,12 @@ export default function TaskRail({ board }: { board: string }) {
               onChange={(event) => setProjectDraft(event.target.value)}
               className="min-w-[200px] flex-1"
             />
-            <Button kind="primary" size="chip" onClick={() => void addProject()}>
+            <Button
+              kind="primary"
+              size="chip"
+              loading={creatingProject}
+              onClick={() => void addProject()}
+            >
               Anlegen
             </Button>
             <Button

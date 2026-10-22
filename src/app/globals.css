@@ -492,3 +492,25 @@ input[type="search"]::-webkit-search-cancel-button {
     opacity: 1;
   }
 }
+
+/* Seitenskelett (loading.tsx): erscheint erst nach einem kurzen Moment, damit
+   schnelle Seitenwechsel nicht aufflackern. Die sofortige Rückmeldung trägt
+   der angeklickte Link selbst (LinkPending). */
+@keyframes knglmrt-skeleton-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.knglmrt-skeleton-in {
+  animation: knglmrt-skeleton-in 160ms ease-out 120ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knglmrt-skeleton-in {
+    animation: none;
+  }
+}

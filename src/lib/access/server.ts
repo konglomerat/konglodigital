@@ -94,8 +94,18 @@ export const canPreviewAccess = (realAccess: UserAccess | null) =>
 export const loadUserAccess = async (
   client: SupabaseClient,
   user: UserLike | null | undefined,
+): Promise<UserAccess | null> =>
+  applyAccessPreview(user, await loadAccessOf(client, user));
+
+/**
+ * Legt eine aktive Rechte-Vorschau über die echten Zuweisungen. Getrennt von
+ * loadUserAccess, damit der Request-Cache (server-session.ts) die echten
+ * Zuweisungen nur einmal abfragt.
+ */
+export const applyAccessPreview = async (
+  user: UserLike | null | undefined,
+  realAccess: UserAccess | null,
 ): Promise<UserAccess | null> => {
-  const realAccess = await loadAccessOf(client, user);
   if (!user || !canPreviewAccess(realAccess)) {
     return realAccess;
   }

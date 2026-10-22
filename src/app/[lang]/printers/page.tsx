@@ -372,6 +372,7 @@ export default function Home() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorJobId, setSaveErrorJobId] = useState<string | null>(null);
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [claimingSelected, setClaimingSelected] = useState(false);
   const [unclaimingJobId, setUnclaimingJobId] = useState<string | null>(null);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [cartJobIds, setCartJobIds] = useState<string[]>([]);
@@ -530,6 +531,7 @@ export default function Home() {
     const jobId = String(formData.get("jobId") ?? "");
     const description = String(formData.get("description") ?? "");
 
+    if (savingJobId === jobId) return;
     setSavingJobId(jobId);
     try {
       await fetchJson<{ ok: boolean }>("/api/descriptions", {
@@ -602,10 +604,12 @@ export default function Home() {
   };
 
   const handleClaimSelected = async () => {
+    if (claimingSelected) return;
     setClaimMessage(null);
     if (selectedJobIds.length === 0) {
       return;
     }
+    setClaimingSelected(true);
     try {
       const data = await fetchJson<{
         claimed: string[];
@@ -629,6 +633,8 @@ export default function Home() {
           ? error.message
           : "Unable to claim selected prints.",
       );
+    } finally {
+      setClaimingSelected(false);
     }
   };
 
@@ -1126,6 +1132,7 @@ export default function Home() {
                     kind="primary"
                     className="px-3 py-2 text-xs"
                     disabled={selectedJobIds.length === 0}
+                    loading={claimingSelected}
                   >
                     Auswahl übernehmen
                   </Button>
@@ -1340,6 +1347,7 @@ export default function Home() {
                                     type="submit"
                                     kind="secondary"
                                     disabled={!canEdit}
+                                    loading={savingJobId === job.id}
                                   >
                                     {savingJobId === job.id
                                       ? "Speichert …"

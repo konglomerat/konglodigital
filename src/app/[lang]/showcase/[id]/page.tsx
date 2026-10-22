@@ -17,9 +17,8 @@ import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { buildShowcasePath } from "@/lib/showcase-path";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 import { can } from "@/lib/access/access";
-import { loadUserAccess } from "@/lib/access/server";
 import {
   getResourceMediaKindFromUrl,
   getSupabaseRenderedImageUrl,
@@ -115,14 +114,7 @@ export async function generateMetadata({
   }
 
   if (showcase.isPrivate) {
-    const supabase = await createSupabaseServerClient({ readOnly: true });
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const canSeePrivate = can(
-      await loadUserAccess(supabase, user),
-      "showcase.private",
-    );
+    const canSeePrivate = can(await getServerAccess(), "showcase.private");
     if (!canViewShowcase(showcase, canSeePrivate)) {
       return { robots: { index: false, follow: false } };
     }
@@ -219,20 +211,18 @@ export default async function ShowcaseDetailPage({
 }) {
   const { id, lang } = await params;
   const locale = normalizeLocale(lang);
-  const [{ tx }, supabase, showcase] = await Promise.all([
+  // Session und Rechte aus dem Request-Cache (wie Layout und Metadaten).
+  const [{ tx }, showcase, { user }, access] = await Promise.all([
     getServerI18n(),
-    createSupabaseServerClient({ readOnly: true }),
     loadCachedShowcase(id),
+    getServerSession(),
+    getServerAccess(),
   ]);
 
   if (!showcase) {
     notFound();
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const access = await loadUserAccess(supabase, user);
   if (!canViewShowcase(showcase, can(access, "showcase.private"))) {
     notFound();
   }

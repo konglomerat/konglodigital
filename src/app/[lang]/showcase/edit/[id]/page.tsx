@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 
 import ShowcaseEditorClient from "../../ShowcaseEditorClient";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 import { can } from "@/lib/access/access";
-import { loadUserAccess } from "@/lib/access/server";
 import { buildShowcasePath } from "@/lib/showcase-path";
 import { loadShowcaseByIdentifier } from "../../showcase-data";
 
@@ -15,10 +14,7 @@ export default async function EditShowcasePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getServerSession();
 
   if (!user) {
     redirect(`/login?redirectedFrom=/showcase/edit/${id}`);
@@ -29,7 +25,7 @@ export default async function EditShowcasePage({
     notFound();
   }
 
-  const access = await loadUserAccess(supabase, user);
+  const access = await getServerAccess();
   const canManagePrivacy = can(access, "showcase.private");
   if (showcase.isPrivate && !canManagePrivacy) {
     notFound();

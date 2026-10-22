@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Suspense } from "react";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import type { Metadata } from "next";
 import Divider from "@/components/knglmrt/Divider";
@@ -33,15 +34,27 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+// Jeder Live-Bereich hängt in einer eigenen Suspense-Grenze: der Kopf der
+// Startseite steht sofort, die Bereiche folgen, sobald ihre Abfrage fertig
+// ist. Kein Skelett — leere Bereiche verschwinden ganz, und sie liegen
+// ohnehin unterhalb der ersten Bildschirmhöhe.
 function HomeFeeds({ page }: { page?: PayloadPage }) {
   return (
     <>
       {!page || !payloadPageHasAppSlot(page, "showcaseOfMonth") ? (
-        <ShowcaseOfTheMonthSection />
+        <Suspense fallback={null}>
+          <ShowcaseOfTheMonthSection />
+        </Suspense>
       ) : null}
-      {!page || !payloadPageHasAppSlot(page, "news") ? <NewsSection /> : null}
+      {!page || !payloadPageHasAppSlot(page, "news") ? (
+        <Suspense fallback={null}>
+          <NewsSection />
+        </Suspense>
+      ) : null}
       {!page || !payloadPageHasAppSlot(page, "resourceOfMonth") ? (
-        <ResourceOfTheMonthSection />
+        <Suspense fallback={null}>
+          <ResourceOfTheMonthSection />
+        </Suspense>
       ) : null}
     </>
   );

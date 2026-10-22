@@ -11,6 +11,7 @@ import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 import Divider from "@/components/knglmrt/Divider";
+import { LinkPendingSpinner } from "@/components/LinkPending";
 
 export type ButtonKind =
   /** Gefüllte Markenfarbe ohne Rahmen, Hover braun. */
@@ -188,16 +189,32 @@ export default function Button({
   ) : null;
 
   // Icon-Tasten tragen nur das Zeichen; die Beschriftung lebt im aria-label.
-  const content = iconOnly ? (
-    (iconElement ?? children)
-  ) : iconElement ? (
-    <>
-      {resolvedPosition === "left" ? iconElement : null}
-      <span className="inline-flex items-center gap-2">{children}</span>
-      {resolvedPosition === "right" ? iconElement : null}
-    </>
-  ) : (
-    children
+  const buildContent = (iconNode: ReactNode) =>
+    iconOnly ? (
+      (iconNode ?? children)
+    ) : iconNode ? (
+      <>
+        {resolvedPosition === "left" ? iconNode : null}
+        <span className="inline-flex items-center gap-2">{children}</span>
+        {resolvedPosition === "right" ? iconNode : null}
+      </>
+    ) : (
+      children
+    );
+  const content = buildContent(iconElement);
+
+  // Als <Link> zeigt die Taste nach dem Klick sofort einen Spinner (an Stelle
+  // des Icons), bis die neue Seite da ist — sonst klickt man doppelt.
+  // Icon-Tasten ohne Icon behalten ihren Inhalt.
+  const linkContent = iconOnly && !iconElement ? content : buildContent(
+    <LinkPendingSpinner
+      fallback={iconElement}
+      className={
+        resolvedKind === "tertiary"
+          ? tertiaryIconPixelSize[size]
+          : iconPixelSize[size]
+      }
+    />,
   );
 
   // Tertiär ist keine Taste, sondern der pinke Fettsatz mit gezeichneter Linie.
@@ -205,9 +222,9 @@ export default function Button({
     const tertiaryClassName = `relative inline-flex w-max cursor-pointer items-center ${tertiarySizeClassName[size]} font-bold text-primary transition-colors duration-200 hover:text-[var(--ui-action-hover)] ${focusClassName}${
       className ? ` ${className}` : ""
     }`;
-    const tertiaryContent = (
+    const withTertiaryLine = (inner: ReactNode) => (
       <>
-        {content}
+        {inner}
         <span className="absolute inset-x-0 bottom-0 block">
           <Divider
             number={4}
@@ -217,6 +234,7 @@ export default function Button({
         </span>
       </>
     );
+    const tertiaryContent = withTertiaryLine(content);
 
     if ("href" in rest && typeof rest.href === "string") {
       const { href, ...anchorProps } = rest;
@@ -229,7 +247,7 @@ export default function Button({
       }
       return (
         <Link href={href} className={tertiaryClassName} {...anchorProps}>
-          {tertiaryContent}
+          {withTertiaryLine(linkContent)}
         </Link>
       );
     }
@@ -241,6 +259,7 @@ export default function Button({
         className={tertiaryClassName}
         {...buttonProps}
         disabled={loading || buttonProps.disabled}
+        aria-busy={loading || undefined}
       >
         {tertiaryContent}
       </button>
@@ -268,7 +287,7 @@ export default function Button({
     }
     return (
       <Link href={href} className={mergedClassName} {...anchorProps}>
-        {content}
+        {linkContent}
       </Link>
     );
   }
@@ -280,6 +299,7 @@ export default function Button({
       className={mergedClassName}
       {...buttonProps}
       disabled={loading || buttonProps.disabled}
+      aria-busy={loading || undefined}
     >
       {content}
     </button>

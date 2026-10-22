@@ -202,6 +202,7 @@ export default function ResourceDetailClient({
                     if (!response.ok) {
                       throw new Error(data.error ?? tx("Unable to delete resource."));
                     }
+                    // Gesperrt lassen, bis die Übersicht da ist.
                     router.push(localizePathname("/resources", locale));
                   } catch (error) {
                     setErrorMessage(
@@ -209,7 +210,6 @@ export default function ResourceDetailClient({
                         ? error.message
                         : tx("Unable to delete resource."),
                     );
-                  } finally {
                     setDeleting(false);
                   }
                 },

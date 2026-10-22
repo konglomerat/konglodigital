@@ -7,6 +7,7 @@
 // Jede Karte führt auf die Buchungsseite. Pfeiltasten links und rechts
 // blättern für alle, die nicht waagerecht scrollen können.
 import Link from "next/link";
+import { LinkPendingOverlay } from "@/components/LinkPending";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
@@ -161,6 +162,7 @@ export default function WorkshopDates({
                     }`}
                     className="relative flex w-full flex-col bg-muted text-foreground no-underline focus-visible:outline-none after:pointer-events-none after:absolute after:inset-0 after:content-[''] after:transition-shadow after:duration-200 after:ease-[cubic-bezier(.2,0,0,1)] hover:after:shadow-[inset_0_0_0_3px_var(--primary)] focus-visible:after:shadow-[inset_0_0_0_3px_var(--primary)]"
                   >
+                    <LinkPendingOverlay />
                     {event.imageUrl ? (
                       // Campai liefert signierte S3-Adressen (24 h gültig) —
                       // kein next/image-Proxy.

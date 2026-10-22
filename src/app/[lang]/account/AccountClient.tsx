@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -526,9 +527,7 @@ export default function AccountClient({
           </p>
         </div>
         <form action={signOut}>
-          <Button type="submit" kind="danger-secondary">
-            Abmelden
-          </Button>
+          <SignOutButton />
         </form>
       </header>
 
@@ -869,5 +868,15 @@ export default function AccountClient({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Sperrt sich, solange die Abmeldung läuft — kein doppeltes Absenden. */
+function SignOutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" kind="danger-secondary" loading={pending}>
+      Abmelden
+    </Button>
   );
 }
