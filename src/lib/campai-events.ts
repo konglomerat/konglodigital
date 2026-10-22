@@ -9,12 +9,15 @@
 //   heißt kostenlos. Ein Tarif mit `member` gilt nur für Mitglieder.
 // - `offer.attendeeMode` "single" = die anmeldende Person ist der einzige
 //   Teilnehmer; "multiple" = mehrere Namen pro Buchung.
+// - `offer.bookingRestriction` "requireConfirmation" („Bestätigung
+//   erforderlich“) schickt jede Anmeldung auf die Warteliste, auch bei
+//   freien Plätzen. So laufen Workshops ohne festen Termin („Termin offen“).
 import "server-only";
 
 import { unstable_cache } from "next/cache";
 
-import { WERKBEREICHE } from "@/lib/werkbereiche";
 import {
+  compareWorkshops,
   maxSeatsFor,
   normalizePhone,
   ratesFor,
@@ -62,7 +65,7 @@ type CampaiEvent = {
       address?: CampaiAddress | null;
       resource?: { siteName?: string; siteAddress?: CampaiAddress | null } | null;
     } | null;
-    tags?: string[];
+    categories?: Array<{ name?: string; bookingCategoryId?: string }>;
   } | null;
   settings?: {
     maxAttendees?: number | null;
@@ -142,38 +145,6 @@ const campaiFetch = async <T>(path: string, body?: unknown): Promise<T> => {
 };
 
 // ------------------------------------------------------------------
-// Werkbereich-Zuordnung über Tags und Titel
-// ------------------------------------------------------------------
-
-const AREA_PATTERNS: Array<[slug: string, pattern: RegExp]> = [
-  ["cnc", /\bcnc\b|fräs/i],
-  ["laser", /laser/i],
-  ["3d-druck", /\b3d\b|3d-druck|3d druck/i],
-  ["elektronik", /elektron|electronic|löt|solder|arduino|platine/i],
-  ["holz", /holz|wood|tischler|schreiner/i],
-  ["textil", /textil|näh|sewing|stoff/i],
-  ["beton", /beton|concrete/i],
-  ["siebdruck", /siebdruck|screen ?print/i],
-  ["riso", /riso/i],
-  ["darkroom", /darkroom|dunkelkammer|analog|foto|film/i],
-  ["kunststoffschmiede", /kunststoff|plastik|plastic/i],
-  ["metall", /metall|schwei|weld/i],
-  ["printshop", /printshop|plotter/i],
-];
-
-const detectArea = (tags: string[], title: string) => {
-  // Tags zuerst: sie sind gezielt gesetzt, der Titel ist Freitext.
-  for (const source of [tags.join(" "), title]) {
-    for (const [slug, pattern] of AREA_PATTERNS) {
-      if (pattern.test(source) && WERKBEREICHE.some((w) => w.slug === slug)) {
-        return slug;
-      }
-    }
-  }
-  return null;
-};
-
-// ------------------------------------------------------------------
 // Normalisierung
 // ------------------------------------------------------------------
 
@@ -243,8 +214,11 @@ export const normalizeCampaiEvent = (
   const info = event.info ?? {};
   const offer = event.offer ?? {};
   const stats = event.statistics ?? {};
-  const tags = (info.tags ?? []).filter(
-    (tag): tag is string => typeof tag === "string",
+  // Campai legt Name und ID der Kategorie direkt am Termin ab.
+  const categories = (info.categories ?? []).flatMap((category) =>
+    category?.bookingCategoryId && category.name?.trim()
+      ? [{ id: category.bookingCategoryId, name: category.name.trim() }]
+      : [],
   );
   const title = info.title?.trim() || "Workshop";
   const maxAttendees =
@@ -299,8 +273,7 @@ export const normalizeCampaiEvent = (
     title,
     description: info.description?.trim() ?? "",
     imageUrl,
-    tags,
-    area: detectArea(tags, title),
+    categories,
     start,
     end: event.period?.to ?? start,
     placeName,
@@ -311,6 +284,8 @@ export const normalizeCampaiEvent = (
     free,
     seatsThreshold: offer.displaySettings?.seatsAvailableThreshold ?? 10,
     waitlistEnabled: offer.bookingRestriction === "bookIntoWaitlist",
+    published: offer.mode === "public",
+    dateOpen: offer.bookingRestriction === "requireConfirmation",
     bookingOpen,
     bookingOpensAt: opensAt !== null && opensAt > now ? availabilityFrom : null,
     attendeeMode: offer.attendeeMode === "single" ? "single" : "multiple",
@@ -350,6 +325,8 @@ export const normalizeCampaiEvent = (
 // Lesen
 // ------------------------------------------------------------------
 
+const VISIBLE_OFFER_MODES = ["public", "protected"];
+
 const LIST_PAGE_SIZE = 100;
 const LIST_MAX_PAGES = 5;
 
@@ -364,7 +341,8 @@ const fetchUpcomingEvents = async (): Promise<WorkshopEvent[]> => {
       {
         fromDate,
         canceled: false,
-        offerModes: ["public"],
+        // Geschützte Termine erscheinen als Vorschau (nicht buchbar).
+        offerModes: VISIBLE_OFFER_MODES,
         sort: { "period.from": "asc" },
         limit: LIST_PAGE_SIZE,
         offset: page * LIST_PAGE_SIZE,
@@ -380,13 +358,13 @@ const fetchUpcomingEvents = async (): Promise<WorkshopEvent[]> => {
   return events
     .map((event) => normalizeCampaiEvent(event, now))
     .filter((event) => event.start && Date.parse(event.start) > now)
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    .sort(compareWorkshops);
 };
 
-/** Alle kommenden öffentlichen Termine, eine Minute zwischengespeichert. */
+/** Alle kommenden öffentlichen und geschützten Termine, eine Minute zwischengespeichert. */
 export const listUpcomingWorkshops = unstable_cache(
   fetchUpcomingEvents,
-  ["campai-events-upcoming-v1"],
+  ["campai-events-upcoming-v2"],
   { revalidate: 60, tags: ["campai-events"] },
 );
 
@@ -395,7 +373,9 @@ export const getWorkshop = async (eventId: string) => {
   if (!/^[a-f0-9]{24}$/i.test(eventId)) return null;
   try {
     const event = await campaiFetch<CampaiEvent>(`/booking/events/${eventId}`);
-    if (!event?._id || event.offer?.mode !== "public") return null;
+    if (!event?._id || !VISIBLE_OFFER_MODES.includes(event.offer?.mode ?? "")) {
+      return null;
+    }
     return normalizeCampaiEvent(event);
   } catch (error) {
     const status = (error as { status?: number }).status;
@@ -430,8 +410,10 @@ export class WorkshopBookingError extends Error {
   }
 }
 
+// Bei offenem Termin („Bestätigung erforderlich“) setzt Campai jede
+// Anmeldung auf die Warteliste, egal wie viele Plätze frei sind.
 const isWaitlisted = (event: WorkshopEvent, seats: number) =>
-  event.free !== null && event.free < seats;
+  event.dateOpen || (event.free !== null && event.free < seats);
 
 export const buildCampaiBookingPayload = (
   event: WorkshopEvent,
@@ -447,7 +429,7 @@ export const buildCampaiBookingPayload = (
   }
 
   const waitlisted = isWaitlisted(event, seats);
-  if (waitlisted && !event.waitlistEnabled) {
+  if (waitlisted && !event.dateOpen && !event.waitlistEnabled) {
     throw new WorkshopBookingError(
       event.free === 0
         ? "Der Termin ist ausgebucht."

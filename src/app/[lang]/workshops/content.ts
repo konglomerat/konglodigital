@@ -42,6 +42,10 @@ export const FAQS: Array<{ q: string; a: string }> = [
     a: "Dann trägst du dich auf die Warteliste ein. Wird ein Platz frei, bekommst du eine Mail und kannst ihn für eine begrenzte Zeit annehmen.",
   },
   {
+    q: "Was heißt „Termin offen“?",
+    a: "Für den Workshop steht noch kein Datum fest – wir schauen erst, wie viele Lust darauf haben. Trag dich auf die Warteliste ein, das kostet nichts. Sobald es einen Termin gibt, bekommst du der Reihe nach eine Einladung per Mail und kannst deinen Platz für eine begrenzte Zeit annehmen. Passt dir der Termin nicht, bleibst du für den nächsten auf der Liste.",
+  },
+  {
     q: "Gibt es Workshops für Schulklassen und Vereine?",
     a: "Ja – siehe „Workshops anfragen“ weiter oben. Wir passen Inhalt, Dauer und Termin an eure Gruppe an. Schulen und gemeinnützige Vereine bekommen einen ermäßigten Satz.",
   },

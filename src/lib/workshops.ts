@@ -17,6 +17,8 @@ export type WorkshopRate = {
 
 export type WorkshopInfoBlock = { title: string; content: string };
 
+export type WorkshopCategory = { id: string; name: string };
+
 export type WorkshopEvent = {
   id: string;
   seriesId: string | null;
@@ -24,9 +26,8 @@ export type WorkshopEvent = {
   title: string;
   description: string;
   imageUrl: string | null;
-  tags: string[];
-  /** Slug aus WERKBEREICHE oder null, wenn kein Bereich passt. */
-  area: string | null;
+  /** Kategorien aus Campai (Buchung → Kategorien), in Campai-Reihenfolge. */
+  categories: WorkshopCategory[];
   start: string;
   end: string;
   placeName: string | null;
@@ -40,6 +41,18 @@ export type WorkshopEvent = {
   seatsThreshold: number;
   /** Ausgebucht heißt: Anmeldung landet auf der Warteliste. */
   waitlistEnabled: boolean;
+  /**
+   * „Termin offen“: In Campai steht „Bestätigung erforderlich“
+   * (`bookingRestriction: "requireConfirmation"`). Jede Anmeldung landet auf
+   * der Warteliste, das Datum ist nur ein Platzhalter — die Kursleitung
+   * vergibt die Plätze, sobald der Termin feststeht.
+   */
+  dateOpen: boolean;
+  /**
+   * In Campai „öffentlich“. Auf „geschützt“ gestellte Termine zeigen wir als
+   * Vorschau (grau, nicht buchbar), damit man die Details schon lesen kann.
+   */
+  published: boolean;
   /** Anmeldefenster offen und Termin nicht abgesagt. */
   bookingOpen: boolean;
   bookingOpensAt: string | null;
@@ -62,12 +75,15 @@ export const WORKSHOP_REQUEST_EMAIL = "workshops@konglomerat.org";
 /** Fragen zu Buchung und Stornierung (Adresse aus dem Entwurf). */
 export const WORKSHOP_BOOKING_EMAIL = "kurse@konglomerat.org";
 
-export const isSoldOut = (event: WorkshopEvent) => event.free === 0;
+export const isSoldOut = (event: WorkshopEvent) =>
+  !event.dateOpen && event.free === 0;
 
 /** Plätze, die eine Buchung höchstens umfassen darf — Warteliste eingerechnet. */
 export const maxSeatsFor = (event: WorkshopEvent) => {
   if (event.attendeeMode === "single") return 1;
-  if (event.free === null || event.free === 0) return MAX_SEATS_PER_BOOKING;
+  if (event.dateOpen || event.free === null || event.free === 0) {
+    return MAX_SEATS_PER_BOOKING;
+  }
   return Math.min(event.free, MAX_SEATS_PER_BOOKING);
 };
 
@@ -75,12 +91,26 @@ export const maxSeatsFor = (event: WorkshopEvent) => {
 export const ratesFor = (event: WorkshopEvent, isMember: boolean) =>
   event.rates.filter((rate) => isMember || !rate.memberOnly);
 
-/** Der Preis, der auf der Karte steht: der reguläre Tarif. */
+/**
+ * Der Preis, der auf der Karte steht: der reguläre Tarif. Gibt es nur
+ * Mitgliedertarife, der günstigste davon — sonst stünde dort „kostenlos“.
+ */
 export const listPriceCents = (event: WorkshopEvent) => {
   const publicRates = event.rates.filter((rate) => !rate.memberOnly);
-  const rate =
-    publicRates.find((entry) => entry.standard) ?? publicRates[0] ?? null;
-  return rate?.priceCents ?? null;
+  if (publicRates.length === 0) return memberPriceCents(event);
+  const rate = publicRates.find((entry) => entry.standard) ?? publicRates[0];
+  return rate.priceCents ?? null;
+};
+
+/**
+ * Preis auf der Karte: Bei mehreren Tarifen mit verschiedenen Preisen der
+ * niedrigste mit „ab“ davor (65 € und 45 € → „ab 45 €“), sonst der eine Preis.
+ * Kostenlose Tarife zählen als 0 €.
+ */
+export const cardPrice = (event: WorkshopEvent) => {
+  const prices = [...new Set(event.rates.map((rate) => rate.priceCents ?? 0))];
+  if (prices.length > 1) return { cents: Math.min(...prices), from: true };
+  return { cents: listPriceCents(event), from: false };
 };
 
 /** Gibt es für Mitglieder einen günstigeren Tarif? */
@@ -186,10 +216,14 @@ export type SeatStatus = {
 };
 
 export const seatStatus = (event: WorkshopEvent): SeatStatus => {
+  if (!event.published) return { label: "Noch nicht buchbar", tone: "neutral" };
   if (!event.bookingOpen) {
     return event.bookingOpensAt
       ? { label: `Anmeldung ab ${formatDate(event.bookingOpensAt)}`, tone: "neutral" }
       : { label: "Anmeldung geschlossen", tone: "neutral" };
+  }
+  if (event.dateOpen) {
+    return { label: "Termin offen – nur Warteliste", tone: "wartet" };
   }
   if (event.free === null || event.free > event.seatsThreshold) {
     return { label: "Plätze frei", tone: "offen" };
@@ -210,15 +244,64 @@ export type BookingAction = "book" | "waitlist" | "closed";
 
 export const bookingAction = (event: WorkshopEvent): BookingAction => {
   if (!event.bookingOpen) return "closed";
+  if (event.dateOpen) return "waitlist";
   if (event.free === 0) return event.waitlistEnabled ? "waitlist" : "closed";
   return "book";
 };
 
+/**
+ * Liegt der Termin mehr als ein Jahr in der Zukunft, ist das Datum in Campai
+ * nur ein Platzhalter — die Übersicht zeigt dann „Termin noch offen“.
+ */
+export const isDateFarOff = (event: WorkshopEvent, now = Date.now()) => {
+  const start = Date.parse(event.start);
+  if (Number.isNaN(start)) return false;
+  const inOneYear = new Date(now);
+  inOneYear.setFullYear(inOneYear.getFullYear() + 1);
+  return start > inOneYear.getTime();
+};
+
+/**
+ * Öffentliche vor geschützten Terminen, darin nach Datum; Termine mit offenem
+ * Datum zuletzt, nach Titel.
+ */
+export const compareWorkshops = (a: WorkshopEvent, b: WorkshopEvent) => {
+  if (a.published !== b.published) return a.published ? -1 : 1;
+  if (a.dateOpen !== b.dateOpen) return a.dateOpen ? 1 : -1;
+  if (a.dateOpen) return a.title.localeCompare(b.title, "de");
+  return Date.parse(a.start) - Date.parse(b.start);
+};
+
 // ------------------------------------------------------------------
-// Werkbereiche als Filter
+// Kategorien als Filter
 // ------------------------------------------------------------------
 
-export const OTHER_AREA = "sonstiges";
+/** Filterwert für Termine ohne Kategorie. */
+export const UNCATEGORIZED = "sonstiges";
+
+/** Ein Filter je Kategorie, die bei den Terminen vorkommt, nach Name; „Sonstiges“ zuletzt. */
+export const categoryFilters = (events: WorkshopEvent[]) => {
+  const byId = new Map<string, string>();
+  for (const event of events) {
+    for (const category of event.categories) byId.set(category.id, category.name);
+  }
+  const filters = [...byId]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, "de"));
+  if (filters.length > 0 && events.some((event) => event.categories.length === 0)) {
+    filters.push({ value: UNCATEGORIZED, label: "Sonstiges" });
+  }
+  return filters;
+};
+
+export const matchesCategory = (event: WorkshopEvent, filter: string) =>
+  filter === UNCATEGORIZED
+    ? event.categories.length === 0
+    : event.categories.some((category) => category.id === filter);
+
+// ------------------------------------------------------------------
+// Werkbereiche (Gruppen-Workshops)
+// ------------------------------------------------------------------
 
 export const findArea = (slug: string | null): Werkbereich | null =>
   (slug && WERKBEREICHE.find((entry) => entry.slug === slug)) || null;
@@ -226,18 +309,6 @@ export const findArea = (slug: string | null): Werkbereich | null =>
 export const areaLabel = (slug: string | null) => {
   const area = findArea(slug);
   return area ? (area.shortLabel ?? area.name) : "Konglomerat";
-};
-
-/** Filter in der Reihenfolge der Werkbereiche, „Sonstiges“ zuletzt. */
-export const areaFilters = (events: WorkshopEvent[]) => {
-  const present = new Set(events.map((event) => event.area ?? OTHER_AREA));
-  const filters = WERKBEREICHE.filter((area) => present.has(area.slug)).map(
-    (area) => ({ value: area.slug, label: area.shortLabel ?? area.name }),
-  );
-  if (present.has(OTHER_AREA)) {
-    filters.push({ value: OTHER_AREA, label: "Sonstiges" });
-  }
-  return filters;
 };
 
 // ------------------------------------------------------------------
@@ -276,5 +347,5 @@ export const collapseSeries = (events: WorkshopEvent[]) => {
         dates.find((event) => bookingAction(event) === "book") ?? dates[0];
       return { event: next, moreDates: dates.length - 1 };
     })
-    .sort((a, b) => Date.parse(a.event.start) - Date.parse(b.event.start));
+    .sort((a, b) => compareWorkshops(a.event, b.event));
 };

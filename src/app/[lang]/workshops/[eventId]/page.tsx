@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const event = await getWorkshop(eventId).catch(() => null);
   if (!event) return { title: "Workshop" };
   return {
-    title: `${event.title} · ${formatDate(event.start)}`,
+    title: `${event.title} · ${event.dateOpen ? "Termin offen" : formatDate(event.start)}`,
     description: event.description || undefined,
   };
 }

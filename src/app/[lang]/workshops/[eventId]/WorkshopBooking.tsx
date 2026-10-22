@@ -131,7 +131,9 @@ export default function WorkshopBooking({
 
   const rate = rates.find((entry) => entry.id === rateId) ?? null;
   const isPaid = Boolean(rate?.priceCents);
-  const totalLabel = waitlist
+  const totalLabel = event.dateOpen
+    ? tx("0,00 € (erst wenn du einen Platz annimmst)", "de")
+    : waitlist
     ? tx("0,00 € (erst beim Nachrücken)", "de")
     : rate?.priceCents
       ? formatEuro(rate.priceCents * seats)
@@ -215,14 +217,25 @@ export default function WorkshopBooking({
           ) : null}
           <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
             <dt className="text-muted-foreground">{tx("Wann", "de")}</dt>
-            <dd className="m-0">
-              {formatWeekday(event.start)}, {formatDate(event.start)}
-              <br />
-              <span className="knglmrt-num">
-                {formatTimeRange(event.start, event.end)}
-                {duration ? ` · ${duration}` : ""}
-              </span>
-            </dd>
+            {event.dateOpen ? (
+              // Das Datum in Campai ist nur ein Platzhalter.
+              <dd className="m-0">
+                {tx("Termin offen", "de")}
+                <br />
+                <span className="text-muted-foreground">
+                  {tx("Steht noch nicht fest", "de")}
+                </span>
+              </dd>
+            ) : (
+              <dd className="m-0">
+                {formatWeekday(event.start)}, {formatDate(event.start)}
+                <br />
+                <span className="knglmrt-num">
+                  {formatTimeRange(event.start, event.end)}
+                  {duration ? ` · ${duration}` : ""}
+                </span>
+              </dd>
+            )}
             {event.placeName || event.placeAddress ? (
               <>
                 <dt className="text-muted-foreground">{tx("Wo", "de")}</dt>
@@ -231,7 +244,7 @@ export default function WorkshopBooking({
                 </dd>
               </>
             ) : null}
-            {event.maxAttendees ? (
+            {event.maxAttendees && !event.dateOpen ? (
               <>
                 <dt className="text-muted-foreground">{tx("Plätze", "de")}</dt>
                 <dd className="knglmrt-num m-0 self-center">
@@ -270,7 +283,9 @@ export default function WorkshopBooking({
                   href={`${overviewHref}/${other.id}`}
                   className="knglmrt-num knglmrt-border inline-block bg-card px-2.5 py-1.5 text-foreground no-underline transition hover:bg-primary-soft"
                 >
-                  {formatWeekdayShort(other.start)} {formatDayMonth(other.start)}
+                  {other.dateOpen
+                    ? tx("Termin offen", "de")
+                    : `${formatWeekdayShort(other.start)} ${formatDayMonth(other.start)}`}
                 </Link>
               </li>
             ))}
@@ -294,7 +309,13 @@ export default function WorkshopBooking({
                     : tx("Gebucht – bis bald im Konglomerat!", "de")}
                 </p>
                 <p className="mb-0 mt-1.5 text-pretty">
-                  {result.waitlisted
+                  {result.waitlisted && event.dateOpen
+                    ? tx(
+                        "Sobald der Termin feststeht, bekommst du der Reihe nach eine Einladung von Campai an {{email}}. Dann hast du eine Weile Zeit, deinen Platz anzunehmen.",
+                        "de",
+                        { email: result.email },
+                      )
+                    : result.waitlisted
                     ? tx(
                         "Wird ein Platz frei, schreibt dir Campai an {{email}}. Dann hast du eine Weile Zeit, ihn anzunehmen.",
                         "de",
@@ -316,7 +337,7 @@ export default function WorkshopBooking({
             </div>
           </Notice>
           <div className="flex flex-wrap gap-3">
-            {!result.waitlisted ? (
+            {!result.waitlisted && !event.dateOpen ? (
               <Button
                 href={buildIcsHref(event)}
                 download={`${
@@ -354,7 +375,9 @@ export default function WorkshopBooking({
             <div className="flex items-center gap-5">
               <Face number={17} size={64} title="" className="flex-none" />
               <p className="m-0">
-                {event.free === 0
+                {!event.published
+                  ? tx("Dieser Workshop ist derzeit nicht buchbar. Die Details kannst du dir schon ansehen – schau bald wieder vorbei.", "de")
+                  : event.free === 0
                   ? tx("Dieser Termin ist ausgebucht.", "de")
                   : event.bookingOpensAt
                     ? tx("Die Anmeldung öffnet am {{date}}.", "de", {
@@ -391,10 +414,15 @@ export default function WorkshopBooking({
                 <div className="flex items-center gap-4">
                   <Face number={8} size={56} title="" className="flex-none" />
                   <p className="m-0">
-                    {tx(
-                      "Ausgebucht. Trag dich auf die Warteliste ein – wird ein Platz frei, schreibt dir Campai.",
-                      "de",
-                    )}
+                    {event.dateOpen
+                      ? tx(
+                          "Für diesen Workshop steht noch kein Termin fest. Trag dich auf die Warteliste ein – sobald es einen Termin gibt, bekommst du der Reihe nach eine Einladung per Mail und kannst deinen Platz dann verbindlich buchen.",
+                          "de",
+                        )
+                      : tx(
+                          "Ausgebucht. Trag dich auf die Warteliste ein – wird ein Platz frei, schreibt dir Campai.",
+                          "de",
+                        )}
                   </p>
                 </div>
               </Notice>
@@ -694,7 +722,9 @@ export default function WorkshopBooking({
               checked={acceptTerms}
               onChange={(changeEvent) => setAcceptTerms(changeEvent.target.checked)}
               label={
-                waitlist
+                event.dateOpen
+                  ? tx("Ich möchte auf die Warteliste. Steht der Termin fest und bekomme ich eine Einladung, entscheide ich dann, ob ich verbindlich buche.", "de")
+                  : waitlist
                   ? tx("Ich möchte auf die Warteliste. Rückt ein Platz frei, melde ich mich verbindlich an.", "de")
                   : event.refundPolicies.length > 0 || event.refundText
                     ? tx("Ich melde mich verbindlich an und akzeptiere die Stornobedingungen.", "de")

@@ -72,21 +72,21 @@ export default async function WorkshopsPage() {
         ) : (
           <WorkshopDates
             events={events}
-            heading={
-              <div key="heading">
-                <h1 id="termine-titel" className="m-0">
-                  {tx("Workshop buchen", "de")}
-                </h1>
-                <p className="mb-0 mt-2 text-muted-foreground">
-                  {tx("Offen für alle. Mitglieder zahlen weniger.", "de")}{" "}
-                  <a
-                    href="#gruppen"
-                    className="text-primary hover:text-[var(--link-color-hover)]"
-                  >
-                    {tx("Für Gruppen auf Anfrage.", "de")}
-                  </a>
-                </p>
-              </div>
+            title={
+              <h1 id="termine-titel" className="m-0">
+                {tx("Workshop buchen", "de")}
+              </h1>
+            }
+            intro={
+              <p className="m-0 text-muted-foreground">
+                {tx("Offen für alle. Mitglieder zahlen weniger.", "de")}{" "}
+                <a
+                  href="#gruppen"
+                  className="text-primary hover:text-[var(--link-color-hover)]"
+                >
+                  {tx("Für Gruppen auf Anfrage.", "de")}
+                </a>
+              </p>
             }
           />
         )}
