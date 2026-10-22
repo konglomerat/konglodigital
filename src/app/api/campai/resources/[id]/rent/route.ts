@@ -119,6 +119,7 @@ export const GET = async (
     const snapshot = await buildCampaiRentalSnapshot({
       resource: snapshotResource,
       viewer: viewerContext.viewer,
+      viewerContactId: viewerContext.memberProfile?.campaiContactId ?? null,
     });
 
     return NextResponse.json(snapshot);

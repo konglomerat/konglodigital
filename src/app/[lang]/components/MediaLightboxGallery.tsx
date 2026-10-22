@@ -190,20 +190,20 @@ export default function MediaLightboxGallery({
           </section>
         ) : null
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-muted/60">
+        <div className="border border-border bg-muted/60">
           {normalizedMedia.length > 0 ? (
-            <div className="flex flex-wrap gap-2 p-2">
+            <div className="flex gap-3 overflow-x-auto p-3">
               {normalizedPreviewMedia.map((mediaUrl, index) =>
                 renderThumbnailButton(
                   mediaUrl,
                   index,
-                  "inline-flex h-60 w-auto items-center justify-center justify-self-start overflow-hidden rounded-lg bg-accent text-left",
-                  "h-60 w-auto object-cover",
+                  "inline-flex h-[300px] w-auto flex-none items-center justify-center overflow-hidden bg-card text-left",
+                  "h-[300px] w-auto max-w-none object-cover",
                 ),
               )}
             </div>
           ) : noMediaLabel ? (
-            <div className="flex h-60 w-full items-center justify-center bg-accent">
+            <div className="flex h-[300px] w-full items-center justify-center bg-card">
               <span className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 {noMediaLabel}
               </span>

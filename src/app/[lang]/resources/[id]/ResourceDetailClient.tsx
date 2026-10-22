@@ -13,6 +13,7 @@ import type { ResourcePayload } from "@/lib/campai-resources";
 import { buildResourcePath } from "@/lib/resource-pretty-title";
 import { useI18n } from "@/i18n/client";
 import { localizePathname, RESOURCES_NAMESPACE } from "@/i18n/config";
+import Badge from "@/components/knglmrt/Badge";
 import PageTitle from "../../components/PageTitle";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import ResourcesMapView from "../ResourcesMapView";
@@ -24,7 +25,12 @@ import {
   canEditResource,
 } from "@/lib/access/resource-access";
 import { useAccess } from "@/lib/access/use-access";
-import CampaiRentalPanel from "./CampaiRentalPanel";
+import {
+  deriveLoanStatus,
+  LoanSectionBody,
+  SidebarSection,
+  useRentalSnapshot,
+} from "./ResourceLoan";
 
 type Resource = ResourcePayload;
 
@@ -51,6 +57,22 @@ export default function ResourceDetailClient({
     initialErrorMessage,
   );
   const [deleting, setDeleting] = useState(false);
+  const [mapOpen, setMapOpen] = useState(true);
+  const [loanOpen, setLoanOpen] = useState(false);
+  const rental = useRentalSnapshot(resourceId);
+  const loanStatus = useMemo(
+    () => deriveLoanStatus(rental.snapshot, tx),
+    [rental.snapshot, tx],
+  );
+  const openLoan = () => {
+    setLoanOpen(true);
+    // Auf schmalen Bildschirmen steht die Seitenleiste unter dem Inhalt.
+    requestAnimationFrame(() =>
+      document
+        .getElementById("ausleihen")
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+    );
+  };
 
   const normalizedMapBasemapResources = useMemo(
     () =>
@@ -125,6 +147,13 @@ export default function ResourceDetailClient({
 
   const pageTitleLinks = resource
     ? [
+        {
+          label: loanStatus?.mine
+            ? tx("Deine Ausleihe", "de")
+            : tx("Ausleihen", "de"),
+          onClick: openLoan,
+          kind: "primary" as const,
+        },
         ...(canEdit
           ? [
               {
@@ -193,160 +222,182 @@ export default function ResourceDetailClient({
       ]
     : undefined;
 
+  const media = resource?.images?.length
+    ? resource.images
+    : resource?.image
+      ? [resource.image]
+      : [];
+  const chipClassName =
+    "border border-border px-3.5 py-1.5 text-[length:var(--ui-size-label)] text-foreground";
+
   return (
-    <div>
-      <div className="flex flex-col gap-6">
-        <PageTitle
-          title={resource?.name ?? tx("Resource not found.")}
-          backLink={{
-            href: localizePathname("/resources", locale),
-            label: tx("Back to resources"),
-            icon: faArrowLeft,
-          }}
-          links={pageTitleLinks}
-        />
+    <div className="flex flex-col gap-5">
+      <PageTitle
+        title={resource?.name ?? tx("Resource not found.")}
+        backLink={{
+          href: localizePathname("/resources", locale),
+          label: tx("Back to resources"),
+          icon: faArrowLeft,
+        }}
+        links={pageTitleLinks}
+      />
 
-        <p className="inline-flex max-w-fit rounded-full bg-warning-soft px-3 py-1 text-xs text-warning">
-          {tx("Images and text on this page were generated with AI.")}
-        </p>
+      {errorMessage ? (
+        <section className="border border-destructive-border bg-destructive-soft p-4 text-destructive">
+          {errorMessage}
+        </section>
+      ) : null}
 
-        {errorMessage ? (
-          <section className="rounded-lg border border-destructive-border bg-destructive-soft p-4 text-sm text-destructive">
-            {errorMessage}
-          </section>
-        ) : null}
-
-        <section>
-          {!resource ? (
-            <p className="text-sm text-muted-foreground">
-              {tx("Resource not found.")}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <MediaLightboxGallery
-                media={
-                  resource.images?.length
-                    ? resource.images
-                    : resource.image
-                      ? [resource.image]
-                      : []
-                }
-                previewMedia={(resource.images?.length
-                  ? resource.images
-                  : resource.image
-                    ? [resource.image]
-                    : []
-                ).map((mediaUrl) => mediaUrl)}
-                title={resource.name}
-                closeLabel={tx("Close")}
-                previousLabel={tx("Prev")}
-                nextLabel={tx("Next")}
-                previewLabel={tx("Resource preview")}
-                noMediaLabel={tx("No media", "en")}
-                documentLabel={tx("PDF", "de")}
-                openDocumentLabel={tx("PDF öffnen", "de")}
-                variant="resource"
+      {!resource ? (
+        <p className="text-muted-foreground">{tx("Resource not found.")}</p>
+      ) : (
+        <div className="grid items-start gap-9 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <MediaLightboxGallery
+              media={media}
+              previewMedia={media}
+              title={resource.name}
+              closeLabel={tx("Close")}
+              previousLabel={tx("Prev")}
+              nextLabel={tx("Next")}
+              previewLabel={tx("Resource preview")}
+              noMediaLabel={tx("No media", "en")}
+              documentLabel={tx("PDF", "de")}
+              openDocumentLabel={tx("PDF öffnen", "de")}
+              variant="resource"
+            />
+            {resource.description ? (
+              <div
+                className="markdown-content text-foreground"
+                dangerouslySetInnerHTML={{ __html: renderedDescription }}
               />
-              <div>
-                {resource.description ? (
-                  <div
-                    className="markdown-content mt-3 text-sm"
-                    dangerouslySetInnerHTML={{ __html: renderedDescription }}
-                  />
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                {resourceTypeLabel ? (
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-foreground">
-                    {resourceTypeLabel}
-                  </span>
-                ) : null}
-                {resource.attachable !== undefined ? (
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-foreground">
-                    {resource.attachable
-                      ? tx("Attachable")
-                      : tx("Not attachable")}
-                  </span>
-                ) : null}
-                {resource.tags?.map((tag) => (
-                  <span
-                    key={`${resource.id}-${tag}`}
-                    className="rounded-full border border-border bg-card px-3 py-1 text-foreground"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-              {resource.categories && resource.categories.length > 0 ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {tx("Categories")}
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    {resource.categories.map((category, index) => (
-                      <li
-                        key={`${resource.id}-category-${index}`}
-                        className="rounded-full border border-border bg-card px-3 py-1 text-foreground"
-                      >
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {resourceTypeLabel ? (
+                <Badge tone="kontur">{resourceTypeLabel}</Badge>
+              ) : null}
+              {resource.attachable !== undefined ? (
+                <Badge tone="kontur">
+                  {resource.attachable
+                    ? tx("Attachable")
+                    : tx("Not attachable")}
+                </Badge>
+              ) : null}
+              {resource.tags?.map((tag) => (
+                <Badge key={`${resource.id}-${tag}`} tone="kontur">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+            {resource.categories && resource.categories.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="knglmrt-label text-muted-foreground">
+                  {tx("Categories")}
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {resource.categories.map((category, index) => (
+                    <li key={`${resource.id}-category-${index}`}>
+                      <Badge tone="kontur">
                         {category.name ?? category.bookingCategoryId ?? ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {resource.relatedResources &&
-              resource.relatedResources.length > 0 ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {tx("Related resources")}
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    {resource.relatedResources.map((relatedResource) => (
-                      <li key={`${resource.id}-related-${relatedResource.id}`}>
-                        <a
-                          href={localizePathname(
-                            buildResourcePath({
-                              id: relatedResource.id,
-                              prettyTitle: relatedResource.prettyTitle,
-                            }),
-                            locale,
-                          )}
-                          className="rounded-full border border-border bg-card px-3 py-1 text-foreground transition hover:border-input hover:text-foreground"
-                        >
-                          {relatedResource.name ?? relatedResource.id}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {resourceGps ? (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    {tx("Location")}
-                  </p>
-                  <div className="mt-3">
-                    <ResourcesMapView
-                      resources={mapOverlayResources}
-                      pointResources={resource ? [resource] : []}
-                      className="w-full aspect-[4/3]"
-                    />
-                  </div>
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {resource.relatedResources &&
+            resource.relatedResources.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="knglmrt-label text-muted-foreground">
+                  {tx("Related resources")}
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {resource.relatedResources.map((relatedResource) => (
+                    <li key={`${resource.id}-related-${relatedResource.id}`}>
+                      <a
+                        href={localizePathname(
+                          buildResourcePath({
+                            id: relatedResource.id,
+                            prettyTitle: relatedResource.prettyTitle,
+                          }),
+                          locale,
+                        )}
+                        className={`${chipClassName} inline-block transition hover:bg-primary-soft`}
+                      >
+                        {relatedResource.name ?? relatedResource.id}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+
+          <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-6">
+            {resourceGps ? (
+              <SidebarSection
+                title={tx("Location")}
+                open={mapOpen}
+                onToggle={() => setMapOpen((open) => !open)}
+              >
+                <div className="flex flex-col gap-2.5 px-[18px] pb-4 pt-3.5">
+                  <ResourcesMapView
+                    resources={mapOverlayResources}
+                    pointResources={[resource]}
+                    className="h-[260px] w-full"
+                  />
+                  {loanStatus?.mapNote ? (
+                    <div
+                      className={`flex flex-col gap-0.5 px-3 py-2.5 text-foreground ${
+                        loanStatus.tone === "rosa"
+                          ? "bg-primary-soft"
+                          : "bg-warning-soft"
+                      }`}
+                    >
+                      {loanStatus.mapNoteEyebrow ? (
+                        <span className="knglmrt-caption text-primary">
+                          {loanStatus.mapNoteEyebrow}
+                        </span>
+                      ) : null}
+                      <span>{loanStatus.mapNote}</span>
+                    </div>
+                  ) : null}
                   <a
                     href={`https://www.google.com/maps?q=${resourceGps.latitude},${resourceGps.longitude}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-semibold text-primary hover:underline"
+                    className="self-start font-bold text-primary hover:text-[var(--knglmrt-brown-100)]"
                   >
                     {tx("Open map")}
                   </a>
                 </div>
-              ) : null}
-              <CampaiRentalPanel resourceId={resourceId} tx={tx} />
-            </div>
-          )}
-        </section>
-      </div>
+              </SidebarSection>
+            ) : null}
+
+            <SidebarSection
+              id="ausleihen"
+              title={tx("Ausleihen", "de")}
+              sub={loanStatus?.sub}
+              open={loanOpen}
+              onToggle={() => setLoanOpen((open) => !open)}
+            >
+              <LoanSectionBody
+                resourceId={resourceId}
+                snapshot={rental.snapshot}
+                status={loanStatus}
+                loading={rental.loading}
+                errorMessage={rental.errorMessage}
+                reload={rental.reload}
+                tx={tx}
+              />
+            </SidebarSection>
+          </aside>
+        </div>
+      )}
+
+      <p className="self-start bg-warning-soft px-3 py-1.5 text-foreground">
+        {tx("Images and text on this page were generated with AI.")}
+      </p>
     </div>
   );
 }
