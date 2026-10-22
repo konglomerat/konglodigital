@@ -45,8 +45,18 @@ export default function TopNavLink({
             <Divider number={4} height={8} color="var(--primary)" />
           </span>
         ) : null}
+        {/* Sitzt als Marke an der oberen rechten Ecke des Titels und macht den
+            Punkt nicht breiter. Bewusst unter der Tag-Stufe (12px). */}
+        {comingSoon ? (
+          <Badge
+            tone="neu"
+            compact
+            className="pointer-events-none absolute right-0 top-0 -translate-y-[calc(50%+5px)] translate-x-1/3 whitespace-nowrap text-[9px]! leading-[11px]!"
+          >
+            Coming Soon
+          </Badge>
+        ) : null}
       </span>
-      {comingSoon ? <Badge tone="neu">Coming Soon</Badge> : null}
     </Element>
   );
 }

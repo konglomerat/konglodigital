@@ -23,15 +23,22 @@ const TONE_CLASSNAME: Record<BadgeTone, string> = {
 type BadgeProps = {
   children: ReactNode;
   tone?: BadgeTone;
+  /** Knapper Innenabstand, z. B. als Marke über einem Navigationspunkt. */
+  compact?: boolean;
   className?: string;
 };
 
 export default function Badge({
   children,
   tone = "offen",
+  compact,
   className,
 }: BadgeProps) {
-  const padding = tone === "kontur" ? "px-1.5 py-0.5" : "px-[7px] py-[3px]";
+  const padding = compact
+    ? "px-1.5 py-0.5"
+    : tone === "kontur"
+      ? "px-1.5 py-0.5"
+      : "px-[7px] py-[3px]";
   return (
     <span
       className={`knglmrt-tag inline-block ${padding} ${TONE_CLASSNAME[tone]}${

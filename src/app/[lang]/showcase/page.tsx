@@ -100,7 +100,7 @@ export default async function ShowcasesPage() {
   return (
     <div>
       <PageTitle
-        title={tx("Hier entstanden", "de")}
+        title={tx("Beiträge", "de")}
         subTitle={tx(
           "Hier kannst du Beiträge, Umbauten und Prototypen unserer Werkstätten entdecken.",
           "de",
