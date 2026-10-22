@@ -9,13 +9,14 @@ import {
   canAnywhere,
 } from "@/lib/access/access";
 import type { Permission } from "@/lib/access/role-config";
-import { VOLKSHAUS_SCOPE_ID } from "@/lib/access/scopes";
+import { HOLZ_SCOPE_ID, VOLKSHAUS_SCOPE_ID } from "@/lib/access/scopes";
 
 export type RessortId =
   | "buchhaltung"
   | "vorstand"
   | "admin"
   | "vhc"
+  | "holzwerkstatt"
   | "oeffentlichkeitsarbeit";
 
 type AccessCheck = (access: UserAccess | null) => boolean;
@@ -79,6 +80,17 @@ const ADMIN_CHILDREN: RessortChild[] = [
   },
 ];
 
+// Sammelbestellungen werden als Rechnungen in Campai gebucht — wer in der Holz-
+// Buchhaltung buchen darf, darf sie auch aufteilen.
+const HOLZWERKSTATT_CHILDREN: RessortChild[] = [
+  {
+    href: "/split-invoice",
+    label: "Sammelbestellungen",
+    canOpen: (access) =>
+      can(access, "receipts.edit", { scope: HOLZ_SCOPE_ID }),
+  },
+];
+
 const OEFFENTLICHKEITSARBEIT_CHILDREN: RessortChild[] = [
   {
     href: "/admin/generate-newsletter",
@@ -123,6 +135,14 @@ export const RESSORTS: Ressort[] = [
     match: ["/admin/volkshaus"],
     canOpen: (access) =>
       can(access, "volkshaus.bookings.manage", { scope: VOLKSHAUS_SCOPE_ID }),
+  },
+  {
+    id: "holzwerkstatt",
+    href: "/admin/holzwerkstatt",
+    label: "Holzwerkstatt",
+    match: ["/admin/holzwerkstatt", "/split-invoice"],
+    canOpen: canOpenAnyChild(HOLZWERKSTATT_CHILDREN),
+    children: HOLZWERKSTATT_CHILDREN,
   },
   {
     id: "oeffentlichkeitsarbeit",

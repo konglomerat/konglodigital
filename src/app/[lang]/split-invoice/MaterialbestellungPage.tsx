@@ -20,6 +20,7 @@ import {
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import Button from "@/components/knglmrt/Button";
 import { AutocompleteInput } from "../components/ui/autocomplete-input";
 import Field from "@/components/knglmrt/Field";
@@ -966,12 +967,12 @@ export default function MaterialInvoicesPage({
   const bruttoTotal = roundCurrency(nettoTotal + mwstTotal);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-28 md:px-0 md:py-0 md:pb-28">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-foreground dark:text-zinc-100">
-          Materialbestellung
-        </h1>
-      </div>
+    <div className="w-full max-w-7xl space-y-6 pb-28">
+      <SubPageTitle
+        ressort="holzwerkstatt"
+        title="Sammelbestellung"
+        backHref="/split-invoice"
+      />
 
       <div className="rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 dark:border-indigo-800 dark:from-indigo-950/30 dark:to-blue-950/30">
         <div className="mb-4">

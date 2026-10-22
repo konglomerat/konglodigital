@@ -16,7 +16,7 @@ const FULLSCREEN_PATHNAMES = new Set(["/resources/batch"]);
 
 // Der Verwaltungsbereich bringt seine eigene Randbreite mit, damit die dunkle
 // Ressort-Leiste bis an den Bildschirmrand reicht.
-const FULL_BLEED_PREFIXES = ["/admin", "/receipts", "/kofi"];
+const FULL_BLEED_PREFIXES = ["/admin", "/receipts", "/kofi", "/split-invoice"];
 
 // Ab lg füllt die Seite genau den Bildschirm; scrollen lässt die Seite selbst
 // nur ihre Liste. Darunter bleibt alles wie gewohnt, samt Footer.
