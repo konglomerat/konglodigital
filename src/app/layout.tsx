@@ -126,7 +126,12 @@ export default async function RootLayout({
   const navigationPromise = loadPayloadNavigation();
   const { user } = await getServerSession();
   const isAuthenticated = Boolean(user);
-  const memberProfile = user ? await getServerMemberProfile() : null;
+  // Profil und Zuweisungen sind getrennte Abfragen — parallel statt
+  // nacheinander, sonst wartet jede Seite eine Runde länger.
+  const [memberProfile, access] = await Promise.all([
+    user ? getServerMemberProfile() : null,
+    getServerAccess(),
+  ]);
   const currentUserDisplayName = user
     ? getCampaiBookingDisplayName(user, memberProfile?.campaiName) ||
       [user.user_metadata?.first_name, user.user_metadata?.last_name]
@@ -137,7 +142,7 @@ export default async function RootLayout({
   // Ohne sichtbares Ressort keine Verwaltung — außer für Admins in einer
   // Rechte-Vorschau, die sonst nicht mehr an den Schalter zum Beenden kämen.
   const adminAreaHref =
-    getVerwaltungEntryHref(await getServerAccess()) ??
+    getVerwaltungEntryHref(access) ??
     (user && canPreviewAccess(await getServerRealAccess()) ? "/admin" : null);
   const showNavTour = Boolean(
     user &&
