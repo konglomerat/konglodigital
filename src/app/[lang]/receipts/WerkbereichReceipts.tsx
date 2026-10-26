@@ -1345,6 +1345,8 @@ export default function WerkbereichReceipts({
       }));
   }, [activeProjectKeys, groupByProject, projectOptions, sortedReceipts]);
 
+  // Die Summen zählen genau die Zeilen, die in der Tabelle stehen — also auch
+  // nach Projekt und Suche gefiltert.
   const { totalIncome, totalExpense, saldo, transferSaldo } = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -1352,7 +1354,7 @@ export default function WerkbereichReceipts({
     // (160xx), alles andere gilt hier als überwiesen.
     let transfer = 0;
 
-    for (const receipt of receiptsMatchingToolbarFilters) {
+    for (const receipt of filteredReceipts) {
       const paidInCash = receipt.paymentAccounts.some(isCashRegisterAccount);
       const amount = receipt.totalGrossAmount ?? 0;
 
@@ -1375,7 +1377,16 @@ export default function WerkbereichReceipts({
       saldo: income - expense,
       transferSaldo: transfer,
     };
-  }, [receiptsMatchingToolbarFilters]);
+  }, [filteredReceipts]);
+
+  // Projekt oder Suche schränken die Tabelle auf einen Ausschnitt ein.
+  const isNarrowed = activeProjectKeys.length > 0 || searchTerms.length > 0;
+  const summaryScopeLabel =
+    activeProjectKeys.length > 0
+      ? activeProjectKeys.map((key) => getProjectLabel(key)).join(", ")
+      : searchTerms.length > 0
+        ? "Auswahl"
+        : `${werkbereich.label} gesamt`;
 
   const cashRegisterAccount =
     CASH_REGISTER_ACCOUNT_BY_COST_CENTER2[werkbereich.value];
@@ -1388,9 +1399,11 @@ export default function WerkbereichReceipts({
 
   // Der Kassenbestand entsteht aus den bar bezahlten Belegen — die zählen im
   // Guthaben deshalb nur einmal, nämlich über den Bestand. Ohne zugeordnete
-  // Kasse bleibt es beim reinen Beleg-Saldo.
+  // Kasse bleibt es beim reinen Beleg-Saldo. Der Kassenbestand gehört zum
+  // ganzen Werkbereich — im Ausschnitt zählt er deshalb nicht mit.
+  const showCashRegister = cashRegisterAccount !== undefined && !isNarrowed;
   const availableSaldo =
-    cashRegisterBalance !== null
+    showCashRegister && cashRegisterBalance !== null
       ? transferSaldo + cashRegisterBalance
       : saldo;
   const visibleColumnCount = visibleColumns.length;
@@ -1894,7 +1907,7 @@ export default function WerkbereichReceipts({
             columns.map((column) => getExportCell(column.key, receipt)),
           ),
           summary: [
-            ...(cashRegisterAccount !== undefined && cashRegisterBalance !== null
+            ...(showCashRegister && cashRegisterBalance !== null
               ? [{ label: "Barkasse", value: formatCents(cashRegisterBalance) }]
               : []),
             { label: "Einnahmen", value: formatSignedCents(totalIncome) },
@@ -2385,7 +2398,7 @@ export default function WerkbereichReceipts({
               </span>
             </span>
             <div className="flex flex-nowrap items-center gap-x-[clamp(8px,2.5cqw,32px)] knglmrt-border bg-muted px-[clamp(8px,2.5cqw,20px)] py-2 @min-[1100px]:py-3">
-              {cashRegisterAccount !== undefined ? (
+              {showCashRegister ? (
                 <SummaryFigure
                   label="Barkasse"
                   title={cashRegisterError ?? undefined}
@@ -2412,7 +2425,7 @@ export default function WerkbereichReceipts({
                 Guthaben
                 <span className="hidden @min-[640px]:inline">
                   {" "}
-                  · {werkbereich.label} gesamt
+                  · {summaryScopeLabel}
                 </span>
               </span>
               <span
