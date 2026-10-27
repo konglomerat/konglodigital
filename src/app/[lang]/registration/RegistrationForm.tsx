@@ -242,6 +242,7 @@ export default function RegistrationForm({
 
   const text = (field: RegistrationField & keyof RegistrationInput) => ({
     id: `field-${field}`,
+    name: field,
     value: input[field] as string,
     error: shownError(field),
     onChange: (event: { target: { value: string } }) =>
@@ -539,7 +540,16 @@ export default function RegistrationForm({
       ) : null}
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
-        <div className="flex min-w-0 flex-col gap-6">
+        {/* Ein echtes <form> mit name-Attributen — ohne das erkennt vor allem
+            Safari die Felder nicht fürs automatische Ausfüllen. */}
+        <form
+          noValidate
+          className="flex min-w-0 flex-col gap-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            next();
+          }}
+        >
           {step === 2 ? (
             <div className="flex flex-col gap-[26px]">
               <StepHead
@@ -731,7 +741,7 @@ export default function RegistrationForm({
                   label="Mobil (optional)"
                   kind="mono"
                   type="tel"
-                  autoComplete="tel"
+                  autoComplete="mobile tel"
                   maxLength={30}
                   {...text("mobilePhone")}
                 />
@@ -739,7 +749,7 @@ export default function RegistrationForm({
                   label="Festnetz (optional)"
                   kind="mono"
                   type="tel"
-                  autoComplete="tel"
+                  autoComplete="home tel"
                   maxLength={30}
                   {...text("phone")}
                 />
@@ -1030,23 +1040,6 @@ export default function RegistrationForm({
             </Notice>
           ) : null}
 
-          {/* Für Bots sichtbar, für Menschen nicht. */}
-          <div
-            aria-hidden="true"
-            className="absolute -left-[9999px] h-px w-px overflow-hidden"
-          >
-            <label>
-              Website
-              <input
-                type="text"
-                tabIndex={-1}
-                autoComplete="off"
-                value={website}
-                onChange={(event) => setWebsite(event.target.value)}
-              />
-            </label>
-          </div>
-
           {step !== 6 ? (
             <div
               className={cn(
@@ -1070,16 +1063,35 @@ export default function RegistrationForm({
                   </span>
                 ) : null}
                 <Button
+                  type="submit"
                   kind="emphasis"
                   disabled={missing > 0}
                   loading={submitting}
-                  onClick={next}
                 >
                   {step === 5 ? "Antrag absenden" : "Weiter"}
                 </Button>
               </div>
             </div>
           ) : null}
+        </form>
+
+        {/* Für Bots sichtbar, für Menschen nicht. Steht außerhalb des
+            <form>, damit das automatische Ausfüllen des Browsers es nicht
+            mitbefüllt — sonst würde der Antrag still verworfen. */}
+        <div
+          aria-hidden="true"
+          className="absolute -left-[9999px] h-px w-px overflow-hidden"
+        >
+          <label>
+            Website
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+            />
+          </label>
         </div>
 
         <aside className="flex flex-col gap-3.5 bg-knglmrt-paper-pink px-[22px] pt-6 pb-[22px] lg:sticky lg:top-4">
