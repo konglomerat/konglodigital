@@ -731,7 +731,7 @@ export default function ApplicationPanel({
           rows={10}
           counter={5000}
           value={inquiryText}
-          hint="Geht genau so raus. Antworten landen bei vorstand@konglomerat.org."
+          hint="Geht genau so raus. Antworten landen im Campai-Posteingang."
           onChange={(event) => setInquiryText(event.target.value)}
         />
       </Dialog>

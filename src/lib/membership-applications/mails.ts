@@ -5,7 +5,7 @@ import "server-only";
 
 import { sendSmtpMail } from "@/lib/smtp-mail";
 
-import { VORSTAND_EMAIL } from "./config";
+import { NEW_APPLICATION_NOTIFY_EMAIL, CAMPAI_INBOX_EMAIL } from "./config";
 import { receiptConfirmation } from "./mail-texts";
 import { describeAccess, describeFee, formatEuro, type MembershipApplication } from "./types";
 
@@ -22,7 +22,7 @@ const textToHtml = (text: string) =>
     .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
     .join("\n");
 
-/** Schickt Text an die antragstellende Person; Antworten gehen an den Vorstand. */
+/** Schickt Text an die antragstellende Person; Antworten landen im Campai-Posteingang. */
 export const mailApplicant = (
   application: MembershipApplication,
   subject: string,
@@ -33,7 +33,7 @@ export const mailApplicant = (
     subject,
     text,
     html: textToHtml(text),
-    replyTo: VORSTAND_EMAIL,
+    replyTo: CAMPAI_INBOX_EMAIL,
   });
 
 export const mailReceiptConfirmation = (application: MembershipApplication) => {
@@ -58,7 +58,7 @@ export const mailVorstandNewApplication = (
     `Prüfen und annehmen: ${inboxUrl}`,
   ].join("\n");
   return sendSmtpMail({
-    to: VORSTAND_EMAIL,
+    to: NEW_APPLICATION_NOTIFY_EMAIL,
     subject: `Neuer Mitgliedsantrag: ${data.firstName} ${data.lastName}`,
     text,
     html: textToHtml(text),

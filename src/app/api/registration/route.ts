@@ -118,7 +118,13 @@ export const POST = async (request: NextRequest) => {
 
   // Die Mails dürfen den Antrag nicht scheitern lassen — er liegt schon in
   // der Liste des Vorstands.
-  const inboxUrl = new URL("/admin/vorstand/antraege", request.nextUrl.origin).toString();
+  // Hinter dem Proxy ist request.nextUrl.origin localhost:3000, deshalb die
+  // öffentliche Adresse aus der Umgebung.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    request.nextUrl.origin;
+  const inboxUrl = new URL("/admin/vorstand/antraege", siteUrl).toString();
   after(async () => {
     const results = await Promise.allSettled([
       mailReceiptConfirmation(application),
