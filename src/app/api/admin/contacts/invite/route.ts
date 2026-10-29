@@ -12,10 +12,12 @@ import { upsertMemberProfile } from "@/lib/member-profiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-const findExistingUserByEmail = async (
+/** Das erste bestehende Konto zu einer der Adressen — ein Durchlauf. */
+const findExistingUserByEmails = async (
   adminClient: ReturnType<typeof createSupabaseAdminClient>,
-  email: string,
+  emails: string[],
 ) => {
+  const wanted = new Set(emails);
   for (let page = 1; page <= 10; page += 1) {
     const { data, error } = await adminClient.auth.admin.listUsers({
       page,
@@ -27,9 +29,10 @@ const findExistingUserByEmail = async (
     }
 
     const users = data.users ?? [];
-    const match = users.find(
-      (user) => user.email?.trim().toLowerCase() === email,
-    );
+    const match = users.find((user) => {
+      const email = user.email?.trim().toLowerCase();
+      return Boolean(email && wanted.has(email));
+    });
 
     if (match) {
       return match;
@@ -56,7 +59,10 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { contactId } = (await request.json()) as { contactId?: string };
+    const { contactId, email: requestedEmail } = (await request.json()) as {
+      contactId?: string;
+      email?: string;
+    };
 
     if (!contactId?.trim()) {
       return NextResponse.json(
@@ -75,16 +81,32 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    // Eingeladen wird an die Adresse, die in Campai am Kontakt steht — sie
-    // kommt aus dem Abruf, nicht aus dem Rumpf der Anfrage.
-    const normalizedEmail = linkedContact.email;
+    // Eingeladen wird an eine Adresse, die in Campai am Kontakt steht — die
+    // Hauptadresse oder eine aus „Alternative Kommunikation". Der Rumpf darf
+    // nur zwischen diesen wählen.
+    const contactEmails = [
+      linkedContact.email,
+      ...linkedContact.alternativeEmails,
+    ].filter(
+      (address, index, list): address is string =>
+        Boolean(address) && list.indexOf(address) === index,
+    );
 
-    if (!normalizedEmail) {
+    if (contactEmails.length === 0) {
       return NextResponse.json(
         { error: "Der Kontakt hat in Campai keine Mailadresse." },
         { status: 400 },
       );
     }
+
+    const wantedEmail = requestedEmail?.trim().toLowerCase();
+    if (wantedEmail && !contactEmails.includes(wantedEmail)) {
+      return NextResponse.json(
+        { error: "Diese Adresse steht in Campai nicht am Kontakt." },
+        { status: 400 },
+      );
+    }
+    const normalizedEmail = wantedEmail || contactEmails[0];
 
     const splitName = splitCampaiContactName(linkedContact.name);
     const userMetadata = {
@@ -99,10 +121,22 @@ export const POST = async (request: NextRequest) => {
       request.url;
     const redirectTo = new URL("/register/complete", publicBaseUrl).toString();
 
-    const existingUser = await findExistingUserByEmail(
+    const existingUser = await findExistingUserByEmails(
       adminClient,
-      normalizedEmail,
+      contactEmails,
     );
+
+    // Pro Kontakt nur ein Konto: Hängt schon eins an einer anderen Adresse,
+    // geht keine zweite Einladung raus.
+    const existingEmail = existingUser?.email?.trim().toLowerCase();
+    if (existingUser && existingEmail !== normalizedEmail) {
+      return NextResponse.json(
+        {
+          error: `Der Kontakt hat bereits ein Konto unter ${existingEmail}.`,
+        },
+        { status: 409 },
+      );
+    }
 
     if (existingUser) {
       const { error: updateError } =
@@ -146,7 +180,7 @@ export const POST = async (request: NextRequest) => {
 
     const invitedUser =
       inviteData.user ??
-      (await findExistingUserByEmail(adminClient, normalizedEmail));
+      (await findExistingUserByEmails(adminClient, [normalizedEmail]));
 
     if (!invitedUser) {
       return NextResponse.json(

@@ -12,6 +12,7 @@ import Button from "@/components/knglmrt/Button";
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import SearchField from "@/components/knglmrt/SearchField";
 import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
+import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Notice from "@/components/knglmrt/Notice";
 import { Table, TBody, Td, THead, Th, Tr } from "@/components/knglmrt/Table";
 
@@ -28,6 +29,10 @@ type CampaiContactRow = {
   id: string;
   name: string;
   email: string | null;
+  /** Weitere Adressen aus Campai („Alternative Kommunikation"). */
+  alternativeEmails: string[];
+  /** Die Adresse, an der ein Konto oder eine Einladung hängt. */
+  accountEmail: string | null;
   memberNumber: string | null;
   balance: number | null;
   tags: string[];
@@ -157,6 +162,7 @@ const ContactSection = ({
       const haystack = [
         contact.name,
         contact.email ?? "",
+        contact.alternativeEmails.join(" "),
         contact.memberNumber ?? "",
         contact.tags.join(" "),
       ]
@@ -240,8 +246,16 @@ const ContactSection = ({
   );
 };
 
+const contactEmails = (contact: CampaiContactRow) =>
+  [contact.email, ...contact.alternativeEmails].filter(
+    (address, index, list): address is string =>
+      Boolean(address) && list.indexOf(address) === index,
+  );
+
 const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
   const [state, setState] = useState<InviteState>({ status: "idle" });
+  const emails = contactEmails(contact);
+  const [selectedEmail, setSelectedEmail] = useState(emails[0] ?? "");
 
   if (contact.inviteStatus === "active") {
     return <span className="text-xs text-muted-foreground">—</span>;
@@ -249,17 +263,24 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
 
   if (contact.inviteStatus === "invited" && state.status !== "sent") {
     const invitedAt = formatInvitedAt(contact.invitedAt);
+    const viaAlternative =
+      contact.accountEmail && contact.accountEmail !== contact.email;
     return (
       <span
         className="whitespace-nowrap text-xs text-foreground/80"
-        title="Eingeladen am"
+        title={
+          contact.accountEmail
+            ? `Eingeladen an ${contact.accountEmail}`
+            : "Eingeladen am"
+        }
       >
         {invitedAt ?? "Eingeladen"}
+        {viaAlternative ? ` · ${contact.accountEmail}` : null}
       </span>
     );
   }
 
-  if (!contact.email) {
+  if (emails.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
 
@@ -269,9 +290,9 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
       await fetchJson("/api/admin/contacts/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: contact.id }),
+        body: JSON.stringify({ contactId: contact.id, email: selectedEmail }),
       });
-      setState({ status: "sent" });
+      setState({ status: "sent", message: selectedEmail });
     } catch (caught) {
       setState({
         status: "error",
@@ -285,14 +306,18 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
 
   if (state.status === "sent") {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-foreground/80">
+      <span
+        className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-foreground/80"
+        title={state.message ? `Gesendet an ${state.message}` : undefined}
+      >
         <FontAwesomeIcon icon={faCheck} />
         Gesendet
+        {emails.length > 1 && state.message ? ` · ${state.message}` : null}
       </span>
     );
   }
 
-  return (
+  const button = (
     <Button
       kind="secondary"
       size="chip"
@@ -309,6 +334,31 @@ const InviteCell = ({ contact }: { contact: CampaiContactRow }) => {
     >
       {state.status === "loading" ? "..." : "Einladen"}
     </Button>
+  );
+
+  if (emails.length === 1) {
+    return button;
+  }
+
+  // Mehrere Adressen: eine wird gewählt, die Einladung geht nur dorthin.
+  return (
+    <div className="flex items-center gap-2">
+      <NativeSelect
+        aria-label="Adresse für die Einladung"
+        value={selectedEmail}
+        disabled={state.status === "loading"}
+        onChange={(event) => setSelectedEmail(event.target.value)}
+        className="min-w-48"
+      >
+        {emails.map((address) => (
+          <option key={address} value={address}>
+            {address}
+            {address === contact.email ? "" : " (alternativ)"}
+          </option>
+        ))}
+      </NativeSelect>
+      {button}
+    </div>
   );
 };
 
@@ -342,6 +392,16 @@ const ContactTable = ({ rows }: { rows: CampaiContactRow[] }) => (
               ) : (
                 <span className="text-muted-foreground">—</span>
               )}
+              {contact.alternativeEmails.map((address) => (
+                <a
+                  key={address}
+                  href={`mailto:${address}`}
+                  className="block text-muted-foreground hover:underline"
+                  title="Alternative Adresse aus Campai"
+                >
+                  {address}
+                </a>
+              ))}
             </Td>
             <Td
               className={`knglmrt-num text-right${

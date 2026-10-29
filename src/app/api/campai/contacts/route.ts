@@ -74,13 +74,30 @@ export const GET = async (request: NextRequest) => {
 
     const rows = contacts
       .map((contact) => {
-        const authSummary = contact.email
-          ? authSummariesByEmail.get(contact.email.trim().toLowerCase())
-          : undefined;
+        // Ein Konto kann an der Haupt- oder einer Alternativadresse hängen —
+        // ein aktives Konto zählt vor einer offenen Einladung.
+        const addresses = [contact.email, ...contact.alternativeEmails].filter(
+          (address, index, list): address is string =>
+            Boolean(address) && list.indexOf(address) === index,
+        );
+        let authSummary: AuthSummary | undefined;
+        let accountEmail: string | null = null;
+        for (const address of addresses) {
+          const summary = authSummariesByEmail.get(address);
+          if (!summary) continue;
+          if (!authSummary || (summary.status === "active" && authSummary.status !== "active")) {
+            authSummary = summary;
+            accountEmail = address;
+          }
+        }
         return {
           id: contact.id,
           name: contact.name,
           email: contact.email,
+          alternativeEmails: contact.alternativeEmails.filter(
+            (address) => address !== contact.email,
+          ),
+          accountEmail,
           memberNumber: contact.memberNumber,
           balance: contact.balance,
           tags: contact.tags,
