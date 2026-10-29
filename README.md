@@ -9,6 +9,9 @@ Campai for products and invoices and Supabase for authentication and data.
 ## Features
 
 - Live printer status from the BambuLab cloud API + MQTT
+- Admin-only print automation with stored sliced files, an idle timer, camera
+  inspection and a persistent dispatch journal. Starts disabled; see
+  [setup and current transport limitations](docs/printer-automation.md).
 - Print job dashboard with description/notes
 - Member shop and checkout powered by Campai
 - Resource inventory (Inventar) with location mapping

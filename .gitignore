@@ -48,3 +48,4 @@ next-env.d.ts
 .playwright-cli/page-2026-07-29T11-46-30-456Z.yml
 yarn.lock
 .vscode/mcp.json
+output/*

@@ -9,6 +9,7 @@ export type PrinterStatus =
 export type PrinterStatusSource = "live" | "cloud" | "unavailable";
 
 export interface BambuPrinter {
+  materialInventory?: import("./printer-automation/material").MaterialInventory;
   id: string;
   name: string;
   model: string;
@@ -24,6 +25,8 @@ export interface BambuPrinter {
   statusSource?: PrinterStatusSource;
   statusObservedAt?: string;
   statusStale?: boolean;
+  /** This request received a non-retained MQTT message containing gcode_state. */
+  liveStateConfirmed?: boolean;
   updatedAt: string;
 }
 

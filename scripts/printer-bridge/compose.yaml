@@ -1,0 +1,39 @@
+services:
+  camera:
+    build:
+      context: ../..
+      dockerfile: scripts/printer-bridge/Dockerfile
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    ports: ["127.0.0.1:8787:8787"]
+    environment:
+      PRINTER_BRIDGE_TOKEN: ${PRINTER_BRIDGE_TOKEN:?Set the shared bridge token}
+    volumes:
+      - ${PRINTER_BRIDGE_CONFIG_FILE:?Set the absolute private config path}:/config/bridge.json:ro
+      - camera-state:/state
+    tmpfs: ["/tmp:size=64m,mode=1777", "/captures:size=256m,uid=1000,gid=1000,mode=0700"]
+    mem_limit: 2g
+    pids_limit: 256
+  worker:
+    profiles: [worker]
+    build:
+      context: ../..
+      dockerfile: scripts/printer-bridge/Dockerfile
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    command: [node, scripts/printer-automation-worker.mjs, --watch]
+    healthcheck:
+      disable: true
+    environment:
+      PRINTER_AUTOMATION_APP_URL: ${PRINTER_AUTOMATION_APP_URL:-}
+      PRINTER_AUTOMATION_WORKER_SECRET: ${PRINTER_AUTOMATION_WORKER_SECRET:-}
+volumes:
+  camera-state:

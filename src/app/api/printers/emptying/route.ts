@@ -84,10 +84,10 @@ export const GET = async (request: NextRequest) => {
       updates.map((update) => [update.printer_id, update.needs_emptying]),
     );
 
-    const responsePrinters: PrinterWithEmptying[] = printers.map((printer) => ({
-      ...printer,
-      needsEmptying: updatesMap.get(printer.id) ?? false,
-    }));
+    const responsePrinters: PrinterWithEmptying[] = printers.map(({ materialInventory, ...printer }) => {
+      void materialInventory;
+      return { ...printer, needsEmptying: updatesMap.get(printer.id) ?? false };
+    });
 
     return NextResponse.json({ printers: responsePrinters });
   } catch (error) {

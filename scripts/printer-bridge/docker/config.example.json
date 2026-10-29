@@ -1,0 +1,21 @@
+{
+  "bind": "0.0.0.0",
+  "port": 8787,
+  "stateDirectory": "/state",
+  "allowRequestCredentials": true,
+  "liveEnabled": false,
+  "printers": [{
+    "id": "REPLACE_WITH_PRINTER_ID",
+    "model": "P1S",
+    "camera": {
+      "type": "bambu-cloud",
+      "printerId": "REPLACE_WITH_PRINTER_ID",
+      "firmware": "01.09.00.00",
+      "workDirectory": "/captures",
+      "networkSdkDirectory": "/opt/bambu",
+      "sourceLibrary": "/opt/bambu/libBambuSource.so",
+      "authorizeBinary": "/opt/camera/authorize",
+      "receiverBinary": "/opt/camera/receive"
+    }
+  }]
+}
