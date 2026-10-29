@@ -16,7 +16,6 @@ import "server-only";
 import { normalizePhone } from "@/lib/campai-registration";
 import { loadCampaiConfig } from "@/lib/campai-receipts/config";
 
-import { CAMPAI_INBOX_EMAIL } from "./config";
 import type { ApplicationData, ApplicationInvoice } from "./types";
 
 /** Zusatzfelder am Mitglied, an denen der Preis des Jahresbeitrags hängt. */
@@ -406,7 +405,9 @@ export const sendTemplateMessage = async (
       email: {
         subject: { de: subject, en: subject },
         message: { de: "", en: "" },
-        replyTo: CAMPAI_INBOX_EMAIL,
+        // Leer wie in Campais Oberfläche. Mit der eigenen Posteingangsadresse
+        // (office@portal…) antwortet Campai 200 und verwirft die Mail still.
+        replyTo: "",
         sendToAlternativeCommunications: false,
         attachments,
       },
