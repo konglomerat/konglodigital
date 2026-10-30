@@ -3,6 +3,7 @@
 // Aufgabenleiste rechts in der Verwaltung: Projekte als Karten, darin die
 // offenen Aufgaben, Erledigte auf Wunsch. Für jedes Board gleich — welches,
 // sagt `board` (src/lib/tasks/boards.ts). Einklappen merkt sich der Browser.
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import Button from "@/components/knglmrt/Button";
@@ -76,6 +77,22 @@ function TaskRow({
 }) {
   const done = !!task.doneAt;
   const due = done ? "" : dueText(task, today);
+  // Aus einem anderen Bereich: erledigt wird dort, hier nur der Weg dahin.
+  if (task.href) {
+    return (
+      <Link
+        href={task.href}
+        className="group flex items-start gap-2.5 border-t-[0.5px] border-[#c1c3c9] py-2.5 text-[15px] leading-5 text-foreground"
+      >
+        <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center text-[var(--knglmrt-pink-100)]">
+          →
+        </span>
+        <span className="min-w-0 flex-1 group-hover:text-[var(--knglmrt-pink-100)] group-hover:underline">
+          {task.title}
+        </span>
+      </Link>
+    );
+  }
   return (
     <div
       className={cn(

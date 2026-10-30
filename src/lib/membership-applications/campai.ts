@@ -21,6 +21,8 @@ import type { ApplicationData, ApplicationInvoice } from "./types";
 /** Zusatzfelder am Mitglied, an denen der Preis des Jahresbeitrags hängt. */
 const ANNUAL_FEE_FIELD = "iSsJ-bIIVANYkzHDLnbcx";
 const TRIAL_RATE_FIELD = "yuJULD";
+/** Benutzerdefiniertes Textfeld „Kartennummer" am Mitglied (Zugangskarte für Roseguarden). */
+const CARD_NUMBER_FIELD = "5qO2LW";
 
 const MAX_ATTACHMENTS = 3;
 const PAGE_SIZE = 100;
@@ -121,6 +123,25 @@ const readContact = async (contactId: string) => {
 export const readMemberNumber = async (contactId: string) =>
   (await readContact(contactId)).memberNumber;
 
+/** Namen, wie sie in Campai stehen — für viele Kontakte in einem Aufruf je 100. */
+export const readContactNames = async (contactIds: string[]) => {
+  const names = new Map<string, string>();
+  const unique = [...new Set(contactIds)];
+  for (let start = 0; start < unique.length; start += PAGE_SIZE) {
+    const ids = unique.slice(start, start + PAGE_SIZE);
+    const result = record(
+      await mandate("crm/contacts/list", {
+        body: { limit: PAGE_SIZE, selection: { ids } },
+      }),
+    );
+    for (const contact of list(result?.contacts)) {
+      const name = text(contact.name);
+      if (name) names.set(text(contact._id), name);
+    }
+  }
+  return names;
+};
+
 /**
  * Legt den Debitor an, falls er fehlt, und stellt die Zahlungsart auf
  * Überweisung. E-Mail, Anschrift und Rechnungsversand per E-Mail übernimmt
@@ -178,6 +199,23 @@ export const setMemberDetails = async (contactId: string, data: ApplicationData)
           [TRIAL_RATE_FIELD]: data.trialRate,
         },
       },
+    },
+  });
+};
+
+/**
+ * Trägt die Nummer der Zugangskarte ins Zusatzfeld „Kartennummer" ein; leer
+ * nimmt sie wieder heraus. Die übrigen Zusatzfelder kommen aus dem gelesenen
+ * Kontakt mit, damit keins verloren geht.
+ */
+export const setCardNumber = async (contactId: string, cardNumber: string) => {
+  const contact = record(
+    await mandate(`crm/contacts/${encodeURIComponent(contactId)}`),
+  );
+  const member = record(record(contact?.customFields)?.member) ?? {};
+  await mandate(`crm/contacts/${encodeURIComponent(contactId)}`, {
+    body: {
+      customFields: { member: { ...member, [CARD_NUMBER_FIELD]: cardNumber } },
     },
   });
 };
@@ -383,6 +421,27 @@ type Attachment = { fileName: string; resource: string };
  * der Vorlage hängt, bleibt weg — Satzung und Beitragsordnung sind schon im
  * Antrag verlinkt.
  */
+/**
+ * Die Vorlage als HTML, wie Campais Vorschau sie zeigt — Platzhalter
+ * (Vorname usw.) bleiben markiert stehen.
+ */
+export const previewTemplate = async (templateId: string) => {
+  const template = record(
+    await mandate(`crm/messageTemplates/${encodeURIComponent(templateId)}`),
+  );
+  if (!template?.templateContents) {
+    throw new CampaiError(`Vorlage ${templateId} ist leer oder fehlt.`);
+  }
+  const preview = record(
+    await mandate(`crm/messageTemplates/${encodeURIComponent(templateId)}/preview`, {
+      body: { templateContents: template.templateContents, type: "email" },
+    }),
+  );
+  const html = text(preview?.document);
+  if (!html) throw new CampaiError("Campai hat keine Vorschau geliefert.");
+  return { subject: text(record(template.email)?.subject), html };
+};
+
 export const sendTemplateMessage = async (
   contactId: string,
   templateId: string,

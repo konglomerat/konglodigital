@@ -13,7 +13,10 @@ export { errorResponse } from "@/app/api/admin/applications/auth";
 export const authorizeBoard = async (
   request: NextRequest,
   board: string | null | undefined,
-): Promise<{ userId: string } | { response: NextResponse }> => {
+): Promise<
+  | { userId: string; access: Awaited<ReturnType<typeof getRouteAccess>>["access"] }
+  | { response: NextResponse }
+> => {
   const { user, access } = await getRouteAccess(request);
   if (!user) {
     return { response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -21,5 +24,5 @@ export const authorizeBoard = async (
   if (!board || !canAccessBoard(access, board)) {
     return { response: NextResponse.json({ error: "Kein Zugriff" }, { status: 403 }) };
   }
-  return { userId: user.id };
+  return { userId: user.id, access };
 };

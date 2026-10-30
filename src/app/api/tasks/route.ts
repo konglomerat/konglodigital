@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { withOnboardingTasks } from "@/lib/tasks/onboarding";
 import { createTask, getProject, listBoard } from "@/lib/tasks/store";
 
 import { authorizeBoard, errorResponse } from "./auth";
@@ -17,7 +18,12 @@ export async function GET(request: NextRequest) {
   const auth = await authorizeBoard(request, board);
   if ("response" in auth) return auth.response;
   try {
-    return NextResponse.json(await listBoard(board!));
+    // Offene Onboarding-Schritte stehen unter „Mitgliederverwaltung“ mit dabei;
+    // fallen die Anträge aus, bleibt die Liste ohne sie.
+    const data = await listBoard(board!);
+    return NextResponse.json(
+      await withOnboardingTasks(board!, data, auth.access).catch(() => data),
+    );
   } catch (error) {
     return errorResponse(error, "Aufgaben konnten nicht geladen werden.");
   }

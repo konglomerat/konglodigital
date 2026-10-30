@@ -21,14 +21,13 @@ import {
   getServerRealAccess,
   getServerSession,
 } from "@/lib/server-session";
-import { can } from "@/lib/access/access";
-import { countOpenApplications } from "@/lib/membership-applications/store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { accessibleBoards } from "@/lib/tasks/boards";
 import TaskRailSlot from "@/components/tasks/TaskRailSlot";
 
 import type { AccessPreviewState } from "./AccessPreviewSwitch";
 
+import { loadNavBadges } from "./nav-badges";
 import VerwaltungSideNav from "./VerwaltungSideNav";
 import { getVerwaltungEntryHref, getVisibleRessorts } from "./ressorts";
 
@@ -41,13 +40,6 @@ const loadWerkbereiche = async (): Promise<BuchhaltungWerkbereich[]> => {
     return [];
   }
 };
-
-// Die Zahl an „Anträge" — fehlt sie (z. B. ohne Tabelle), bleibt der Punkt ohne.
-const APPLICATIONS_HREF = "/admin/vorstand/antraege";
-const loadOpenApplications = async (access: Awaited<ReturnType<typeof getServerAccess>>) =>
-  can(access, "members.onboarding")
-    ? countOpenApplications().catch(() => null)
-    : null;
 
 // Nur wer echt (nicht in einer Vorschau) access.manage hat, bekommt den
 // Testschalter. Den Namen der Person braucht nur der Hinweis über dem Inhalt.
@@ -73,12 +65,12 @@ export default async function VerwaltungShell({
   const locale = await getRequestLocale();
   const { supabase } = await getServerSession();
   const access = await getServerAccess();
-  const [werkbereiche, allowedCostCenters, accessPreview, openApplications] =
+  const [werkbereiche, allowedCostCenters, accessPreview, badges] =
     await Promise.all([
       loadWerkbereiche(),
       loadAllowedCostCenters(supabase, access, "receipts.view"),
       loadAccessPreview(),
-      loadOpenApplications(access),
+      loadNavBadges(),
     ]);
   // Ohne sichtbares Ressort (z. B. Admin in der Vorschau einer Person ohne
   // Rolle) bleibt der Titel ein Link auf das eigene Konto.
@@ -107,9 +99,7 @@ export default async function VerwaltungShell({
         href: localizePathname(child.href, locale),
         label: child.label,
         match: child.href,
-        ...(child.href === APPLICATIONS_HREF && openApplications
-          ? { badge: openApplications }
-          : {}),
+        ...(badges[child.href] ? { badge: badges[child.href] } : {}),
       })),
     };
   });

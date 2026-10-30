@@ -16,6 +16,11 @@ export type Task = {
   priority: TaskPriority | null;
   doneAt: string | null;
   createdAt: string;
+  /**
+   * Kommt aus einem anderen Bereich (z. B. Onboarding der Mitgliedsanträge) und
+   * wird dort erledigt — die Leiste zeigt ihn als Link, ohne Häkchen.
+   */
+  href?: string;
 };
 
 export type TaskBoardData = {

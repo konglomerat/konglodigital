@@ -9,12 +9,19 @@
 // die Reihenfolge ohne Campai testen (workflow.test.ts).
 import { contractPlanIds } from "@/lib/campai-registration";
 
-import { COMPLETION_TEMPLATE_ID, WELCOME_TEMPLATE_ID } from "./config";
+import {
+  COMPLETION_NO_CARD_TEMPLATE_ID,
+  COMPLETION_TEMPLATE_ID,
+  WELCOME_TEMPLATE_ID,
+} from "./config";
 import type { ApplicationPatch } from "./store";
 import {
+  allDone,
+  hasAccessCard,
   isOnboarding,
   isUndecided,
   onboardingItems,
+  openBeforeCompletion,
   type ApplicationData,
   type ApplicationInvoice,
   type ChecklistStep,
@@ -26,6 +33,7 @@ export type WorkflowCampai = {
   ensureDebtor: (contactId: string) => Promise<number>;
   readMemberNumber: (contactId: string) => Promise<string | null>;
   setMemberDetails: (contactId: string, data: ApplicationData) => Promise<void>;
+  setCardNumber: (contactId: string, cardNumber: string) => Promise<void>;
   uploadFile: (bytes: Uint8Array, fileName: string, contentType: string) => Promise<string>;
   addContactDocument: (
     contactId: string,
@@ -191,7 +199,7 @@ export const syncInvoice = async (
   };
 };
 
-/** Hakt „Überweisung eingegangen" ab, sobald Campai die Rechnung als bezahlt führt. */
+/** Hakt „Überweisung prüfen" ab, sobald Campai die Rechnung als bezahlt führt. */
 const recordPayment = async (
   application: MembershipApplication,
   invoice: ApplicationInvoice,
@@ -247,12 +255,33 @@ export const setChecklistItem = (
   if (step === "card" && done && !number) {
     throw new WorkflowError("Bitte die Kartennummer eintragen.");
   }
-  return deps.save(application, {
-    checklist: {
-      [step]: done
-        ? { at: deps.now(), by: actor, ...(step === "card" ? { cardNumber: number } : {}) }
-        : null,
-    },
+  const completionSent = Boolean(application.campai.completionSentAt);
+  if (step === "cardHandedOut" && done && !completionSent) {
+    throw new WorkflowError("Die Karte wird nach der zweiten Willkommensmail ausgegeben.");
+  }
+  if (step !== "cardHandedOut" && completionSent) {
+    throw new WorkflowError("Die zweite Willkommensmail ist schon raus.");
+  }
+  const entry = done
+    ? { at: deps.now(), by: actor, ...(step === "card" ? { cardNumber: number } : {}) }
+    : null;
+  // Ist die Karte der letzte offene Punkt, ist die Aufnahme damit fertig.
+  const finished =
+    entry &&
+    allDone({ ...application, checklist: { ...application.checklist, [step]: entry } });
+  const patch: ApplicationPatch = {
+    checklist: { [step]: entry },
+    ...(finished
+      ? { status: "completed" as const, history: { by: actor, type: "completed" as const } }
+      : {}),
+  };
+  if (step !== "card") return deps.save(application, patch);
+
+  // Die Kartennummer steht auch in Campai (Zusatzfeld „Kartennummer“);
+  // zurückgenommen wird sie dort wieder geleert.
+  return recordingErrors(application, deps, async () => {
+    await deps.campai.setCardNumber(requireContact(application), done ? number : "");
+    return patch;
   });
 };
 
@@ -265,6 +294,8 @@ export const releaseInvoice = (
   application: MembershipApplication,
   actor: string,
   deps: WorkflowDeps,
+  /** Willkommensmail ohne Rechnung; der Entwurf bleibt in Campai liegen. */
+  withoutInvoice = false,
 ) => {
   if (application.status !== "invoice_draft") {
     throw new WorkflowError("Die Rechnung ist schon freigegeben.");
@@ -274,7 +305,7 @@ export const releaseInvoice = (
     const contactId = requireContact(application);
     const attachments: { fileName: string; resource: string }[] = [];
 
-    if (!application.campai.noInvoiceDue) {
+    if (!application.campai.noInvoiceDue && !withoutInvoice) {
       const invoiceId = application.campai.invoiceId;
       if (!invoiceId) {
         throw new WorkflowError(
@@ -301,13 +332,24 @@ export const releaseInvoice = (
     await deps.campai.sendTemplateMessage(contactId, WELCOME_TEMPLATE_ID, attachments);
     return {
       status: "welcomed",
-      campai: { welcomeSentAt: deps.now() },
-      history: { by: actor, type: "invoice_released" },
+      campai: {
+        welcomeSentAt: deps.now(),
+        ...(withoutInvoice ? { welcomeWithoutInvoice: true } : {}),
+      },
+      history: {
+        by: actor,
+        type: "invoice_released",
+        ...(withoutInvoice ? { text: "ohne Rechnung" } : {}),
+      },
     };
   });
 };
 
-/** Alles abgehakt: Vorlage „Willkommen (Teil 2/2)", danach ist es ein Mitglied. */
+/**
+ * Alles bis hierhin abgehakt: Vorlage „Willkommen (Teil 2/2)". Ist danach
+ * nichts mehr offen, ist es ein Mitglied — sonst erst, wenn die Karte
+ * ausgegeben ist (setChecklistItem).
+ */
 export const completeMembership = (
   application: MembershipApplication,
   actor: string,
@@ -316,17 +358,23 @@ export const completeMembership = (
   if (application.status !== "welcomed") {
     throw new WorkflowError("Erst die Rechnung freigeben und die Willkommensmail schicken.");
   }
-  const open = onboardingItems(application).filter((item) => !item.done);
+  if (application.campai.completionSentAt) {
+    throw new WorkflowError("Die zweite Willkommensmail ist schon raus.");
+  }
+  const open = openBeforeCompletion(application);
   if (open.length > 0) {
     throw new WorkflowError(`Noch offen: ${open.map((item) => item.short).join(", ")}.`);
   }
 
   return recordingErrors(application, deps, async () => {
-    await deps.campai.sendTemplateMessage(requireContact(application), COMPLETION_TEMPLATE_ID);
-    return {
-      status: "completed",
-      campai: { completionSentAt: deps.now() },
-      history: { by: actor, type: "completed" },
-    };
+    // Ohne Zugangskarte fällt die Einladung zum Abholen und Roseguarden weg.
+    await deps.campai.sendTemplateMessage(
+      requireContact(application),
+      hasAccessCard(application.data) ? COMPLETION_TEMPLATE_ID : COMPLETION_NO_CARD_TEMPLATE_ID,
+    );
+    const campai = { completionSentAt: deps.now() };
+    return allDone({ ...application, campai: { ...application.campai, ...campai } })
+      ? { status: "completed", campai, history: { by: actor, type: "completed" } }
+      : { campai, history: { by: actor, type: "completion_sent" } };
   });
 };

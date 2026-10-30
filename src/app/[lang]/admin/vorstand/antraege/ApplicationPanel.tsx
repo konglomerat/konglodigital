@@ -4,6 +4,7 @@
 // Antragsdaten mit Annehmen, Rückfrage und Ablehnen. Danach steht oben die
 // Aufnahme als Checkliste — Rechnung freigeben, Roseguarden, Zahlung,
 // Zugangskarte — bis aus dem Antrag ein Mitglied geworden ist.
+import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { useState, type ReactNode } from "react";
 
 import Badge from "@/components/knglmrt/Badge";
@@ -30,10 +31,12 @@ import {
   formatDate,
   formatEuro,
   formatEuroCents,
+  displayName,
   initials,
   isOnboarding,
   isUndecided,
   onboardingItems,
+  readyForCompletion,
   type ApplicationData,
   type ApplicationInvoice,
   type ChecklistEntry,
@@ -47,7 +50,7 @@ import ApplicationEditForm from "./ApplicationEditForm";
 
 export type PanelAction =
   | { action: "accept" }
-  | { action: "release" }
+  | { action: "release"; withoutInvoice?: boolean }
   | { action: "complete" }
   | { action: "inquiry"; text: string }
   | { action: "reject"; reason: string; mailText: string | null }
@@ -67,6 +70,7 @@ type Props = {
   fieldErrors: RegistrationErrors;
   onAction: (action: PanelAction) => Promise<boolean>;
   onSave: (data: ApplicationData) => Promise<boolean>;
+  onDelete: () => Promise<boolean>;
 };
 
 const PAYMENT_LABELS: Record<ApplicationInvoice["paymentStatus"], string> = {
@@ -88,13 +92,36 @@ const describeHistory = (entry: HistoryEntry): ReactNode => {
     case "accepted":
       return `Angenommen${by}.`;
     case "invoice_released":
-      return `Rechnung freigegeben und Willkommensmail verschickt${by}.`;
+      return entry.text === "ohne Rechnung"
+        ? `Erste Willkommensmail ohne Rechnung verschickt${by}.`
+        : `Rechnung freigegeben und erste Willkommensmail verschickt${by}.`;
+    case "completion_sent":
+      return `Zweite Willkommensmail verschickt${by}.`;
     case "completed":
       return "Aufnahme abgeschlossen.";
     case "rejected":
       return `Abgelehnt${by}.`;
   }
 };
+
+/** Kleiner Link aufs Profil in Campai, neben dem Namen im Panel. */
+function CampaiProfileButton({ url }: { url: string }) {
+  return (
+    <Button
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      kind="ghost"
+      size="chip"
+      iconOnly
+      icon={faArrowUpRightFromSquare}
+      title="Profil in Campai öffnen"
+      aria-label="Profil in Campai öffnen"
+    >
+      Profil in Campai öffnen
+    </Button>
+  );
+}
 
 function Section({
   title,
@@ -157,7 +184,14 @@ const meta = (entry: ChecklistEntry, extra?: string) =>
     .join(" · ");
 
 type DialogKind =
-  "accept" | "inquiry" | "reject" | "release" | "complete" | null;
+  | "accept"
+  | "inquiry"
+  | "reject"
+  | "release"
+  | "releaseWithoutInvoice"
+  | "complete"
+  | "delete"
+  | null;
 
 export default function ApplicationPanel({
   application,
@@ -168,6 +202,7 @@ export default function ApplicationPanel({
   fieldErrors,
   onAction,
   onSave,
+  onDelete,
 }: Props) {
   const { data, campai, checklist } = application;
   const [editing, setEditing] = useState(false);
@@ -195,12 +230,17 @@ export default function ApplicationPanel({
   const changes = changedFields(application.submittedData, data);
   const items = onboardingItems(application);
   const doneCount = items.filter((item) => item.done).length;
+  const canComplete =
+    application.status === "welcomed" && readyForCompletion(application);
   const waitingForInvoice =
     application.status === "invoice_draft" &&
     !campai.invoiceId &&
     !campai.noInvoiceDue;
   const releasedBy = application.history.find(
     (entry) => entry.type === "invoice_released",
+  );
+  const completionSentBy = application.history.find(
+    (entry) => entry.type === "completion_sent" || entry.type === "completed",
   );
   // Laufende Anträge zeigen den Eingang im Verlauf — dort klappen die Daten auf.
   const history = accepted
@@ -265,7 +305,7 @@ export default function ApplicationPanel({
   const itemBody = (
     item: OnboardingItem,
   ): { hint?: ReactNode; extra?: ReactNode } => {
-    if (item.key !== "welcome" && checklist[item.key]) {
+    if (item.key !== "welcome" && item.key !== "completion" && checklist[item.key]) {
       const entry = checklist[item.key]!;
       return {
         hint: meta(
@@ -275,15 +315,32 @@ export default function ApplicationPanel({
       };
     }
     switch (item.key) {
+      case "completion":
+        return item.done
+          ? {
+              hint: [
+                `verschickt ${formatDate(campai.completionSentAt)}`,
+                completionSentBy?.by ? initials(completionSentBy.by) : null,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            }
+          : {
+              hint: canComplete
+                ? "Alles erledigt — abhaken schickt die Campai-Vorlage „Willkommen (Teil 2/2)“."
+                : "Wird auswählbar, sobald alle Punkte darüber abgehakt sind.",
+            };
       case "welcome":
         return item.done
           ? {
               hint: [
                 `verschickt ${formatDate(campai.welcomeSentAt)}`,
                 releasedBy?.by ? initials(releasedBy.by) : null,
-                campai.invoiceNumber
-                  ? `Rechnung ${campai.invoiceNumber}`
-                  : null,
+                campai.welcomeWithoutInvoice
+                  ? "ohne Rechnung"
+                  : campai.invoiceNumber
+                    ? `Rechnung ${campai.invoiceNumber}`
+                    : null,
               ]
                 .filter(Boolean)
                 .join(" · "),
@@ -302,6 +359,17 @@ export default function ApplicationPanel({
                   >
                     Rechnung freigeben + senden
                   </Button>
+                  {campai.noInvoiceDue ? null : (
+                    <Button
+                      kind="ghost"
+                      size="small"
+                      className="self-start"
+                      disabled={busy}
+                      onClick={() => openDialog("releaseWithoutInvoice")}
+                    >
+                      Ohne Rechnung senden
+                    </Button>
+                  )}
                 </div>
               ),
             };
@@ -310,7 +378,9 @@ export default function ApplicationPanel({
           hint:
             invoice && !invoice.draft
               ? `Rechnung ${invoice.number} über ${formatEuroCents(invoice.amountCents)}, Verwendungszweck ${invoice.reference ?? "—"} · Campai: ${PAYMENT_LABELS[invoice.paymentStatus]}. Hakt sich ab, sobald Campai sie als bezahlt führt.`
-              : "Nach der Freigabe der Rechnung gleicht Campai die Zahlung ab.",
+              : campai.welcomeWithoutInvoice
+                ? "Ohne Rechnung verschickt — Zahlung von Hand abhaken."
+                : "Nach der Freigabe der Rechnung gleicht Campai die Zahlung ab.",
         };
       case "card":
         return {
@@ -372,8 +442,22 @@ export default function ApplicationPanel({
     }
   };
 
+  // Die erste Mail hakt die Freigabe ab, nicht die Hand. Vor der zweiten
+  // Mail muss alles darüber erledigt sein; danach bleibt nur, was sie anstößt.
+  const completionIndex = items.findIndex((item) => item.key === "completion");
+  const checkable = (item: OnboardingItem) => {
+    if (item.key === "welcome") return false;
+    if (item.key === "completion") return !item.done && canComplete;
+    const afterCompletion = items.indexOf(item) > completionIndex;
+    return afterCompletion === Boolean(campai.completionSentAt);
+  };
+
   const toggle = (item: OnboardingItem, done: boolean) => {
     if (item.key === "welcome") return;
+    if (item.key === "completion") {
+      if (done && canComplete) openDialog("complete");
+      return;
+    }
     if (item.key === "card" && done) {
       setCardPending(true);
       return;
@@ -483,8 +567,13 @@ export default function ApplicationPanel({
           <span className="knglmrt-num block text-muted-foreground">
             {application.number}
           </span>
-          <span className="knglmrt-card-title block truncate">
-            {data.firstName} {data.lastName}
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="knglmrt-card-title truncate">
+              {displayName(application)}
+            </span>
+            {application.campaiContact ? (
+              <CampaiProfileButton url={application.campaiContact.url} />
+            ) : null}
           </span>
         </span>
         <Badge tone={STATUS_TONES[application.status]}>
@@ -505,7 +594,7 @@ export default function ApplicationPanel({
 
         {accepted ? (
           <Section
-            title="Aufnahme"
+            title="Onboarding"
             action={
               <span className="knglmrt-num">
                 {doneCount} / {items.length} erledigt
@@ -522,12 +611,28 @@ export default function ApplicationPanel({
                     className="flex flex-col gap-2 border-b border-border py-3"
                   >
                     <Choice
-                      label={item.label}
+                      label={
+                        item.href ? (
+                          <>
+                            {item.label}{" "}
+                            <a
+                              href={item.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {item.linkText ?? "Link"}
+                            </a>
+                          </>
+                        ) : (
+                          item.label
+                        )
+                      }
                       checked={
                         item.done || (item.key === "card" && cardPending)
                       }
-                      // Die Willkommensmail hakt die Freigabe ab, nicht die Hand.
-                      disabled={item.key === "welcome" || !onboarding || busy}
+                      mark="check"
+                      disabled={!checkable(item) || !onboarding || busy}
                       onChange={(event) => toggle(item, event.target.checked)}
                       hint={hint}
                     />
@@ -540,23 +645,6 @@ export default function ApplicationPanel({
               <p className="bg-muted px-3.5 py-3">
                 Aufnahme abgeschlossen. {data.firstName} ist Mitglied.
               </p>
-            ) : application.status === "welcomed" &&
-              doneCount === items.length ? (
-              <div className="flex flex-col gap-2 bg-muted px-3.5 py-3">
-                <p>
-                  Alles erledigt. Zum Abschluss geht „Willkommen (Teil 2/2)“
-                  raus.
-                </p>
-                <Button
-                  kind="primary"
-                  size="small"
-                  className="self-start"
-                  disabled={busy}
-                  onClick={() => openDialog("complete")}
-                >
-                  Aufnahme abschließen
-                </Button>
-              </div>
             ) : null}
           </Section>
         ) : null}
@@ -639,6 +727,18 @@ export default function ApplicationPanel({
               </li>
             ))}
           </ol>
+        ) : null}
+
+        {onboarding ? (
+          <Button
+            kind="ghost"
+            size="chip"
+            className="-mt-3 self-end text-muted-foreground"
+            disabled={busy}
+            onClick={() => openDialog("delete")}
+          >
+            Antrag löschen
+          </Button>
         ) : null}
 
         {accepted && showData ? dataSections : null}
@@ -814,8 +914,56 @@ export default function ApplicationPanel({
       </Dialog>
 
       <Dialog
+        open={dialog === "releaseWithoutInvoice"}
+        title="Ohne Rechnung senden?"
+        onCancel={() => setDialog(null)}
+        width={480}
+        actions={dialogButtons(
+          <Button
+            kind="primary"
+            loading={busy}
+            onClick={() => void run({ action: "release", withoutInvoice: true })}
+          >
+            Ohne Rechnung senden
+          </Button>,
+        )}
+      >
+        <p>
+          Die Willkommensmail (Campai-Vorlage „Willkommen, Teil 1/2“) geht an{" "}
+          {data.email}, ohne Rechnung im Anhang. Der Rechnungsentwurf bleibt in
+          Campai unter den Belegen liegen; die Zahlung wird dann von Hand
+          abgehakt.
+        </p>
+      </Dialog>
+
+      <Dialog
+        open={dialog === "delete"}
+        title="Antrag löschen?"
+        onCancel={() => setDialog(null)}
+        width={480}
+        actions={dialogButtons(
+          <Button
+            kind="danger-primary"
+            loading={busy}
+            onClick={async () => {
+              if (await onDelete()) setDialog(null);
+            }}
+          >
+            Löschen
+          </Button>,
+        )}
+      >
+        <p>
+          Antrag {application.number} von {displayName(application)} verschwindet
+          mit Checkliste und Verlauf aus dieser Liste. Das lässt sich nicht
+          rückgängig machen. In Campai bleibt alles stehen — Kontakt, Verträge
+          und Rechnung bei Bedarf dort von Hand entfernen.
+        </p>
+      </Dialog>
+
+      <Dialog
         open={dialog === "complete"}
-        title="Aufnahme abschließen?"
+        title="Zweite Willkommensmail senden?"
         onCancel={() => setDialog(null)}
         width={480}
         actions={dialogButtons(
@@ -824,13 +972,15 @@ export default function ApplicationPanel({
             loading={busy}
             onClick={() => void run({ action: "complete" })}
           >
-            Abschließen und senden
+            Senden
           </Button>,
         )}
       >
         <p>
-          Die Campai-Vorlage „Willkommen, Teil 2/2“ geht an {data.email}. Danach
-          steht {data.firstName} unter „Mitglied“.
+          Die Campai-Vorlage „Willkommen, Teil 2/2“ geht an {data.email}.{" "}
+          {items.some((item) => item.key === "cardHandedOut")
+            ? `Sobald die Zugangskarte ausgehändigt ist, steht ${data.firstName} unter „Mitglied“.`
+            : `Danach steht ${data.firstName} unter „Mitglied“.`}
         </p>
       </Dialog>
     </div>

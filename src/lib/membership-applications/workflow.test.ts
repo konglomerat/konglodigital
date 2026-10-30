@@ -2,9 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ANNUAL_PLAN_ID, emptyRegistration } from "@/lib/campai-registration";
 
-import { COMPLETION_TEMPLATE_ID, WELCOME_TEMPLATE_ID } from "./config";
+import {
+  COMPLETION_NO_CARD_TEMPLATE_ID,
+  COMPLETION_TEMPLATE_ID,
+  WELCOME_TEMPLATE_ID,
+} from "./config";
 import type { ApplicationPatch } from "./store";
-import { changedFields, onboardingItems, type ApplicationData, type ApplicationInvoice, type MembershipApplication } from "./types";
+import { activeOnboardingItems, changedFields, onboardingItems, type ApplicationData, type ApplicationInvoice, type MembershipApplication } from "./types";
 import {
   acceptApplication,
   completeMembership,
@@ -102,6 +106,9 @@ const makeDeps = (campai: Partial<WorkflowCampai> = {}) => {
       ensureDebtor: track("ensureDebtor", 100719),
       readMemberNumber: track("readMemberNumber", "0351"),
       setMemberDetails: track("setMemberDetails", undefined),
+      setCardNumber: vi.fn(async (_contactId: string, cardNumber: string) => {
+        calls.push(`setCardNumber:${cardNumber}`);
+      }),
       uploadFile: track("uploadFile", "resource-1"),
       addContactDocument: track("addContactDocument", "document-1"),
       createContract: vi.fn(async (_contactId: string, planId: string) => {
@@ -267,6 +274,21 @@ describe("releaseInvoice", () => {
     );
     expect(deps.campai.sendTemplateMessage).toHaveBeenCalledWith("contact-1", WELCOME_TEMPLATE_ID, []);
   });
+
+  it("schickt auf Wunsch ohne Rechnung und lässt den Entwurf liegen", async () => {
+    const { deps, calls } = makeDeps();
+    const result = await releaseInvoice(
+      application({ status: "invoice_draft", campai: { contactId: "contact-1", invoiceId: "inv-1" } }),
+      "Vincent",
+      deps,
+      true,
+    );
+    expect(calls).not.toContain("completeInvoice");
+    expect(calls).not.toContain("uploadFile");
+    expect(deps.campai.sendTemplateMessage).toHaveBeenCalledWith("contact-1", WELCOME_TEMPLATE_ID, []);
+    expect(result.campai.welcomeWithoutInvoice).toBe(true);
+    expect(result.status).toBe("welcomed");
+  });
 });
 
 describe("Aufnahme abhaken", () => {
@@ -283,20 +305,23 @@ describe("Aufnahme abhaken", () => {
     expect(() => setChecklistItem(welcomed(), "card", true, "Vincent", deps)).toThrow(/Kartennummer/);
     const checked = await setChecklistItem(welcomed(), "card", true, "Vincent", deps, " 0388 ");
     expect(checked.checklist.card).toMatchObject({ by: "Vincent", cardNumber: "0388" });
+    expect(deps.campai.setCardNumber).toHaveBeenLastCalledWith("contact-1", "0388");
     const unchecked = await setChecklistItem(checked, "card", false, "Vincent", deps);
     expect(unchecked.checklist.card).toBeUndefined();
+    expect(deps.campai.setCardNumber).toHaveBeenLastCalledWith("contact-1", "");
   });
 
-  it("kennt die Zugangskarte nicht, wenn keine gewählt ist", () => {
+  it("kennt Zugangskarte und Roseguarden nicht, wenn keine Karte gewählt ist", () => {
     const { deps } = makeDeps();
     const noCard = welcomed({ data: { ...data(), accessTariff: "none" } });
     expect(() => setChecklistItem(noCard, "card", true, "V", deps, "1")).toThrow();
     expect(() => setChecklistItem(noCard, "cardHandedOut", true, "V", deps)).toThrow();
+    expect(() => setChecklistItem(noCard, "roseguarden", true, "V", deps)).toThrow();
     expect(onboardingItems(noCard).map((item) => item.key)).toEqual([
       "welcome",
-      "roseguarden",
       "payment",
       "mailingList",
+      "completion",
     ]);
   });
 
@@ -328,31 +353,90 @@ describe("Aufnahme abhaken", () => {
 });
 
 describe("completeMembership", () => {
-  it("schickt Teil 2/2 erst, wenn alles abgehakt ist", async () => {
+  const entry = { at: "x", by: "V" };
+  const ready = (overrides: Partial<MembershipApplication> = {}) =>
+    application({
+      status: "welcomed",
+      campai: { contactId: "contact-1", welcomeSentAt: "x" },
+      checklist: {
+        roseguarden: entry,
+        payment: entry,
+        mailingList: entry,
+        card: { ...entry, cardNumber: "1" },
+      },
+      ...overrides,
+    });
+
+  it("schickt Teil 2/2 erst, wenn alles davor abgehakt ist", async () => {
     const { deps } = makeDeps();
     expect(() => completeMembership(application(), "V", deps)).toThrow();
     const open = application({ status: "welcomed", campai: { contactId: "contact-1", welcomeSentAt: "x" } });
     expect(() => completeMembership(open, "V", deps)).toThrow(
-      /Roseguarden, Zahlung, Mailingliste, Karte erstellen, Karte ausgeben/,
+      /Noch offen: Roseguarden, Zahlung, Mailingliste, Karte erstellen\.$/,
     );
-    const entry = { at: "x", by: "V" };
+    const result = await completeMembership(ready(), "Vincent", deps);
+    expect(deps.campai.sendTemplateMessage).toHaveBeenCalledWith("contact-1", COMPLETION_TEMPLATE_ID);
+    // Die Karte wird erst danach ausgegeben — bis dahin bleibt es in der Aufnahme.
+    expect(result.status).toBe("welcomed");
+    expect(result.campai.completionSentAt).toBeTruthy();
+    expect(() => completeMembership(result, "V", deps)).toThrow(/schon raus/);
+  });
+
+  it("macht ohne Zugangskarte gleich ein Mitglied", async () => {
+    const { deps } = makeDeps();
     const result = await completeMembership(
-      application({
-        status: "welcomed",
-        campai: { contactId: "contact-1", welcomeSentAt: "x" },
-        checklist: {
-          roseguarden: entry,
-          payment: entry,
-          mailingList: entry,
-          card: { ...entry, cardNumber: "1" },
-          cardHandedOut: entry,
-        },
+      ready({
+        data: { ...data(), accessTariff: "none" },
+        checklist: { payment: entry, mailingList: entry },
       }),
       "Vincent",
       deps,
     );
-    expect(deps.campai.sendTemplateMessage).toHaveBeenCalledWith("contact-1", COMPLETION_TEMPLATE_ID);
     expect(result.status).toBe("completed");
+    expect(deps.campai.sendTemplateMessage).toHaveBeenCalledWith(
+      "contact-1",
+      COMPLETION_NO_CARD_TEMPLATE_ID,
+    );
+  });
+
+  it("gibt die Karte erst nach Teil 2/2 aus und schließt damit ab", async () => {
+    const { deps } = makeDeps();
+    expect(() => setChecklistItem(ready(), "cardHandedOut", true, "V", deps)).toThrow(
+      /nach der zweiten Willkommensmail/,
+    );
+    const sent = await completeMembership(ready(), "V", deps);
+    expect(() => setChecklistItem(sent, "payment", false, "V", deps)).toThrow(/schon raus/);
+    const handedOut = await setChecklistItem(sent, "cardHandedOut", true, "V", deps);
+    expect(handedOut.status).toBe("completed");
+  });
+});
+
+describe("activeOnboardingItems", () => {
+  const entry = { at: "x", by: "V" };
+  const keys = (overrides: Partial<MembershipApplication>) =>
+    activeOnboardingItems(
+      application({ status: "welcomed", campai: { contactId: "c", welcomeSentAt: "x" }, ...overrides }),
+    ).map((item) => item.key);
+
+  it("zeigt die offenen Punkte vor der zweiten Mail, die Mail selbst noch nicht", () => {
+    expect(keys({ checklist: { payment: entry } })).toEqual([
+      "roseguarden",
+      "mailingList",
+      "card",
+    ]);
+  });
+
+  it("zeigt die zweite Mail, sobald alles davor erledigt ist", () => {
+    const checklist = { roseguarden: entry, payment: entry, mailingList: entry, card: { ...entry, cardNumber: "1" } };
+    expect(keys({ checklist })).toEqual(["completion"]);
+    expect(
+      keys({ checklist, campai: { contactId: "c", welcomeSentAt: "x", completionSentAt: "y" } }),
+    ).toEqual(["cardHandedOut"]);
+  });
+
+  it("zeigt nichts außerhalb des Onboardings", () => {
+    expect(activeOnboardingItems(application({ status: "pending" }))).toEqual([]);
+    expect(activeOnboardingItems(application({ status: "completed" }))).toEqual([]);
   });
 });
 

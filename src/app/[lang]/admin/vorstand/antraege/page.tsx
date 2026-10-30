@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import AntraegeClient from "./AntraegeClient";
 
 export const metadata: Metadata = {
-  title: "Anträge",
+  title: "Anträge Mitgliedschaft",
 };
 
 export const dynamic = "force-dynamic";

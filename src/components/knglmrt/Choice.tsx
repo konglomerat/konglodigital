@@ -21,6 +21,8 @@ export type ChoiceProps = Omit<
   kind?: ChoiceKind;
   /** Zweite Zeile unter der Beschriftung, still. */
   hint?: ReactNode;
+  /** Kästchen: angehakt als gefülltes Quadrat (Standard) oder mit Haken — für Checklisten. */
+  mark?: "fill" | "check";
   className?: string;
   ref?: Ref<HTMLInputElement>;
 };
@@ -34,6 +36,7 @@ export default function Choice({
   label,
   kind = "checkbox",
   hint,
+  mark = "fill",
   disabled,
   className,
   ref,
@@ -55,7 +58,7 @@ export default function Choice({
         disabled={disabled}
         className="peer sr-only"
       />
-      {kind === "checkbox" ? (
+      {kind === "checkbox" && mark === "fill" ? (
         <span
           className={cn(
             "mt-0.5 h-5 w-5 shrink-0 knglmrt-border",
@@ -64,6 +67,31 @@ export default function Choice({
             focusClassName,
           )}
         />
+      ) : null}
+      {kind === "checkbox" && mark === "check" ? (
+        <span
+          className={cn(
+            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center knglmrt-border",
+            disabled ? "border-border bg-muted" : "border-foreground bg-card",
+            // Wie beim Radio: der Haken ist kein Geschwister des Feldes.
+            "peer-checked:border-foreground peer-checked:bg-foreground peer-checked:[&>svg]:opacity-100",
+            focusClassName,
+          )}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            className="h-3.5 w-3.5 text-card opacity-0"
+          >
+            <path
+              d="M3 8.5l3.2 3.2L13 4.8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.25"
+              strokeLinecap="square"
+            />
+          </svg>
+        </span>
       ) : null}
       {kind === "radio" ? (
         <span

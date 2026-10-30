@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { workflowDeps } from "@/lib/membership-applications/server";
+import { withCampaiContacts, workflowDeps } from "@/lib/membership-applications/server";
 import { listApplications } from "@/lib/membership-applications/store";
 import { syncPayments } from "@/lib/membership-applications/workflow";
 
@@ -15,7 +15,9 @@ export const GET = async (request: NextRequest) => {
   const auth = await authorizeApplications(request);
   if ("response" in auth) return auth.response;
   try {
-    const applications = await syncPayments(await listApplications(), workflowDeps);
+    const applications = await withCampaiContacts(
+      await syncPayments(await listApplications(), workflowDeps),
+    );
     // Ein frisch gespeicherter Antrag kommt mit Unterschriften zurück — die
     // braucht die Liste nicht.
     return NextResponse.json({

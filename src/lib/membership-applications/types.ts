@@ -40,6 +40,8 @@ export type CampaiProgress = {
   invoiceId?: string;
   invoiceNumber?: string;
   welcomeSentAt?: string;
+  /** Die erste Willkommensmail ging bewusst ohne Rechnung raus. */
+  welcomeWithoutInvoice?: boolean;
   completionSentAt?: string;
 };
 
@@ -69,6 +71,7 @@ export type HistoryType =
   | "inquiry"
   | "accepted"
   | "invoice_released"
+  | "completion_sent"
   | "completed"
   | "rejected";
 
@@ -98,7 +101,18 @@ export type MembershipApplication = {
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Name und Profil in Campai — setzt die API, sobald es einen Kontakt gibt. */
+  campaiContact?: CampaiContactLink | null;
 };
+
+export type CampaiContactLink = { name: string; url: string };
+
+/** Name zum Anzeigen: aus Campai, sonst wie im Antrag. */
+export const displayName = (
+  application: Pick<MembershipApplication, "campaiContact" | "data">,
+) =>
+  application.campaiContact?.name ||
+  `${application.data.firstName} ${application.data.lastName}`;
 
 /** Die Rechnung, wie die Inbox sie zum Prüfen zeigt. */
 export type ApplicationInvoice = {
@@ -118,8 +132,8 @@ export type ApplicationInvoice = {
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   pending: "Neu",
   inquiry: "Rückfrage",
-  invoice_draft: "Aufnahme",
-  welcomed: "Aufnahme",
+  invoice_draft: "Onboarding",
+  welcomed: "Onboarding",
   completed: "Mitglied",
   rejected: "Abgelehnt",
 };
@@ -135,7 +149,7 @@ export const STATUS_TONES = {
 
 export const APPLICATION_TABS = [
   { value: "open", label: "Offen", statuses: ["pending", "inquiry"] },
-  { value: "onboarding", label: "Aufnahme", statuses: ["invoice_draft", "welcomed"] },
+  { value: "onboarding", label: "Onboarding", statuses: ["invoice_draft", "welcomed"] },
   { value: "members", label: "Mitglied", statuses: ["completed"] },
   { value: "rejected", label: "Abgelehnt", statuses: ["rejected"] },
   {
@@ -173,12 +187,16 @@ export const tabOf = (status: ApplicationStatus): ApplicationTab =>
 // --- Aufnahme ---------------------------------------------------------------
 
 export type OnboardingItem = {
-  key: "welcome" | ChecklistStep;
+  key: "welcome" | ChecklistStep | "completion";
   label: string;
   /** Kurz für „Offen: …" in der Liste. */
   short: string;
   /** Steht unter dem Titel, solange der Punkt offen ist. */
   hint?: string;
+  /** Ein Link hinter dem Titel, z. B. wo der Schritt erledigt wird. */
+  href?: string;
+  /** Text des Links; ohne Angabe „Link". */
+  linkText?: string;
   done: boolean;
 };
 
@@ -187,64 +205,143 @@ type ChecklistDefinition = {
   label: string;
   short: string;
   hint?: (data: ApplicationData) => string;
+  href?: string;
   /** Ohne Bedingung gilt der Punkt für jeden Antrag. */
   appliesTo?: (data: ApplicationData) => boolean;
+  /** Steht nach der zweiten Willkommensmail — die lädt erst dazu ein. */
+  afterCompletion?: boolean;
 };
 
-const hasAccessCard = (data: ApplicationData) =>
+/** Abo Groß, Abo Klein oder 10er-Karte — nur dann braucht es Karte und Roseguarden. */
+export const hasAccessCard = (data: ApplicationData) =>
   Boolean(accessTariffById(data.accessTariff)?.planId);
 
 /**
  * Die Punkte zum Abhaken, in ihrer Reihenfolge. Ein neuer Punkt ist ein
  * Eintrag hier plus sein Schlüssel in CHECKLIST_STEPS — die Datenbank braucht
  * nichts, `checklist` ist JSON. Sonderfälle stehen im Code: die Zahlung hakt
- * Campai ab (workflow.ts), „Zugangskarte erstellt" fragt die Kartennummer ab.
+ * Campai ab (workflow.ts), „Zugangskarte zuweisen" fragt die Kartennummer ab.
  */
 const CHECKLIST: ChecklistDefinition[] = [
   {
     key: "roseguarden",
-    label: "Roseguarden-Konto angelegt",
+    label: "Roseguarden-Konto prüfen",
     short: "Roseguarden",
     hint: (data) => `In Roseguarden nach ${data.email} suchen.`,
+    href: "https://open.konglomerat.org/access/users",
+    appliesTo: hasAccessCard,
   },
-  { key: "payment", label: "Überweisung eingegangen", short: "Zahlung" },
-  { key: "mailingList", label: "Mailingliste Verein", short: "Mailingliste" },
+  { key: "payment", label: "Überweisung prüfen", short: "Zahlung" },
+  {
+    key: "mailingList",
+    label: "In Mailingliste Verein eintragen",
+    short: "Mailingliste",
+    href: "https://listen.konglomerat.org/postorius/lists/verein.listen.konglomerat.org/mass_subscribe/",
+  },
   {
     key: "card",
-    label: "Zugangskarte erstellt",
+    label: "Zugangskarte zuweisen",
     short: "Karte erstellen",
-    hint: () => "Nummer eintragen, dann im Schließsystem freischalten.",
+    hint: () => "Nummer eintragen — sie landet auch in Campai im Feld „Kartennummer“ —, dann im Schließsystem freischalten.",
     appliesTo: hasAccessCard,
   },
   {
     key: "cardHandedOut",
-    label: "Zugangskarte ausgegeben",
+    label: "Zugangskarte aushändigen",
     short: "Karte ausgeben",
     appliesTo: hasAccessCard,
+    afterCompletion: true,
   },
 ];
 
 /**
- * Die Punkte der Aufnahme. Vorneweg die Willkommensmail — die erledigt die
- * Freigabe der Rechnung, nicht ein Häkchen.
+ * Die Punkte der Aufnahme. Vorneweg die erste Willkommensmail — die erledigt
+ * die Freigabe der Rechnung, nicht ein Häkchen. Dann die Häkchen, dann die
+ * zweite Willkommensmail (completeMembership) und danach, was erst sie
+ * anstößt: die Zugangskarte ausgeben.
  */
 export const onboardingItems = (
   application: Pick<MembershipApplication, "data" | "campai" | "checklist">,
-): OnboardingItem[] => [
-  {
-    key: "welcome",
-    label: "Willkommensmail mit Rechnung verschickt",
-    short: "Rechnung",
-    done: Boolean(application.campai.welcomeSentAt),
-  },
-  ...CHECKLIST.filter((step) => step.appliesTo?.(application.data) ?? true).map((step) => ({
+): OnboardingItem[] => {
+  const steps = CHECKLIST.filter((step) => step.appliesTo?.(application.data) ?? true).map(
+    (step) => ({
+      key: step.key,
+      label: step.label,
+      short: step.short,
+      hint: step.hint?.(application.data),
+      href: step.href,
+      done: Boolean(application.checklist[step.key]),
+      afterCompletion: step.afterCompletion ?? false,
+    }),
+  );
+  const strip = (step: (typeof steps)[number]): OnboardingItem => ({
     key: step.key,
     label: step.label,
     short: step.short,
-    hint: step.hint?.(application.data),
-    done: Boolean(application.checklist[step.key]),
-  })),
-];
+    hint: step.hint,
+    href: step.href,
+    done: step.done,
+  });
+  return [
+    {
+      key: "welcome",
+      label: "Erste Willkommensmail senden",
+      short: "Willkommen 1/2",
+      done: Boolean(application.campai.welcomeSentAt),
+    },
+    ...steps.filter((step) => !step.afterCompletion).map(strip),
+    {
+      key: "completion",
+      label: "Zweite Willkommensmail senden",
+      short: "Willkommen 2/2",
+      href: `/api/admin/applications/completion-preview${
+        hasAccessCard(application.data) ? "" : "?karte=nein"
+      }`,
+      linkText: "Vorschau",
+      done: Boolean(application.campai.completionSentAt),
+    },
+    ...steps.filter((step) => step.afterCompletion).map(strip),
+  ];
+};
+
+/**
+ * Was gerade zu tun ist: offene Punkte, die sich jetzt erledigen lassen. Vor
+ * der zweiten Willkommensmail alles darüber, die Mail selbst erst, wenn das
+ * erledigt ist, und danach nur noch, was sie anstößt.
+ */
+export const activeOnboardingItems = (
+  application: Pick<MembershipApplication, "status" | "data" | "campai" | "checklist">,
+) => {
+  if (!isOnboarding(application.status)) return [];
+  const items = onboardingItems(application);
+  const completionIndex = items.findIndex((item) => item.key === "completion");
+  const completionSent = Boolean(application.campai.completionSentAt);
+  const ready = readyForCompletion(application);
+  return items.filter((item, index) => {
+    if (item.done) return false;
+    if (item.key === "completion") return ready;
+    return index > completionIndex === completionSent;
+  });
+};
+
+/** Die Punkte vor der zweiten Willkommensmail. */
+const beforeCompletion = (items: OnboardingItem[]) =>
+  items.slice(0, items.findIndex((item) => item.key === "completion"));
+
+/** Was vor der zweiten Willkommensmail noch offen ist. */
+export const openBeforeCompletion = (
+  application: Pick<MembershipApplication, "data" | "campai" | "checklist">,
+) => beforeCompletion(onboardingItems(application)).filter((item) => !item.done);
+
+/** Alles vor der zweiten Willkommensmail erledigt — dann darf sie raus. */
+export const readyForCompletion = (
+  application: Pick<MembershipApplication, "data" | "campai" | "checklist">,
+) => openBeforeCompletion(application).length === 0;
+
+/** Die zweite Mail ist raus und alles danach erledigt — dann ist es ein Mitglied. */
+export const allDone = (
+  application: Pick<MembershipApplication, "data" | "campai" | "checklist">,
+) => onboardingItems(application).every((item) => item.done);
 
 /** „VS" für „Vincent Schmidt". */
 export const initials = (name: string) =>

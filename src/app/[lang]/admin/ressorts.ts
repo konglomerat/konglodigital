@@ -62,7 +62,7 @@ const VORSTAND_CHILDREN: RessortChild[] = [
   },
   {
     href: "/admin/vorstand/antraege",
-    label: "Anträge",
+    label: "Anträge Mitgliedschaft",
     canOpen: (access) => can(access, "members.onboarding"),
   },
 ];

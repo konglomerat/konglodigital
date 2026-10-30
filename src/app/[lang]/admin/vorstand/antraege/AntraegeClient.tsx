@@ -17,6 +17,7 @@ import {
   STATUS_LABELS,
   STATUS_TONES,
   describeAccess,
+  displayName,
   describeFee,
   formatDate,
   formatEuro,
@@ -93,7 +94,15 @@ export default function AntraegeClient() {
       const response = await fetch("/api/admin/applications", { cache: "no-store" });
       const payload = await readJson<{ applications?: MembershipApplication[] }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Anträge konnten nicht geladen werden.");
-      setApplications(payload.applications ?? []);
+      const list = payload.applications ?? [];
+      setApplications(list);
+      // ?antrag=<id> (z. B. aus der Aufgabenleiste) öffnet diesen Antrag im passenden Tab.
+      const wanted = new URLSearchParams(window.location.search).get("antrag");
+      const target = wanted ? list.find((entry) => entry.id === wanted) : undefined;
+      if (target) {
+        setTab(tabOf(target.status));
+        setSelectedId(target.id);
+      }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Anträge konnten nicht geladen werden.");
     } finally {
@@ -138,7 +147,7 @@ export default function AntraegeClient() {
       (entry) =>
         statuses.includes(entry.status) &&
         (!needle ||
-          `${entry.firstName} ${entry.lastName} ${entry.email} ${entry.number}`
+          `${entry.firstName} ${entry.lastName} ${entry.campaiContact?.name ?? ""} ${entry.email} ${entry.number}`
             .toLowerCase()
             .includes(needle)),
     );
@@ -215,6 +224,27 @@ export default function AntraegeClient() {
     }
   };
 
+  /** Laufende Aufnahme löschen — danach steht der nächste Antrag der Liste offen. */
+  const remove = async () => {
+    if (!activeId) return false;
+    setBusy(true);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/admin/applications/${activeId}`, { method: "DELETE" });
+      const payload = await readJson<object>(response);
+      if (!response.ok) throw new Error(payload.error ?? "Löschen hat nicht geklappt.");
+      setApplications((current) => current.filter((entry) => entry.id !== activeId));
+      setSelectedId(null);
+      setDetail(null);
+      return true;
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Löschen hat nicht geklappt.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const counts = useMemo(
     () =>
       Object.fromEntries(
@@ -233,7 +263,7 @@ export default function AntraegeClient() {
       <div>
         <SubPageTitle
           ressort="vorstand"
-          title="Mitgliedschaftsanträge"
+          title="Anträge Mitgliedschaft"
           subTitle="Neue Anträge prüfen, annehmen und die Aufnahme Schritt für Schritt nachhalten, bis aus dem Antrag ein Mitglied geworden ist."
         />
       </div>
@@ -287,7 +317,7 @@ export default function AntraegeClient() {
                   <Tr key={entry.id} tone={active ? "rosa" : "weiss"} onClick={() => setSelectedId(entry.id)}>
                     <Td className={active ? "shadow-[inset_3px_0_0_var(--primary)]" : undefined}>
                       <span className="block font-bold">
-                        {entry.firstName} {entry.lastName}
+                        {displayName(entry)}
                       </span>
                       <span className="block text-muted-foreground">{entry.email}</span>
                     </Td>
@@ -326,6 +356,7 @@ export default function AntraegeClient() {
             fieldErrors={fieldErrors}
             onAction={(action: PanelAction) => send("POST", action)}
             onSave={(data: ApplicationData) => send("PATCH", { data })}
+            onDelete={remove}
           />
         ) : activeId ? (
           <div className="knglmrt-border bg-card p-[18px] text-muted-foreground">
