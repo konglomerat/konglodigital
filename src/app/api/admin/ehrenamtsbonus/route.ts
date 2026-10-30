@@ -31,7 +31,9 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")) {
+  if (
+    !can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")
+  ) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
@@ -79,6 +81,7 @@ export const GET = async (request: NextRequest) => {
       const contactId = profile?.campaiContactId ?? null;
       return {
         ...entry,
+        campaiSync: null,
         applicantName: profile?.campaiName ?? null,
         applicantMemberNumber: profile?.campaiMemberNumber ?? null,
         openBalanceCents: contactId

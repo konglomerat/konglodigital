@@ -52,6 +52,18 @@ export const getProject = async (id: string) => {
   return data ? mapProject(data) : null;
 };
 
+/** Ein Projekt eines Boards über seinen Namen, z. B. „Mitgliederverwaltung“. */
+export const findProjectByName = async (board: string, name: string) => {
+  const { data, error } = await createSupabaseAdminClient()
+    .from("task_projects")
+    .select("id, board, name, position")
+    .eq("board", board)
+    .eq("name", name)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapProject(data) : null;
+};
+
 /** Das Board einer Aufgabe — für die Rechteprüfung vor Änderungen. */
 export const getTaskBoard = async (taskId: string) => {
   const { data, error } = await createSupabaseAdminClient()

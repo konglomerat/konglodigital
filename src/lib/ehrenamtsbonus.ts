@@ -420,8 +420,27 @@ export type EhrenamtsbonusDecision = "approve" | "reject";
  */
 export type EhrenamtsbonusAdminAction = EhrenamtsbonusDecision | "cancel";
 
+/** Ein Schritt nach der Entscheidung — ob er geklappt hat und wann. */
+export type EhrenamtsbonusSyncStep = {
+  status: "ok" | "error";
+  at: string;
+  /** Bei Fehlern der Grund, sonst eine kurze Beschreibung. */
+  detail?: string;
+};
+
+/** Was nach der Entscheidung passiert ist — nur in der Antwort, nicht gespeichert. */
+export type EhrenamtsbonusCampaiSync = {
+  pause?: EhrenamtsbonusSyncStep;
+  /** Stornierung: Pause in Campai aufgehoben. */
+  unpause?: EhrenamtsbonusSyncStep;
+  message?: EhrenamtsbonusSyncStep;
+  tasks?: EhrenamtsbonusSyncStep;
+};
+
 /** Antrag plus alles, was nur der Vorstand sieht. */
 export type EhrenamtsbonusAdminRequest = EhrenamtsbonusRequest & {
+  /** Nur direkt nach Annehmen/Ablehnen gesetzt, sonst `null`. */
+  campaiSync: EhrenamtsbonusCampaiSync | null;
   applicantName: string | null;
   applicantMemberNumber: string | null;
   cancelledByName: string | null;

@@ -127,18 +127,20 @@ const RHYTHM_TAG: Record<Rhythm, string> = {
 };
 
 // Die Mitgliederspalte ist hervorgehoben, die Gästespalte bleibt Papier.
-// Fährt die Maus über eine Zelle, färbt sich die ganze Spalte eine Stufe
-// kräftiger — per :has() auf der Tabelle, ohne Client-State. col-member und
-// col-guest sind nur Marker für diesen Selektor.
-const MEMBER_COLUMN =
-  "col-member bg-knglmrt-paper-pink transition-colors group-has-[.col-member:hover]/table:bg-knglmrt-pink-15";
-const GUEST_COLUMN =
-  "col-guest bg-transparent transition-colors group-has-[.col-guest:hover]/table:bg-knglmrt-pink-15";
+// col-member und col-guest markieren jede Zelle ihrer Spalte: Fährt die Maus
+// darüber, bekommt die ganze Spalte einen kräftigen Rahmen wie die Kacheln
+// im Inventar — per :has() auf der Tabelle, ohne Client-State.
+const MEMBER_MARK = "col-member";
+const GUEST_MARK = "col-guest";
+const MEMBER_COLUMN = cn(MEMBER_MARK, "bg-knglmrt-paper-pink");
+const GUEST_COLUMN = cn(GUEST_MARK, "bg-transparent");
+const COLUMN_FRAME =
+  "pointer-events-none absolute inset-y-0 w-[240px] opacity-0 shadow-[inset_0_0_0_3px_var(--primary)] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)]";
 
-const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_210px_210px]";
+const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_240px_240px]";
 const CELL_RULE = "border-l-[0.5px] border-knglmrt-dark-30";
-const COLUMN_LABEL =
-  "text-[10px] leading-3 font-bold tracking-[.13em] uppercase";
+const COLUMN_HEAD =
+  "font-display text-[length:var(--ui-size-section)] leading-[var(--ui-line-section)] font-black";
 
 function RhythmTag({
   className,
@@ -146,10 +148,7 @@ function RhythmTag({
 }: Readonly<{ className: string; children: ReactNode }>) {
   return (
     <span
-      className={cn(
-        "mt-1 self-start px-1.5 py-0.5 text-[10px] leading-3 font-bold tracking-[.1em] uppercase",
-        className,
-      )}
+      className={cn("knglmrt-tag mt-1 self-start px-1.5 py-0.5", className)}
     >
       {children}
     </span>
@@ -163,19 +162,14 @@ function PriceCell({
   return (
     <div
       className={cn(
-        "flex flex-col justify-center gap-0.5 px-[18px] py-3",
+        "flex flex-col justify-center gap-1 px-[18px] py-3",
         CELL_RULE,
         className,
       )}
     >
       {price.amount ? (
         <>
-          <span
-            className={cn(
-              "font-[family-name:var(--font-num)] text-[22px] leading-[1.1] font-bold",
-              RHYTHM_TEXT[price.rhythm],
-            )}
-          >
+          <span className={cn("knglmrt-value", RHYTHM_TEXT[price.rhythm])}>
             {price.amount}
           </span>
           <RhythmTag className={RHYTHM_TAG[price.rhythm]}>
@@ -183,14 +177,10 @@ function PriceCell({
           </RhythmTag>
         </>
       ) : (
-        <span className="font-[family-name:var(--font-num)] text-[15px] leading-[1.1] text-muted-foreground">
-          —
-        </span>
+        <span className="knglmrt-num text-muted-foreground">—</span>
       )}
       {price.note ? (
-        <span className="text-[11px] leading-[14px] text-muted-foreground">
-          {price.note}
-        </span>
+        <span className="text-muted-foreground">{price.note}</span>
       ) : null}
     </div>
   );
@@ -215,7 +205,22 @@ export default async function TarifePage() {
       />
 
       <div className="overflow-x-auto knglmrt-border">
-        <div className="group/table min-w-[600px]">
+        <div className="group/table relative min-w-[720px]">
+          {/* Rahmen über der Spalte unter der Maus */}
+          <div
+            aria-hidden
+            className={cn(
+              COLUMN_FRAME,
+              "right-[240px] group-has-[.col-member:hover]/table:opacity-100",
+            )}
+          />
+          <div
+            aria-hidden
+            className={cn(
+              COLUMN_FRAME,
+              "right-0 group-has-[.col-guest:hover]/table:opacity-100",
+            )}
+          />
           {/* Spaltenköpfe */}
           <div className={cn(ROW_GRID, "knglmrt-border-b")}>
             <div className="px-[18px] py-4" />
@@ -226,11 +231,9 @@ export default async function TarifePage() {
                 MEMBER_COLUMN,
               )}
             >
-              <span className={cn(COLUMN_LABEL, "text-primary")}>Intern</span>
-              <span className="font-display text-[23px] leading-none font-black">
-                Mitglieder
-              </span>
-              <span className="text-[11px] leading-[14px] text-muted-foreground">
+              <span className="knglmrt-caption text-primary">Intern</span>
+              <span className={COLUMN_HEAD}>Mitglieder</span>
+              <span className="text-muted-foreground">
                 Jahresbeitrag + Zugang
               </span>
             </div>
@@ -241,15 +244,11 @@ export default async function TarifePage() {
                 GUEST_COLUMN,
               )}
             >
-              <span className={cn(COLUMN_LABEL, "text-muted-foreground")}>
+              <span className="knglmrt-caption text-muted-foreground">
                 Extern
               </span>
-              <span className="font-display text-[23px] leading-none font-black">
-                Gäste
-              </span>
-              <span className="text-[11px] leading-[14px] text-muted-foreground">
-                ohne Mitgliedschaft
-              </span>
+              <span className={COLUMN_HEAD}>Gäste</span>
+              <span className="text-muted-foreground">ohne Mitgliedschaft</span>
             </div>
           </div>
 
@@ -257,12 +256,10 @@ export default async function TarifePage() {
           <div className={cn(ROW_GRID, "knglmrt-border-b")}>
             <div className="flex flex-col gap-1.5 px-[18px] py-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[15px] leading-[18px] font-bold">
-                  Jahresbeitrag
-                </span>
+                <span className="knglmrt-card-title">Jahresbeitrag</span>
                 <Badge tone="wartet">Pflicht für Mitglieder</Badge>
               </div>
-              <span className="text-xs leading-4 text-pretty text-muted-foreground">
+              <span className="text-pretty text-muted-foreground">
                 Macht dich zum Mitglied — der Zugang zu den Werkstätten kommt
                 unten dazu. Mindestens 120 €, freiwillig mehr; du wählst im
                 Antrag.
@@ -270,34 +267,28 @@ export default async function TarifePage() {
             </div>
             <div
               className={cn(
-                "flex flex-col justify-center gap-0.5 px-[18px] py-4",
+                "flex flex-col justify-center gap-1 px-[18px] py-4",
                 CELL_RULE,
                 MEMBER_COLUMN,
               )}
             >
-              <span className="font-[family-name:var(--font-num)] text-[22px] leading-[1.1] font-bold text-foreground">
-                ab 120 €
-              </span>
+              <span className="knglmrt-value text-foreground">ab 120 €</span>
               <RhythmTag className="bg-foreground text-background">
                 jährlich
               </RhythmTag>
-              <span className="text-[11px] leading-[14px] text-muted-foreground">
+              <span className="text-muted-foreground">
                 quartalsweise gezahlt
               </span>
             </div>
             <div
               className={cn(
-                "flex flex-col justify-center gap-0.5 px-[18px] py-4",
+                "flex flex-col justify-center gap-1 px-[18px] py-4",
                 CELL_RULE,
                 GUEST_COLUMN,
               )}
             >
-              <span className="font-[family-name:var(--font-num)] text-[15px] leading-[1.1] text-muted-foreground">
-                —
-              </span>
-              <span className="text-[11px] leading-[14px] text-muted-foreground">
-                entfällt
-              </span>
+              <span className="knglmrt-num text-muted-foreground">—</span>
+              <span className="text-muted-foreground">entfällt</span>
             </div>
           </div>
 
@@ -306,10 +297,8 @@ export default async function TarifePage() {
             className={cn(ROW_GRID, "border-b-[0.5px] border-knglmrt-dark-30")}
           >
             <div className="flex items-baseline gap-2 px-[18px] py-2.5">
-              <span className="font-display text-[19px] leading-none font-black text-primary">
-                +
-              </span>
-              <span className="text-[13px] font-bold">Zugang nach Wahl</span>
+              <span className="knglmrt-card-title text-primary">+</span>
+              <span className="knglmrt-card-title">Zugang nach Wahl</span>
             </div>
             <div className={cn(CELL_RULE, MEMBER_COLUMN)} />
             <div className={cn(CELL_RULE, GUEST_COLUMN)} />
@@ -320,14 +309,13 @@ export default async function TarifePage() {
               <div className={cn(ROW_GRID, "bg-muted")}>
                 <div
                   className={cn(
-                    COLUMN_LABEL,
-                    "px-[18px] py-2 text-muted-foreground",
+                    "knglmrt-caption px-[18px] py-2 text-muted-foreground",
                   )}
                 >
                   {group.title}
                 </div>
-                <div className={CELL_RULE} />
-                <div className={CELL_RULE} />
+                <div className={cn(CELL_RULE, MEMBER_MARK)} />
+                <div className={cn(CELL_RULE, GUEST_MARK)} />
               </div>
               {group.rows.map((row) => (
                 <div
@@ -338,10 +326,8 @@ export default async function TarifePage() {
                   )}
                 >
                   <div className="flex flex-col gap-[3px] px-[18px] py-3">
-                    <span className="text-[15px] leading-[18px] font-bold">
-                      {row.name}
-                    </span>
-                    <span className="text-xs leading-4 text-pretty text-muted-foreground">
+                    <span className="knglmrt-card-title">{row.name}</span>
+                    <span className="text-pretty text-muted-foreground">
                       {row.lead}
                     </span>
                   </div>
@@ -356,8 +342,8 @@ export default async function TarifePage() {
 
       <section className="grid items-center gap-x-7 gap-y-4 bg-knglmrt-yellow-30 px-5 py-[18px] md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex flex-col gap-1">
-          <p className="text-sm leading-[18px] font-bold">Hinweis</p>
-          <p className="text-[13px] leading-[18px] text-pretty">
+          <p className="knglmrt-card-title">Hinweis</p>
+          <p className="text-pretty">
             Enthalten ist nur der Zugang. Je nach Werkbereich brauchst du für
             bestimmte Maschinen eine Einweisung und/oder zahlst zusätzliche
             Gebühren.
@@ -365,7 +351,7 @@ export default async function TarifePage() {
           {user ? (
             <Link
               href="/werkbereiche"
-              className="text-xs text-primary underline hover:text-knglmrt-brown-100"
+              className="self-start text-primary underline hover:text-knglmrt-brown-100"
             >
               Einweisungen und Gebühren je Werkbereich
             </Link>
@@ -385,10 +371,8 @@ export default async function TarifePage() {
             <Face number={11} size={48} title="" />
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <h2 className="font-display text-[23px] leading-none font-black">
-              Mitglied werden
-            </h2>
-            <p className="text-[13px] leading-[18px] text-pretty">
+            <h2>Mitglied werden</h2>
+            <p className="text-pretty">
               Jahresbeitrag 120, 150 oder 180 € — du wählst im Antrag, was du
               zahlen kannst. Schon mit einer 10er-Karte im Jahr günstiger als
               extern.
@@ -404,10 +388,8 @@ export default async function TarifePage() {
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-[18px] bg-muted px-[26px] py-6">
           <Face number={21} size={48} title="" />
           <div className="flex min-w-0 flex-col gap-1.5">
-            <h2 className="font-display text-[23px] leading-none font-black">
-              Als Gast buchen
-            </h2>
-            <p className="text-[13px] leading-[18px] text-pretty">
+            <h2>Als Gast buchen</h2>
+            <p className="text-pretty">
               Einfach mal reinschnuppern: Tag, Woche, Monat, Quartal oder
               10er-Karte.
             </p>

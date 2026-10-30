@@ -7,6 +7,11 @@
 // schon angenommenen Bonus, ebenfalls nur mit Begründung. Ein offener Antrag
 // wird nicht storniert, sondern abgelehnt.
 //
+// Nach Annehmen oder Ablehnen laufen die Folgen (ehrenamtsbonus-followup.ts):
+// Abo in Campai pausieren, Nachricht über Campai, Roseguarden-Aufgaben. Ihr
+// Ergebnis kommt mit der Antwort zurück; `retry` wiederholt fehlgeschlagene
+// Schritte.
+//
 // „Vorstand" ist heute die Rolle `admin`: der Campai-Tag „vorstand" wird bei
 // der Registrierung auf genau diese Rolle abgebildet (siehe roles.ts).
 import { NextResponse } from "next/server";
@@ -18,6 +23,11 @@ import {
   parseAdminAction,
   parseStatus,
 } from "@/lib/ehrenamtsbonus";
+import {
+  type FollowUpStep,
+  runFollowUp,
+  stepsFor,
+} from "@/lib/ehrenamtsbonus-followup";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { can } from "@/lib/access/access";
 import { loadUserAccess } from "@/lib/access/server";
@@ -35,7 +45,9 @@ export const POST = async (
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")) {
+  if (
+    !can(await loadUserAccess(supabase, data.user), "ehrenamtsbonus.manage")
+  ) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
@@ -44,6 +56,10 @@ export const POST = async (
     string,
     unknown
   >;
+
+  if (body.decision === "retry") {
+    return retry(id, body.steps, data.user.id);
+  }
 
   const action = parseAdminAction(body.decision);
   if (!action) {
@@ -158,9 +174,69 @@ export const POST = async (
   );
   const actorName = actor?.campaiName ?? null;
 
+  const mapped = mapRequestRow(updated as Record<string, unknown>);
+  const campaiSync = mapped
+    ? await runFollowUp({
+        client: adminClient,
+        request: mapped,
+        action,
+        note,
+        actorId: data.user.id,
+      })
+    : null;
+
   return NextResponse.json({
-    request: mapRequestRow(updated as Record<string, unknown>),
+    request: mapped ? { ...mapped, campaiSync } : null,
     decidedByName: action === "cancel" ? null : actorName,
     cancelledByName: action === "cancel" ? actorName : null,
   });
+};
+
+/** Wiederholt fehlgeschlagene Folgeschritte einer Entscheidung. */
+const retry = async (id: string, rawSteps: unknown, actorId: string) => {
+  const adminClient = createSupabaseAdminClient();
+  const { data: row, error } = await adminClient
+    .from(EHRENAMTSBONUS_TABLE)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  const request = row ? mapRequestRow(row as Record<string, unknown>) : null;
+  if (!request)
+    return NextResponse.json(
+      { error: "Antrag nicht gefunden." },
+      { status: 404 },
+    );
+  if (request.status === "in_review") {
+    return NextResponse.json(
+      { error: "Vor der Entscheidung gibt es nichts zu wiederholen." },
+      { status: 409 },
+    );
+  }
+  const action =
+    request.status === "approved"
+      ? "approve"
+      : request.status === "cancelled"
+        ? "cancel"
+        : "reject";
+  const allowed = stepsFor(request, action);
+  const steps = (Array.isArray(rawSteps) ? rawSteps : []).filter(
+    (step): step is FollowUpStep => allowed.includes(step as FollowUpStep),
+  );
+  if (steps.length === 0) {
+    return NextResponse.json(
+      { error: "Kein Schritt zum Wiederholen." },
+      { status: 400 },
+    );
+  }
+  const campaiSync = await runFollowUp({
+    client: adminClient,
+    request,
+    action,
+    note: action === "cancel" ? request.cancellationNote : request.decisionNote,
+    actorId,
+    only: steps,
+  });
+  return NextResponse.json({ campaiSync });
 };
