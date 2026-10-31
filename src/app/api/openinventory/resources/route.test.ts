@@ -19,7 +19,11 @@ describe("inventory list API", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect((await response.json()).count).toBe(596);
   });
-  it.each(["?limit=501", "?offset=-1", "?limit=NaN", "?offset=1.5"])("rejects invalid pagination %s", async query => {
+  it("preserves the showcase editor's 1500-item inventory selector", async () => {
+    expect((await GET(request("?limit=1500&offset=0"))).status).toBe(200);
+    expect(mocks.list).toHaveBeenCalledWith({ offset: 0, limit: 1500, query: "", type: "" });
+  });
+  it.each(["?limit=1501", "?offset=-1", "?limit=NaN", "?offset=1.5"])("rejects invalid pagination %s", async query => {
     expect((await GET(request(query))).status).toBe(400);
     expect(mocks.list).not.toHaveBeenCalled();
   });
