@@ -1,3 +1,4 @@
+import { inventoryEditingMoved } from "@/lib/inventory-editing-moved";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -1036,6 +1037,8 @@ export const PUT = async (
   if (!existingResource) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (existingResource.type?.trim().toLowerCase() !== SHOWCASE_RESOURCE_TYPE) return inventoryEditingMoved();
+
 
   // Eigene Einträge immer, fremde nur mit der Rolle (canEditResource). Wer
   // nicht Eigentümer ist, schreibt über den Service-Client — die RLS kennt
@@ -1055,6 +1058,7 @@ export const PUT = async (
   ) as typeof supabase;
 
   const payload = await readResourcePayload(request);
+  if (payload.type.trim().toLowerCase() !== SHOWCASE_RESOURCE_TYPE) return inventoryEditingMoved();
   if (
     (payload.isPrivate ?? false) !== (existingResource.is_private ?? false) &&
     !can(access, "showcase.private")
@@ -1375,6 +1379,8 @@ export const DELETE = async (
   const isShowcase =
     typeof row.type === "string" &&
     row.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
+
+  if (!isShowcase) return inventoryEditingMoved();
 
   // Inventar nur mit resources.delete, Showcases auch die eigenen. Gelöscht
   // wird nach der Prüfung immer über den Service-Client — die RLS erlaubt

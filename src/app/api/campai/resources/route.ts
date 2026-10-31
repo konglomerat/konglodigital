@@ -1,3 +1,4 @@
+import { inventoryEditingMoved } from "@/lib/inventory-editing-moved";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -822,120 +823,7 @@ const toResourcePayload = (
     : undefined,
 });
 
-export const GET = async (request: NextRequest) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const searchParams = request.nextUrl.searchParams;
-  const limit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
-  const offset = Number.parseInt(searchParams.get("offset") ?? "0", 10);
-  const searchTerm =
-    searchParams.get("searchTerm") ?? searchParams.get("q") ?? "";
-  const resourceType = searchParams.get("type") ?? "";
-  const effectiveLimit = Number.isNaN(limit) ? 50 : Math.max(1, limit);
-  const effectiveOffset = Number.isNaN(offset) ? 0 : Math.max(0, offset);
-
-  let query = supabase
-    .from("resources")
-    .select("*", { count: "exact" })
-    .not("type", "ilike", SHOWCASE_RESOURCE_TYPE)
-    .order("priority", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .range(
-      effectiveOffset,
-      effectiveOffset + effectiveLimit - 1,
-    );
-
-  if (searchTerm.trim()) {
-    const term = `%${searchTerm.trim()}%`;
-    query = query.or(
-      `name.ilike.${term},excerpt.ilike.${term},description.ilike.${term}`,
-    );
-  }
-
-  if (resourceType.trim()) {
-    query = query.ilike("type", resourceType.trim());
-  }
-
-  const { data: rows, error, count } = await query;
-  if (error) {
-    const rangeNotSatisfiable =
-      error.code === "PGRST103" ||
-      error.message.toLowerCase().includes("range not satisfiable");
-
-    if (rangeNotSatisfiable) {
-      let countQuery = supabase
-        .from("resources")
-        .select("*", { count: "exact", head: true })
-        .not("type", "ilike", SHOWCASE_RESOURCE_TYPE);
-
-      if (searchTerm.trim()) {
-        const term = `%${searchTerm.trim()}%`;
-        countQuery = countQuery.or(
-          `name.ilike.${term},excerpt.ilike.${term},description.ilike.${term}`,
-        );
-      }
-
-      if (resourceType.trim()) {
-        countQuery = countQuery.ilike("type", resourceType.trim());
-      }
-
-      const { count: matchingCount, error: countError } = await countQuery;
-      if (!countError) {
-        return NextResponse.json({
-          resources: [],
-          count: matchingCount ?? 0,
-        });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error.message || "Unable to load resources." },
-      { status: 500 },
-    );
-  }
-
-  const workshopById = await getWorkshopResourcesMap(
-    supabase,
-    (rows ?? []).map(
-      (row) => (row as ResourceRow).workshop_resource_id ?? null,
-    ),
-  );
-
-  const resources = (rows ?? []).map((row) =>
-    toResourcePayload(row as ResourceRow, workshopById),
-  );
-  let relatedResourcesMap = new Map<
-    string,
-    Array<{ id: string; name?: string }>
-  >();
-  try {
-    relatedResourcesMap = await getRelatedResourcesMap(
-      supabase,
-      resources.map((resource) => resource.id),
-    );
-  } catch (relatedError) {
-    console.error("Unable to load related resources map:", relatedError);
-    relatedResourcesMap = new Map(
-      resources.map((resource) => [
-        resource.id,
-        [] as Array<{ id: string; name?: string }>,
-      ]),
-    );
-  }
-  const resourcesWithRelated = resources.map((resource) => ({
-    ...resource,
-    relatedResources: relatedResourcesMap.get(resource.id) ?? [],
-  }));
-
-  return NextResponse.json({
-    resources: resourcesWithRelated,
-    count: typeof count === "number" ? count : resourcesWithRelated.length,
-  });
-};
+export { GET } from "@/app/api/openinventory/resources/route";
 
 export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
@@ -945,6 +833,8 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await readResourcePayload(request);
+  if (payload.type.trim().toLowerCase() !== SHOWCASE_RESOURCE_TYPE) return inventoryEditingMoved();
+
   if (payload.mapFeatures?.some(isPlaceholderGpsPointFeature)) {
     return NextResponse.json(
       { error: "Location coordinates [0, 0] are invalid." },
