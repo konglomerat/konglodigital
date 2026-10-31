@@ -1,3 +1,4 @@
+import { inventoryEditingMoved } from "@/lib/inventory-editing-moved";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -139,6 +140,8 @@ export const POST = async (request: NextRequest) => {
   if (!keepResource || !removeResource) {
     return NextResponse.json({ error: "Resource not found." }, { status: 404 });
   }
+  if ([keepResource, removeResource].some(row => row.type?.trim().toLowerCase() !== "project")) return inventoryEditingMoved();
+
 
   const access = await loadUserAccess(supabase, data.user);
   const canDeleteRemoveResource = canDeleteResource(access, {

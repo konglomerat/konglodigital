@@ -1,3 +1,4 @@
+import { inventoryEditingMoved } from "@/lib/inventory-editing-moved";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -822,6 +823,8 @@ const toResourcePayload = (
     : undefined,
 });
 
+// Showcases retain their legacy resource links (Supabase foreign keys).
+// The inventory pages use /api/openinventory/resources directly.
 export const GET = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data } = await supabase.auth.getUser();
@@ -945,6 +948,8 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await readResourcePayload(request);
+  if (payload.type.trim().toLowerCase() !== SHOWCASE_RESOURCE_TYPE) return inventoryEditingMoved();
+
   if (payload.mapFeatures?.some(isPlaceholderGpsPointFeature)) {
     return NextResponse.json(
       { error: "Location coordinates [0, 0] are invalid." },

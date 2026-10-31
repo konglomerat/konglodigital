@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "@/components/knglmrt/Button";
 import { can } from "@/lib/access/access";
 import type { AccountAccessResponse } from "@/app/api/account/access/route";
+import { isInventoryOAuthClient } from "@/lib/oauth-client-access";
 import { createSupabaseCookieBrowserClient } from "@/lib/supabase/cookie-browser";
 
 type AuthorizationDetails = {
   client: {
+    id: string;
     name: string;
     uri: string;
   };
@@ -29,8 +31,10 @@ const getReturnPath = () =>
 
 export default function OAuthConsentClient({
   authorizationId,
+  inventoryClientId,
 }: {
   authorizationId: string;
+  inventoryClientId: string;
 }) {
   const supabase = useMemo(() => createSupabaseCookieBrowserClient(), []);
   const [view, setView] = useState<ViewState>({ status: "loading" });
@@ -56,28 +60,6 @@ export default function OAuthConsentClient({
         return;
       }
 
-      const accessResponse = await fetch("/api/account/access", {
-        cache: "no-store",
-      }).catch(() => null);
-      const accessData = accessResponse?.ok
-        ? ((await accessResponse.json()) as AccountAccessResponse)
-        : null;
-
-      if (!isCurrent) return;
-
-      if (!accessData) {
-        setView({
-          status: "error",
-          message: "Die Backend-Berechtigung konnte nicht geprüft werden.",
-        });
-        return;
-      }
-
-      if (!can(accessData.access, "backend.login")) {
-        setView({ status: "denied" });
-        return;
-      }
-
       const { data, error } =
         await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
 
@@ -96,6 +78,33 @@ export default function OAuthConsentClient({
         return;
       }
 
+      // Inventory authorizes its own existing users and memberships. All other
+      // clients retain the existing CMS role check. Never trust a client name.
+      if (!isInventoryOAuthClient(data.client.id, inventoryClientId)) {
+        const accessResponse = await fetch("/api/account/access", {
+          cache: "no-store",
+        }).catch(() => null);
+        const accessData = accessResponse?.ok
+          ? ((await accessResponse.json()) as AccountAccessResponse)
+          : null;
+
+        if (!isCurrent) return;
+
+        if (!accessData) {
+          setView({
+            status: "error",
+            message: "Die Backend-Berechtigung konnte nicht geprüft werden.",
+          });
+          return;
+        }
+
+        if (!can(accessData.access, "backend.login")) {
+          setView({ status: "denied" });
+          return;
+        }
+
+      }
+
       setView({ status: "ready", details: data });
     };
 
@@ -104,7 +113,7 @@ export default function OAuthConsentClient({
     return () => {
       isCurrent = false;
     };
-  }, [authorizationId, supabase]);
+  }, [authorizationId, inventoryClientId, supabase]);
 
   const decide = async (decision: "approve" | "deny") => {
     setIsSubmitting(true);
@@ -135,7 +144,7 @@ export default function OAuthConsentClient({
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
       <section className="w-full max-w-lg knglmrt-border bg-card p-8">
         <h1 className="text-2xl font-semibold text-foreground">
-          Backend-Zugriff
+          Anmeldung bestätigen
         </h1>
 
         {view.status === "loading" ? (
@@ -167,8 +176,9 @@ export default function OAuthConsentClient({
               <strong>{view.details.user.email}</strong> anmelden.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Du erlaubst dem CMS, dich mit deinem bestehenden Konto anzumelden
-              und deine Backend-Berechtigung zu prüfen.
+              Du erlaubst dieser Anwendung, dich mit deinem bestehenden Konto
+              anzumelden und deine bestätigte E-Mail-Adresse und dein Profil zu lesen.
+              Deine Zugriffsrechte verwaltet die jeweilige Anwendung.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button
@@ -177,7 +187,7 @@ export default function OAuthConsentClient({
                 disabled={isSubmitting}
                 onClick={() => void decide("approve")}
               >
-                Backend öffnen
+                Anmelden
               </Button>
               <Button
                 kind="secondary"

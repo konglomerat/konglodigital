@@ -1,3 +1,4 @@
+import { inventoryEditingMoved } from "@/lib/inventory-editing-moved";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -194,6 +195,8 @@ export const POST = async (
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  if (row.type?.trim().toLowerCase() !== "project") return inventoryEditingMoved();
 
   const resourceRow = row as ResourceRow & {
     owner_id?: string | null;
