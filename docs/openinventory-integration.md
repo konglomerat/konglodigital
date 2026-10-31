@@ -53,3 +53,17 @@ inventory data. Revoke the integration token when retiring this connection.
 
 Validation: `npm test`, `npx tsc --noEmit`, `npm run build`; authenticated live UI
 checks for list/search/detail/map/media, anonymous API rejection, and editor links.
+
+## Shared Supabase login
+
+The consent page supports the dedicated **Konglomerat Inventar** OAuth client.
+Set `OPENINVENTORY_OAUTH_CLIENT_ID` to its exact registered ID. Inventory checks
+its own pre-existing user accounts and organization memberships, so this client
+must not require the unrelated CMS `backend` role. Unknown clients and the CMS
+retain the existing `backend.login` check. Matching uses the provider-returned
+client ID, never a name, browser parameter, or redirect URL.
+
+The consent page reuses Digital's existing Supabase cookie session. Inventory
+receives only the authorization code and completes its own server-side exchange.
+Its client secret and provider tokens are never included in Digital's page.
+Test with `node --test scripts/supabase-oauth-session.test.mjs scripts/oauth-inventory-consent.test.mjs`.
