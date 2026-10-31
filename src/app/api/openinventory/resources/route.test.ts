@@ -19,7 +19,7 @@ describe("inventory list API", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect((await response.json()).count).toBe(596);
   });
-  it("preserves the showcase editor's 1500-item inventory selector", async () => {
+  it("supports bounded larger inventory selections", async () => {
     expect((await GET(request("?limit=1500&offset=0"))).status).toBe(200);
     expect(mocks.list).toHaveBeenCalledWith({ offset: 0, limit: 1500, query: "", type: "" });
   });

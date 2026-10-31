@@ -26,7 +26,9 @@ gallery entries. No integration response may be publicly cached.
 OpenInventory slugs and IDs work on the old detail route. Historical Unicode
 aliases resolve through the existing Supabase alias table to an ID; all content
 is still read from OpenInventory. The legacy database remains intact. Showcases
-continue using their existing storage and editing paths.
+continue using their existing storage, editing paths and resource selector.
+The legacy `/api/campai/resources` GET remains for that selector because its
+relationships have foreign keys into the existing Supabase catalog.
 
 Create/edit/map/duplicate entry points redirect to OpenInventory. Legacy inventory
 writes and Campai sync/rental actions are disabled. Shared showcase create/update/
