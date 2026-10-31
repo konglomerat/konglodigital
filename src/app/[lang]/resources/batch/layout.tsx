@@ -1,8 +1,1 @@
-import AccessGuard, { isSignedIn } from "../../admin/AccessGuard";
-
-// Anlegen darf jedes angemeldete Mitglied.
-export default function BatchCaptureLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return <AccessGuard check={isSignedIn}>{children}</AccessGuard>;
-}
+export default function Layout({ children }: { children: React.ReactNode }) { return children; }

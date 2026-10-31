@@ -1,12 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   faArrowLeft,
-  faLayerGroup,
   faPen,
-  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 
 import type { ResourcePayload } from "@/lib/campai-resources";
@@ -20,17 +17,9 @@ import ResourcesMapView from "../ResourcesMapView";
 import { RESOURCE_TYPES } from "../resource-types";
 import { getPointFeatures } from "../map-features";
 import { renderSimpleMarkdown } from "@/lib/simple-markdown";
-import {
-  canDeleteResource,
-  canEditResource,
-} from "@/lib/access/resource-access";
-import { useAccess } from "@/lib/access/use-access";
-import {
-  deriveLoanStatus,
-  LoanSectionBody,
-  SidebarSection,
-  useRentalSnapshot,
-} from "./ResourceLoan";
+import { SidebarSection } from "./ResourceLoan";
+import { inventoryEditUrl } from "@/lib/openinventory-contract";
+import { getResourcePreviewUrl } from "@/lib/resource-media";
 
 type Resource = ResourcePayload;
 
@@ -47,32 +36,10 @@ export default function ResourceDetailClient({
   initialMapBasemapResources,
   initialErrorMessage,
 }: ResourceDetailClientProps) {
-  const router = useRouter();
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
-  // Die Seite ist statisch erzeugt — welche Knöpfe passen, entscheidet der
-  // Browser, sobald die Rechte da sind. Die API prüft trotzdem selbst.
-  const access = useAccess();
-  const [resource] = useState<Resource | null>(initialResource);
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    initialErrorMessage,
-  );
-  const [deleting, setDeleting] = useState(false);
+  const resource = initialResource;
+  const errorMessage = initialErrorMessage;
   const [mapOpen, setMapOpen] = useState(true);
-  const [loanOpen, setLoanOpen] = useState(false);
-  const rental = useRentalSnapshot(resourceId);
-  const loanStatus = useMemo(
-    () => deriveLoanStatus(rental.snapshot, tx),
-    [rental.snapshot, tx],
-  );
-  const openLoan = () => {
-    setLoanOpen(true);
-    // Auf schmalen Bildschirmen steht die Seitenleiste unter dem Inhalt.
-    requestAnimationFrame(() =>
-      document
-        .getElementById("ausleihen")
-        ?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
-    );
-  };
 
   const normalizedMapBasemapResources = useMemo(
     () =>
@@ -136,91 +103,9 @@ export default function ResourceDetailClient({
     [resource?.description],
   );
 
-  const canEdit = canEditResource(access, {
-    ownerId: resource?.ownerId,
-    type: resource?.type,
-  });
-  const canDelete = canDeleteResource(access, {
-    ownerId: resource?.ownerId,
-    type: resource?.type,
-  });
-
-  const pageTitleLinks = resource
-    ? [
-        {
-          label: loanStatus?.mine
-            ? tx("Deine Ausleihe", "de")
-            : tx("Ausleihen", "de"),
-          onClick: openLoan,
-          kind: "primary" as const,
-        },
-        ...(canEdit
-          ? [
-              {
-                href: localizePathname(
-                  `/resources/features?resourceId=${resourceId}`,
-                  locale,
-                ),
-                label: tx("Edit"),
-                icon: faPen,
-                className: "border-primary-border text-primary",
-              },
-              {
-                href: localizePathname(
-                  `/resources/features?resourceId=${resourceId}`,
-                  locale,
-                ),
-                label: tx("Map features"),
-                icon: faLayerGroup,
-              },
-            ]
-          : []),
-        ...(canDelete
-          ? [
-              {
-                label: deleting ? tx("Deleting…") : tx("Delete"),
-                onClick: async () => {
-                  if (deleting) {
-                    return;
-                  }
-                  const confirmed = window.confirm(
-                    tx("Really delete this resource? This cannot be undone."),
-                  );
-                  if (!confirmed) {
-                    return;
-                  }
-                  setDeleting(true);
-                  setErrorMessage(null);
-                  try {
-                    const response = await fetch(
-                      `/api/campai/resources/${resourceId}`,
-                      {
-                        method: "DELETE",
-                      },
-                    );
-                    const data = (await response.json()) as { error?: string };
-                    if (!response.ok) {
-                      throw new Error(data.error ?? tx("Unable to delete resource."));
-                    }
-                    // Gesperrt lassen, bis die Übersicht da ist.
-                    router.push(localizePathname("/resources", locale));
-                  } catch (error) {
-                    setErrorMessage(
-                      error instanceof Error
-                        ? error.message
-                        : tx("Unable to delete resource."),
-                    );
-                    setDeleting(false);
-                  }
-                },
-                disabled: deleting,
-                icon: faTrash,
-                kind: "danger-secondary" as const,
-              },
-            ]
-          : []),
-      ]
-    : undefined;
+  const pageTitleLinks = resource ? [{
+    href: inventoryEditUrl(resourceId), label: tx("In OpenInventory bearbeiten", "de"), icon: faPen,
+  }] : undefined;
 
   const media = resource?.images?.length
     ? resource.images
@@ -255,7 +140,8 @@ export default function ResourceDetailClient({
           <div className="flex min-w-0 flex-col gap-6">
             <MediaLightboxGallery
               media={media}
-              previewMedia={media}
+              previewMedia={media.map(url => getResourcePreviewUrl(url, resource.mediaPreviews) ?? url)}
+              mediaPosters={resource.mediaPosters ?? undefined}
               title={resource.name}
               closeLabel={tx("Close")}
               previousLabel={tx("Prev")}
@@ -334,7 +220,7 @@ export default function ResourceDetailClient({
           </div>
 
           <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-6">
-            {resourceGps ? (
+            {resource.mapFeatures?.length ? (
               <SidebarSection
                 title={tx("Location")}
                 open={mapOpen}
@@ -346,51 +232,18 @@ export default function ResourceDetailClient({
                     pointResources={[resource]}
                     className="h-[260px] w-full"
                   />
-                  {loanStatus?.mapNote ? (
-                    <div
-                      className={`flex flex-col gap-0.5 px-3 py-2.5 text-foreground ${
-                        loanStatus.tone === "rosa"
-                          ? "bg-primary-soft"
-                          : "bg-warning-soft"
-                      }`}
-                    >
-                      {loanStatus.mapNoteEyebrow ? (
-                        <span className="knglmrt-caption text-primary">
-                          {loanStatus.mapNoteEyebrow}
-                        </span>
-                      ) : null}
-                      <span>{loanStatus.mapNote}</span>
-                    </div>
-                  ) : null}
-                  <a
+                  {resourceGps ? <a
                     href={`https://www.google.com/maps?q=${resourceGps.latitude},${resourceGps.longitude}`}
                     target="_blank"
                     rel="noreferrer"
                     className="self-start font-bold text-primary hover:text-[var(--knglmrt-brown-100)]"
                   >
                     {tx("Open map")}
-                  </a>
+                  </a> : null}
                 </div>
               </SidebarSection>
             ) : null}
 
-            <SidebarSection
-              id="ausleihen"
-              title={tx("Ausleihen", "de")}
-              sub={loanStatus?.sub}
-              open={loanOpen}
-              onToggle={() => setLoanOpen((open) => !open)}
-            >
-              <LoanSectionBody
-                resourceId={resourceId}
-                snapshot={rental.snapshot}
-                status={loanStatus}
-                loading={rental.loading}
-                errorMessage={rental.errorMessage}
-                reload={rental.reload}
-                tx={tx}
-              />
-            </SidebarSection>
           </aside>
         </div>
       )}

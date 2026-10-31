@@ -18,6 +18,7 @@ import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 type MediaLightboxGalleryProps = {
   media: string[];
   previewMedia?: string[];
+  mediaPosters?: Record<string, string>;
   title: string;
   closeLabel: string;
   previousLabel: string;
@@ -36,6 +37,7 @@ const renderMedia = (
   options?: {
     controls?: boolean;
     autoPlay?: boolean;
+    poster?: string;
   },
 ) => {
   const mediaKind = getResourceMediaKindFromUrl(mediaUrl);
@@ -44,6 +46,7 @@ const renderMedia = (
     return (
       <video
         src={mediaUrl}
+        poster={options?.poster}
         controls={options?.controls ?? false}
         autoPlay={options?.autoPlay ?? true}
         muted
@@ -76,6 +79,7 @@ const renderMedia = (
 export default function MediaLightboxGallery({
   media,
   previewMedia,
+  mediaPosters,
   title,
   closeLabel,
   previousLabel,
@@ -158,7 +162,7 @@ export default function MediaLightboxGallery({
       onClick={() => setLightboxIndex(index)}
       aria-label={`${title} ${index + 1}`}
     >
-      {renderMedia(previewMediaUrl, `${title} ${index + 1}`, mediaClassName)}
+      {renderMedia(previewMediaUrl, `${title} ${index + 1}`, mediaClassName, { poster: mediaPosters?.[normalizedMedia[index]] })}
     </button>
   );
 
@@ -272,6 +276,7 @@ export default function MediaLightboxGallery({
           {getResourceMediaKindFromUrl(activeLightboxMedia) === "video" ? (
             <video
               src={activeLightboxMedia}
+              poster={mediaPosters?.[activeLightboxMedia]}
               controls
               autoPlay
               muted

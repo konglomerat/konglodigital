@@ -46,8 +46,7 @@ import {
   getResourcePreviewUrl,
 } from "@/lib/resource-media";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
-import { can } from "@/lib/access/access";
-import { useAccess } from "@/lib/access/use-access";
+import { INVENTORY_HOME, INVENTORY_URL } from "@/lib/openinventory-contract";
 import Choice from "@/components/knglmrt/Choice";
 
 type Resource = ResourcePayload;
@@ -121,6 +120,7 @@ const truncateText = (text: string, maxLength: number) => {
 
 const getSupabaseThumbnailUrl = (url: string, width = 700) => {
   try {
+    if (url.startsWith("/api/openinventory/media/")) return `${url}?w=640`;
     const marker = "/storage/v1/object/public/";
     if (!url.includes(marker)) {
       return url;
@@ -235,6 +235,8 @@ const ResourceItem = ({
                     <FontAwesomeIcon icon={faFilePdf} className="h-8 w-8" />
                     <span className="knglmrt-tag mt-2">PDF</span>
                   </div>
+                ) : getResourceMediaKindFromUrl(slide.url) === "video" ? (
+                  <video src={slide.url} muted loop playsInline autoPlay preload="metadata" className="block h-full w-full object-contain" />
                 ) : (
                   <img
                     src={slide.url}
@@ -453,9 +455,6 @@ export default function ResourcesPageClient({
   initialResourceType,
 }: ResourcesPageClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
-  // Verwaltende Aktionen (Neu, Dubletten, Bearbeiten …) nur mit der passenden
-  // Inventar-Berechtigung; bis die Rechte geladen sind, bleiben sie weg.
-  const access = useAccess();
   const overviewStorageKey = "resourcesOverviewState";
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -491,7 +490,6 @@ export default function ResourcesPageClient({
   );
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [syncingCampai, setSyncingCampai] = useState(false);
   const normalizedSearchTerm = searchTerm.trim();
   const resourceTypes = useMemo(
     () =>
@@ -1040,6 +1038,10 @@ export default function ResourcesPageClient({
   );
 
   const searchAndTypeFilteredResources = normalizedResources;
+  const allMapPointResources = useMemo(() => normalizedMapBasemapResources.filter(resource =>
+    (!initialResourceType || resource.type === initialResourceType) &&
+    (!initialQueryText || [resource.name, resource.excerpt, resource.description, ...(resource.tags ?? [])].some(value => value?.toLocaleLowerCase().includes(initialQueryText.toLocaleLowerCase())))
+  ), [normalizedMapBasemapResources, initialResourceType, initialQueryText]);
 
   const mapOverlayResources = useMemo(() => {
     const combinedById = new Map(
@@ -1119,7 +1121,7 @@ export default function ResourcesPageClient({
       }
 
       const response = await fetch(
-        `/api/campai/resources?${params.toString()}`,
+        `/api/openinventory/resources?${params.toString()}`,
         {
           cache: "no-store",
         },
@@ -1167,28 +1169,6 @@ export default function ResourcesPageClient({
     tx,
   ]);
 
-  const syncAllToCampai = useCallback(async () => {
-    setSyncingCampai(true);
-    try {
-      const response = await fetch("/api/campai/resources/sync", {
-        method: "POST",
-      });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? tx("Campai sync failed.", "en"));
-      }
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : tx("Campai sync failed.", "en"),
-      );
-    } finally {
-      setSyncingCampai(false);
-    }
-  }, [tx]);
-
   const handleIncludeWithinChange = (nextValue: boolean) => {
     setIncludeWithinPolygons(nextValue);
     replaceFilterParamsInUrl(
@@ -1235,42 +1215,8 @@ export default function ResourcesPageClient({
   const isUnfilteredServerCount = !initialQueryText && !initialResourceType;
 
   const toolsMenuItems: ToolsMenuItem[] = [
-    // Anlegen darf jedes angemeldete Mitglied.
-    ...(access
-      ? [
-          {
-            href: localizePathname("/resources/batch", locale),
-            label: tx("Batch capture"),
-            hint: tx("Mehrere Ressourcen nacheinander fotografieren", "de"),
-          },
-        ]
-      : []),
-    ...(can(access, "resources.delete")
-      ? [
-          {
-            href: localizePathname("/resources/duplicates", locale),
-            label: tx("Duplicates"),
-            hint: tx("Doppelte Einträge finden und zusammenführen", "de"),
-          },
-        ]
-      : []),
-    ...(can(access, "resources.edit")
-      ? [
-          {
-            href: localizePathname("/resources/features", locale),
-            label: tx("Map features"),
-            hint: tx("Räume und Standorte auf der Karte pflegen", "de"),
-          },
-          {
-            label: syncingCampai
-              ? tx("Syncing…", "en")
-              : tx("Sync all to Campai", "en"),
-            hint: tx("Alle Ressourcen abgleichen", "de"),
-            onClick: syncAllToCampai,
-            disabled: syncingCampai,
-          },
-        ]
-      : []),
+    { href: INVENTORY_HOME, label: tx("In OpenInventory verwalten", "de"), hint: tx("Bearbeiten, anlegen und organisieren", "de") },
+    { href: `${INVENTORY_URL}/konglomerat/map`, label: tx("Map features"), hint: tx("Räume und Standorte in OpenInventory pflegen", "de") },
   ];
 
   const renderResults = (
@@ -1369,7 +1315,7 @@ export default function ResourcesPageClient({
         {placement === "stretch" ? mapViewportChoice : null}
         <ResourcesMapView
           resources={mapOverlayResources}
-          pointResources={searchAndTypeFilteredResources}
+          pointResources={allMapPointResources}
           highlightedResourceId={hoveredResourceId}
           onVisibleResourceIdsChange={handleVisibleResourceIdsChange}
           className={`w-full overflow-hidden knglmrt-border ${
@@ -1397,15 +1343,13 @@ export default function ResourcesPageClient({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {access ? (
-            <Button
+          <Button
               kind="emphasis"
               icon={faPlus}
-              href={localizePathname("/resources/new", locale)}
+              href={`${INVENTORY_HOME}/new`}
             >
-              {tx("New resource")}
-            </Button>
-          ) : null}
+              {tx("In OpenInventory anlegen", "de")}
+          </Button>
           {toolsMenuItems.length > 0 ? (
             <ToolsMenu label={tx("Werkzeuge", "de")} items={toolsMenuItems} />
           ) : null}
