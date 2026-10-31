@@ -3,7 +3,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { resolveResourceIdByPrettyTitle } from "@/lib/resource-pretty-title";
-import { INVENTORY_URL, toPublicInventoryResource, type InventoryResource } from "./openinventory-contract";
+import { INVENTORY_URL, inventoryIdentifier, toPublicInventoryResource, type InventoryResource } from "./openinventory-contract";
 
 export class InventoryApiError extends Error {
   constructor(public status: number) { super("Das Inventar ist momentan nicht erreichbar. Bitte später erneut versuchen."); }
@@ -53,7 +53,8 @@ export const inventoryRawResource = unstable_cache(async (id: string) => {
   return result.resource;
 }, ["openinventory-resource-v1"], { revalidate: 15 });
 
-export const inventoryResource = cache(async (id: string) => {
+export const inventoryResource = cache(async (identifier: string) => {
+  const id = inventoryIdentifier(identifier);
   let raw: InventoryResource;
   try { raw = await inventoryRawResource(id); }
   catch (error) {

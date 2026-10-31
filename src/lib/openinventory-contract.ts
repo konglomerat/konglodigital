@@ -4,6 +4,12 @@ export const INVENTORY_URL = "https://inventar.konglomerat.org";
 export const INVENTORY_HOME = `${INVENTORY_URL}/konglomerat/inventory`;
 export const inventoryEditUrl = (id: string) => `${INVENTORY_HOME}/${encodeURIComponent(id)}/edit`;
 
+// Next's locale rewrite may retain percent-encoded dynamic path segments.
+export function inventoryIdentifier(value: string): string {
+  try { return decodeURIComponent(value).normalize("NFC"); }
+  catch { return value; }
+}
+
 export type InventoryMedia = {
   id: string; resourceId: string; name: string; url: string; kind: string;
   mimeType: string; position: number; previewMediaId?: string | null; posterMediaId?: string | null;

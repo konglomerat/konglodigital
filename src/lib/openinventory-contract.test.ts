@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inventoryEditUrl, inventoryMediaUrl, toPublicInventoryResource, type InventoryResource, type InventoryMedia } from "./openinventory-contract";
+import { inventoryEditUrl, inventoryIdentifier, inventoryMediaUrl, toPublicInventoryResource, type InventoryResource, type InventoryMedia } from "./openinventory-contract";
 const media = (id: string, mimeType = "image/jpeg", extra = {}): InventoryMedia => ({ id, resourceId: "resource-1", name: "untrusted.html", url: `/api/files/${id}`, mimeType, kind: mimeType.startsWith("video/") ? "video" : "image", position: 0, ...extra });
 const resource = (extra = {}): InventoryResource => ({ id: "resource-1", name: "Werkzeug", type: "object", ...extra });
 describe("public OpenInventory projection", () => {
@@ -29,5 +29,13 @@ describe("public OpenInventory projection", () => {
   it("uses GPS when there are no features and encodes edit path segments", () => {
     expect(toPublicInventoryResource(resource({ gpsLatitude: 51, gpsLongitude: 13 })).mapFeatures?.[0]).toMatchObject({ geometryType: "Point", point: [13, 51] });
     expect(inventoryEditUrl("id?evil")).toBe("https://inventar.konglomerat.org/konglomerat/inventory/id%3Fevil/edit");
+  });
+});
+
+describe("historical inventory identifiers", () => {
+  it("decodes locale-rewritten umlaut paths and preserves already decoded aliases", () => {
+    expect(inventoryIdentifier("tischkreiss%C3%A4ge-in-holzwerkstatt")).toBe("tischkreissäge-in-holzwerkstatt");
+    expect(inventoryIdentifier("tischkreissäge-in-holzwerkstatt")).toBe("tischkreissäge-in-holzwerkstatt");
+    expect(inventoryIdentifier("bad%identifier")).toBe("bad%identifier");
   });
 });
