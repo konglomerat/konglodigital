@@ -3,7 +3,9 @@
 `/resources` and its detail pages read the Konglomerat organization in
 https://inventar.konglomerat.org through the server-side v1 API. The existing
 Konglodigital login requirement remains in place, including both JSON and media
-endpoints. The browser receives an explicit catalog field allowlist, never the
+endpoints. Concurrent requests from one session share a single auth check;
+successful checks are cached for at most 15 seconds, keyed by a cookie hash.
+The browser receives an explicit catalog field allowlist, never the
 upstream token, notes, actor identities, financial data or arbitrary custom fields.
 
 Set `OPENINVENTORY_API_TOKEN` in the application's server environment. Create a
