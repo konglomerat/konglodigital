@@ -14,7 +14,13 @@
 //   · Der Dialog ist ein echter Modal: Portal auf <body>, Escape, Klick auf den
 //     Hintergrund, Fokus wandert in den Rahmen und danach zurück. Der Export
 //     war nur die Attrappe dafür.
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
@@ -117,6 +123,11 @@ export default function Dialog({
     () => false,
   );
 
+  // Aufrufer geben `onCancel` meist als neue Pfeilfunktion je Render. Hinge
+  // der Effekt daran, liefe er bei jedem Tastendruck in einem Textfeld neu —
+  // und zöge den Fokus aus dem Feld zurück auf den Rahmen.
+  const cancel = useEffectEvent(() => onCancel());
+
   useEffect(() => {
     if (!open) return;
 
@@ -129,7 +140,7 @@ export default function Dialog({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onCancel();
+        cancel();
         return;
       }
       // Tab bleibt im Rahmen: ein Modal, aus dem der Fokus hinausläuft, ist
@@ -157,7 +168,7 @@ export default function Dialog({
       document.body.style.overflow = overflow;
       previous?.focus?.();
     };
-  }, [open, onCancel]);
+  }, [open]);
 
   if (!open || !onClient) return null;
 
