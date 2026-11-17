@@ -20,3 +20,16 @@ export const sanitizeEuroInput = (value: string): string => {
 
   return `${integerPart},${fractionPart}`;
 };
+
+/** 3570 → "35,70" — für Eingabefelder, ohne Tausenderpunkte. */
+export const centsToEuroInput = (cents: number | null | undefined): string =>
+  typeof cents === "number" && Number.isFinite(cents)
+    ? (cents / 100).toFixed(2).replace(".", ",")
+    : "";
+
+/** "35,7" → 3570. Leer oder ungültig → null; 0 ist erlaubt. */
+export const euroInputToCents = (value: string): number | null => {
+  const normalized = value.trim().replace(/\./g, ",");
+  if (!euroAmountPattern.test(normalized)) return null;
+  return Math.round(Number.parseFloat(normalized.replace(",", ".")) * 100);
+};

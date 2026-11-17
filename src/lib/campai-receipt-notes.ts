@@ -42,7 +42,7 @@ const getMetadataFullName = (user: User): string | null => {
   return combined || null;
 };
 
-const getReceiptCreatorName = (
+export const getReceiptCreatorName = (
   user: User,
   memberProfile: MemberProfile | null,
 ): string => {

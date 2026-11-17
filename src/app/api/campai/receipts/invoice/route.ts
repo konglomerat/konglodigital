@@ -13,6 +13,8 @@ import {
   type CampaiConfig,
 } from "@/lib/campai-receipts/config";
 import { parsePositiveInt } from "@/lib/campai-receipts/parsers";
+import { fetchCampaiTaxes } from "@/lib/campai-taxes";
+import { isValidCampaiCostCenter1 } from "@/lib/receipt-edit";
 import {
   costCenterForbiddenResponse,
   getBuchhaltungRouteAccess,
@@ -108,11 +110,6 @@ const normalizePaymentMethodType = (
 ): CampaiPaymentMethodType | null =>
   isCampaiPaymentMethodType(value) ? value : null;
 
-const isValidCampaiCostCenter1 = (value: number): boolean => {
-  const firstDigit = String(value).trim().charAt(0);
-  return ["1", "2", "3", "4", "9"].includes(firstDigit);
-};
-
 const getValidDefaultCostCenter = (): number | null => {
   const parsed = parsePositiveInt(process.env.CAMPAI_COST_CENTER1);
   if (!parsed) return null;
@@ -195,45 +192,20 @@ const resolveTaxCodeOverrides = (): Map<TaxRateChoice, string> => {
 const resolveCampaiTaxCodesByRate = async (
   config: CampaiConfig,
 ): Promise<Map<TaxRateChoice, string>> => {
-  const response = await fetch(
-    `https://cloud.campai.com/api/${config.organizationId}/finance/accounting/accountingPlan`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": config.apiKey,
-      },
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) return new Map();
-
-  const payload = (await response.json().catch(() => null)) as {
-    taxes?: Array<{
-      type?: string;
-      code?: string;
-      rate?: number;
-      builtIn?: boolean;
-    }>;
-  } | null;
-
-  const taxes = Array.isArray(payload?.taxes) ? payload.taxes : [];
+  const taxes = await fetchCampaiTaxes({
+    apiKey: config.apiKey,
+    organizationId: config.organizationId,
+  }).catch(() => []);
   const result = new Map<TaxRateChoice, string>();
 
   for (const rate of [0, 7, 19] as const) {
     const matching = taxes.filter(
-      (tax) =>
-        tax.type === "vat" &&
-        typeof tax.code === "string" &&
-        tax.code.trim() &&
-        typeof tax.rate === "number" &&
-        tax.rate === rate,
+      (tax) => tax.type === "vat" && tax.rate === rate,
     );
     const preferred =
-      matching.find((tax) => tax.builtIn === true) ?? matching[0] ?? null;
-    if (preferred?.code) {
-      result.set(String(rate) as TaxRateChoice, preferred.code.trim());
+      matching.find((tax) => tax.builtIn) ?? matching[0] ?? null;
+    if (preferred) {
+      result.set(String(rate) as TaxRateChoice, preferred.code);
     }
   }
 
