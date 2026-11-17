@@ -16,6 +16,9 @@ export type ApplicationStatus =
   | "completed"
   | "rejected";
 
+/** Größter Scan eines Papierantrags; zwei Seiten wiegen ein, zwei MB. */
+export const MAX_SCAN_BYTES = 10 * 1024 * 1024;
+
 /** Der Antrag ohne Unterschriften — so steht er in `data` und `submitted_data`. */
 export type ApplicationData = Omit<RegistrationInput, "signature" | "sepaSignature">;
 
@@ -24,9 +27,25 @@ export type ApplicationSignatures = {
   sepaSignature?: string;
 };
 
-/** Was die Schritte beim Annehmen in Campai angelegt haben. */
+/** Was Campai über die Person wusste, bevor der Antrag kam. */
+export type ExistingContact = {
+  memberNumber: string | null;
+  /** Mitglied ohne Austrittsdatum — dann geht kein zweiter Antrag durch. */
+  activeMember: boolean;
+  tags: string[];
+};
+
+/**
+ * Was die Schritte in Campai angelegt haben. Den Kontakt gibt es schon ab dem
+ * Eingang (Typ Adresse, Tag „Mitgliedsantrag"); erst das Annehmen macht ihn
+ * zum Mitglied.
+ */
 export type CampaiProgress = {
   contactId?: string;
+  /** Gesetzt, wenn die E-Mail-Adresse in Campai schon einen Kontakt hatte. */
+  existingContact?: ExistingContact;
+  /** Typ Mitglied ergänzt und die Antragsdaten übertragen — danach ist der Antrag entschieden. */
+  memberAt?: string;
   memberNumber?: string;
   debtorAccount?: number;
   /** Beitragsfelder und Telefonnummern gesetzt. */
@@ -175,6 +194,10 @@ export type ApplicationTab = (typeof APPLICATION_TABS)[number]["value"];
 /** Bearbeiten, Rückfrage, Annehmen und Ablehnen gehen nur vor dem Annehmen. */
 export const isUndecided = (status: ApplicationStatus) =>
   status === "pending" || status === "inquiry";
+
+/** Papieranträge trägt der Vorstand ein — online reicht die Person selbst ein. */
+export const isPaperApplication = (application: Pick<MembershipApplication, "history">) =>
+  application.history.some((entry) => entry.type === "submitted" && entry.by !== null);
 
 export const isOnboarding = (status: ApplicationStatus) =>
   status === "invoice_draft" || status === "welcomed";

@@ -3,6 +3,8 @@
 // Vorstand → Anträge: Mitgliedsanträge von /registration prüfen, korrigieren,
 // nachfragen, annehmen oder ablehnen — und nach dem Annehmen Rechnung und
 // Willkommensmails anstoßen. Links die Liste, rechts der gewählte Antrag.
+// Papieranträge kommen über „Neues Mitglied" (./neu) dazu.
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
@@ -22,6 +24,7 @@ import {
   formatDate,
   formatEuro,
   isOnboarding,
+  isPaperApplication,
   onboardingItems,
   tabOf,
   type ApplicationData,
@@ -265,6 +268,14 @@ export default function AntraegeClient() {
           ressort="vorstand"
           title="Anträge Mitgliedschaft"
           subTitle="Neue Anträge prüfen, annehmen und die Aufnahme Schritt für Schritt nachhalten, bis aus dem Antrag ein Mitglied geworden ist."
+          links={[
+            {
+              href: "/admin/vorstand/antraege/neu",
+              label: "Neues Mitglied",
+              icon: faPlus,
+              kind: "primary",
+            },
+          ]}
         />
       </div>
 
@@ -325,6 +336,7 @@ export default function AntraegeClient() {
                       <span className="knglmrt-num block">{formatDate(entry.createdAt)}</span>
                       <span className="knglmrt-num block text-muted-foreground">
                         {daysAgo(entry.createdAt)}
+                        {isPaperApplication(entry) ? " · Papier" : ""}
                       </span>
                     </Td>
                     <Td>

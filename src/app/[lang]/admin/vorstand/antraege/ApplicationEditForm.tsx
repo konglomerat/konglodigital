@@ -1,8 +1,9 @@
 "use client";
 
 // Korrektur eines Antrags vor dem Annehmen. Dieselben Felder und Regeln wie
-// /registration, nur ohne Unterschriften und Erklärungen.
-import { useState } from "react";
+// /registration, nur ohne Unterschriften und Erklärungen. Auch das Formular
+// für Papieranträge („Neues Mitglied").
+import { useState, type ReactNode } from "react";
 
 import Button from "@/components/knglmrt/Button";
 import Choice from "@/components/knglmrt/Choice";
@@ -24,6 +25,11 @@ type Props = {
   fieldErrors: RegistrationErrors;
   onSave: (data: ApplicationData) => void;
   onCancel: () => void;
+  submitLabel?: string;
+  /** Unter dem Schnuppertarif, solange er gewählt ist. */
+  trialHint?: string;
+  /** Steht vor den Knöpfen — z. B. der Upload des Papierantrags. */
+  children?: ReactNode;
 };
 
 export default function ApplicationEditForm({
@@ -32,6 +38,9 @@ export default function ApplicationEditForm({
   fieldErrors,
   onSave,
   onCancel,
+  submitLabel = "Speichern",
+  trialHint,
+  children,
 }: Props) {
   const [data, setData] = useState<ApplicationData>(initial);
   const update = <K extends keyof ApplicationData>(key: K, value: ApplicationData[K]) =>
@@ -94,6 +103,7 @@ export default function ApplicationEditForm({
       <Choice
         label={`Schnuppertarif im ersten Jahr (${formatEuro(TRIAL_FEE_EURO)})`}
         checked={data.trialRate}
+        hint={data.trialRate ? trialHint : undefined}
         onChange={(event) => update("trialRate", event.target.checked)}
       />
       <NativeSelect
@@ -110,9 +120,11 @@ export default function ApplicationEditForm({
         ))}
       </NativeSelect>
 
+      {children}
+
       <div className="flex flex-wrap gap-3">
         <Button type="submit" kind="primary" size="small" loading={saving}>
-          Speichern
+          {submitLabel}
         </Button>
         <Button type="button" kind="secondary" size="small" disabled={saving} onClick={onCancel}>
           Abbrechen

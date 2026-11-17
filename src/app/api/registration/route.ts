@@ -1,6 +1,7 @@
 // Mitgliedsantrag von /registration in die Antragsliste des Vorstands
-// (membership_applications). In Campai entsteht das Mitglied erst, wenn der
-// Vorstand den Antrag unter Vorstand → Anträge annimmt.
+// (membership_applications). In Campai bekommt die Person gleich einen
+// Kontakt ohne Mitgliedschaft (Tag „Mitgliedsantrag"); Mitglied wird sie erst,
+// wenn der Vorstand den Antrag unter Vorstand → Anträge annimmt.
 //
 // Öffentlich — wer einen Antrag stellt, hat noch kein Konto. Die Eingaben
 // werden hier noch einmal mit denselben Regeln geprüft wie im Browser; die
@@ -19,12 +20,15 @@ import {
   usesDirectDebit,
   validateRegistration,
 } from "@/lib/campai-registration";
-import {
-  mailReceiptConfirmation,
-  mailVorstandNewApplication,
-} from "@/lib/membership-applications/mails";
+import { receiptConfirmation } from "@/lib/membership-applications/mail-texts";
+import { mailVorstandNewApplication } from "@/lib/membership-applications/mails";
+import { workflowDeps } from "@/lib/membership-applications/server";
 import { insertApplication } from "@/lib/membership-applications/store";
 import type { ApplicationSignatures } from "@/lib/membership-applications/types";
+import {
+  messageApplicant,
+  registerApplicant,
+} from "@/lib/membership-applications/workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -116,8 +120,19 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
+  // Der Campai-Kontakt (Typ Adresse, Tag „Mitgliedsantrag") entsteht gleich,
+  // wie beim Papierantrag. Fällt Campai aus, bleibt der Antrag trotzdem
+  // gespeichert — den Kontakt holen Rückfrage, Annehmen oder Ablehnen nach.
+  try {
+    application = await registerApplicant(application, workflowDeps);
+  } catch (error) {
+    console.error("[registration] Campai-Kontakt nicht angelegt", error);
+  }
+  const registered = application;
+
   // Die Mails dürfen den Antrag nicht scheitern lassen — er liegt schon in
-  // der Liste des Vorstands.
+  // der Liste des Vorstands. Die Eingangsbestätigung geht über Campai an den
+  // Kontakt, die Info an den Vorstand per SMTP.
   // Hinter dem Proxy ist request.nextUrl.origin localhost:3000, deshalb die
   // öffentliche Adresse aus der Umgebung.
   const siteUrl =
@@ -126,9 +141,10 @@ export const POST = async (request: NextRequest) => {
     request.nextUrl.origin;
   const inboxUrl = new URL("/admin/vorstand/antraege", siteUrl).toString();
   after(async () => {
+    const confirmation = receiptConfirmation(registered.data.firstName, registered.number);
     const results = await Promise.allSettled([
-      mailReceiptConfirmation(application),
-      mailVorstandNewApplication(application, inboxUrl),
+      messageApplicant(registered, confirmation.subject, confirmation.text, workflowDeps),
+      mailVorstandNewApplication(registered, inboxUrl),
     ]);
     for (const result of results) {
       if (result.status === "rejected") {

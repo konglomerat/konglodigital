@@ -9,10 +9,12 @@ export const COMPLETION_NO_CARD_TEMPLATE_ID = "6ae4dbc3d52c0593dc8659d5";
 export const CARD_TARIFF_INSTRUCTIONS_TEMPLATE_ID = "6ad1f4991df1fe49049a5102";
 
 /**
- * Posteingang in Campai (crm/conversations/inbox-email). Antworten der
- * Antragstellenden landen dort, auch auf die Mails vor dem Annehmen.
+ * Tags am Campai-Kontakt. Jede Person, die einen Antrag stellt, bekommt den
+ * ersten — so lässt sich in Campai nachsehen, wer schon einmal einen gestellt
+ * hat, auch wenn nichts daraus wurde.
  */
-export const CAMPAI_INBOX_EMAIL = "office@portal.konglomerat.org";
+export const APPLICANT_TAG = "Mitgliedsantrag";
+export const REJECTED_TAG = "Antrag abgelehnt";
 
 /** Empfänger der Info über neue Anträge. In der Testphase nur Vincent statt des ganzen Vorstands. */
 export const NEW_APPLICATION_NOTIFY_EMAIL = "vincent@konglomerat.org";

@@ -16,6 +16,7 @@ import Field from "@/components/knglmrt/Field";
 import Notice from "@/components/knglmrt/Notice";
 import Textarea from "@/components/knglmrt/Textarea";
 import type { RegistrationErrors } from "@/lib/campai-registration";
+import { APPLICANT_TAG, REJECTED_TAG } from "@/lib/membership-applications/config";
 import {
   inquiryDraft,
   rejectionDraft,
@@ -34,6 +35,7 @@ import {
   displayName,
   initials,
   isOnboarding,
+  isPaperApplication,
   isUndecided,
   onboardingItems,
   readyForCompletion,
@@ -41,6 +43,7 @@ import {
   type ApplicationInvoice,
   type ChecklistEntry,
   type ChecklistStep,
+  type ExistingContact,
   type HistoryEntry,
   type MembershipApplication,
   type OnboardingItem,
@@ -84,7 +87,8 @@ const describeHistory = (entry: HistoryEntry): ReactNode => {
   const by = entry.by ? ` von ${entry.by}` : "";
   switch (entry.type) {
     case "submitted":
-      return "Antrag eingegangen.";
+      // Online-Anträge reicht die Person selbst ein, Papieranträge trägt der Vorstand ein.
+      return entry.by ? `Papierantrag eingetragen${by}.` : "Antrag eingegangen.";
     case "edited":
       return `Bearbeitet${by}${entry.text ? ` (${entry.text})` : ""}.`;
     case "inquiry":
@@ -103,6 +107,21 @@ const describeHistory = (entry: HistoryEntry): ReactNode => {
       return `Abgelehnt${by}.`;
   }
 };
+
+/** Was Campai vor diesem Antrag über die Person wusste, in einem Satz. */
+const describeExistingContact = (existing: ExistingContact) =>
+  [
+    existing.memberNumber
+      ? `${existing.activeMember ? "Mitglied" : "früheres Mitglied"} Nr. ${existing.memberNumber}`
+      : "Kontakt ohne Mitgliedschaft",
+    existing.tags.includes(REJECTED_TAG)
+      ? "ein früherer Antrag wurde abgelehnt"
+      : existing.tags.includes(APPLICANT_TAG)
+        ? "hat schon einmal einen Antrag gestellt"
+        : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
 /** Kleiner Link aufs Profil in Campai, neben dem Namen im Panel. */
 function CampaiProfileButton({ url }: { url: string }) {
@@ -205,6 +224,8 @@ export default function ApplicationPanel({
   onDelete,
 }: Props) {
   const { data, campai, checklist } = application;
+  // Den Scan eines Papierantrags gibt es nur als Dokument in Campai.
+  const paper = isPaperApplication(application);
   const [editing, setEditing] = useState(false);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [inquiryText, setInquiryText] = useState("");
@@ -224,8 +245,8 @@ export default function ApplicationPanel({
   const undecided = isUndecided(application.status);
   const onboarding = isOnboarding(application.status);
   const accepted = onboarding || application.status === "completed";
-  // Hat die Annahme schon in Campai angefangen, lässt sich nur noch fortsetzen.
-  const editable = undecided && !campai.contactId;
+  // Ist der Kontakt in Campai schon Mitglied, lässt sich nur noch fortsetzen.
+  const editable = undecided && !campai.memberAt;
   const fee = describeFee(data);
   const changes = changedFields(application.submittedData, data);
   const items = onboardingItems(application);
@@ -592,6 +613,18 @@ export default function ApplicationPanel({
           </Notice>
         ) : null}
 
+        {undecided && campai.existingContact ? (
+          <Notice
+            tone={campai.existingContact.activeMember ? "gelb" : "grau"}
+            title="Schon in Campai"
+          >
+            {describeExistingContact(campai.existingContact)}.
+            {campai.existingContact.activeMember
+              ? " Annehmen geht nicht — bitte erst in Campai klären."
+              : " Beim Annehmen wird derselbe Kontakt zum Mitglied."}
+          </Notice>
+        ) : null}
+
         {accepted ? (
           <Section
             title="Onboarding"
@@ -651,7 +684,16 @@ export default function ApplicationPanel({
 
         {!accepted ? dataSections : null}
 
-        {!accepted ? (
+        {!accepted && paper ? (
+          <Section title="Unterschrift">
+            <p className="text-muted-foreground">
+              Auf Papier unterschrieben · der Scan liegt als Dokument am
+              Campai-Kontakt.
+            </p>
+          </Section>
+        ) : null}
+
+        {!accepted && !paper ? (
           <Section title="Unterschrift">
             {application.signatures?.signature ? (
               // eslint-disable-next-line @next/next/no-img-element -- Data-URL aus dem Antrag
@@ -703,17 +745,22 @@ export default function ApplicationPanel({
                       onClick={() => setShowData((current) => !current)}
                       className="text-primary hover:underline"
                     >
-                      Antrag eingegangen {showData ? "▴" : "▾"}
+                      {paper ? "Papierantrag eingetragen" : "Antrag eingegangen"}{" "}
+                      {showData ? "▴" : "▾"}
                     </button>
-                    {" · "}
-                    <a
-                      href={`/api/admin/applications/${application.id}/pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      PDF
-                    </a>
+                    {!paper ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={`/api/admin/applications/${application.id}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          PDF
+                        </a>
+                      </>
+                    ) : null}
                   </>
                 ) : (
                   describeHistory(entry)
@@ -751,7 +798,7 @@ export default function ApplicationPanel({
               disabled={busy}
               onClick={() => openDialog("accept")}
             >
-              {campai.contactId ? "Annahme fortsetzen" : "Annehmen"}
+              {campai.memberAt ? "Annahme fortsetzen" : "Annehmen"}
             </Button>
             {editable ? (
               <>
@@ -795,7 +842,8 @@ export default function ApplicationPanel({
         <p>In Campai entstehen:</p>
         <ul className="mt-1 list-disc pl-5">
           <li>
-            Mitglied mit Debitor, Beitragsfeldern und dem Antrag als Dokument
+            aus dem Campai-Kontakt ein Mitglied mit Debitor, Beitragsfeldern
+            und dem Antrag als Dokument
           </li>
           <li>
             Verträge: Jahresbeitrag
@@ -868,7 +916,7 @@ export default function ApplicationPanel({
             counter={2000}
             value={rejectReason}
             error={rejectReasonError ?? undefined}
-            hint="Pflicht. Bleibt beim Antrag, geht nicht an die Person."
+            hint={`Pflicht. Bleibt beim Antrag, geht nicht an die Person. Der Campai-Kontakt bekommt den Tag „${REJECTED_TAG}“.`}
             onChange={(event) => {
               setRejectReason(event.target.value);
               setRejectReasonError(null);

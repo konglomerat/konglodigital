@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ANNUAL_PLAN_ID, emptyRegistration } from "@/lib/campai-registration";
 
 import {
+  APPLICANT_TAG,
   COMPLETION_NO_CARD_TEMPLATE_ID,
   COMPLETION_TEMPLATE_ID,
+  REJECTED_TAG,
   WELCOME_TEMPLATE_ID,
 } from "./config";
 import type { ApplicationPatch } from "./store";
@@ -12,6 +14,9 @@ import { activeOnboardingItems, changedFields, onboardingItems, type Application
 import {
   acceptApplication,
   completeMembership,
+  messageApplicant,
+  registerApplicant,
+  tagRejection,
   releaseInvoice,
   setChecklistItem,
   syncInvoice,
@@ -102,7 +107,15 @@ const makeDeps = (campai: Partial<WorkflowCampai> = {}) => {
     };
   const deps: WorkflowDeps = {
     campai: {
-      createMemberContact: track("createMemberContact", "contact-1"),
+      findContactByEmail: track("findContactByEmail", null),
+      createApplicantContact: track("createApplicantContact", "contact-1"),
+      addContactTags: vi.fn(async (_contactId: string, tags: string[]) => {
+        calls.push(`tags:${tags.join(",")}`);
+      }),
+      makeMember: track("makeMember", undefined),
+      sendTextMessage: vi.fn(async (_contactId: string, subject: string) => {
+        calls.push(`message:${subject}`);
+      }),
       ensureDebtor: track("ensureDebtor", 100719),
       readMemberNumber: track("readMemberNumber", "0351"),
       setMemberDetails: track("setMemberDetails", undefined),
@@ -135,13 +148,69 @@ const makeDeps = (campai: Partial<WorkflowCampai> = {}) => {
   return { deps, calls };
 };
 
+describe("registerApplicant", () => {
+  it("legt einen Kontakt ohne Mitgliedschaft an und taggt ihn", async () => {
+    const { deps, calls } = makeDeps();
+    const result = await registerApplicant(application(), deps);
+    expect(calls).toEqual(["findContactByEmail", "createApplicantContact", `tags:${APPLICANT_TAG}`]);
+    expect(result.campai).toEqual({ contactId: "contact-1" });
+  });
+
+  it("nimmt den vorhandenen Kontakt und merkt sich, was Campai schon wusste", async () => {
+    const existing = { memberNumber: "0123", activeMember: false, tags: [APPLICANT_TAG] };
+    const { deps, calls } = makeDeps({
+      findContactByEmail: async () => ({ contactId: "old-contact", existing }),
+    });
+    const result = await registerApplicant(application(), deps);
+    expect(calls).toEqual([`tags:${APPLICANT_TAG}`]);
+    expect(result.campai).toEqual({ contactId: "old-contact", existingContact: existing });
+  });
+
+  it("tut nichts, wenn der Antrag schon einen Kontakt hat", async () => {
+    const { deps, calls } = makeDeps();
+    await registerApplicant(application({ campai: { contactId: "contact-1" } }), deps);
+    expect(calls).toEqual([]);
+  });
+});
+
+describe("messageApplicant", () => {
+  it("schreibt über Campai und legt den fehlenden Kontakt vorher an", async () => {
+    const { deps, calls } = makeDeps();
+    const result = await messageApplicant(application(), "Rückfrage", "Hallo", deps);
+    expect(calls).toEqual([
+      "findContactByEmail",
+      "createApplicantContact",
+      `tags:${APPLICANT_TAG}`,
+      "message:Rückfrage",
+    ]);
+    expect(result.campai.contactId).toBe("contact-1");
+  });
+});
+
+describe("tagRejection", () => {
+  it("holt den fehlenden Kontakt nach und setzt „Antrag abgelehnt“", async () => {
+    const { deps, calls } = makeDeps();
+    const result = await tagRejection(application(), deps);
+    expect(calls).toEqual([
+      "findContactByEmail",
+      "createApplicantContact",
+      `tags:${APPLICANT_TAG}`,
+      `tags:${REJECTED_TAG}`,
+    ]);
+    expect(result.campai.contactId).toBe("contact-1");
+  });
+});
+
 describe("acceptApplication", () => {
   it("legt alles in der richtigen Reihenfolge an — Beitragsfelder vor den Verträgen", async () => {
     const { deps, calls } = makeDeps();
     const result = await acceptApplication(application(), "Vincent", deps);
 
     expect(calls).toEqual([
-      "createMemberContact",
+      "findContactByEmail",
+      "createApplicantContact",
+      `tags:${APPLICANT_TAG}`,
+      "makeMember",
       "ensureDebtor",
       "readMemberNumber",
       "setMemberDetails",
@@ -155,6 +224,7 @@ describe("acceptApplication", () => {
     expect(result.signatures).toBeNull();
     expect(result.campai).toMatchObject({
       contactId: "contact-1",
+      memberAt: "2026-10-11T09:00:00.000Z",
       debtorAccount: 100719,
       memberNumber: "0351",
       documentId: "document-1",
@@ -189,6 +259,12 @@ describe("acceptApplication", () => {
     expect(retry.calls).toEqual([`createContract:${ABO_KLEIN_PLAN_ID}`, "collectDraft"]);
     expect(result.status).toBe("invoice_draft");
     expect(result.lastError).toBeNull();
+  });
+
+  it("macht aus dem Kontakt vom Eingang ein Mitglied, statt einen neuen anzulegen", async () => {
+    const { deps, calls } = makeDeps();
+    await acceptApplication(application({ campai: { contactId: "contact-1" } }), "Vincent", deps);
+    expect(calls.slice(0, 2)).toEqual(["makeMember", "ensureDebtor"]);
   });
 
   it("merkt sich, wenn noch nichts fällig ist", async () => {

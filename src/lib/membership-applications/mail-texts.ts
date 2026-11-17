@@ -1,6 +1,7 @@
-// Mitgliedsanträge — Texte der Mails, die vor dem Annehmen per SMTP rausgehen.
-// Rückfrage und Absage füllt die Inbox damit vor; verschickt wird, was danach
-// im Textfeld steht. Ohne Server-Abhängigkeit, damit der Client sie nutzt.
+// Mitgliedsanträge — Texte der Mails, die vor dem Annehmen über Campai an den
+// Kontakt gehen (Klartext, Absätze als Leerzeilen). Rückfrage und Absage füllt
+// die Inbox damit vor; verschickt wird, was danach im Textfeld steht. Ohne
+// Server-Abhängigkeit, damit der Client sie nutzt.
 
 const SIGNATURE = "Viele Grüße\nDer Vorstand des Konglomerat e.V.";
 

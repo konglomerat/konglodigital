@@ -1,4 +1,9 @@
-// Mitgliedsanträge — die Schritte nach der Entscheidung des Vorstands.
+// Mitgliedsanträge — die Schritte in Campai, vom Eingang bis zur Aufnahme.
+//
+// Schon beim Eingang bekommt die Person einen Campai-Kontakt ohne
+// Mitgliedschaft (Typ Adresse, Tag „Mitgliedsantrag"); gibt es ihre
+// E-Mail-Adresse dort schon, wird der vorhandene Kontakt genommen. Erst das
+// Annehmen macht daraus ein Mitglied, eine Absage setzt „Antrag abgelehnt".
 //
 // Jeder Schritt speichert sein Ergebnis in `campai`, bevor der nächste
 // beginnt. Bricht etwas ab, steht der Fehler in `lastError`, und derselbe
@@ -10,8 +15,10 @@
 import { contractPlanIds } from "@/lib/campai-registration";
 
 import {
+  APPLICANT_TAG,
   COMPLETION_NO_CARD_TEMPLATE_ID,
   COMPLETION_TEMPLATE_ID,
+  REJECTED_TAG,
   WELCOME_TEMPLATE_ID,
 } from "./config";
 import type { ApplicationPatch } from "./store";
@@ -25,11 +32,18 @@ import {
   type ApplicationData,
   type ApplicationInvoice,
   type ChecklistStep,
+  type ExistingContact,
   type MembershipApplication,
 } from "./types";
 
 export type WorkflowCampai = {
-  createMemberContact: (data: ApplicationData) => Promise<string>;
+  findContactByEmail: (
+    email: string,
+  ) => Promise<{ contactId: string; existing: ExistingContact } | null>;
+  createApplicantContact: (data: ApplicationData) => Promise<string>;
+  addContactTags: (contactId: string, tags: string[]) => Promise<void>;
+  makeMember: (contactId: string, data: ApplicationData) => Promise<void>;
+  sendTextMessage: (contactId: string, subject: string, body: string) => Promise<void>;
   ensureDebtor: (contactId: string) => Promise<number>;
   readMemberNumber: (contactId: string) => Promise<string | null>;
   setMemberDetails: (contactId: string, data: ApplicationData) => Promise<void>;
@@ -94,6 +108,55 @@ const recordingErrors = async (
   }
 };
 
+/**
+ * Der Campai-Kontakt zur Person: der vorhandene mit derselben E-Mail-Adresse
+ * oder ein neuer ohne Mitgliedschaft — in beiden Fällen mit Tag
+ * „Mitgliedsantrag".
+ */
+export const applicantContact = async (
+  data: ApplicationData,
+  campai: WorkflowCampai,
+): Promise<{ contactId: string; existingContact?: ExistingContact }> => {
+  const found = await campai.findContactByEmail(data.email);
+  const contactId = found?.contactId ?? (await campai.createApplicantContact(data));
+  await campai.addContactTags(contactId, [APPLICANT_TAG]);
+  return found ? { contactId, existingContact: found.existing } : { contactId };
+};
+
+/**
+ * Beim Eingang: Kontakt anlegen oder finden. Klappt das nicht, holt es das
+ * Annehmen bzw. Ablehnen nach.
+ */
+export const registerApplicant = async (
+  application: MembershipApplication,
+  deps: WorkflowDeps,
+) =>
+  application.campai.contactId
+    ? application
+    : deps.save(application, { campai: await applicantContact(application.data, deps.campai) });
+
+/**
+ * Mail an die antragstellende Person über ihren Campai-Kontakt — so steht sie
+ * im Verlauf des Kontakts, und Antworten landen im Campai-Posteingang.
+ */
+export const messageApplicant = async (
+  application: MembershipApplication,
+  subject: string,
+  body: string,
+  deps: WorkflowDeps,
+) => {
+  const registered = await registerApplicant(application, deps);
+  await deps.campai.sendTextMessage(requireContact(registered), subject, body);
+  return registered;
+};
+
+/** Absage: Tag „Antrag abgelehnt" am Kontakt, damit Campai den Antrag kennt. */
+export const tagRejection = async (application: MembershipApplication, deps: WorkflowDeps) => {
+  const registered = await registerApplicant(application, deps);
+  await deps.campai.addContactTags(requireContact(registered), [REJECTED_TAG]);
+  return registered;
+};
+
 const requireContact = (application: MembershipApplication) => {
   const contactId = application.campai.contactId;
   if (!contactId) throw new WorkflowError("Der Antrag hat noch keinen Campai-Kontakt.");
@@ -101,9 +164,9 @@ const requireContact = (application: MembershipApplication) => {
 };
 
 /**
- * Annehmen: Kontakt, Debitor, Beitragsfelder, Antrag als Dokument, Verträge
- * und der Rechnungsentwurf. Der Entwurf erscheint in Campai erst ~30 s
- * später — den holt syncInvoice() ab.
+ * Annehmen: aus dem Kontakt ein Mitglied machen, Debitor, Beitragsfelder,
+ * Antrag als Dokument, Verträge und der Rechnungsentwurf. Der Entwurf
+ * erscheint in Campai erst ~30 s später — den holt syncInvoice() ab.
  */
 export const acceptApplication = (
   application: MembershipApplication,
@@ -128,9 +191,15 @@ export const acceptApplication = (
     };
 
     if (!current.campai.contactId) {
-      await step({ campai: { contactId: await deps.campai.createMemberContact(current.data) } });
+      await step({ campai: await applicantContact(current.data, deps.campai) });
     }
     const contactId = requireContact(current);
+
+    // Ab hier ist der Antrag entschieden: Korrekturen gehen nicht mehr.
+    if (!current.campai.memberAt) {
+      await deps.campai.makeMember(contactId, current.data);
+      await step({ campai: { memberAt: deps.now() } });
+    }
 
     if (!current.campai.debtorAccount) {
       const debtorAccount = await deps.campai.ensureDebtor(contactId);
