@@ -19,6 +19,7 @@ import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
 import ReceiptsPageHeader from "../create/header";
+import ReceiptTagField from "../ReceiptTagField";
 import {
   AutocompleteInput,
   type Suggestion,
@@ -92,6 +93,9 @@ export default function AusgabePage() {
 
   // File state — multiple files get bundled into a single PDF
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+  // Optionale Tags; „API“ setzt der Server selbst dazu.
+  const [tags, setTags] = useState<string[]>([]);
 
   const handleCreditorSelect = useCallback((suggestion: Suggestion) => {
     setCreditorAccount(suggestion.account);
@@ -187,6 +191,7 @@ export default function AusgabePage() {
           expense: values.betragEuro,
           costCenter2: values.costCenter2,
           internalNote: values.notes || undefined,
+          tags,
           ...fileData,
         }),
       });
@@ -213,6 +218,7 @@ export default function AusgabePage() {
       setCreditorName("");
       setShowCreatePanel(false);
       setSelectedFiles([]);
+      setTags([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -368,6 +374,7 @@ export default function AusgabePage() {
                 ))}
               </NativeSelect>
             </div>
+            <ReceiptTagField value={tags} onChange={setTags} reservedCount={1} />
           </div>
         </FormSection>
 

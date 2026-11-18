@@ -38,6 +38,16 @@ export type MultiSelectProps = FieldStateProps & {
   empty?: string;
   /** `lg` gibt dem Feld mehr Höhe — für Filterleisten. */
   size?: "md" | "lg";
+  /**
+   * Freie Eingaben erlauben: Was getippt ist und nicht in der Liste steht,
+   * erscheint oben als „neu“ und lässt sich mit Enter übernehmen. Gewählte
+   * Werte ohne passende Option bleiben dann als Marke stehen.
+   */
+  creatable?: boolean;
+  /** Höchstzahl gewählter Werte — danach nimmt das Feld nichts mehr an. */
+  maxSelected?: number;
+  /** Höchstlänge einer freien Eingabe. */
+  maxLength?: number;
   id?: string;
   className?: string;
 };
@@ -55,6 +65,9 @@ export default function MultiSelect({
   clearable = true,
   empty = "kein Treffer",
   size = "md",
+  creatable = false,
+  maxSelected,
+  maxLength,
   id,
   className,
 }: MultiSelectProps) {
@@ -70,20 +83,28 @@ export default function MultiSelect({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const items = useMemo(() => normalizeOptions(options), [options]);
-  const selectedOptions = useMemo(
-    () =>
-      value
-        .map((entry) => items.find((option) => option.value === entry))
-        .filter((option): option is SelectOption => Boolean(option)),
-    [items, value],
-  );
+  const resolve = (entry: string): SelectOption | undefined =>
+    items.find((option) => option.value === entry) ??
+    (creatable ? { value: entry, label: entry } : undefined);
+  const selectedOptions = value
+    .map(resolve)
+    .filter((option): option is SelectOption => Boolean(option));
+  const isFull = maxSelected !== undefined && value.length >= maxSelected;
 
   // Gewähltes bleibt in der Liste stehen (mit Markierung), damit man es dort
   // auch wieder abwählen kann.
-  const needle = query.trim().toLowerCase();
-  const hits = needle
+  const typed = query.trim();
+  const needle = typed.toLowerCase();
+  const matches = needle
     ? items.filter((option) => option.label.toLowerCase().includes(needle))
     : items;
+  const isKnown =
+    items.some((option) => option.label.toLowerCase() === needle) ||
+    value.some((entry) => entry.toLowerCase() === needle);
+  const hits: SelectOption[] =
+    creatable && typed && !isKnown
+      ? [{ value: typed, label: typed, meta: "neu" }, ...matches]
+      : matches;
 
   useEffect(() => {
     if (!open) return;
@@ -98,14 +119,16 @@ export default function MultiSelect({
     onChange(
       nextValues,
       nextValues
-        .map((entry) => items.find((option) => option.value === entry))
+        .map(resolve)
         .filter((option): option is SelectOption => Boolean(option)),
     );
   }
 
   function toggle(option: SelectOption) {
+    const isSelected = value.includes(option.value);
+    if (!isSelected && isFull) return;
     commit(
-      value.includes(option.value)
+      isSelected
         ? value.filter((entry) => entry !== option.value)
         : [...value, option.value],
     );
@@ -126,9 +149,13 @@ export default function MultiSelect({
       setActiveIndex((index) => (index + delta + hits.length) % hits.length);
       return;
     }
-    if (event.key === "Enter" && open && hits[activeIndex]) {
+    // Bei freier Eingabe übernimmt Enter auch ohne markierte Zeile den
+    // ersten Treffer — meist genau das Getippte.
+    const enterTarget =
+      hits[activeIndex] ?? (creatable && typed ? hits[0] : undefined);
+    if (event.key === "Enter" && open && enterTarget) {
       event.preventDefault();
-      toggle(hits[activeIndex]);
+      toggle(enterTarget);
       return;
     }
     if (event.key === "Backspace" && query === "" && value.length > 0) {
@@ -206,6 +233,7 @@ export default function MultiSelect({
             aria-invalid={error ? true : undefined}
             aria-describedby={messageId}
             disabled={disabled}
+            maxLength={maxLength}
             placeholder={selectedOptions.length === 0 ? placeholder : ""}
             value={query}
             onChange={(event) => {

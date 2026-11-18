@@ -14,6 +14,10 @@ import { fetchCampaiCostCenters } from "@/lib/campai-cost-centers";
 import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import {
+	MAX_RECEIPT_TAGS,
+	parseReceiptTags,
+} from "@/lib/campai-receipts/tags";
+import {
 	addCampaiReceiptNotes,
 	buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
@@ -119,7 +123,6 @@ export const POST = async (request: NextRequest) => {
 	const canBook =
 		allowedCostCenters === ALL_SCOPES || allowedCostCenters.length > 0;
 
-	const tags = mergeCampaiTags(["API"]);
 	const memberProfile = await getMemberProfileByUserId(supabase, user.id);
 	const creatorNote = buildCampaiReceiptCreatorNote({
 		user,
@@ -159,6 +162,10 @@ export const POST = async (request: NextRequest) => {
 			unknown
 		>;
 
+		const tags = mergeCampaiTags(["API"], parseReceiptTags(body.tags)).slice(
+			0,
+			MAX_RECEIPT_TAGS,
+		);
 		const betreff = compactText(body.betreff);
 		const internalNote = compactText(body.internalNote ?? body.notiz);
 		const belegdatum = parseDate(body.belegdatum);

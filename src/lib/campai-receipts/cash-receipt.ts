@@ -22,6 +22,7 @@ import {
   parsePositiveInt,
   toIsoDate,
 } from "./parsers";
+import { MAX_RECEIPT_TAGS, parseReceiptTags } from "./tags";
 
 export type CashReceiptDirection = "expense" | "revenue";
 
@@ -124,12 +125,7 @@ const parseCashReceiptInput = (
   const receiptNumber = (
     receiptNumberOverride || `${autoPrefix}-${timeStamp}`
   ).slice(0, 30);
-  const extraTags = Array.isArray(body.tags)
-    ? body.tags
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.trim())
-        .filter(Boolean)
-    : [];
+  const extraTags = parseReceiptTags(body.tags);
 
   return {
     ok: true,
@@ -285,7 +281,7 @@ export const handleCashReceipt = async (
     const payload = buildPayload(
       receipt,
       positionAccount,
-      mergeCampaiTags(["API"], receipt.extraTags),
+      mergeCampaiTags(["API"], receipt.extraTags).slice(0, MAX_RECEIPT_TAGS),
       upload.receiptFileId ?? null,
     );
 

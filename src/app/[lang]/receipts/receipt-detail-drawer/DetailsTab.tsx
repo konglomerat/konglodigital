@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { KeyboardEvent } from "react";
 
 import { AutocompleteInput } from "@/app/[lang]/components/ui/autocomplete-input";
 import Badge from "@/components/knglmrt/Badge";
@@ -12,6 +11,10 @@ import Notice from "@/components/knglmrt/Notice";
 import { SegmentedControl } from "@/components/knglmrt/SegmentedControl";
 import Textarea from "@/components/knglmrt/Textarea";
 import type { ReceiptFieldsPatch } from "@/lib/receipt-edit";
+
+import ReceiptTagField, {
+  invalidateReceiptTagSuggestions,
+} from "../ReceiptTagField";
 
 import {
   PAYMENT_STATUS_LABELS,
@@ -83,6 +86,10 @@ export default function DetailsTab({
       <BelegSection
         detail={detail}
         patchReceipt={patchReceipt}
+        onDirtyChange={onDirtyChange}
+      />
+      <TagsSection
+        detail={detail}
         saveTags={saveTags}
         onDirtyChange={onDirtyChange}
       />
@@ -110,7 +117,6 @@ type BelegDraft = {
   account: number | null;
   accountName: string;
   description: string;
-  tags: string[];
 };
 
 const belegDraftFrom = (detail: ReceiptDetail): BelegDraft => ({
@@ -118,15 +124,13 @@ const belegDraftFrom = (detail: ReceiptDetail): BelegDraft => ({
   account: detail.account,
   accountName: detail.accountName ?? "",
   description: detail.description,
-  tags: detail.tags,
 });
 
 function BelegSection({
   detail,
   patchReceipt,
-  saveTags,
   onDirtyChange,
-}: Omit<DetailsTabProps, "cancelable" | "onRequestCancel">) {
+}: Pick<DetailsTabProps, "detail" | "patchReceipt" | "onDirtyChange">) {
   const [draft, setDraft] = useState<BelegDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,18 +158,11 @@ function BelegSection({
         fields.accountName = draft.accountName;
       }
     }
-    const tagsChanged =
-      draft.tags.length !== original.tags.length ||
-      draft.tags.some((tag, index) => tag !== original.tags[index]);
-
     setSaving(true);
     setError(null);
     try {
       if (Object.keys(fields).length > 0) {
         await patchReceipt({ receipt: fields });
-      }
-      if (tagsChanged) {
-        await saveTags(draft.tags);
       }
       setDraft(null);
     } catch (applyError) {
@@ -270,11 +267,6 @@ function BelegSection({
               setDraft({ ...draft, description: event.target.value })
             }
           />
-          <TagEditor
-            className="col-span-2"
-            tags={draft.tags}
-            onChange={(tags) => setDraft({ ...draft, tags })}
-          />
         </EditBlock>
       ) : (
         <ReadGrid>
@@ -285,80 +277,97 @@ function BelegSection({
           />
           <ReadRow label={label} value={detail.accountName} />
           <ReadRow label="Beschreibung" value={detail.description} />
-          <ReadRow
-            label="Tags"
-            value={detail.tags.length > 0 ? detail.tags.join(", ") : null}
-          />
         </ReadGrid>
       )}
     </section>
   );
 }
 
-function TagEditor({
-  tags,
-  onChange,
-  className,
-}: {
-  tags: string[];
-  onChange: (tags: string[]) => void;
-  className?: string;
-}) {
-  const [input, setInput] = useState("");
+// ── Tags ─────────────────────────────────────────────────────────────────
+// Eigener Abschnitt, damit Tags an jedem Beleg änderbar bleiben — auch an
+// bezahlten, stornierten oder mit der Kasse verknüpften. Campai ersetzt die
+// Liste vollständig.
 
-  const add = () => {
-    const tag = input.trim().slice(0, 40);
-    if (tag && !tags.includes(tag) && tags.length < 20) {
-      onChange([...tags, tag]);
+const sameTags = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((tag, index) => tag === right[index]);
+
+function TagsSection({
+  detail,
+  saveTags,
+  onDirtyChange,
+}: Pick<DetailsTabProps, "detail" | "saveTags" | "onDirtyChange">) {
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const editing = draft !== null;
+
+  useEffect(() => {
+    onDirtyChange("tags", editing);
+  }, [editing, onDirtyChange]);
+
+  const apply = async () => {
+    if (!draft) return;
+    if (sameTags(draft, detail.tags)) {
+      setDraft(null);
+      return;
     }
-    setInput("");
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      add();
-    } else if (event.key === "Backspace" && !input && tags.length > 0) {
-      onChange(tags.slice(0, -1));
+    setSaving(true);
+    setError(null);
+    try {
+      await saveTags(draft);
+      invalidateReceiptTagSuggestions();
+      setDraft(null);
+    } catch (applyError) {
+      setError(errorMessage(applyError));
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <FieldShell
-      as="div"
-      label="Tags"
-      className={className}
-      hint="Enter fügt einen Tag hinzu. Höchstens 20."
-    >
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 knglmrt-border bg-card px-2 py-1.5">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 bg-muted px-1.5 py-0.5 knglmrt-tag text-foreground"
-          >
-            {tag}
-            <button
-              type="button"
-              aria-label={`Tag ${tag} entfernen`}
-              className="cursor-pointer px-0.5 text-muted-foreground hover:text-foreground"
-              onClick={() => onChange(tags.filter((entry) => entry !== tag))}
+    <section className="border-b-[0.5px] border-border pb-3 pt-3.5">
+      <SectionHeader
+        title="Tags"
+        action={
+          !editing ? (
+            <TextLink onClick={() => setDraft(detail.tags)}>
+              {detail.tags.length > 0 ? "Bearbeiten" : "+ Tag hinzufügen"}
+            </TextLink>
+          ) : null
+        }
+      />
+      {draft ? (
+        <EditBlock
+          error={error}
+          applying={saving}
+          onCancel={() => {
+            setDraft(null);
+            setError(null);
+          }}
+          onApply={() => void apply()}
+        >
+          <ReceiptTagField
+            className="col-span-2"
+            value={draft}
+            onChange={setDraft}
+            hint="Vorhandene Tags aus Campai wählen oder neue tippen, Enter übernimmt."
+          />
+        </EditBlock>
+      ) : detail.tags.length > 0 ? (
+        <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+          {detail.tags.map((tag) => (
+            <li
+              key={tag}
+              className="bg-muted px-1.5 text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)] text-foreground"
             >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={add}
-          maxLength={40}
-          placeholder={tags.length === 0 ? "Tag hinzufügen" : ""}
-          aria-label="Tag hinzufügen"
-          className="min-w-[8ch] flex-1 border-0 bg-transparent text-foreground outline-none"
-        />
-      </div>
-    </FieldShell>
+              {tag}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="m-0 text-muted-foreground">Keine Tags.</p>
+      )}
+    </section>
   );
 }
 

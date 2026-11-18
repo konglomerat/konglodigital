@@ -52,6 +52,7 @@ import {
   isCashRegisterAccount,
 } from "@/lib/campai-cash-register-balances";
 import type { CampaiCashRegisterBalanceSummary } from "@/lib/campai-cash-register-balances";
+import { SYSTEM_RECEIPT_TAGS } from "@/lib/campai-receipts/tag-rules";
 import type {
   BalanceTableDensity,
   MemberProfilePreferences,
@@ -100,6 +101,7 @@ type PaymentStatusTone = "paid" | "partial" | "unpaid" | "default";
 type SortKey = "paidAt" | "receiptDate" | "createdAt" | "income" | "expense";
 type SortDirection = "asc" | "desc";
 type KindFilter = "all" | "income" | "expense" | "open";
+type GroupBy = "none" | "project" | "tag";
 type SearchScope =
   | "all"
   | "receiptNumber"
@@ -121,6 +123,21 @@ type TableColumn = {
 };
 
 type BalancePreferences = NonNullable<MemberProfilePreferences["balance"]>;
+
+// Eigene Option für Belege ohne (selbst gesetzte) Tags.
+const NO_TAG_KEY = "\u0000ohne-tag";
+const NO_TAG_LABEL = "Ohne Tag";
+
+/** Die Tags, die Menschen gesetzt haben — ohne die, die die App selbst setzt. */
+const getUserTags = (receipt: CampaiBalanceReceipt): string[] =>
+  receipt.tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag && !SYSTEM_RECEIPT_TAGS.has(tag));
+
+const getReceiptTagKeys = (receipt: CampaiBalanceReceipt): string[] => {
+  const tags = getUserTags(receipt);
+  return tags.length > 0 ? Array.from(new Set(tags)) : [NO_TAG_KEY];
+};
 
 const KIND_FILTER_OPTIONS: { value: KindFilter; label: string }[] = [
   { value: "all", label: "Alle" },
@@ -739,7 +756,8 @@ export default function WerkbereichReceipts({
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScope, setSearchScope] = useState<SearchScope>("all");
-  const [groupByProject, setGroupByProject] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [cashRegisterSummary, setCashRegisterSummary] =
     useState<CampaiCashRegisterBalanceSummary | null>(null);
   const [cashRegisterError, setCashRegisterError] = useState<string | null>(
@@ -1167,6 +1185,74 @@ export default function WerkbereichReceipts({
     );
   }, [activeProjectKeys, receiptsMatchingToolbarFilters]);
 
+  // Tags quer zu den Projekten: ein Beleg mit mehreren Tags zählt bei jedem.
+  // Der Saldo je Tag nimmt den ganzen Beleg, wie die Summenzeile unten.
+  const getSignedAmount = useCallback((receipt: CampaiBalanceReceipt) => {
+    const amount = receipt.totalGrossAmount ?? 0;
+    if (receipt.type && INCOME_TYPES.has(receipt.type)) return amount;
+    if (receipt.type && EXPENSE_TYPES.has(receipt.type)) return -amount;
+    return 0;
+  }, []);
+
+  const tagOptions = useMemo<ProjectFilterOption[]>(() => {
+    const tags = new Map<string, ProjectFilterOption>();
+
+    for (const receipt of receiptsMatchingProjects) {
+      const signedAmount = getSignedAmount(receipt);
+      for (const key of getReceiptTagKeys(receipt)) {
+        const option = tags.get(key) ?? {
+          key,
+          label: key === NO_TAG_KEY ? NO_TAG_LABEL : key,
+          count: 0,
+          saldo: 0,
+        };
+        option.count += 1;
+        option.saldo += signedAmount;
+        tags.set(key, option);
+      }
+    }
+
+    // Häufige Tags zuerst, „Ohne Tag" immer ans Ende.
+    return Array.from(tags.values()).sort((left, right) => {
+      if (left.key === NO_TAG_KEY) return 1;
+      if (right.key === NO_TAG_KEY) return -1;
+      return (
+        right.count - left.count ||
+        left.label.localeCompare(right.label, "de")
+      );
+    });
+  }, [getSignedAmount, receiptsMatchingProjects]);
+
+  const activeTagKeys = useMemo(() => {
+    const available = new Set(tagOptions.map((option) => option.key));
+    return selectedTags.filter((key) => available.has(key));
+  }, [selectedTags, tagOptions]);
+
+  const receiptsMatchingTags = useMemo(() => {
+    if (activeTagKeys.length === 0) {
+      return receiptsMatchingProjects;
+    }
+
+    const keys = new Set(activeTagKeys);
+    return receiptsMatchingProjects.filter((receipt) =>
+      getReceiptTagKeys(receipt).some((key) => keys.has(key)),
+    );
+  }, [activeTagKeys, receiptsMatchingProjects]);
+
+  const tagSelectionSaldo = useMemo(
+    () =>
+      receiptsMatchingTags.reduce(
+        (sum, receipt) => sum + getSignedAmount(receipt),
+        0,
+      ),
+    [getSignedAmount, receiptsMatchingTags],
+  );
+
+  const getTagFilterLabel = useCallback(
+    (key: string) => (key === NO_TAG_KEY ? NO_TAG_LABEL : key),
+    [],
+  );
+
   // Durchsuchbarer Text je Bereich — so, wie er in der Tabelle steht, plus
   // Beträge ohne Tausenderpunkt und mit Dezimalpunkt.
   const getSearchText = useCallback(
@@ -1242,14 +1328,14 @@ export default function WerkbereichReceipts({
   // Mehrere Wörter müssen alle vorkommen, egal in welcher Reihenfolge.
   const filteredReceipts = useMemo(() => {
     if (searchTerms.length === 0) {
-      return receiptsMatchingProjects;
+      return receiptsMatchingTags;
     }
 
-    return receiptsMatchingProjects.filter((receipt) => {
+    return receiptsMatchingTags.filter((receipt) => {
       const text = getSearchText(receipt, searchScope).toLowerCase();
       return searchTerms.every((term) => text.includes(term));
     });
-  }, [getSearchText, receiptsMatchingProjects, searchScope, searchTerms]);
+  }, [getSearchText, receiptsMatchingTags, searchScope, searchTerms]);
 
   // Markiert die Suchwörter in einer Zelle — nur in Spalten, die zum
   // gewählten Suchbereich gehören. `all` heißt: nur bei „Alle Felder".
@@ -1328,7 +1414,7 @@ export default function WerkbereichReceipts({
 
   // Ein Beleg mit Positionen in mehreren Unterprojekten steht in jeder Gruppe.
   const projectGroups = useMemo(() => {
-    if (!groupByProject) {
+    if (groupBy !== "project") {
       return [];
     }
 
@@ -1343,7 +1429,37 @@ export default function WerkbereichReceipts({
           ),
         ),
       }));
-  }, [activeProjectKeys, groupByProject, projectOptions, sortedReceipts]);
+  }, [activeProjectKeys, groupBy, projectOptions, sortedReceipts]);
+
+  // Ein Beleg mit mehreren Tags steht in jeder ihrer Gruppen. Anzahl und
+  // Saldo zählen die Zeilen, die nach Suche in der Gruppe stehen.
+  const tagGroups = useMemo(() => {
+    if (groupBy !== "tag") {
+      return [];
+    }
+
+    const keys = new Set(activeTagKeys);
+    return tagOptions
+      .filter((option) => keys.size === 0 || keys.has(option.key))
+      .map((option) => {
+        const groupReceipts = sortedReceipts.filter((receipt) =>
+          getReceiptTagKeys(receipt).includes(option.key),
+        );
+        return {
+          ...option,
+          count: groupReceipts.length,
+          saldo: groupReceipts.reduce(
+            (sum, receipt) => sum + getSignedAmount(receipt),
+            0,
+          ),
+          receipts: groupReceipts,
+        };
+      })
+      .filter((group) => group.receipts.length > 0);
+  }, [activeTagKeys, getSignedAmount, groupBy, sortedReceipts, tagOptions]);
+
+  const receiptGroups =
+    groupBy === "project" ? projectGroups : groupBy === "tag" ? tagGroups : null;
 
   // Die Summen zählen genau die Zeilen, die in der Tabelle stehen — also auch
   // nach Projekt und Suche gefiltert.
@@ -1380,13 +1496,18 @@ export default function WerkbereichReceipts({
   }, [filteredReceipts]);
 
   // Projekt oder Suche schränken die Tabelle auf einen Ausschnitt ein.
-  const isNarrowed = activeProjectKeys.length > 0 || searchTerms.length > 0;
+  const isNarrowed =
+    activeProjectKeys.length > 0 ||
+    activeTagKeys.length > 0 ||
+    searchTerms.length > 0;
   const summaryScopeLabel =
-    activeProjectKeys.length > 0
+    activeProjectKeys.length > 0 && activeTagKeys.length === 0
       ? activeProjectKeys.map((key) => getProjectLabel(key)).join(", ")
-      : searchTerms.length > 0
-        ? "Auswahl"
-        : `${werkbereich.label} gesamt`;
+      : activeTagKeys.length > 0 && activeProjectKeys.length === 0
+        ? activeTagKeys.map(getTagFilterLabel).join(", ")
+        : isNarrowed
+          ? "Auswahl"
+          : `${werkbereich.label} gesamt`;
 
   const cashRegisterAccount =
     CASH_REGISTER_ACCOUNT_BY_COST_CENTER2[werkbereich.value];
@@ -1883,6 +2004,9 @@ export default function WerkbereichReceipts({
       activeProjectKeys.length > 0
         ? activeProjectKeys.map((key) => getProjectLabel(key)).join(", ")
         : null,
+      activeTagKeys.length > 0
+        ? `Tags: ${activeTagKeys.map(getTagFilterLabel).join(", ")}`
+        : null,
       searchQuery.trim() ? `Suche „${searchQuery.trim()}"` : null,
       `${sortedReceipts.length} ${sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}`,
     ].filter(Boolean);
@@ -2003,8 +2127,27 @@ export default function WerkbereichReceipts({
                 value={activeProjectKeys}
                 onChange={setSelectedProjects}
                 formatAmount={formatCents}
-                groupByProject={groupByProject}
-                onGroupByProjectChange={setGroupByProject}
+                grouped={groupBy === "project"}
+                onGroupedChange={(grouped) =>
+                  setGroupBy(grouped ? "project" : "none")
+                }
+                panelClassName={FILTERS_NARROW_POPOVER_CLASS_NAME}
+              />
+              <ProjectFilter
+                options={tagOptions}
+                value={activeTagKeys}
+                onChange={setSelectedTags}
+                formatAmount={formatCents}
+                grouped={groupBy === "tag"}
+                onGroupedChange={(grouped) =>
+                  setGroupBy(grouped ? "tag" : "none")
+                }
+                selectionSaldo={tagSelectionSaldo}
+                label="Tags"
+                searchLabel="Tag suchen"
+                emptyLabel="Kein Tag gefunden."
+                groupLabel="Nach Tag gruppieren"
+                dialogLabel="Tags filtern"
                 panelClassName={FILTERS_NARROW_POPOVER_CLASS_NAME}
               />
             </div>
@@ -2340,8 +2483,8 @@ export default function WerkbereichReceipts({
                 )
               : sortedReceipts.length === 0
                 ? renderMessageRow("Keine Belege gefunden.")
-                : groupByProject
-                  ? projectGroups.map((group) => (
+                : receiptGroups
+                  ? receiptGroups.map((group) => (
                       <Fragment key={group.key}>
                         <tr className="bg-primary-soft">
                           <td colSpan={visibleColumnCount} className="p-0">

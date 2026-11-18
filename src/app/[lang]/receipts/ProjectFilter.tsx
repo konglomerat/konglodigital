@@ -3,6 +3,8 @@
 // Unterprojekte eines Werkbereichs (dreistellige Kostenstelle 2) als
 // Mehrfachauswahl. Leere Auswahl heißt: alle. Das Gruppieren nach Projekt
 // sitzt mit im aufgeklappten Feld — es gehört zur selben Frage.
+//
+// Dieselbe Auswahl dient auch für Tags; die Texte kommen dann als Props.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
@@ -23,8 +25,18 @@ type ProjectFilterProps = {
   value: string[];
   onChange: (value: string[]) => void;
   formatAmount: (cents: number) => string;
-  groupByProject: boolean;
-  onGroupByProjectChange: (value: boolean) => void;
+  grouped: boolean;
+  onGroupedChange: (value: boolean) => void;
+  /**
+   * Saldo der Auswahl, wenn er sich nicht aus den Optionen summieren lässt —
+   * etwa bei Tags, wo ein Beleg in mehreren Optionen steht.
+   */
+  selectionSaldo?: number;
+  label?: string;
+  searchLabel?: string;
+  emptyLabel?: string;
+  groupLabel?: string;
+  dialogLabel?: string;
   /** Zusatzklasse am aufgeklappten Feld. */
   panelClassName?: string;
 };
@@ -34,11 +46,18 @@ export default function ProjectFilter({
   value,
   onChange,
   formatAmount,
-  groupByProject,
-  onGroupByProjectChange,
+  grouped,
+  onGroupedChange,
+  selectionSaldo: selectionSaldoOverride,
+  label = "Projekt",
+  searchLabel = "Projekt suchen",
+  emptyLabel = "Kein Projekt gefunden.",
+  groupLabel = "Nach Projekt gruppieren",
+  dialogLabel = "Projekte filtern",
   panelClassName,
 }: ProjectFilterProps) {
   const buttonId = useId();
+  const panelId = `${buttonId}-panel`;
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -76,9 +95,12 @@ export default function ProjectFilter({
   }, [options, query]);
 
   const selectedOptions = options.filter((option) => selected.has(option.key));
-  const selectionSaldo = (
-    selectedOptions.length > 0 ? selectedOptions : options
-  ).reduce((sum, option) => sum + option.saldo, 0);
+  const selectionSaldo =
+    selectionSaldoOverride ??
+    (selectedOptions.length > 0 ? selectedOptions : options).reduce(
+      (sum, option) => sum + option.saldo,
+      0,
+    );
 
   const buttonLabel =
     selectedOptions.length === 0
@@ -99,7 +121,7 @@ export default function ProjectFilter({
     <FieldShell
       as="div"
       htmlFor={buttonId}
-      label="Projekt"
+      label={label}
       className="relative shrink-0"
     >
       <div ref={containerRef}>
@@ -108,13 +130,13 @@ export default function ProjectFilter({
           type="button"
           aria-haspopup="dialog"
           aria-expanded={isOpen}
-          aria-controls="project-filter-panel"
+          aria-controls={panelId}
           onClick={() => setIsOpen((open) => !open)}
           className="inline-flex h-[38px] max-w-[320px] shrink-0 items-center gap-3 whitespace-nowrap knglmrt-border bg-card px-4 transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
         >
           <span className="truncate font-bold">
             {buttonLabel}
-            {groupByProject ? (
+            {grouped ? (
               <span className="font-normal text-muted-foreground">
                 {" "}
                 · gruppiert
@@ -130,17 +152,17 @@ export default function ProjectFilter({
 
         {isOpen ? (
           <div
-            id="project-filter-panel"
+            id={panelId}
             role="dialog"
-            aria-label="Projekte filtern"
+            aria-label={dialogLabel}
             className={`absolute left-0 top-full z-30 mt-2 w-[min(400px,calc(100vw-2rem))] border border-primary bg-popover text-popover-foreground ${panelClassName ?? ""}`}
           >
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Projekt suchen …"
-              aria-label="Projekt suchen"
+              placeholder={`${searchLabel} …`}
+              aria-label={searchLabel}
               autoFocus
               className="w-full border-b border-border bg-transparent px-5 py-3 placeholder:text-muted-foreground focus-visible:outline-none"
             />
@@ -148,7 +170,7 @@ export default function ProjectFilter({
             <ul className="max-h-[320px] overflow-y-auto">
               {visibleOptions.length === 0 ? (
                 <li className="px-5 py-3 text-muted-foreground">
-                  Kein Projekt gefunden.
+                  {emptyLabel}
                 </li>
               ) : (
                 visibleOptions.map((option) => (
@@ -178,11 +200,9 @@ export default function ProjectFilter({
             <div className="border-t border-border px-5 py-3">
               <Choice
                 kind="switch"
-                checked={groupByProject}
-                onChange={(event) =>
-                  onGroupByProjectChange(event.target.checked)
-                }
-                label="Nach Projekt gruppieren"
+                checked={grouped}
+                onChange={(event) => onGroupedChange(event.target.checked)}
+                label={groupLabel}
               />
             </div>
 

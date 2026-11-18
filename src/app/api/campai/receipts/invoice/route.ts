@@ -13,6 +13,10 @@ import {
   type CampaiConfig,
 } from "@/lib/campai-receipts/config";
 import { parsePositiveInt } from "@/lib/campai-receipts/parsers";
+import {
+  MAX_RECEIPT_TAGS,
+  parseReceiptTags,
+} from "@/lib/campai-receipts/tags";
 import { fetchCampaiTaxes } from "@/lib/campai-taxes";
 import { isValidCampaiCostCenter1 } from "@/lib/receipt-edit";
 import {
@@ -59,6 +63,7 @@ type InvoiceBody = {
   intro?: string;
   note?: string;
   internalNote?: string;
+  tags?: unknown;
   description?: string;
   positions?: PositionPayload[];
   isNet?: boolean;
@@ -289,7 +294,6 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const tags = mergeCampaiTags(["API"]);
   const memberProfile = await getMemberProfileByUserId(supabase, user.id);
   const creatorNote = buildCampaiReceiptCreatorNote({
     user,
@@ -297,6 +301,10 @@ export const POST = async (request: NextRequest) => {
   });
 
   const body = (await request.json()) as InvoiceBody;
+  const tags = mergeCampaiTags(["API"], parseReceiptTags(body.tags)).slice(
+    0,
+    MAX_RECEIPT_TAGS,
+  );
 
   if (!body.address || !body.positions || body.positions.length === 0) {
     return NextResponse.json(

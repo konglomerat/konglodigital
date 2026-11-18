@@ -24,6 +24,7 @@ import SelectedCreditorBadge from "../../components/ui/selected-creditor-badge";
 import InternalNoteSection from "../../components/ui/InternalNoteSection";
 import ReceiptUploadSection from "../../components/ui/ReceiptUploadSection";
 import ReceiptsPageHeader from "../create/header";
+import ReceiptTagField from "../ReceiptTagField";
 import PageTitle from "../../components/PageTitle";
 import {
   AutocompleteInput,
@@ -133,6 +134,8 @@ export default function ReimbursementForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   // File state — multiple files get bundled into a single PDF
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // Optionale Tags; „API“ setzt der Server selbst dazu.
+  const [tags, setTags] = useState<string[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
   const [costCentersLoading, setCostCentersLoading] = useState(true);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
@@ -238,6 +241,7 @@ export default function ReimbursementForm({
             : { creditorAccount: creditorAccount ?? undefined }),
           positions: values.positions,
           internalNote,
+          tags,
           receiptFileBase64: bytesToBase64(bytes),
           receiptFileName: datei.name,
           receiptFileContentType: datei.type || "application/octet-stream",
@@ -266,6 +270,7 @@ export default function ReimbursementForm({
       reset(emptyValues());
 
       setSelectedFiles([]);
+      setTags([]);
       setCreditorAccount(null);
       setCreditorName("");
       setShowCreatePanel(false);
@@ -413,6 +418,8 @@ export default function ReimbursementForm({
                 })}
               />
             </div>
+
+            <ReceiptTagField value={tags} onChange={setTags} reservedCount={1} />
 
             {/* Einzelne Positionen */}
             <div className="space-y-4 border-t border-border pt-5">
