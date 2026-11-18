@@ -34,6 +34,7 @@ type ParsedCashReceipt = {
   positionAccount: number | null;
   extraTags: string[];
   notes: string;
+  internalNote: string;
   description: string;
   positionDescription: string;
   receiptDate: string;
@@ -141,6 +142,9 @@ const parseCashReceiptInput = (
       positionAccount: parsePositiveInt(body.positionAccount),
       extraTags,
       notes,
+      // Die Formulare schicken `internalNote`; `notes` fließt zusätzlich in
+      // die automatisch gebaute Beschreibung.
+      internalNote: compactText(body.internalNote ?? body.notes),
       description,
       positionDescription,
       receiptDate: toIsoDate(body.transactionDate),
@@ -316,7 +320,7 @@ export const handleCashReceipt = async (
           config,
           receiptId,
           user: routeAccess.user,
-          internalNote: receipt.notes,
+          internalNote: receipt.internalNote,
         })
       : "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
 
