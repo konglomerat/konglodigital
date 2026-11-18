@@ -26,6 +26,7 @@ import { I18nProvider } from "@/i18n/client";
 import { getServerI18n } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
 import AppShell from "./AppShell";
+import FeedbackWidget from "./FeedbackWidget";
 import MobileTopNav from "./MobileTopNav";
 import SiteFooter from "./SiteFooter";
 import TopNav from "./TopNav";
@@ -206,6 +207,9 @@ export default async function RootLayout({
           >
             {children}
           </AppShell>
+          {isAuthenticated ? (
+            <FeedbackWidget defaultName={currentUserDisplayName} />
+          ) : null}
         </I18nProvider>
       </body>
     </html>

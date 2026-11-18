@@ -178,7 +178,8 @@ export default function Dialog({
       aria-modal="true"
       aria-labelledby={titleId}
       // Der Hintergrund ist die stille Fläche des Systems, kein schwarzer Schleier.
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[color-mix(in_oklab,var(--muted)_92%,transparent)] p-6"
+      // center-safe: ist der Rahmen höher als der Bildschirm, bleibt sein Kopf erreichbar.
+      className="fixed inset-0 z-50 flex items-center-safe justify-center overflow-y-auto bg-[color-mix(in_oklab,var(--muted)_92%,transparent)] p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onCancel();
       }}
