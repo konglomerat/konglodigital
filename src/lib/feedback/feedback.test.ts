@@ -58,13 +58,12 @@ describe("parseFeedbackSubmission", () => {
     });
   });
 
-  it("keeps only the language in the context of an idea", () => {
+  it("drops the technical context of an idea", () => {
     const idea = parseFeedbackSubmission({ ...valid, type: "feature" });
     expect(idea?.context).toMatchObject({
       path: "unbekannt",
       viewportWidth: null,
       screenWidth: null,
-      language: "de",
     });
   });
 

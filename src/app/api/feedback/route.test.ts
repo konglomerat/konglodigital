@@ -6,7 +6,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
-  sendSmtpMail: vi.fn(),
   uploadOpeninaryMedia: vi.fn(),
 }));
 
@@ -16,7 +15,6 @@ vi.mock("@/lib/supabase/route", () => ({
     supabase: { auth: { getUser: mocks.getUser } },
   }),
 }));
-vi.mock("@/lib/smtp-mail", () => ({ sendSmtpMail: mocks.sendSmtpMail }));
 vi.mock("@/lib/openinary-server", () => ({
   uploadOpeninaryMedia: mocks.uploadOpeninaryMedia,
 }));
@@ -76,7 +74,6 @@ beforeEach(() => {
   vi.stubEnv("GITHUB_APP_INSTALLATION_ID", "42");
   vi.stubEnv("GITHUB_APP_PRIVATE_KEY", privateKey);
   mocks.getUser.mockResolvedValue({ data: { user: member } });
-  mocks.sendSmtpMail.mockResolvedValue({});
   mocks.uploadOpeninaryMedia.mockResolvedValue({
     url: "https://media.test/t/feedback/a.jpg",
   });
@@ -115,15 +112,6 @@ describe("POST /api/feedback", () => {
     expect(sent).toContain("<details>");
   });
 
-  it("confirms the entry to the sender only", async () => {
-    await postFeedback({});
-    expect(mocks.sendSmtpMail).toHaveBeenCalledTimes(1);
-    expect(mocks.sendSmtpMail.mock.calls[0][0].to).toBe(member.email);
-    expect(mocks.sendSmtpMail.mock.calls[0][0].text).toContain(
-      "https://github.com/issue/1",
-    );
-  });
-
   it("publishes an idea as a discussion in the ideas category", async () => {
     fetchMock
       .mockResolvedValueOnce(
@@ -155,13 +143,12 @@ describe("POST /api/feedback", () => {
     expect(sent).not.toContain("/de/receipts");
   });
 
-  it("reports an error and sends no mail when GitHub fails", async () => {
+  it("reports an error when GitHub fails", async () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
 
     const response = await postFeedback({});
 
     expect(response.status).toBe(503);
-    expect(mocks.sendSmtpMail).not.toHaveBeenCalled();
   });
 
   it("creates no entry when the image upload fails", async () => {
@@ -171,13 +158,6 @@ describe("POST /api/feedback", () => {
 
     expect(response.status).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(mocks.sendSmtpMail).not.toHaveBeenCalled();
-  });
-
-  it("still succeeds when only the confirmation mail fails", async () => {
-    mocks.sendSmtpMail.mockRejectedValue(new Error("smtp down"));
-    const response = await postFeedback({});
-    expect(response.status).toBe(200);
   });
 
   it("rejects files that are not images", async () => {

@@ -14,7 +14,6 @@ import {
   type FeedbackResponse,
 } from "@/lib/feedback/feedback";
 import { publishFeedbackToGithub } from "@/lib/feedback/github";
-import { mailFeedbackConfirmation } from "@/lib/feedback/mails";
 import { uploadOpeninaryMedia } from "@/lib/openinary-server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -45,7 +44,7 @@ export const POST = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
-  if (!user?.email) {
+  if (!user) {
     return NextResponse.json(
       { error: "Bitte melde dich an, um Feedback zu senden." },
       { status: 401 },
@@ -118,13 +117,6 @@ export const POST = async (request: NextRequest) => {
       { error: "Das Feedback ist nicht angekommen." },
       { status: 503 },
     );
-  }
-
-  // Der Eintrag steht — eine fehlende Bestätigung ist kein Fehler mehr.
-  try {
-    await mailFeedbackConfirmation({ email: user.email, submission, url });
-  } catch (error) {
-    console.error("[feedback] confirmation mail failed", error);
   }
 
   return NextResponse.json({ url } satisfies FeedbackResponse);

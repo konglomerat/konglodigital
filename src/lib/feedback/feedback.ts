@@ -126,11 +126,8 @@ export const parseFeedbackSubmission = (input: {
     name,
     message,
     title: deriveFeedbackTitle(message),
-    // Ideen brauchen keinen technischen Kontext, nur die Sprache für die Mail.
-    context:
-      type === "bug"
-        ? context
-        : parseFeedbackContext({ language: context.language }),
+    // Ideen brauchen keinen technischen Kontext.
+    context: type === "bug" ? context : parseFeedbackContext(null),
   };
 };
 

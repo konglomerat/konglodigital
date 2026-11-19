@@ -128,23 +128,21 @@ export default function FeedbackWidget({
     body.set("type", type);
     body.set("name", name);
     body.set("message", message);
-    body.set(
-      "context",
-      JSON.stringify(
-        type === "bug"
-          ? {
-              path: window.location.pathname,
-              viewportWidth: window.innerWidth,
-              viewportHeight: window.innerHeight,
-              screenWidth: window.screen.width,
-              screenHeight: window.screen.height,
-              pixelRatio: window.devicePixelRatio,
-              touch: navigator.maxTouchPoints > 0,
-              language: locale,
-            }
-          : { language: locale },
-      ),
-    );
+    if (type === "bug") {
+      body.set(
+        "context",
+        JSON.stringify({
+          path: window.location.pathname,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+          pixelRatio: window.devicePixelRatio,
+          touch: navigator.maxTouchPoints > 0,
+          language: locale,
+        }),
+      );
+    }
     if (screenshot) body.set("screenshot", screenshot.blob, "screenshot.jpg");
 
     try {
@@ -216,11 +214,7 @@ export default function FeedbackWidget({
       >
         {result ? (
           <div className="flex flex-col gap-3">
-            <p>
-              {tx(
-                "Dein Beitrag ist jetzt online. Den Link bekommst du auch per E-Mail.",
-              )}
-            </p>
+            <p>{tx("Dein Beitrag ist jetzt online.")}</p>
             <Button
               kind="tertiary"
               href={result.url}
