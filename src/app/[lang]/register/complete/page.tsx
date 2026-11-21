@@ -56,6 +56,94 @@ const getRegistrationProfile = async (
   return { firstName, lastName, memberNumber };
 };
 
+const LINK_INVALID_MESSAGE =
+  "Dieser Registrierungslink ist abgelaufen oder wurde bereits verwendet.";
+
+// Ein abgelaufener Link verrät nicht, zu wem er gehört — deshalb fragt das
+// Formular die Adresse ab. Die Antwort bleibt neutral, ob es ein Konto gibt.
+const ResendInviteForm = () => {
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setIsSending(true);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(body.error ?? "Die Einladung konnte nicht gesendet werden.");
+        return;
+      }
+      setIsSent(true);
+    } catch {
+      setError("Verbindung fehlgeschlagen. Bitte versuche es erneut.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (isSent) {
+    return (
+      <p
+        role="status"
+        className="mt-6 rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success"
+      >
+        Wenn zu dieser Adresse eine Einladung gehört, ist eine neue Mail
+        unterwegs. Schau bitte auch im Spam-Ordner nach.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <p className="text-foreground">
+        Du kannst dir selbst einen neuen Link schicken: Gib dafür hier die
+        E-Mail-Adresse ein, an die deine Einladung gegangen ist, und klicke auf
+        „Neue Einladung senden“. Du bekommst dann eine neue Mail und kannst
+        deine Registrierung abschließen.
+      </p>
+      <Field
+        id="register-complete-resend-email"
+        label="E-Mail-Adresse"
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+      />
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      ) : null}
+      <Button
+        fullWidth
+        size="small"
+        type="submit"
+        kind="primary"
+        disabled={isSending}
+      >
+        {isSending ? "Einladung wird gesendet ..." : "Neue Einladung senden"}
+      </Button>
+    </form>
+  );
+};
+
 export default function RegisterCompletePage() {
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<RegistrationProfile | null>(null);
@@ -76,7 +164,7 @@ export default function RegisterCompletePage() {
         const { error: exchangeError } =
           await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError && isMounted) {
-          setError("Der Registrierungslink ist ungueltig oder abgelaufen.");
+          setError(LINK_INVALID_MESSAGE);
           setIsLoading(false);
           return;
         }
@@ -91,8 +179,9 @@ export default function RegisterCompletePage() {
         return;
       }
 
+      // Ohne gültigen Link gibt es keine Sitzung, auch das landet hier.
       if (userError) {
-        setError("Der Registrierungslink konnte nicht geladen werden.");
+        setError(LINK_INVALID_MESSAGE);
         setIsLoading(false);
         return;
       }
@@ -108,9 +197,7 @@ export default function RegisterCompletePage() {
       }
 
       if (!nextProfile) {
-        setError(
-          "Dieser Registrierungslink ist ungueltig, unvollstaendig oder bereits abgelaufen.",
-        );
+        setError(LINK_INVALID_MESSAGE);
         setIsLoading(false);
         return;
       }
@@ -198,10 +285,12 @@ export default function RegisterCompletePage() {
         <h1 className="text-2xl font-semibold text-foreground">
           Registrierung abschliessen
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem
-          Mitgliedskonto.
-        </p>
+        {isLoading || profile ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Vergib jetzt dein Passwort. Die Stammdaten stammen direkt aus deinem
+            Mitgliedskonto.
+          </p>
+        ) : null}
 
         {isLoading ? (
           <p className="mt-6 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
@@ -306,16 +395,17 @@ export default function RegisterCompletePage() {
         ) : null}
 
         {!isLoading && !profile && error ? (
-          <div className="mt-6 space-y-3 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-4 text-sm text-destructive">
-            <p>{error}</p>
-            <p>
-              Einladungen verschickt der Vorstand — bitte melde dich dort für
-              einen neuen Link.
+          <>
+            <p className="mt-6 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3 text-sm text-destructive">
+              {error}
             </p>
-            <Link className="font-semibold underline" href="/login">
-              Zur Anmeldung
-            </Link>
-          </div>
+            <ResendInviteForm />
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              <Link className="font-semibold underline" href="/login">
+                Zur Anmeldung
+              </Link>
+            </p>
+          </>
         ) : null}
       </div>
     </div>

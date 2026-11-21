@@ -18,6 +18,7 @@ import { getVerwaltungEntryHref } from "./[lang]/admin/ressorts";
 import { canPreviewAccess } from "@/lib/access/server";
 import {
   getServerAccess,
+  getServerMemberProfile,
   getServerRealAccess,
   getServerSession,
 } from "@/lib/server-session";
@@ -25,6 +26,7 @@ import { I18nProvider } from "@/i18n/client";
 import { getServerI18n } from "@/i18n/server";
 import { storyOpenSans } from "@/lib/story-fonts";
 import AppShell from "./AppShell";
+import FeedbackWidget from "./FeedbackWidget";
 import MobileTopNav from "./MobileTopNav";
 import SiteFooter from "./SiteFooter";
 import TopNav from "./TopNav";
@@ -125,13 +127,23 @@ export default async function RootLayout({
   const navigationPromise = loadPayloadNavigation();
   const { user } = await getServerSession();
   const isAuthenticated = Boolean(user);
+  // Profil und Zuweisungen sind getrennte Abfragen — parallel statt
+  // nacheinander, sonst wartet jede Seite eine Runde länger.
+  const [memberProfile, access] = await Promise.all([
+    user ? getServerMemberProfile() : null,
+    getServerAccess(),
+  ]);
   const currentUserDisplayName = user
-    ? getCampaiBookingDisplayName(user)
+    ? getCampaiBookingDisplayName(user, memberProfile?.campaiName) ||
+      [user.user_metadata?.first_name, user.user_metadata?.last_name]
+        .filter((part) => typeof part === "string" && part.trim())
+        .join(" ") ||
+      null
     : null;
   // Ohne sichtbares Ressort keine Verwaltung — außer für Admins in einer
   // Rechte-Vorschau, die sonst nicht mehr an den Schalter zum Beenden kämen.
   const adminAreaHref =
-    getVerwaltungEntryHref(await getServerAccess()) ??
+    getVerwaltungEntryHref(access) ??
     (user && canPreviewAccess(await getServerRealAccess()) ? "/admin" : null);
   const showNavTour = Boolean(
     user &&
@@ -195,6 +207,9 @@ export default async function RootLayout({
           >
             {children}
           </AppShell>
+          {isAuthenticated ? (
+            <FeedbackWidget defaultName={currentUserDisplayName} />
+          ) : null}
         </I18nProvider>
       </body>
     </html>

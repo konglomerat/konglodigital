@@ -1,4 +1,5 @@
 import ICAL from "ical.js";
+import { unstable_cache } from "next/cache";
 import {
   faBolt,
   faBoxesStacked,
@@ -187,35 +188,36 @@ const normalizeEvent = (
   } satisfies CalendarEvent;
 };
 
+/** So weit reicht der gecachte Ausschnitt; Aufrufer schneiden daraus zu. */
+const CACHED_DAYS = 90;
+/** Der Google-Feed (gut 1 MB) wird höchstens alle fünf Minuten neu geholt. */
+const CALENDAR_REVALIDATE_SECONDS = 300;
+const FETCH_TIMEOUT_MS = 8000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type SerializedCalendarEvent = Omit<CalendarEvent, "start" | "end"> & {
+  start: string;
+  end?: string;
+};
+
 /**
- * Termine ab heute. `daysAhead` weitet das Fenster (die Vereinsseite zeigt
- * die nächsten Wochen, die Kalenderseite nur eine Woche); ohne
- * `revalidateSeconds` bleibt es beim ungecachten Abruf wie bisher.
+ * Serien, deren letzte Wiederholung vor dem Fenster liegt, können nichts
+ * mehr beitragen. Der Iterator liefe sonst jede einzelne Wiederholung
+ * seit dem Serienstart ab.
  */
-export const getUpcomingEvents = async (
-  daysAhead: number = DAYS_AHEAD,
-  { revalidateSeconds }: { revalidateSeconds?: number } = {},
-) => {
-  const now = new Date();
-  const rangeStart = new Date(now);
-  rangeStart.setHours(0, 0, 0, 0);
-  const rangeEnd = new Date(
-    rangeStart.getTime() + daysAhead * 24 * 60 * 60 * 1000,
+const seriesEndedBefore = (vevent: ICAL.Component, rangeStart: Date) => {
+  if (vevent.getAllProperties("rdate").length > 0) return false;
+  const rrules = vevent
+    .getAllProperties("rrule")
+    .map((property) => property.getFirstValue() as ICAL.Recur);
+  return (
+    rrules.length > 0 &&
+    rrules.every((rule) => rule.until && rule.until.toJSDate() < rangeStart)
   );
+};
 
-  const response = await fetch(
-    ICAL_URL,
-    revalidateSeconds === undefined
-      ? { cache: "no-store" }
-      : { next: { revalidate: revalidateSeconds } },
-  );
-  if (!response.ok) {
-    throw new Error("Kalender konnte nicht geladen werden.");
-  }
-
-  const icsText = await response.text();
-  const jcalData = ICAL.parse(icsText);
-  const component = new ICAL.Component(jcalData);
+const parseEvents = (icsText: string, rangeStart: Date, rangeEnd: Date) => {
+  const component = new ICAL.Component(ICAL.parse(icsText));
   const vevents = component.getAllSubcomponents("vevent");
 
   const events: CalendarEvent[] = [];
@@ -224,6 +226,8 @@ export const getUpcomingEvents = async (
     const event = new ICAL.Event(vevent);
 
     if (event.isRecurring()) {
+      if (seriesEndedBefore(vevent, rangeStart)) continue;
+
       const iterator = event.iterator();
       let next = iterator.next();
 
@@ -256,4 +260,59 @@ export const getUpcomingEvents = async (
   }
 
   return events.sort((a, b) => a.start.getTime() - b.start.getTime());
+};
+
+/**
+ * Abruf und Auflösen der Serien kosten zusammen gut eine halbe Sekunde
+ * Rechenzeit. Deshalb liegt das fertige Ergebnis im Cache, nicht nur die
+ * Antwort von Google. Der Schlüssel ist der Tagesbeginn: mit jedem neuen Tag
+ * entsteht ein neuer Eintrag.
+ */
+const loadCachedEvents = unstable_cache(
+  async (rangeStartIso: string): Promise<SerializedCalendarEvent[]> => {
+    const rangeStart = new Date(rangeStartIso);
+    const rangeEnd = new Date(rangeStart.getTime() + CACHED_DAYS * DAY_MS);
+
+    const response = await fetch(ICAL_URL, {
+      next: { revalidate: CALENDAR_REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      throw new Error("Kalender konnte nicht geladen werden.");
+    }
+
+    return parseEvents(await response.text(), rangeStart, rangeEnd).map(
+      (event) => ({
+        ...event,
+        start: event.start.toISOString(),
+        end: event.end?.toISOString(),
+      }),
+    );
+  },
+  ["calendar-upcoming-events-v1"],
+  { revalidate: CALENDAR_REVALIDATE_SECONDS, tags: ["calendar"] },
+);
+
+/**
+ * Termine ab heute. `daysAhead` weitet das Fenster (die Vereinsseite zeigt
+ * die nächsten Wochen, die Kalenderseite nur eine Woche).
+ */
+export const getUpcomingEvents = async (
+  daysAhead: number = DAYS_AHEAD,
+): Promise<CalendarEvent[]> => {
+  const rangeStart = new Date();
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(
+    rangeStart.getTime() + Math.min(daysAhead, CACHED_DAYS) * DAY_MS,
+  );
+
+  const events = await loadCachedEvents(rangeStart.toISOString());
+
+  return events
+    .map((event) => ({
+      ...event,
+      start: new Date(event.start),
+      end: event.end ? new Date(event.end) : undefined,
+    }))
+    .filter((event) => event.start <= rangeEnd);
 };

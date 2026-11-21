@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import {
 	listMemberProfilesByUserIds,
-	upsertMemberProfile,
+	setMemberProfileCampaiLink,
 } from "@/lib/member-profiles";
 import { can } from "@/lib/access/access";
 import { listAssignments, listScopes } from "@/lib/access/assignments";
@@ -118,6 +118,22 @@ export const GET = async (request: NextRequest) => {
 	}
 };
 
+const toLinkResponse = (
+	userId: string,
+	memberProfile: Awaited<ReturnType<typeof setMemberProfileCampaiLink>>,
+) =>
+	NextResponse.json({
+		profile: {
+			id: userId,
+			campaiContactId: memberProfile.campaiContactId,
+			campaiMemberNumber: memberProfile.campaiMemberNumber,
+			campaiDebtorAccount: memberProfile.campaiDebtorAccount,
+			campaiName: memberProfile.campaiName,
+		},
+	});
+
+// Verknüpfen, neu verknüpfen und lösen: `campaiContactId` als ID setzt den
+// Kontakt, `null` löst die Verknüpfung.
 export const PATCH = async (request: NextRequest) => {
 	try {
 		const { supabase } = createSupabaseRouteClient(request);
@@ -133,10 +149,6 @@ export const PATCH = async (request: NextRequest) => {
 
 		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 		const userId = typeof body.userId === "string" ? body.userId.trim() : "";
-		const requestedCampaiContactId =
-			typeof body.campaiContactId === "string"
-				? body.campaiContactId.trim()
-				: "";
 
 		if (!userId) {
 			return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
@@ -151,43 +163,124 @@ export const PATCH = async (request: NextRequest) => {
 			throw userLookupError;
 		}
 
-		if (requestedCampaiContactId) {
-			const contact = await getCampaiActiveMemberContactById(
-				requestedCampaiContactId,
-			);
-
-			if (!contact) {
-				return NextResponse.json(
-					{ error: "Campai-Konto konnte nicht gefunden werden." },
-					{ status: 404 },
-				);
-			}
-
-			const memberProfile = await upsertMemberProfile(
+		if (body.campaiContactId === null) {
+			const memberProfile = await setMemberProfileCampaiLink(
 				adminClient,
-				userId,
-				buildCampaiProfileData(contact),
+				userLookup.user.id,
+				null,
 			);
-
-			return NextResponse.json({
-				profile: {
-					id: userLookup.user.id,
-					campaiContactId: memberProfile.campaiContactId,
-					campaiMemberNumber: memberProfile.campaiMemberNumber,
-					campaiDebtorAccount: memberProfile.campaiDebtorAccount,
-					campaiName: memberProfile.campaiName,
-				},
-			});
+			return toLinkResponse(userLookup.user.id, memberProfile);
 		}
 
-		return NextResponse.json(
-			{ error: "Keine Aenderung angegeben." },
-			{ status: 400 },
+		const requestedCampaiContactId =
+			typeof body.campaiContactId === "string"
+				? body.campaiContactId.trim()
+				: "";
+
+		if (!requestedCampaiContactId) {
+			return NextResponse.json(
+				{ error: "Keine Änderung angegeben." },
+				{ status: 400 },
+			);
+		}
+
+		const contact = await getCampaiActiveMemberContactById(
+			requestedCampaiContactId,
 		);
+
+		if (!contact) {
+			return NextResponse.json(
+				{ error: "Campai-Konto konnte nicht gefunden werden." },
+				{ status: 404 },
+			);
+		}
+
+		// Ein Kontakt gehört zu genau einem Konto (eindeutiger Index) — sonst
+		// scheitert das Speichern mit einer Datenbankmeldung statt einer Erklärung.
+		const { data: otherLinks, error: otherLinksError } = await adminClient
+			.from("member_profiles")
+			.select("user_id")
+			.eq("campai_contact_id", contact.id)
+			.neq("user_id", userLookup.user.id)
+			.limit(1);
+
+		if (otherLinksError) {
+			throw otherLinksError;
+		}
+
+		if (otherLinks && otherLinks.length > 0) {
+			const { data: otherUser } = await adminClient.auth.admin.getUserById(
+				otherLinks[0].user_id as string,
+			);
+			return NextResponse.json(
+				{
+					error: `Dieser Campai-Kontakt ist schon mit ${
+						otherUser?.user?.email ?? "einem anderen Konto"
+					} verknüpft. Löse diese Verknüpfung zuerst.`,
+				},
+				{ status: 409 },
+			);
+		}
+
+		const profileData = buildCampaiProfileData(contact);
+		const memberProfile = await setMemberProfileCampaiLink(
+			adminClient,
+			userLookup.user.id,
+			profileData,
+		);
+
+		return toLinkResponse(userLookup.user.id, memberProfile);
 	} catch (error) {
 		const message = getErrorMessage(
 			error,
-			"Aenderung konnte nicht gespeichert werden.",
+			"Änderung konnte nicht gespeichert werden.",
+		);
+		return NextResponse.json({ error: message }, { status: 500 });
+	}
+};
+
+// Löscht das Konto in Supabase. Profil, Rollen und eigene Einträge fallen per
+// Fremdschlüssel mit weg oder verlieren nur den Verweis; der Campai-Kontakt
+// bleibt unberührt.
+export const DELETE = async (request: NextRequest) => {
+	try {
+		const { supabase } = createSupabaseRouteClient(request);
+		const { data } = await supabase.auth.getUser();
+
+		if (!data.user) {
+			return createUnauthorizedResponse();
+		}
+
+		if (!can(await loadUserAccess(supabase, data.user), "users.manage")) {
+			return createForbiddenResponse();
+		}
+
+		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+		const userId = typeof body.userId === "string" ? body.userId.trim() : "";
+
+		if (!userId) {
+			return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
+		}
+
+		if (userId === data.user.id) {
+			return NextResponse.json(
+				{ error: "Das eigene Konto kannst du hier nicht löschen." },
+				{ status: 400 },
+			);
+		}
+
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient.auth.admin.deleteUser(userId);
+
+		if (error) {
+			throw error;
+		}
+
+		return NextResponse.json({ ok: true });
+	} catch (error) {
+		const message = getErrorMessage(
+			error,
+			"Konto konnte nicht gelöscht werden.",
 		);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}

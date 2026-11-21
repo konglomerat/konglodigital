@@ -77,6 +77,11 @@ export type TariffChangeResult = {
   /** Nur bei der 10er Karte: die Rechnung ist erstellt und verschickt. */
   invoiceSent: boolean;
   cardRequested: boolean;
+  /**
+   * Die Mail mit Dauerauftrag und Roseguarden-Registrierung ist raus — nur beim
+   * Abo per Überweisung mit Kartenantrag. Verschickt sie die Route.
+   */
+  instructionsMailSent: boolean;
   /** Was das Mitglied überweisen soll — nur beim Abo per Überweisung. */
   transfer: {
     bank: TariffBankDetails;
@@ -694,6 +699,7 @@ export const applyTariffChange = async (
     previousEndsAt,
     invoiceSent,
     cardRequested,
+    instructionsMailSent: false,
     transfer,
   };
 };

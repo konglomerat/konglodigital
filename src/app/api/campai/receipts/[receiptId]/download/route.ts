@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { canAnywhere } from "@/lib/access/access";
 import { loadUserAccess } from "@/lib/access/server";
-import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { listCampaiReceipts } from "@/lib/campai-list-receipts";
 import {
   createSupabaseRouteClient,
@@ -46,7 +46,14 @@ export const GET = async (
     );
   }
 
-  const currentUserDisplayName = getCampaiBookingDisplayName(data.user).trim();
+  // Wem ein Beleg gehört, entscheidet der Name — also nur der aus dem
+  // Mitgliedsprofil, den allein der Server schreibt. `user_metadata` kann jede
+  // Person über die Supabase-API selbst ändern und taugt hier nicht.
+  const memberProfile = await getMemberProfileByUserId(
+    supabase,
+    data.user.id,
+  ).catch(() => null);
+  const currentUserDisplayName = memberProfile?.campaiName?.trim() ?? "";
   if (
     !currentUserDisplayName ||
     !canAnywhere(await loadUserAccess(supabase, data.user), "receipts.view")

@@ -7,7 +7,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Button from "@/components/knglmrt/Button";
 
 type PageTitleButtonKind =
-  "primary" | "secondary" | "danger-primary" | "danger-secondary";
+  | "primary"
+  | "secondary"
+  | "emphasis"
+  | "danger-primary"
+  | "danger-secondary";
 
 type PageTitleButtonSize = "small" | "medium" | "large";
 

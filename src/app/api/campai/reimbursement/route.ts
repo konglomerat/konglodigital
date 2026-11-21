@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { ALL_SCOPES } from "@/lib/access/access";
 import {
 	costCenterForbiddenResponse,
-	getBuchhaltungRouteAccess,
+	forbiddenResponse,
+	getRouteAccess,
+	loadAllowedCostCenters,
+	unauthorizedResponse,
 } from "@/lib/access/server";
 import { canEditReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
+import { fetchCampaiCostCenters } from "@/lib/campai-cost-centers";
 import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
+import {
+	MAX_RECEIPT_TAGS,
+	parseReceiptTags,
+} from "@/lib/campai-receipts/tags";
 import {
 	addCampaiReceiptNotes,
 	buildCampaiReceiptCreatorNote,
@@ -93,14 +102,27 @@ const extractId = (payload: unknown): string | null => {
 	return null;
 };
 
-export const POST = async (request: NextRequest) => {
-	const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
-	if (!routeAccess.ok) {
-		return routeAccess.response;
-	}
-	const { supabase, user } = routeAccess;
+const IBAN_PATTERN = /^[A-Z]{2}[0-9A-Z]{13,32}$/;
 
-	const tags = mergeCampaiTags(["API"]);
+// Einreichen darf jedes Mitglied. Wer Buchhaltung (receipts.edit) in
+// mindestens einem Bereich hat, wählt Kreditor und Kostenstellen aus den
+// eigenen Bereichen. Alle anderen — und wer das Mitgliederformular nutzt —
+// laufen im Mitgliedermodus: kein Kreditor vom Client (sonst ließe sich auf
+// fremde Konten buchen), Buchung auf den Sammel-Kreditor, die angegebene
+// Bankverbindung landet als Campai-Notiz für die Auszahlung.
+export const POST = async (request: NextRequest) => {
+	const { supabase, user, access } = await getRouteAccess(request);
+	if (!user) {
+		return unauthorizedResponse();
+	}
+	const allowedCostCenters = await loadAllowedCostCenters(
+		supabase,
+		access,
+		"receipts.edit",
+	);
+	const canBook =
+		allowedCostCenters === ALL_SCOPES || allowedCostCenters.length > 0;
+
 	const memberProfile = await getMemberProfileByUserId(supabase, user.id);
 	const creatorNote = buildCampaiReceiptCreatorNote({
 		user,
@@ -140,16 +162,43 @@ export const POST = async (request: NextRequest) => {
 			unknown
 		>;
 
+		const tags = mergeCampaiTags(["API"], parseReceiptTags(body.tags)).slice(
+			0,
+			MAX_RECEIPT_TAGS,
+		);
 		const betreff = compactText(body.betreff);
 		const internalNote = compactText(body.internalNote ?? body.notiz);
 		const belegdatum = parseDate(body.belegdatum);
 		const bereitsBeglichen = body.bereitsBeglichen === true;
 		const empfaengerName = compactText(body.empfaengerName);
 		const empfaengerEmail = compactText(body.empfaengerEmail);
+		const memberMode = body.mode === "member" || !canBook;
 		const clientCreditorAccount =
-			typeof body.creditorAccount === "number" && body.creditorAccount > 0
+			!memberMode &&
+			typeof body.creditorAccount === "number" &&
+			body.creditorAccount > 0
 				? body.creditorAccount
 				: null;
+		const iban =
+			typeof body.iban === "string"
+				? body.iban.replace(/\s+/g, "").toUpperCase()
+				: "";
+		const bic = compactText(body.bic).toUpperCase().slice(0, 11);
+
+		if (memberMode) {
+			if (!empfaengerName) {
+				return NextResponse.json(
+					{ error: "Bitte den Namen der Kontoinhaber*in angeben." },
+					{ status: 400 },
+				);
+			}
+			if (!IBAN_PATTERN.test(iban)) {
+				return NextResponse.json(
+					{ error: "Bitte eine gültige IBAN angeben." },
+					{ status: 400 },
+				);
+			}
+		}
 
 		if (!betreff) {
 			return NextResponse.json(
@@ -197,11 +246,19 @@ export const POST = async (request: NextRequest) => {
 			);
 		}
 
-		if (
-			!canEditReceiptCostCenters(
-				positions.map((position) => position.costCenter2),
-				routeAccess.allowedCostCenters,
-			)
+		const positionCostCenters = positions.map(
+			(position) => position.costCenter2,
+		);
+		if (memberMode) {
+			// Mitglieder dürfen jede buchbare Kostenstelle wählen — aber nur die.
+			const bookable = new Set(
+				(await fetchCampaiCostCenters()).map((option) => Number(option.value)),
+			);
+			if (!positionCostCenters.every((value) => bookable.has(value))) {
+				return forbiddenResponse("Diese Kostenstelle ist nicht buchbar.");
+			}
+		} else if (
+			!canEditReceiptCostCenters(positionCostCenters, allowedCostCenters)
 		) {
 			return costCenterForbiddenResponse();
 		}
@@ -257,9 +314,10 @@ export const POST = async (request: NextRequest) => {
 
 		// ── Kreditor-Konto: vom Client übergeben oder Fallback auf Env ──
 		const finalCreditorAccount = clientCreditorAccount ?? creditorAccount;
-		const finalAccountName = clientCreditorAccount
-			? (empfaengerName || accountName)
-			: accountName;
+		const finalAccountName =
+			clientCreditorAccount || memberMode
+				? empfaengerName || accountName
+				: accountName;
 
 		const payload: Record<string, unknown> = {
 			account: finalCreditorAccount,
@@ -316,7 +374,13 @@ export const POST = async (request: NextRequest) => {
 				organizationId,
 				mandateId,
 				receiptId,
-				contents: [creatorNote, internalNote],
+				contents: [
+					creatorNote,
+					memberMode
+						? `Erstattung an: ${empfaengerName}, IBAN ${iban}${bic ? `, BIC ${bic}` : ""} (über das Mitgliederformular eingereicht)`
+						: "",
+					internalNote,
+				],
 			});
 
 			if (!noteResult.ok) {

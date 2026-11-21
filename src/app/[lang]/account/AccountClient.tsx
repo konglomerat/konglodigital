@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -526,9 +527,7 @@ export default function AccountClient({
           </p>
         </div>
         <form action={signOut}>
-          <Button type="submit" kind="danger-secondary">
-            Abmelden
-          </Button>
+          <SignOutButton />
         </form>
       </header>
 
@@ -758,7 +757,14 @@ export default function AccountClient({
             )}
           </AccountSection>
 
-          <AccountProfileSections campai={campai} accountEmail={user.email} />
+          <AccountProfileSections
+            campai={campai}
+            accountEmail={user.email}
+            accountName={{
+              firstName: text(user.metadata.first_name),
+              lastName: text(user.metadata.last_name),
+            }}
+          />
 
           {/* Gelistet wird jeder Beleg des Debitorenkontos, nicht nur
               Rechnungen: Spenden, Angebote und Einnahmen laufen über dasselbe
@@ -862,5 +868,15 @@ export default function AccountClient({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Sperrt sich, solange die Abmeldung läuft — kein doppeltes Absenden. */
+function SignOutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" kind="danger-secondary" loading={pending}>
+      Abmelden
+    </Button>
   );
 }

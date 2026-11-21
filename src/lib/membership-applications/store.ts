@@ -71,9 +71,17 @@ export const getApplication = async (id: string) => {
   return data ? mapRow(data as Record<string, unknown>) : null;
 };
 
+/** Löscht den Antrag bei uns; in Campai bleibt alles stehen. */
+export const deleteApplication = async (id: string) => {
+  const { error } = await createSupabaseAdminClient().from(TABLE).delete().eq("id", id);
+  if (error) throw error;
+};
+
 export const insertApplication = async (
   data: ApplicationData,
-  signatures: ApplicationSignatures,
+  signatures: ApplicationSignatures | null,
+  /** Wer einen Papierantrag eingetragen hat; online `null`. */
+  by: string | null = null,
 ) => {
   const { data: row, error } = await createSupabaseAdminClient()
     .from(TABLE)
@@ -85,7 +93,7 @@ export const insertApplication = async (
       data,
       signatures,
       history: [
-        { at: new Date().toISOString(), by: null, type: "submitted" },
+        { at: new Date().toISOString(), by, type: "submitted" },
       ] satisfies HistoryEntry[],
     })
     .select("*")

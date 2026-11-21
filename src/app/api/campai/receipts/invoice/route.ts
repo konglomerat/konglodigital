@@ -14,6 +14,12 @@ import {
 } from "@/lib/campai-receipts/config";
 import { parsePositiveInt } from "@/lib/campai-receipts/parsers";
 import {
+  MAX_RECEIPT_TAGS,
+  parseReceiptTags,
+} from "@/lib/campai-receipts/tags";
+import { fetchCampaiTaxes } from "@/lib/campai-taxes";
+import { isValidCampaiCostCenter1 } from "@/lib/receipt-edit";
+import {
   costCenterForbiddenResponse,
   getBuchhaltungRouteAccess,
 } from "@/lib/access/server";
@@ -57,6 +63,7 @@ type InvoiceBody = {
   intro?: string;
   note?: string;
   internalNote?: string;
+  tags?: unknown;
   description?: string;
   positions?: PositionPayload[];
   isNet?: boolean;
@@ -107,11 +114,6 @@ const normalizePaymentMethodType = (
   value: unknown,
 ): CampaiPaymentMethodType | null =>
   isCampaiPaymentMethodType(value) ? value : null;
-
-const isValidCampaiCostCenter1 = (value: number): boolean => {
-  const firstDigit = String(value).trim().charAt(0);
-  return ["1", "2", "3", "4", "9"].includes(firstDigit);
-};
 
 const getValidDefaultCostCenter = (): number | null => {
   const parsed = parsePositiveInt(process.env.CAMPAI_COST_CENTER1);
@@ -195,45 +197,20 @@ const resolveTaxCodeOverrides = (): Map<TaxRateChoice, string> => {
 const resolveCampaiTaxCodesByRate = async (
   config: CampaiConfig,
 ): Promise<Map<TaxRateChoice, string>> => {
-  const response = await fetch(
-    `https://cloud.campai.com/api/${config.organizationId}/finance/accounting/accountingPlan`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": config.apiKey,
-      },
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) return new Map();
-
-  const payload = (await response.json().catch(() => null)) as {
-    taxes?: Array<{
-      type?: string;
-      code?: string;
-      rate?: number;
-      builtIn?: boolean;
-    }>;
-  } | null;
-
-  const taxes = Array.isArray(payload?.taxes) ? payload.taxes : [];
+  const taxes = await fetchCampaiTaxes({
+    apiKey: config.apiKey,
+    organizationId: config.organizationId,
+  }).catch(() => []);
   const result = new Map<TaxRateChoice, string>();
 
   for (const rate of [0, 7, 19] as const) {
     const matching = taxes.filter(
-      (tax) =>
-        tax.type === "vat" &&
-        typeof tax.code === "string" &&
-        tax.code.trim() &&
-        typeof tax.rate === "number" &&
-        tax.rate === rate,
+      (tax) => tax.type === "vat" && tax.rate === rate,
     );
     const preferred =
-      matching.find((tax) => tax.builtIn === true) ?? matching[0] ?? null;
-    if (preferred?.code) {
-      result.set(String(rate) as TaxRateChoice, preferred.code.trim());
+      matching.find((tax) => tax.builtIn) ?? matching[0] ?? null;
+    if (preferred) {
+      result.set(String(rate) as TaxRateChoice, preferred.code);
     }
   }
 
@@ -317,7 +294,6 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const tags = mergeCampaiTags(["API"]);
   const memberProfile = await getMemberProfileByUserId(supabase, user.id);
   const creatorNote = buildCampaiReceiptCreatorNote({
     user,
@@ -325,6 +301,10 @@ export const POST = async (request: NextRequest) => {
   });
 
   const body = (await request.json()) as InvoiceBody;
+  const tags = mergeCampaiTags(["API"], parseReceiptTags(body.tags)).slice(
+    0,
+    MAX_RECEIPT_TAGS,
+  );
 
   if (!body.address || !body.positions || body.positions.length === 0) {
     return NextResponse.json(

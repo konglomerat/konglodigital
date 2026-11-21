@@ -22,6 +22,7 @@ import {
   parsePositiveInt,
   toIsoDate,
 } from "./parsers";
+import { MAX_RECEIPT_TAGS, parseReceiptTags } from "./tags";
 
 export type CashReceiptDirection = "expense" | "revenue";
 
@@ -34,6 +35,7 @@ type ParsedCashReceipt = {
   positionAccount: number | null;
   extraTags: string[];
   notes: string;
+  internalNote: string;
   description: string;
   positionDescription: string;
   receiptDate: string;
@@ -123,12 +125,7 @@ const parseCashReceiptInput = (
   const receiptNumber = (
     receiptNumberOverride || `${autoPrefix}-${timeStamp}`
   ).slice(0, 30);
-  const extraTags = Array.isArray(body.tags)
-    ? body.tags
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.trim())
-        .filter(Boolean)
-    : [];
+  const extraTags = parseReceiptTags(body.tags);
 
   return {
     ok: true,
@@ -141,6 +138,9 @@ const parseCashReceiptInput = (
       positionAccount: parsePositiveInt(body.positionAccount),
       extraTags,
       notes,
+      // Die Formulare schicken `internalNote`; `notes` fließt zusätzlich in
+      // die automatisch gebaute Beschreibung.
+      internalNote: compactText(body.internalNote ?? body.notes),
       description,
       positionDescription,
       receiptDate: toIsoDate(body.transactionDate),
@@ -281,7 +281,7 @@ export const handleCashReceipt = async (
     const payload = buildPayload(
       receipt,
       positionAccount,
-      mergeCampaiTags(["API"], receipt.extraTags),
+      mergeCampaiTags(["API"], receipt.extraTags).slice(0, MAX_RECEIPT_TAGS),
       upload.receiptFileId ?? null,
     );
 
@@ -316,7 +316,7 @@ export const handleCashReceipt = async (
           config,
           receiptId,
           user: routeAccess.user,
-          internalNote: receipt.notes,
+          internalNote: receipt.internalNote,
         })
       : "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";
 

@@ -51,13 +51,14 @@ function LoginForm() {
         setError(body.error === "Invalid login credentials"
           ? tx("E-Mail-Adresse oder Passwort ist falsch.")
           : tx(body.error ?? "Anmeldung nicht möglich. Bitte versuche es erneut."));
+        setIsLoading(false);
         return;
       }
 
+      // Bis die Weiterleitung greift, bleibt die Taste gesperrt.
       window.location.replace(getSafeRedirect());
     } catch {
       setError(tx("Verbindung fehlgeschlagen. Bitte versuche es erneut."));
-    } finally {
       setIsLoading(false);
     }
   };

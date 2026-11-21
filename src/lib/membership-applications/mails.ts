@@ -1,12 +1,12 @@
-// Mitgliedsanträge — Mails per SMTP. Vor dem Annehmen gibt es noch keinen
-// Campai-Kontakt, deshalb gehen Eingangsbestätigung, Rückfrage, Absage und
-// die Info an den Vorstand nicht über Campai.
+// Mitgliedsanträge — die Info an den Vorstand über einen neuen Antrag, per
+// SMTP. Was an die antragstellende Person geht (Eingangsbestätigung,
+// Rückfrage, Absage), schickt Campai an ihren Kontakt (messageApplicant in
+// workflow.ts).
 import "server-only";
 
 import { sendSmtpMail } from "@/lib/smtp-mail";
 
-import { VORSTAND_EMAIL } from "./config";
-import { receiptConfirmation } from "./mail-texts";
+import { NEW_APPLICATION_NOTIFY_EMAIL } from "./config";
 import { describeAccess, describeFee, formatEuro, type MembershipApplication } from "./types";
 
 const escapeHtml = (value: string) =>
@@ -22,28 +22,6 @@ const textToHtml = (text: string) =>
     .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
     .join("\n");
 
-/** Schickt Text an die antragstellende Person; Antworten gehen an den Vorstand. */
-export const mailApplicant = (
-  application: MembershipApplication,
-  subject: string,
-  text: string,
-) =>
-  sendSmtpMail({
-    to: application.data.email,
-    subject,
-    text,
-    html: textToHtml(text),
-    replyTo: VORSTAND_EMAIL,
-  });
-
-export const mailReceiptConfirmation = (application: MembershipApplication) => {
-  const { subject, text } = receiptConfirmation(
-    application.data.firstName,
-    application.number,
-  );
-  return mailApplicant(application, subject, text);
-};
-
 export const mailVorstandNewApplication = (
   application: MembershipApplication,
   inboxUrl: string,
@@ -58,7 +36,7 @@ export const mailVorstandNewApplication = (
     `Prüfen und annehmen: ${inboxUrl}`,
   ].join("\n");
   return sendSmtpMail({
-    to: VORSTAND_EMAIL,
+    to: NEW_APPLICATION_NOTIFY_EMAIL,
     subject: `Neuer Mitgliedsantrag: ${data.firstName} ${data.lastName}`,
     text,
     html: textToHtml(text),

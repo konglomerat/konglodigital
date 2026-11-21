@@ -24,6 +24,9 @@ export const GLOBAL_SCOPE_PARAM = "global";
 /** Das Volkshaus-Projekt — die Raumbuchung gehört zu seinen Tools. */
 export const VOLKSHAUS_SCOPE_ID = "vhc";
 
+/** Der Werkbereich Holz — seine Sammelbestellungen teilt die Holzwerkstatt auf. */
+export const HOLZ_SCOPE_ID = "holz";
+
 export const findScope = (scopes: readonly Scope[], scopeId: string | null) =>
   scopeId === null
     ? null

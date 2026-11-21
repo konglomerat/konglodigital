@@ -185,6 +185,7 @@ const fetchPayloadJson = async <T>(url: URL): Promise<T | null> => {
       ...(process.env.NODE_ENV === "development"
         ? { cache: "no-store" as const }
         : { next: { revalidate: 60, tags: ["payload-cms"] } }),
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return null;
     return (await response.json()) as T;

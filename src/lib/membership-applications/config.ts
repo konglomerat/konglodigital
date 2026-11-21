@@ -3,5 +3,18 @@
 /** Gestaltete Campai-Vorlagen (crm/messageTemplates); den Text pflegt der Vorstand in Campai. */
 export const WELCOME_TEMPLATE_ID = "6a85d1b6087ed5f40420c311";
 export const COMPLETION_TEMPLATE_ID = "6ab6c38894f108c02a7c87eb";
+/** Teil 2/2 ohne Abholung der Karte und ohne Roseguarden — nur Jahresbeitrag. */
+export const COMPLETION_NO_CARD_TEMPLATE_ID = "6ae4dbc3d52c0593dc8659d5";
+/** Tarifwechsel auf ein Abo mit Karte (Self-Service): Dauerauftrag + Roseguarden. */
+export const CARD_TARIFF_INSTRUCTIONS_TEMPLATE_ID = "6ad1f4991df1fe49049a5102";
 
-export const VORSTAND_EMAIL = "vorstand@konglomerat.org";
+/**
+ * Tags am Campai-Kontakt. Jede Person, die einen Antrag stellt, bekommt den
+ * ersten — so lässt sich in Campai nachsehen, wer schon einmal einen gestellt
+ * hat, auch wenn nichts daraus wurde.
+ */
+export const APPLICANT_TAG = "Mitgliedsantrag";
+export const REJECTED_TAG = "Antrag abgelehnt";
+
+/** Empfänger der Info über neue Anträge. In der Testphase nur Vincent statt des ganzen Vorstands. */
+export const NEW_APPLICATION_NOTIFY_EMAIL = "vincent@konglomerat.org";

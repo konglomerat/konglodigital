@@ -60,6 +60,42 @@ export const POST = async (request: NextRequest) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const adminClient = createSupabaseAdminClient();
+  const publicBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    request.url;
+  const redirectTo = new URL("/register/complete", publicBaseUrl).toString();
+  const existingUser = await findExistingUserByEmail(
+    adminClient,
+    normalizedEmail,
+  );
+
+  // Offene Einladung: Die Registrierungsmail geht noch einmal an genau die
+  // eingeladene Adresse. Das gilt auch für alternative Adressen aus Campai,
+  // die die Mitgliedersuche unten nicht findet.
+  if (
+    existingUser &&
+    !existingUser.email_confirmed_at &&
+    !existingUser.last_sign_in_at
+  ) {
+    const { error: resendError } =
+      await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
+        data: existingUser.user_metadata ?? {},
+        redirectTo,
+      });
+
+    if (resendError) {
+      console.error("[auth/register] Failed to resend invite", resendError);
+      return NextResponse.json(
+        { error: "Registrierung konnte nicht gestartet werden." },
+        { status: 500 },
+      );
+    }
+
+    return withSupabaseCookies(NextResponse.json({ ok: true }), response);
+  }
+
   const linkedContact =
     await getCampaiActiveMemberContactByEmail(normalizedEmail);
 
@@ -72,22 +108,12 @@ export const POST = async (request: NextRequest) => {
     return withSupabaseCookies(NextResponse.json({ ok: true }), response);
   }
 
-  const adminClient = createSupabaseAdminClient();
   const splitName = splitCampaiContactName(linkedContact.name);
   const userMetadata = {
     first_name: splitName.firstName,
     last_name: splitName.lastName,
   };
   const memberProfile = buildCampaiProfileData(linkedContact);
-  const publicBaseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    request.url;
-  const redirectTo = new URL("/register/complete", publicBaseUrl).toString();
-  const existingUser = await findExistingUserByEmail(
-    adminClient,
-    normalizedEmail,
-  );
 
   if (existingUser) {
     const { error: updateError } = await adminClient.auth.admin.updateUserById(

@@ -32,6 +32,16 @@ export const isWerkbereichCostCenter = (value: string): boolean =>
 export const isUnterprojektOf = (value: string, werkbereich: string): boolean =>
   /^\d{3}$/.test(value) && value.startsWith(werkbereich);
 
+/** Der Werkbereich und jedes denkbare Unterprojekt (57 → 57, 570 … 579) —
+ *  ohne erst die Kostenstellen bei Campai abzufragen. */
+export const getWerkbereichCostCenterCandidates = (werkbereich: string): string[] => {
+  const value = werkbereich.trim();
+  return [
+    value,
+    ...Array.from({ length: 10 }, (_, digit) => `${value}${digit}`),
+  ].filter((candidate) => belongsToWerkbereich(candidate, value));
+};
+
 export const belongsToWerkbereich = (
   value: string,
   werkbereich: string,

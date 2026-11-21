@@ -398,12 +398,25 @@ function AppSlotBlock({ block, werkbereich, sidebar }: { block: PayloadBlock; we
           </Suspense>
         </section>
       );
+    // Live-Bereiche streamen nach, statt die ganze CMS-Seite aufzuhalten.
     case "news":
-      return <NewsSection />;
+      return (
+        <Suspense fallback={null}>
+          <NewsSection />
+        </Suspense>
+      );
     case "showcaseOfMonth":
-      return <ShowcaseOfTheMonthSection />;
+      return (
+        <Suspense fallback={null}>
+          <ShowcaseOfTheMonthSection />
+        </Suspense>
+      );
     case "resourceOfMonth":
-      return <ResourceOfTheMonthSection />;
+      return (
+        <Suspense fallback={null}>
+          <ResourceOfTheMonthSection />
+        </Suspense>
+      );
     default:
       return null;
   }

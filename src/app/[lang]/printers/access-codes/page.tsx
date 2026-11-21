@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 
 import PrinterAccessCodesClient from "./PrinterAccessCodesClient";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getServerSession } from "@/lib/server-session";
 
 export default async function PrinterAccessCodesPage() {
-  const supabase = await createSupabaseServerClient({ readOnly: true });
-  const { data } = await supabase.auth.getUser();
+  const { user } = await getServerSession();
 
-  if (!data.user) {
+  if (!user) {
     redirect("/login?redirectedFrom=/printers/access-codes");
   }
 

@@ -1,8 +1,14 @@
-// Mitgliedsanträge — die Campai-Aufrufe beim Annehmen. Jede Funktion ist ein
-// Endpunkt der REST-API (cloud.campai.com/api/openapi.json); die Form der
-// Bodies ist am 2026-10-11 live geprüft.
+// Mitgliedsanträge — die Campai-Aufrufe vom Eingang bis zur Aufnahme. Jede
+// Funktion ist ein Endpunkt der REST-API (cloud.campai.com/api/openapi.json);
+// die Form der Bodies ist am 2026-10-11 und 2026-11-16 live geprüft.
 //
 // Was Campai dabei nicht von selbst sagt:
+// - Nach E-Mail sucht nur `userFilter` (als JSON-String), nicht `searchTerm`.
+// - Die Duplikatprüfung beim Anlegen schlägt schon bei ähnlichen Namen an
+//   (409) — gesucht wird deshalb vorher selbst, per E-Mail.
+// - `types/add` vergibt beim Typ Mitglied sofort die Mitgliedsnummer, lässt
+//   das Eintrittsdatum aber leer. `types/remove` will den Kontaktnamen als
+//   Bestätigung, so wie `removal-impact` ihn liefert.
 // - `createDebtor: true` beim Anlegen des Kontakts legt keinen Debitor an.
 // - Verträge brauchen `options: []` und `pause: null`.
 // - `contracts/collect` arbeitet asynchron: der Rechnungsentwurf erscheint
@@ -16,12 +22,13 @@ import "server-only";
 import { normalizePhone } from "@/lib/campai-registration";
 import { loadCampaiConfig } from "@/lib/campai-receipts/config";
 
-import { VORSTAND_EMAIL } from "./config";
 import type { ApplicationData, ApplicationInvoice } from "./types";
 
 /** Zusatzfelder am Mitglied, an denen der Preis des Jahresbeitrags hängt. */
 const ANNUAL_FEE_FIELD = "iSsJ-bIIVANYkzHDLnbcx";
 const TRIAL_RATE_FIELD = "yuJULD";
+/** Benutzerdefiniertes Textfeld „Kartennummer" am Mitglied (Zugangskarte für Roseguarden). */
+const CARD_NUMBER_FIELD = "5qO2LW";
 
 const MAX_ATTACHMENTS = 3;
 const PAGE_SIZE = 100;
@@ -79,13 +86,66 @@ const mandate = (path: string, options?: { method?: string; body?: unknown }) =>
 
 // --- Kontakt und Debitor ----------------------------------------------------
 
-export const createMemberContact = async (data: ApplicationData) => {
+const contactPath = (contactId: string) => `crm/contacts/${encodeURIComponent(contactId)}`;
+
+const tagsOf = (contact: JsonRecord | null) =>
+  Array.isArray(contact?.tags) ? contact.tags.filter((tag): tag is string => typeof tag === "string") : [];
+
+const typesOf = (contact: JsonRecord | null) =>
+  Array.isArray(contact?.types) ? contact.types.filter((type): type is string => typeof type === "string") : [];
+
+/** Der Kontakt mit dieser E-Mail-Adresse — und was Campai schon über ihn weiß. */
+export const findContactByEmail = async (email: string) => {
+  const filter = {
+    operator: "and",
+    groups: [
+      {
+        operator: "and",
+        fields: [
+          { path: "communication.email", comparator: "equals", value: email.trim().toLowerCase() },
+        ],
+      },
+    ],
+  };
+  const result = record(
+    await mandate("crm/contacts/list", {
+      body: { limit: 5, userFilter: JSON.stringify(filter) },
+    }),
+  );
+  // Mehrere Treffer: das Mitglied zuerst, sonst der älteste Kontakt.
+  const [contact] = list(result?.contacts).sort(
+    (a, b) =>
+      Number(typesOf(b).includes("member")) - Number(typesOf(a).includes("member")) ||
+      text(a.createdAt).localeCompare(text(b.createdAt)),
+  );
+  if (!contact) return null;
+  const memberNumber = text(record(contact.contactNumbers)?.member) || null;
+  const member = record(contact.member);
+  return {
+    contactId: text(contact._id),
+    existing: {
+      memberNumber,
+      activeMember:
+        typesOf(contact).includes("member") && Boolean(member?.entryAt) && !member?.exitAt,
+      tags: tagsOf(contact),
+    },
+  };
+};
+
+const applicationAddress = (data: ApplicationData) => ({
+  country: "DE",
+  zip: data.zip.trim(),
+  city: data.city.trim(),
+  addressLine: data.street.trim(),
+});
+
+/** Die Person aus dem Antrag als Kontakt ohne Mitgliedschaft (Typ Adresse). */
+export const createApplicantContact = async (data: ApplicationData) => {
   const created = record(
     await mandate("crm/contacts", {
       body: {
-        type: "member",
+        type: "address",
         language: "de",
-        member: { entryAt: campaiDate(data.entryAt) },
         person: {
           title: "",
           firstName: data.firstName.trim(),
@@ -95,19 +155,102 @@ export const createMemberContact = async (data: ApplicationData) => {
         },
         // Telefonnummern nimmt erst das Update an (setMemberDetails).
         communication: { email: data.email.trim().toLowerCase() },
-        address: {
-          country: "DE",
-          zip: data.zip.trim(),
-          city: data.city.trim(),
-          addressLine: data.street.trim(),
-        },
-        makeDuplicateCheck: true,
+        address: applicationAddress(data),
+        // Gesucht ist schon per E-Mail; Campais Prüfung hält ähnliche Namen
+        // für Dubletten.
+        makeDuplicateCheck: false,
       },
     }),
   );
   const id = text(created?._id);
   if (!id) throw new CampaiError("Campai hat den Kontakt ohne ID angelegt.");
   return id;
+};
+
+/** Ergänzt Tags; die vorhandenen bleiben (das Update ersetzt die ganze Liste). */
+export const addContactTags = async (contactId: string, tags: string[]) => {
+  const current = tagsOf(record(await mandate(contactPath(contactId))));
+  const next = [...new Set([...current, ...tags])];
+  if (next.length === current.length) return;
+  await mandate(contactPath(contactId), { body: { tags: next } });
+};
+
+/**
+ * Macht aus dem Kontakt ein Mitglied: Typ Mitglied ergänzen, Name, Anschrift,
+ * E-Mail und Eintritt aus dem (ggf. korrigierten) Antrag, dann den Typ
+ * Adresse entfernen. Jeder Teil prüft vorher den Stand — ein zweiter Aufruf
+ * nach einem Abbruch macht nichts doppelt.
+ */
+export const makeMember = async (contactId: string, data: ApplicationData) => {
+  let contact = record(await mandate(contactPath(contactId)));
+  // Ein Mitglied mit Eintritt und ohne Austritt hat schon Verträge. Solange
+  // der Typ Adresse noch dransteht, ist es der eigene halbe Versuch von eben.
+  const member = record(contact?.member);
+  if (
+    typesOf(contact).includes("member") &&
+    !typesOf(contact).includes("address") &&
+    member?.entryAt &&
+    !member.exitAt
+  ) {
+    throw new CampaiError(
+      `Die Person ist in Campai schon Mitglied (Nr. ${text(record(contact?.contactNumbers)?.member) || "?"}). Bitte dort prüfen, statt den Antrag anzunehmen.`,
+    );
+  }
+  if (!typesOf(contact).includes("member")) {
+    await mandate(`${contactPath(contactId)}/types/add`, { body: { type: "member" } });
+    contact = record(await mandate(contactPath(contactId)));
+  }
+
+  // Mitgeschickte Blöcke müssen vollständig sein.
+  const person = record(contact?.person) ?? {};
+  const communication = { ...(record(contact?.communication) ?? {}) };
+  delete communication.greetings;
+  const address = record(contact?.address) ?? {};
+  await mandate(contactPath(contactId), {
+    body: {
+      person: {
+        salutation: person.salutation ?? "",
+        gender: person.gender ?? null,
+        title: person.title ?? "",
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        institutionName: person.institutionName ?? "",
+        printInstitutionOnAddress: person.printInstitutionOnAddress ?? false,
+        birthdate: person.birthdate ?? null,
+      },
+      communication: { ...communication, email: data.email.trim().toLowerCase() },
+      // Bundesland und Zusatzzeilen hat der Antrag nicht — die bleiben.
+      address: {
+        ...Object.fromEntries(
+          ["state", "details1", "details2"].flatMap((key) =>
+            address[key] == null ? [] : [[key, address[key]]],
+          ),
+        ),
+        ...applicationAddress(data),
+      },
+      member: { entryAt: campaiDate(data.entryAt), exitAt: null },
+    },
+  });
+
+  if (typesOf(contact).includes("address")) {
+    const impact = record(
+      await mandate(`${contactPath(contactId)}/types/address/removal-impact`),
+    );
+    const blockers = list(impact?.blockers);
+    if (blockers.length > 0) {
+      throw new CampaiError(
+        `Campai lässt den Typ Adresse nicht entfernen: ${JSON.stringify(blockers).slice(0, 200)}`,
+      );
+    }
+    await mandate(`${contactPath(contactId)}/types/remove`, {
+      body: {
+        type: "address",
+        revision: text(impact?.revision),
+        acknowledged: true,
+        confirmationName: text(impact?.contactName),
+      },
+    });
+  }
 };
 
 const readContact = async (contactId: string) => {
@@ -121,6 +264,27 @@ const readContact = async (contactId: string) => {
 
 export const readMemberNumber = async (contactId: string) =>
   (await readContact(contactId)).memberNumber;
+
+/** Name und Typen, wie sie in Campai stehen — für viele Kontakte in einem Aufruf je 100. */
+export const readContactSummaries = async (contactIds: string[]) => {
+  const summaries = new Map<string, { name: string; member: boolean }>();
+  const unique = [...new Set(contactIds)];
+  for (let start = 0; start < unique.length; start += PAGE_SIZE) {
+    const ids = unique.slice(start, start + PAGE_SIZE);
+    const result = record(
+      await mandate("crm/contacts/list", {
+        body: { limit: PAGE_SIZE, selection: { ids } },
+      }),
+    );
+    for (const contact of list(result?.contacts)) {
+      summaries.set(text(contact._id), {
+        name: text(contact.name),
+        member: typesOf(contact).includes("member"),
+      });
+    }
+  }
+  return summaries;
+};
 
 /**
  * Legt den Debitor an, falls er fehlt, und stellt die Zahlungsart auf
@@ -179,6 +343,23 @@ export const setMemberDetails = async (contactId: string, data: ApplicationData)
           [TRIAL_RATE_FIELD]: data.trialRate,
         },
       },
+    },
+  });
+};
+
+/**
+ * Trägt die Nummer der Zugangskarte ins Zusatzfeld „Kartennummer" ein; leer
+ * nimmt sie wieder heraus. Die übrigen Zusatzfelder kommen aus dem gelesenen
+ * Kontakt mit, damit keins verloren geht.
+ */
+export const setCardNumber = async (contactId: string, cardNumber: string) => {
+  const contact = record(
+    await mandate(`crm/contacts/${encodeURIComponent(contactId)}`),
+  );
+  const member = record(record(contact?.customFields)?.member) ?? {};
+  await mandate(`crm/contacts/${encodeURIComponent(contactId)}`, {
+    body: {
+      customFields: { member: { ...member, [CARD_NUMBER_FIELD]: cardNumber } },
     },
   });
 };
@@ -379,11 +560,56 @@ export const completeInvoice = async (invoiceId: string, email: string) => {
 type Attachment = { fileName: string; resource: string };
 
 /**
+ * Freie Nachricht an einen Kontakt — wie „Nachricht senden" in Campai. Campai
+ * nimmt den Text als Klartext (HTML käme als Quelltext an), Absätze sind
+ * Leerzeilen. Antworten landen im Campai-Posteingang.
+ */
+export const sendTextMessage = async (contactId: string, subject: string, body: string) => {
+  await mandate("crm/contacts/sendMessage", {
+    body: {
+      email: {
+        subject: { de: subject, en: subject },
+        message: { de: body, en: body },
+        // Leer wie in der Oberfläche — siehe sendTemplateMessage.
+        replyTo: "",
+        sendToAlternativeCommunications: false,
+        attachments: [],
+      },
+      letter: null,
+      recipients: {
+        selection: { ids: [contactId], selectedCount: 1, isAllSelected: false },
+      },
+    },
+  });
+};
+
+/**
  * Schickt eine gestaltete Campai-Vorlage an einen Kontakt — wie „Nachricht
  * senden" in Campai. Angehängt wird nur `attachments` (die Rechnung); was an
  * der Vorlage hängt, bleibt weg — Satzung und Beitragsordnung sind schon im
  * Antrag verlinkt.
  */
+/**
+ * Die Vorlage als HTML, wie Campais Vorschau sie zeigt — Platzhalter
+ * (Vorname usw.) bleiben markiert stehen.
+ */
+export const previewTemplate = async (templateId: string) => {
+  const template = record(
+    await mandate(`crm/messageTemplates/${encodeURIComponent(templateId)}`),
+  );
+  if (!template?.templateContents) {
+    throw new CampaiError(`Vorlage ${templateId} ist leer oder fehlt.`);
+  }
+  const preview = record(
+    await mandate(`crm/messageTemplates/${encodeURIComponent(templateId)}/preview`, {
+      body: { templateContents: template.templateContents, type: "email" },
+    }),
+  );
+  const html = text(preview?.document);
+  if (!html) throw new CampaiError("Campai hat keine Vorschau geliefert.");
+  return { subject: text(record(template.email)?.subject), html };
+};
+
 export const sendTemplateMessage = async (
   contactId: string,
   templateId: string,
@@ -406,7 +632,9 @@ export const sendTemplateMessage = async (
       email: {
         subject: { de: subject, en: subject },
         message: { de: "", en: "" },
-        replyTo: VORSTAND_EMAIL,
+        // Leer wie in Campais Oberfläche. Mit der eigenen Posteingangsadresse
+        // (office@portal…) antwortet Campai 200 und verwirft die Mail still.
+        replyTo: "",
         sendToAlternativeCommunications: false,
         attachments,
       },

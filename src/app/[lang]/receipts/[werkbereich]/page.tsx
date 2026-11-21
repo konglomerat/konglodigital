@@ -5,6 +5,7 @@ import Notice from "@/components/knglmrt/Notice";
 import { loadAllowedCostCenters } from "@/lib/access/server";
 import {
   type BuchhaltungWerkbereich,
+  filterAllowedWerkbereiche,
   findBuchhaltungWerkbereich,
   isCostCenterAllowed,
 } from "@/lib/buchhaltung-werkbereiche";
@@ -20,11 +21,11 @@ type WerkbereichPageProps = {
 
 const resolveWerkbereich = async (
   params: WerkbereichPageProps["params"],
+  werkbereiche?: BuchhaltungWerkbereich[],
 ): Promise<BuchhaltungWerkbereich | null> => {
   const { werkbereich } = await params;
-  const werkbereiche = await getBuchhaltungWerkbereiche();
   return findBuchhaltungWerkbereich(
-    werkbereiche,
+    werkbereiche ?? (await getBuchhaltungWerkbereiche()),
     decodeURIComponent(werkbereich),
   );
 };
@@ -39,10 +40,12 @@ export const generateMetadata = async ({
 export default async function WerkbereichReceiptsPage({
   params,
 }: WerkbereichPageProps) {
+  let werkbereiche: BuchhaltungWerkbereich[];
   let werkbereich: BuchhaltungWerkbereich | null;
 
   try {
-    werkbereich = await resolveWerkbereich(params);
+    werkbereiche = await getBuchhaltungWerkbereiche();
+    werkbereich = await resolveWerkbereich(params, werkbereiche);
   } catch (error) {
     return (
       <div className="flex flex-col gap-4">
@@ -70,5 +73,16 @@ export default async function WerkbereichReceiptsPage({
     return <NoAccessNotice />;
   }
 
-  return <WerkbereichReceipts key={werkbereich.value} werkbereich={werkbereich} />;
+  // Wie /receipts: bei nur einem Werkbereich gibt es keine Übersicht, zu der
+  // man zurück könnte.
+  const isOnlyWerkbereich =
+    filterAllowedWerkbereiche(werkbereiche, allowed).length === 1;
+
+  return (
+    <WerkbereichReceipts
+      key={werkbereich.value}
+      werkbereich={werkbereich}
+      isOnlyWerkbereich={isOnlyWerkbereich}
+    />
+  );
 }

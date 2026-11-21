@@ -24,7 +24,7 @@ const LINKS = [
   },
   {
     href: "/admin/vorstand/antraege",
-    label: "Anträge",
+    label: "Anträge Mitgliedschaft",
     description:
       "Mitgliedsanträge prüfen, annehmen oder ablehnen; danach Rechnung und Willkommensmails.",
   },

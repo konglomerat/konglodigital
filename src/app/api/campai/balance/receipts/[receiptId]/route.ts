@@ -10,7 +10,21 @@ import {
   canEditReceiptCostCenters,
   canViewReceiptCostCenters,
 } from "@/lib/buchhaltung-werkbereiche";
-import { addCampaiReceiptNote } from "@/lib/campai-receipt-notes";
+import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
+import {
+  addCampaiReceiptNote,
+  getReceiptCreatorName,
+} from "@/lib/campai-receipt-notes";
+import { fetchCampaiTaxes } from "@/lib/campai-taxes";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
+import {
+  buildReceiptUpdatePayload,
+  formatAuthoredNote,
+  isCashLinkedReceipt,
+  isEditableReceiptType,
+  isReceiptFullyEditable,
+  type ReceiptPatchBody,
+} from "@/lib/receipt-edit";
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -89,125 +103,20 @@ export const GET = async (
     ) {
       return costCenterForbiddenResponse();
     }
-    return NextResponse.json({ receipt: result.receipt });
+    const memberProfile = await getMemberProfileByUserId(
+      routeAccess.supabase,
+      routeAccess.user.id,
+    ).catch(() => null);
+    return NextResponse.json({
+      receipt: result.receipt,
+      viewerName: getReceiptCreatorName(routeAccess.user, memberProfile),
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Beleg konnte nicht geladen werden.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 };
-
-const UPDATE_FIELD_WHITELIST: Record<string, string[]> = {
-  expense: [
-    "account",
-    "receiptNumber",
-    "isNet",
-    "totalGrossAmount",
-    "receiptDate",
-    "dueDate",
-    "refundReceiptNumber",
-    "accountName",
-    "description",
-    "refund",
-    "positions",
-    "paymentSepaCreditTransferId",
-    "receiptFileId",
-    "receiptFileName",
-  ],
-  revenue: [
-    "account",
-    "receiptNumber",
-    "isNet",
-    "totalGrossAmount",
-    "receiptDate",
-    "dueDate",
-    "refundReceiptNumber",
-    "accountName",
-    "description",
-    "refund",
-    "deliveryDate",
-    "positions",
-    "paymentSepaCreditTransferId",
-    "receiptFileId",
-    "receiptFileName",
-  ],
-  invoice: [
-    "draft",
-    "address",
-    "deliveryDateType",
-    "title",
-    "intro",
-    "account",
-    "isNet",
-    "receiptDate",
-    "dueDate",
-    "refundReceiptNumber",
-    "offerReceipt",
-    "offerReceiptNumber",
-    "confirmationReceipt",
-    "confirmationReceiptNumber",
-    "email",
-    "sendMethod",
-    "accountName",
-    "receiptNumber",
-    "customerType",
-    "customerNumber",
-    "deliveryDate",
-    "deliveryDateStart",
-    "deliveryDateEnd",
-    "description",
-    "refund",
-    "note",
-    "discount",
-    "discountType",
-    "invoiceType",
-    "paymentMethod",
-    "paymentTerms",
-    "positions",
-    "paymentSepaCreditTransferId",
-    "useDepositReceipts",
-    "supplierNumber",
-    "doNotSendReceipt",
-  ],
-};
-
-const POSITION_FIELD_WHITELIST: Record<string, string[]> = {
-  expense: ["account", "amount", "description", "costCenter1", "costCenter2", "taxCode"],
-  revenue: ["account", "amount", "description", "costCenter1", "costCenter2", "taxCode"],
-  invoice: [
-    "unitAmount",
-    "discount",
-    "description",
-    "account",
-    "details",
-    "quantity",
-    "unit",
-    "costCenter1",
-    "costCenter2",
-    "taxCode",
-  ],
-};
-
-const pickFields = (
-  source: Record<string, unknown>,
-  fields: string[],
-): Record<string, unknown> => {
-  const result: Record<string, unknown> = {};
-  for (const field of fields) {
-    if (source[field] !== undefined) {
-      result[field] = source[field];
-    }
-  }
-  return result;
-};
-
-type EditablePositionPatch = {
-  description?: string | null;
-  costCenter2?: number | null;
-};
-
-const isEditableType = (type: unknown): type is "expense" | "revenue" | "invoice" =>
-  type === "expense" || type === "revenue" || type === "invoice";
 
 export const PATCH = async (
   request: NextRequest,
@@ -223,10 +132,15 @@ export const PATCH = async (
     return NextResponse.json({ error: "Beleg-ID fehlt." }, { status: 400 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    description?: string | null;
-    positions?: EditablePositionPatch[];
+  const body = (await request.json().catch(() => ({}))) as ReceiptPatchBody & {
+    receiptFile?: {
+      base64?: string;
+      name?: string;
+      contentType?: string;
+    } | null;
   };
+  const newFileBase64 =
+    typeof body.receiptFile?.base64 === "string" ? body.receiptFile.base64 : "";
 
   try {
     const detailResult = await fetchReceiptDetail(receiptId);
@@ -240,23 +154,30 @@ export const PATCH = async (
     const receipt = detailResult.receipt;
     const type = receipt.type;
 
-    if (!isEditableType(type)) {
+    if (!isEditableReceiptType(type)) {
       return NextResponse.json(
         { error: `Belegtyp "${String(type)}" kann nicht bearbeitet werden.` },
         { status: 400 },
       );
     }
 
-    const sourcePositions = Array.isArray(receipt.positions) ? receipt.positions : [];
-    const patches = Array.isArray(body.positions) ? body.positions : [];
+    // Rechnungen erzeugt Campai selbst als PDF — dort gibt es keine Datei,
+    // die sich austauschen ließe.
+    if (newFileBase64 && type === "invoice") {
+      return NextResponse.json(
+        { error: "Bei Rechnungen kann die Belegdatei nicht ersetzt werden." },
+        { status: 400 },
+      );
+    }
 
-    const isCashLinked = Array.isArray(receipt.payments)
-      ? (receipt.payments as Array<Record<string, unknown>>).some(
-          (payment) => typeof payment?.cashTransaction === "string" && payment.cashTransaction.length > 0,
-        )
-      : false;
+    if (typeof receipt.canceledAt === "string" && receipt.canceledAt) {
+      return NextResponse.json(
+        { error: "Stornierte Belege können nicht bearbeitet werden." },
+        { status: 400 },
+      );
+    }
 
-    if (isCashLinked) {
+    if (isCashLinkedReceipt(receipt)) {
       return NextResponse.json(
         {
           error:
@@ -269,32 +190,27 @@ export const PATCH = async (
     const apiKey = requiredEnv("CAMPAI_API_KEY");
     const baseUrl = buildBaseUrl();
 
-    const fieldWhitelist = UPDATE_FIELD_WHITELIST[type];
-    const positionWhitelist = POSITION_FIELD_WHITELIST[type];
-
-    const payload = pickFields(receipt as Record<string, unknown>, fieldWhitelist);
-
-    if (typeof body.description === "string") {
-      payload.description = body.description.slice(0, 140);
+    const fullyEditable = isReceiptFullyEditable(receipt);
+    // Die Bruttosumme von Ausgaben und Einnahmen rechnen wir selbst nach —
+    // dafür braucht es die Steuersätze.
+    const rateByCode = new Map<string, number>();
+    if (fullyEditable && type !== "invoice") {
+      for (const tax of await fetchCampaiTaxes()) {
+        rateByCode.set(tax.code, tax.rate);
+      }
     }
 
-    const nextPositions = sourcePositions.map((position, index) => {
-      const sanitized = pickFields(position, positionWhitelist);
-      const patch = patches[index];
-      if (patch) {
-        if (typeof patch.description === "string") {
-          sanitized.description = patch.description.slice(0, 200);
-        }
-        if (patch.costCenter2 === null) {
-          sanitized.costCenter2 = null;
-        } else if (typeof patch.costCenter2 === "number" && Number.isFinite(patch.costCenter2)) {
-          sanitized.costCenter2 = patch.costCenter2;
-        }
-      }
-      return sanitized;
+    const built = buildReceiptUpdatePayload({
+      receipt,
+      body,
+      fullyEditable,
+      rateByCode,
     });
-
-    payload.positions = nextPositions;
+    if (!built.ok) {
+      return NextResponse.json({ error: built.error }, { status: 400 });
+    }
+    const payload = built.payload;
+    const nextPositions = built.positions;
 
     // Vorher und nachher müssen alle Positionen in den eigenen Bereichen
     // liegen — sonst ließe sich ein Beleg in einen fremden Bereich schieben.
@@ -309,6 +225,28 @@ export const PATCH = async (
       )
     ) {
       return costCenterForbiddenResponse();
+    }
+
+    if (newFileBase64) {
+      const fileName = body.receiptFile?.name?.trim() || "beleg.pdf";
+      const { receiptFileId } = await uploadCampaiReceiptFile({
+        apiKey,
+        baseUrl,
+        endpointOverride:
+          process.env.CAMPAI_RECEIPT_FILE_UPLOAD_ENDPOINT?.trim() || undefined,
+        fileBase64: newFileBase64,
+        fileName,
+        fileContentType:
+          body.receiptFile?.contentType?.trim() || "application/octet-stream",
+      });
+      if (!receiptFileId) {
+        return NextResponse.json(
+          { error: "Datei-Upload zu Campai fehlgeschlagen. Beleg wurde nicht geändert." },
+          { status: 502 },
+        );
+      }
+      payload.receiptFileId = receiptFileId;
+      payload.receiptFileName = fileName;
     }
 
     const updateResponse = await fetch(
@@ -393,12 +331,19 @@ export const POST = async (
     const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
     const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
 
+    const memberProfile = await getMemberProfileByUserId(
+      routeAccess.supabase,
+      routeAccess.user.id,
+    ).catch(() => null);
     const noteResult = await addCampaiReceiptNote({
       apiKey,
       organizationId,
       mandateId,
       receiptId,
-      content,
+      content: formatAuthoredNote(
+        getReceiptCreatorName(routeAccess.user, memberProfile),
+        content,
+      ),
     });
 
     if (!noteResult.ok) {

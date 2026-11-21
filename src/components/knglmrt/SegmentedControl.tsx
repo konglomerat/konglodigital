@@ -21,6 +21,8 @@ type SegmentedControlProps<T extends string> = {
    *  in denen Pink der einen Handlung der Seite vorbehalten ist. */
   tone?: "primary" | "ink";
   className?: string;
+  /** Zusatzklasse an jedem Segment — etwa um die Höhe an Nachbarfelder anzugleichen. */
+  segmentClassName?: string;
 };
 
 export function SegmentedControl<T extends string>({
@@ -30,6 +32,7 @@ export function SegmentedControl<T extends string>({
   size = "chip",
   tone = "primary",
   className,
+  segmentClassName,
 }: SegmentedControlProps<T>) {
   const containerClassName = [
     // Die eine Kontur sitzt am Rahmen, die Haarlinien dazwischen zeichnet
@@ -51,11 +54,14 @@ export function SegmentedControl<T extends string>({
             size={size}
             onClick={() => onChange(option.value)}
             aria-pressed={isActive}
-            className={
+            className={[
               isActive && tone === "ink"
                 ? "border-0 bg-foreground! text-background!"
-                : "border-0"
-            }
+                : "border-0",
+              segmentClassName,
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             {option.label}
           </Button>

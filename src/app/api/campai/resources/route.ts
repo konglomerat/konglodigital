@@ -768,6 +768,7 @@ type ResourceRow = {
   tags: string[] | null;
   categories: StoredCategory[] | null;
   map_features?: unknown;
+  updated_at?: string | null;
 };
 
 const toResourcePayload = (
@@ -808,6 +809,7 @@ const toResourcePayload = (
         })
       : null,
   gpsAltitude: row.gps_altitude ?? null,
+  updatedAt: row.updated_at ?? null,
   type: row.type ?? undefined,
   priority: row.priority ?? null,
   attachable: row.attachable ?? undefined,

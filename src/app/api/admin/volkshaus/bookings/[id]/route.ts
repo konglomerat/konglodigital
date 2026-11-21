@@ -2,7 +2,7 @@ import { prepareVolkshausAdminEdit } from "@/lib/volkshaus-admin-edit-server";
 import { VolkshausValidationError } from "@/lib/volkshaus-booking-server";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
+import { loadCampaiBookingDisplayName } from "@/lib/campai-booking-tags";
 import {
   buildVolkshausContractSnapshot,
   getEffectiveVolkshausPrice,
@@ -165,7 +165,7 @@ export const PATCH = async (
   const origin = resolvePublicOrigin(request);
   const accessUrl = `${origin}/volkshaus/anfrage/${booking.accessToken}`;
   const actorName =
-    getCampaiBookingDisplayName(data.user) ||
+    (await loadCampaiBookingDisplayName(data.user)) ||
     data.user.email ||
     "Konglomerat e.V.";
   try {

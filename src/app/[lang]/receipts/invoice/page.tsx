@@ -36,6 +36,7 @@ import {
 } from "@/lib/campai-payment-methods";
 import { euroAmountValidationMessage } from "@/lib/euro-input";
 import ReceiptsPageHeader from "../create/header";
+import ReceiptTagField from "../ReceiptTagField";
 import Choice from "@/components/knglmrt/Choice";
 
 type InvoicePosition = {
@@ -176,6 +177,8 @@ const getDefaultCostCenter2 = (items: CostCenterOption[]) => {
 export default function NewSimpleInvoicePage() {
   const [intro, setIntro] = useState("");
   const [note, setNote] = useState("");
+  // Optionale Tags; „API“ setzt der Server selbst dazu.
+  const [tags, setTags] = useState<string[]>([]);
   const [sendByMail, setSendByMail] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [addressLine, setAddressLine] = useState("");
@@ -667,6 +670,7 @@ export default function NewSimpleInvoicePage() {
           body: JSON.stringify({
             intro: intro.trim(),
             internalNote: internalNote || undefined,
+            tags,
             sendByMail,
             recipientEmail: recipientEmail.trim() || undefined,
             debtorName: debtorName.trim(),
@@ -1312,7 +1316,14 @@ export default function NewSimpleInvoicePage() {
             value: note,
             onChange: (event) => setNote(event.target.value),
           }}
-        />
+        >
+          <ReceiptTagField
+            value={tags}
+            onChange={setTags}
+            reservedCount={1}
+            className="mb-5"
+          />
+        </InternalNoteSection>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="mr-auto flex flex-wrap items-center gap-3">

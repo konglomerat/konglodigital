@@ -889,6 +889,7 @@ export default function ResourceFeaturesEditorClient({
         throw new Error(data.error ?? tx("Unable to delete resource."));
       }
 
+      // Gesperrt lassen, bis die Übersicht da ist (kein zweites DELETE).
       router.push(localizePathname("/resources", locale));
     } catch (error) {
       setErrorMessage(
@@ -896,7 +897,6 @@ export default function ResourceFeaturesEditorClient({
           ? error.message
           : tx("Unable to delete resource."),
       );
-    } finally {
       setDeletingResource(false);
     }
   }, [deletingResource, locale, router, selectedResourceId, tx]);

@@ -444,6 +444,160 @@ function Section({
   );
 }
 
+// Alle Textstile, die verwendet werden dürfen — von groß nach klein. Größen
+// stehen ausschließlich in knglmrt-theme.css (--ui-size-*); Komponenten nehmen
+// die Klasse oder das Element, keine eigenen Pixelwerte. Kleiner als der
+// Fließtext sind nur Caption, Num, Label und Tag — und die nie für Fließtext.
+const TYPE_STYLES: {
+  name: string;
+  /** Wie man den Stil bekommt: Element oder Klasse. */
+  usage: string;
+  use: string;
+  sample: string;
+  as: "h1" | "h2" | "h3" | "p" | "span";
+  className?: string;
+}[] = [
+  {
+    name: "Seitentitel",
+    usage: "<h1> · PageTitle",
+    use: "Ein Titel pro Seite.",
+    sample: "Design System",
+    as: "h1",
+  },
+  {
+    name: "Sektion",
+    usage: "<h2>",
+    use: "Überschrift eines Seitenabschnitts, z. B. „Für Mitglieder“.",
+    sample: "Was gibt’s Neues",
+    as: "h2",
+  },
+  {
+    name: "Lead",
+    usage: ".knglmrt-lead",
+    use: "Einleitender Satz unter einem großen Titel.",
+    sample: "Hier findest du alles zur Werkstatt.",
+    as: "p",
+    className: "knglmrt-lead",
+  },
+  {
+    name: "Kartentitel",
+    usage: "<h3> · .knglmrt-card-title",
+    use: "Titel in Karten, Kacheln und Unterabschnitten.",
+    sample: "Ehrenamtsbonus beantragen",
+    as: "h3",
+  },
+  {
+    name: "Fließtext",
+    usage: "<p> (body)",
+    use: "Alles Lesbare: Absätze, Beschreibungen, Kacheltexte. Die Untergrenze für Text.",
+    sample: "Stunden für den Verein auf den Beitrag anrechnen.",
+    as: "p",
+  },
+  {
+    name: "Augenbraue",
+    usage: ".knglmrt-caption",
+    use: "Die einzige Augenbraue: über Titeln (PageTitle, Hero), Abschnittsmarken.",
+    sample: "Musterbogen",
+    as: "p",
+    className: "knglmrt-caption text-primary",
+  },
+  {
+    name: "Daten",
+    usage: ".knglmrt-num",
+    use: "Daten, Zeiten, Beträge, IDs, Mitgliedsnummer.",
+    sample: "Mitglied seit 03/2024 · Nr. 0187",
+    as: "span",
+    className: "knglmrt-num",
+  },
+  {
+    name: "Kennzahl",
+    usage: ".knglmrt-value",
+    use: "Die eine Zahl auf einer StatTile.",
+    sample: "48,00 €",
+    as: "span",
+    className: "knglmrt-value",
+  },
+  {
+    name: "Label",
+    usage: ".knglmrt-label",
+    use: "Beschriftung von Feldern und StatTiles.",
+    sample: "E-Mail-Adresse",
+    as: "span",
+    className: "knglmrt-label",
+  },
+  {
+    name: "Tag",
+    usage: ".knglmrt-tag · Badge",
+    use: "Nur in Statusmarken. Kleinste Größe im System.",
+    sample: "Coming Soon",
+    as: "span",
+    className: "knglmrt-tag",
+  },
+];
+
+// Spalten der Typografie-Tabelle: Muster, Stil, Schrift, Größe, Zeilenhöhe, Gewicht.
+const TYPE_GRID =
+  "grid gap-x-6 gap-y-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_150px_60px_100px_70px] md:items-baseline";
+
+/** Kopf der Typografie-Tabelle. */
+function TypeHeader() {
+  return (
+    <div className={`${TYPE_GRID} hidden border-b border-border pb-2 md:grid`}>
+      {["Muster", "Stil", "Schrift", "Größe", "Zeilenhöhe", "Gewicht"].map((label) => (
+        <span key={label} className="knglmrt-label text-muted-foreground">
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Eine Zeile der Typografie: Muster, Name und Verwendung, dann die
+ * gemessenen Werte — dicht wie eine Tabelle, damit alle Stile auf einen
+ * Blick passen.
+ */
+function TypeRow({ style }: { style: (typeof TYPE_STYLES)[number] }) {
+  const [metrics, setMetrics] = useState<{
+    family: string;
+    size: string;
+    lineHeight: string;
+    weight: string;
+  } | null>(null);
+  const Tag = style.as;
+
+  return (
+    <div className={`${TYPE_GRID} border-b border-border py-2`}>
+      <Tag
+        ref={(element: HTMLElement | null) => {
+          if (!element || metrics) return;
+          // Gemessen statt abgeschrieben: was hier steht, ist, was rendert.
+          const computed = getComputedStyle(element);
+          const lineHeight = parseFloat(computed.lineHeight);
+          setMetrics({
+            family: computed.fontFamily.split(",")[0].replace(/["']/g, ""),
+            size: `${parseFloat(computed.fontSize)}px`,
+            lineHeight: lineHeight ? `${lineHeight}px` : "normal",
+            weight: computed.fontWeight,
+          });
+        }}
+        className={`m-0 truncate ${style.className ?? ""}`}
+      >
+        {style.sample}
+      </Tag>
+      <p className="m-0 text-muted-foreground">
+        <span className="font-bold text-foreground">{style.name}</span>{" "}
+        <code className="knglmrt-num text-foreground">{style.usage}</code> —{" "}
+        {style.use}
+      </p>
+      <code className="knglmrt-num truncate">{metrics?.family}</code>
+      <code className="knglmrt-num">{metrics?.size}</code>
+      <code className="knglmrt-num">{metrics?.lineHeight}</code>
+      <code className="knglmrt-num">{metrics?.weight}</code>
+    </div>
+  );
+}
+
 /** Ein einzelnes Muster mit seinem Prop-Wert darunter. */
 function Sample({
   label,
@@ -573,6 +727,19 @@ export default function DesignSystemPage() {
               </code>
               <p className="knglmrt-tag text-muted-foreground">{t.note}</p>
             </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Typografie"
+        source="src/app/knglmrt-theme.css · --ui-size-*"
+        hint="Alle Textstile, die es gibt — von groß nach klein. Größen nie als Pixelwert in Komponenten schreiben, sondern Element oder Klasse von hier nehmen. Fließtext (18px) ist die Untergrenze für alles Lesbare; kleiner sind nur Caption, Daten, Label und Tag."
+      >
+        <div className="max-w-[1300px]">
+          <TypeHeader />
+          {TYPE_STYLES.map((style) => (
+            <TypeRow key={style.name} style={style} />
           ))}
         </div>
       </Section>

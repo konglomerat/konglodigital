@@ -1,7 +1,8 @@
 import { cache } from "react";
 
 import type { UserAccess } from "@/lib/access/access";
-import { loadAccessOf, loadUserAccess } from "@/lib/access/server";
+import { applyAccessPreview, loadAccessOf } from "@/lib/access/server";
+import { getMemberProfileByUserId } from "@/lib/member-profiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Layout und Seite rendern im selben Request und brauchen beide Session und
@@ -14,9 +15,11 @@ export const getServerSession = cache(async () => {
   return { supabase, user: data.user };
 });
 
-export const getServerAccess = cache(async (): Promise<UserAccess | null> => {
+/** Das eigene Mitgliedsprofil, einmal pro Request — `null` ohne Login. */
+export const getServerMemberProfile = cache(async () => {
   const { supabase, user } = await getServerSession();
-  return loadUserAccess(supabase, user);
+  if (!user) return null;
+  return getMemberProfileByUserId(supabase, user.id).catch(() => null);
 });
 
 /** Die echten Zuweisungen, ohne Rechte-Vorschau — etwa um sie zu beenden. */
@@ -26,3 +29,10 @@ export const getServerRealAccess = cache(
     return loadAccessOf(supabase, user);
   },
 );
+
+// Baut auf getServerRealAccess auf: die Zuweisungen werden pro Request nur
+// einmal abgefragt, auch wenn das Layout beide braucht.
+export const getServerAccess = cache(async (): Promise<UserAccess | null> => {
+  const { user } = await getServerSession();
+  return applyAccessPreview(user, await getServerRealAccess());
+});

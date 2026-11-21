@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MemberProfile } from "@/lib/member-profiles";
 import { getResourceMediaKindFromUrl } from "@/lib/resource-media";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import { MAX_RENTAL_DAYS } from "@/lib/rental-limits";
 
 export type CampaiSyncStatus = "pending" | "synced" | "failed" | "skipped";
 
@@ -36,6 +37,10 @@ export type CampaiRentalStatusItem = {
   description: string | null;
   quantity: number | null;
   bookingRecordNumber: string | null;
+  /** „Mira K." — nur für angemeldete Mitglieder, sonst null. */
+  who: string | null;
+  /** Gehört die Buchung dem angemeldeten Mitglied? */
+  mine: boolean;
 };
 
 export type CampaiRentalSnapshot = {
@@ -52,6 +57,8 @@ export type CampaiRentalSnapshot = {
     nextChangeAt: string | null;
   };
   activeReservations: CampaiRentalStatusItem[];
+  /** Alles, was noch kommt — sperrt die Tage im Ausleih-Kalender. */
+  upcomingReservations: CampaiRentalStatusItem[];
   previousRents: CampaiRentalStatusItem[];
 };
 
@@ -71,6 +78,8 @@ type CampaiSite = {
 
 type CampaiReservation = {
   _id?: string;
+  /** Campai-ID der Ressource. */
+  resource?: string;
   type?: string;
   status?: string;
   period?: {
@@ -81,6 +90,10 @@ type CampaiReservation = {
   quantity?: number | null;
   booking?: {
     recordNumber?: string | null;
+    applicant?: {
+      name?: string | null;
+      contact?: string | null;
+    } | null;
   } | null;
   site?: {
     site?: string;
@@ -102,6 +115,10 @@ type CampaiResourceDetails = {
   } | null;
   offer?: {
     sessionMinutes?: number;
+    slots?: {
+      size?: number;
+      unit?: string;
+    } | null;
   } | null;
   sites?: Array<{
     site?: string;
@@ -159,8 +176,25 @@ const optionalEnv = (name: string) => {
   return value ? value : null;
 };
 
-const DEFAULT_CAMPAI_SITE_NAME = "Standort Rosenwerk";
-const CAMPAI_RESOURCE_OFFER_MAX_SLOTS = 24;
+// So heißt der Standort in Campai (booking/resources/sites).
+const DEFAULT_CAMPAI_SITE_NAME = "Rosenwerk";
+const CAMPAI_RESOURCE_OFFER_SLOT_MINUTES = 60;
+
+const SLOT_UNIT_MINUTES = { minutes: 1, hours: 60, days: 1440 } as const;
+
+const toSlotMinutes = (slots: { size?: unknown; unit?: unknown } | null | undefined) => {
+  const size =
+    typeof slots?.size === "number" && slots.size > 0 ? slots.size : null;
+  const unit =
+    slots?.unit === "minutes" || slots?.unit === "hours" || slots?.unit === "days"
+      ? slots.unit
+      : null;
+  return size && unit ? size * SLOT_UNIT_MINUTES[unit] : null;
+};
+
+// Ein Angebot muss so viele Slots erlauben, wie MAX_RENTAL_DAYS am Stück brauchen.
+const maxSlotsFor = (slotMinutes: number) =>
+  Math.ceil((MAX_RENTAL_DAYS * 24 * 60) / slotMinutes);
 
 const parsePositiveInt = (value: string | null | undefined) => {
   if (!value) {
@@ -360,6 +394,8 @@ const buildDefaultCampaiOfferSettings = () => {
         },
       ],
     },
+    // Kein Vorlauf-Limit. Campai verlangt das Feld, auch wenn es leer ist.
+    availability: null,
     availabilityHours: null,
     availabilityWeekdays: {
       mon: true,
@@ -374,10 +410,10 @@ const buildDefaultCampaiOfferSettings = () => {
     rates: [],
     services: [],
     slots: {
-      size: 60,
+      size: CAMPAI_RESOURCE_OFFER_SLOT_MINUTES,
       unit: "minutes",
       minimum: 1,
-      maximum: CAMPAI_RESOURCE_OFFER_MAX_SLOTS,
+      maximum: maxSlotsFor(CAMPAI_RESOURCE_OFFER_SLOT_MINUTES),
       chargeRateBySlotNumber: true,
     },
     quantity: null,
@@ -687,6 +723,7 @@ const syncCampaiOffer = async (
     formSettings: isRecord(offer.formSettings)
       ? offer.formSettings
       : defaultOfferSettings.formSettings,
+    availability: isRecord(offer.availability) ? offer.availability : null,
     availabilityHours: isRecord(offer.availabilityHours)
       ? offer.availabilityHours
       : defaultOfferSettings.availabilityHours,
@@ -706,7 +743,9 @@ const syncCampaiOffer = async (
         toPositiveNumber(slots.minimum) ?? defaultOfferSettings.slots.minimum,
       maximum: Math.max(
         toPositiveNumber(slots.maximum) ?? 1,
-        CAMPAI_RESOURCE_OFFER_MAX_SLOTS,
+        maxSlotsFor(
+          toSlotMinutes(slots) ?? CAMPAI_RESOURCE_OFFER_SLOT_MINUTES,
+        ),
       ),
       chargeRateBySlotNumber: slots.chargeRateBySlotNumber !== false,
     },
@@ -1099,7 +1138,7 @@ const upsertCampaiResource = async (
           await countCampaiReservationsForResource(existingResourceId);
         if (reservationCount > 0) {
           throw new Error(
-            `Campai kept the old site assignment for "${resource.name}". This resource already has reservation history, so it cannot be recreated automatically at Standort Rosenwerk.`,
+            `Campai kept the old site assignment for "${resource.name}". This resource already has reservation history, so it cannot be recreated automatically at ${DEFAULT_CAMPAI_SITE_NAME}.`,
           );
         }
 
@@ -1139,7 +1178,7 @@ const upsertCampaiResource = async (
       await countCampaiReservationsForResource(targetResourceId);
     if (reservationCount > 0) {
       throw new Error(
-        `Campai kept the old site assignment for "${resource.name}". This resource already has reservation history, so it cannot be recreated automatically at Standort Rosenwerk.`,
+        `Campai kept the old site assignment for "${resource.name}". This resource already has reservation history, so it cannot be recreated automatically at ${DEFAULT_CAMPAI_SITE_NAME}.`,
       );
     }
 
@@ -1298,12 +1337,25 @@ const toStatusLabel = (status: string | null | undefined) => {
   }
 };
 
+// „Mira Kowalski" → „Mira K." — wie im Entwurf, nie der volle Name.
+const toShortName = (name: string | null | undefined) => {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return null;
+  }
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
+};
+
 export const buildCampaiRentalSnapshot = async (params: {
   resource: ResourceSyncRecord & {
     campai_sync_status?: string | null;
     campai_sync_error?: string | null;
   };
   viewer: CampaiRentalViewer;
+  viewerContactId?: string | null;
 }) => {
   const syncStatus =
     params.resource.campai_sync_status === "synced" ||
@@ -1327,6 +1379,7 @@ export const buildCampaiRentalSnapshot = async (params: {
         nextChangeAt: null,
       },
       activeReservations: [],
+      upcomingReservations: [],
       previousRents: [],
     } satisfies CampaiRentalSnapshot;
   }
@@ -1336,60 +1389,61 @@ export const buildCampaiRentalSnapshot = async (params: {
     listCampaiReservationsForResource(params.resource.campai_resource_id),
   ]);
 
+  const viewerContactId = params.viewerContactId?.trim() || null;
+  const toStatusItem = (reservation: CampaiReservation) =>
+    ({
+      id: reservation._id ?? crypto.randomUUID(),
+      type:
+        reservation.type === "booking" ||
+        reservation.type === "event" ||
+        reservation.type === "custom"
+          ? reservation.type
+          : "custom",
+      status: reservation.status ?? "other",
+      from: reservation.period?.from ?? "",
+      to: reservation.period?.to ?? "",
+      description: reservation.description ?? null,
+      quantity:
+        typeof reservation.quantity === "number" ? reservation.quantity : null,
+      bookingRecordNumber: reservation.booking?.recordNumber ?? null,
+      // Wer etwas ausgeliehen hat, sehen nur angemeldete Mitglieder.
+      who: params.viewer.authenticated
+        ? toShortName(reservation.booking?.applicant?.name)
+        : null,
+      mine: Boolean(
+        viewerContactId &&
+          reservation.booking?.applicant?.contact === viewerContactId,
+      ),
+    }) satisfies CampaiRentalStatusItem;
+
   const now = Date.now();
-  const activeReservations = reservations
+  const timeOf = (value: string | undefined) =>
+    value ? new Date(value).getTime() : Number.NaN;
+  const liveReservations = reservations.filter(
+    (reservation) => reservation.status !== "canceled",
+  );
+
+  const activeReservations = liveReservations
     .filter((reservation) => {
-      const from = reservation.period?.from
-        ? new Date(reservation.period.from).getTime()
-        : Number.NaN;
-      const to = reservation.period?.to
-        ? new Date(reservation.period.to).getTime()
-        : Number.NaN;
+      const from = timeOf(reservation.period?.from);
+      const to = timeOf(reservation.period?.to);
       return Number.isFinite(from) && Number.isFinite(to) && from <= now && now < to;
     })
-    .map(
-      (reservation) =>
-        ({
-          id: reservation._id ?? crypto.randomUUID(),
-          type:
-            reservation.type === "booking" ||
-            reservation.type === "event" ||
-            reservation.type === "custom"
-              ? reservation.type
-              : "custom",
-          status: reservation.status ?? "other",
-          from: reservation.period?.from ?? "",
-          to: reservation.period?.to ?? "",
-          description: reservation.description ?? null,
-          quantity:
-            typeof reservation.quantity === "number" ? reservation.quantity : null,
-          bookingRecordNumber: reservation.booking?.recordNumber ?? null,
-        }) satisfies CampaiRentalStatusItem,
-    )
+    .map(toStatusItem)
     .sort((left, right) => left.from.localeCompare(right.from));
 
-  const previousRents = reservations
+  const upcomingReservations = liveReservations
+    .filter((reservation) => timeOf(reservation.period?.from) > now)
+    .map(toStatusItem)
+    .sort((left, right) => left.from.localeCompare(right.from));
+
+  const previousRents = liveReservations
     .filter((reservation) => reservation.type === "booking")
     .filter((reservation) => {
-      const to = reservation.period?.to
-        ? new Date(reservation.period.to).getTime()
-        : Number.NaN;
+      const to = timeOf(reservation.period?.to);
       return Number.isFinite(to) && to < now;
     })
-    .map(
-      (reservation) =>
-        ({
-          id: reservation._id ?? crypto.randomUUID(),
-          type: "booking",
-          status: reservation.status ?? "other",
-          from: reservation.period?.from ?? "",
-          to: reservation.period?.to ?? "",
-          description: reservation.description ?? null,
-          quantity:
-            typeof reservation.quantity === "number" ? reservation.quantity : null,
-          bookingRecordNumber: reservation.booking?.recordNumber ?? null,
-        }) satisfies CampaiRentalStatusItem,
-    )
+    .map(toStatusItem)
     .sort((left, right) => right.from.localeCompare(left.from))
     .slice(0, 8);
 
@@ -1421,6 +1475,7 @@ export const buildCampaiRentalSnapshot = async (params: {
       nextChangeAt,
     },
     activeReservations,
+    upcomingReservations,
     previousRents,
   } satisfies CampaiRentalSnapshot;
 };
@@ -1446,16 +1501,19 @@ export const createCampaiBookingForResource = async (
   ) {
     throw new Error("A valid rental period is required.");
   }
+  // Eine Stunde Luft für die Zeitumstellung.
+  if (endDate.getTime() - startDate.getTime() > (MAX_RENTAL_DAYS * 24 + 1) * 3_600_000) {
+    throw new Error(`Höchstens ${MAX_RENTAL_DAYS} Tage am Stück.`);
+  }
 
   const resourceDetails = await getCampaiResourceDetails(resource.campai_resource_id);
-  const sessionMinutes =
-    typeof resourceDetails.offer?.sessionMinutes === "number" &&
-    resourceDetails.offer.sessionMinutes > 0
-      ? resourceDetails.offer.sessionMinutes
-      : 60;
+  // sessionMinutes ist die Bezahl-Sitzung, nicht die Slot-Länge.
+  const slotMinutes =
+    toSlotMinutes(resourceDetails.offer?.slots) ??
+    CAMPAI_RESOURCE_OFFER_SLOT_MINUTES;
   const slotCount = Math.max(
     1,
-    Math.ceil((endDate.getTime() - startDate.getTime()) / (sessionMinutes * 60_000)),
+    Math.ceil((endDate.getTime() - startDate.getTime()) / (slotMinutes * 60_000)),
   );
 
   const contactId = params.memberProfile.campaiContactId?.trim();
@@ -1488,4 +1546,93 @@ export const createCampaiBookingForResource = async (
       },
     ],
   });
+};
+
+/** Ausleihstatus einer Ressource für Übersichten — ohne Namen. */
+export type ResourceRentalState =
+  /** Nicht mit Campai verbunden, also nicht ausleihbar. */
+  | { state: "none" }
+  /** Frei; `nextFrom` ist die nächste Reservierung im Vorschaufenster. */
+  | { state: "free"; nextFrom: string | null }
+  /** Gerade ausgeliehen oder reserviert. */
+  | { state: "out"; until: string }
+  /** Gesperrt, Wartung, defekt. */
+  | { state: "blocked"; until: string };
+
+const BLOCKING_RESERVATION_STATUSES = new Set([
+  "maintenance",
+  "blocked",
+  "outOfOrder",
+  "closed",
+]);
+
+const RENTAL_STATE_LOOKAHEAD_DAYS = 60;
+
+// Ein Aufruf für viele Ressourcen: Campai liefert alle Reservierungen, die das
+// Fenster ab jetzt überschneiden. Höchstens 1000 — reicht für eine Seite.
+export const listCampaiRentalStates = async (campaiResourceIds: string[]) => {
+  const ids = Array.from(new Set(campaiResourceIds.filter(Boolean)));
+  const states = new Map<string, ResourceRentalState>(
+    ids.map((id) => [id, { state: "free", nextFrom: null }]),
+  );
+  if (ids.length === 0) {
+    return states;
+  }
+
+  const now = Date.now();
+  const payload = await fetchCampaiJson<{
+    reservations?: CampaiReservation[];
+  }>("/booking/resources/reservations/list", {
+    resourceIds: ids,
+    period: {
+      from: new Date(now).toISOString(),
+      to: new Date(
+        now + RENTAL_STATE_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
+    limit: 1000,
+    offset: 0,
+    returnCount: false,
+    sort: { "period.from": "asc" },
+  });
+
+  for (const reservation of payload.reservations ?? []) {
+    const current = reservation.resource
+      ? states.get(reservation.resource)
+      : undefined;
+    const fromValue = reservation.period?.from;
+    const toValue = reservation.period?.to;
+    if (!current || !fromValue || !toValue || reservation.status === "canceled") {
+      continue;
+    }
+    const from = new Date(fromValue).getTime();
+    const to = new Date(toValue).getTime();
+    if (!Number.isFinite(from) || !Number.isFinite(to)) {
+      continue;
+    }
+
+    if (from <= now && now < to) {
+      // Laufende Reservierungen schlagen alles; bei mehreren zählt die längste.
+      const currentUntil =
+        current.state === "out" || current.state === "blocked"
+          ? new Date(current.until).getTime()
+          : Number.NEGATIVE_INFINITY;
+      if (to > currentUntil) {
+        states.set(reservation.resource!, {
+          state: BLOCKING_RESERVATION_STATUSES.has(reservation.status ?? "")
+            ? "blocked"
+            : "out",
+          until: toValue,
+        });
+      }
+    } else if (
+      from > now &&
+      current.state === "free" &&
+      current.nextFrom === null
+    ) {
+      states.set(reservation.resource!, { state: "free", nextFrom: fromValue });
+    }
+  }
+
+  return states;
 };

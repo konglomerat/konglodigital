@@ -14,7 +14,13 @@
 //   · Der Dialog ist ein echter Modal: Portal auf <body>, Escape, Klick auf den
 //     Hintergrund, Fokus wandert in den Rahmen und danach zurück. Der Export
 //     war nur die Attrappe dafür.
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
@@ -117,6 +123,11 @@ export default function Dialog({
     () => false,
   );
 
+  // Aufrufer geben `onCancel` meist als neue Pfeilfunktion je Render. Hinge
+  // der Effekt daran, liefe er bei jedem Tastendruck in einem Textfeld neu —
+  // und zöge den Fokus aus dem Feld zurück auf den Rahmen.
+  const cancel = useEffectEvent(() => onCancel());
+
   useEffect(() => {
     if (!open) return;
 
@@ -129,7 +140,7 @@ export default function Dialog({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onCancel();
+        cancel();
         return;
       }
       // Tab bleibt im Rahmen: ein Modal, aus dem der Fokus hinausläuft, ist
@@ -157,7 +168,7 @@ export default function Dialog({
       document.body.style.overflow = overflow;
       previous?.focus?.();
     };
-  }, [open, onCancel]);
+  }, [open]);
 
   if (!open || !onClient) return null;
 
@@ -167,7 +178,8 @@ export default function Dialog({
       aria-modal="true"
       aria-labelledby={titleId}
       // Der Hintergrund ist die stille Fläche des Systems, kein schwarzer Schleier.
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[color-mix(in_oklab,var(--muted)_92%,transparent)] p-6"
+      // center-safe: ist der Rahmen höher als der Bildschirm, bleibt sein Kopf erreichbar.
+      className="fixed inset-0 z-50 flex items-center-safe justify-center overflow-y-auto bg-[color-mix(in_oklab,var(--muted)_92%,transparent)] p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onCancel();
       }}

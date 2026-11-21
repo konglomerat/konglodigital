@@ -7,6 +7,7 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 
+import SubPageTitle from "@/app/[lang]/admin/SubPageTitle";
 import Button from "@/components/knglmrt/Button";
 import type { MaterialOrderSummary } from "@/lib/material-orders";
 
@@ -87,20 +88,19 @@ export default function MaterialbestellungListPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 md:px-0 md:py-0">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground dark:text-zinc-100">
-          Materialbestellungen
-        </h1>
-        <Button
-          href="/split-invoice/new"
-          kind="primary"
-          size="small"
-          icon={faPlus}
-        >
-          Neue Materialbestellung
-        </Button>
-      </div>
+    <div className="w-full max-w-6xl space-y-6">
+      <SubPageTitle
+        ressort="holzwerkstatt"
+        title="Sammelbestellungen"
+        links={[
+          {
+            href: "/split-invoice/new",
+            label: "Neue Sammelbestellung",
+            kind: "primary",
+            icon: faPlus,
+          },
+        ]}
+      />
 
       <div className="knglmrt-border-section overflow-x-auto bg-card dark:bg-zinc-900">
         <table className="min-w-full divide-y divide-border dark:divide-zinc-800">

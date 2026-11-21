@@ -8,6 +8,7 @@ import {
   filterAllowedCostCenters,
   filterAllowedWerkbereiche,
   getAllowedCostCenters,
+  getWerkbereichCostCenterCandidates,
   isCostCenterAllowed,
   toBuchhaltungWerkbereiche,
 } from "@/lib/buchhaltung-werkbereiche";
@@ -33,6 +34,14 @@ describe("getAllowedCostCenters", () => {
 
   it("überspringt unbekannte Bereiche und Bereiche ohne Kostenstelle", () => {
     expect(getAllowedCostCenters(["ohne", "gibts-nicht"], SCOPES)).toEqual([]);
+  });
+});
+
+describe("getWerkbereichCostCenterCandidates", () => {
+  it("liefert den Werkbereich und alle zehn Unterprojekte", () => {
+    expect(getWerkbereichCostCenterCandidates("57")).toEqual([
+      "57", "570", "571", "572", "573", "574", "575", "576", "577", "578", "579",
+    ]);
   });
 });
 

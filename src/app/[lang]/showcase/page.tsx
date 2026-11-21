@@ -1,9 +1,8 @@
 import PageTitle from "../components/PageTitle";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { can } from "@/lib/access/access";
-import { loadUserAccess } from "@/lib/access/server";
+import { getServerAccess, getServerSession } from "@/lib/server-session";
 import ShowcaseCard from "./ShowcaseCard";
 import ShowcaseOfTheMonthCard from "./ShowcaseOfTheMonthCard";
 import ShowcaseUploadPromptCard from "./ShowcaseUploadPromptCard";
@@ -18,14 +17,12 @@ const hasShowcaseOfTheMonthTag = (tags?: string[] | null) =>
   false;
 
 export default async function ShowcasesPage({ searchParams }: { searchParams: Promise<{ ansicht?: string }> }) {
-  const [{ tx, locale }, supabase] = await Promise.all([
+  const [{ tx, locale }, { user }, access] = await Promise.all([
     getServerI18n(),
-    createSupabaseServerClient({ readOnly: true }),
+    getServerSession(),
+    getServerAccess(),
   ]);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const canEdit = can(await loadUserAccess(supabase, user), "backend.login");
+  const canEdit = Boolean(user && can(access, "backend.login"));
   const archive = (await searchParams).ansicht === "archiv";
   const allPosts = await loadAllShowcases();
   const legacyCount = allPosts.filter(post => post.isLegacyNews).length;

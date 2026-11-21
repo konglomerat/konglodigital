@@ -231,7 +231,11 @@ export default function ResourceEditorPage({}: Record<string, never>) {
         body: formData,
       });
       setFormMessage(tx("Resource created."));
-      if (data.id) {
+      // Die Taste bleibt gesperrt, bis die neue Seite da ist — sonst legt ein
+      // zweiter Klick die Ressource doppelt an.
+      if (!data.id) {
+        setSaving(false);
+      } else {
         router.push(
           localizePathname(
             buildResourcePath({
@@ -246,7 +250,6 @@ export default function ResourceEditorPage({}: Record<string, never>) {
       setFormError(
         error instanceof Error ? error.message : tx("Unable to save resource."),
       );
-    } finally {
       setSaving(false);
     }
   };

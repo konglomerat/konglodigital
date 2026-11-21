@@ -40,6 +40,7 @@ describe("Verwaltungsmenü", () => {
       "vorstand",
       "admin",
       "vhc",
+      "holzwerkstatt",
       "oeffentlichkeitsarbeit",
     ]);
   });
@@ -51,20 +52,30 @@ describe("Verwaltungsmenü", () => {
   });
 
   it("zeigt Bereichs-Buchhaltung die Buchhaltung, aber kein KoFi", () => {
-    const access = accessWith(["buchhaltung", "holz"]);
+    const access = accessWith(["buchhaltung", "printshop"]);
     expect(visibleIds(access)).toEqual(["buchhaltung"]);
+  });
+
+  it("zeigt die Holzwerkstatt nur der Buchhaltung von Holz", () => {
+    const access = accessWith(["buchhaltung", "holz"]);
+    expect(visibleIds(access)).toEqual(["buchhaltung", "holzwerkstatt"]);
+    expect(visibleChildren(access, "holzwerkstatt")).toEqual([
+      "Sammelbestellungen",
+    ]);
+    expect(visibleIds(accessWith(["tools", "holz"]))).toEqual([]);
   });
 
   it("zeigt Vorstand nur der Rolle Vorstand, nicht der Buchhaltung", () => {
     expect(visibleIds(accessWith(["buchhaltung", null]))).toEqual([
       "buchhaltung",
+      "holzwerkstatt",
     ]);
     const access = accessWith(["vorstand", null]);
     expect(visibleIds(access)).toEqual(["vorstand"]);
     expect(visibleChildren(access, "vorstand")).toEqual([
       "KoFi",
       "Ehrenamtsbonus",
-      "Anträge",
+      "Anträge Mitgliedschaft",
     ]);
   });
 

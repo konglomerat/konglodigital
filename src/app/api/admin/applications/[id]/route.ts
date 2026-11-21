@@ -1,16 +1,20 @@
 // Ein Mitgliedsantrag: GET mit Unterschriften und Rechnung, PATCH für
 // Korrekturen, POST für Rückfrage, Annehmen, Rechnung freigeben, Abschluss
-// und Ablehnen.
+// und Ablehnen, DELETE für eine laufende Aufnahme.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { INQUIRY_SUBJECT, REJECTION_SUBJECT } from "@/lib/membership-applications/mail-texts";
-import { mailApplicant } from "@/lib/membership-applications/mails";
-import { workflowDeps } from "@/lib/membership-applications/server";
-import { getApplication, updateApplication } from "@/lib/membership-applications/store";
+import { withCampaiContacts, workflowDeps } from "@/lib/membership-applications/server";
+import {
+  deleteApplication,
+  getApplication,
+  updateApplication,
+} from "@/lib/membership-applications/store";
 import {
   CHECKLIST_STEPS,
   changedFields,
+  isOnboarding,
   isUndecided,
   type ApplicationInvoice,
   type ChecklistStep,
@@ -23,9 +27,11 @@ import {
 import {
   acceptApplication,
   completeMembership,
+  messageApplicant,
   releaseInvoice,
   setChecklistItem,
   syncInvoice,
+  tagRejection,
   WorkflowError,
 } from "@/lib/membership-applications/workflow";
 
@@ -57,21 +63,24 @@ const notFound = () =>
 const withInvoice = async (
   application: MembershipApplication,
 ): Promise<ApplicationDetailResponse> => {
-  try {
-    return await syncInvoice(application, workflowDeps);
-  } catch (error) {
-    return {
+  const result: ApplicationDetailResponse = await syncInvoice(application, workflowDeps).catch(
+    (error: unknown) => ({
       application,
       invoice: null,
       invoiceError: messageOf(error) ?? "Rechnung nicht abrufbar.",
-    };
-  }
+    }),
+  );
+  const [withContact] = await withCampaiContacts([result.application]);
+  return { ...result, application: withContact };
 };
 
-/** Korrigieren, nachfragen und ablehnen gehen nur, solange in Campai nichts angelegt ist. */
+/**
+ * Korrigieren, nachfragen und ablehnen gehen nur, solange der Kontakt in
+ * Campai noch kein Mitglied ist.
+ */
 const editableError = (application: MembershipApplication) => {
   if (!isUndecided(application.status)) return "Der Antrag ist schon entschieden.";
-  if (application.campai.contactId) {
+  if (application.campai.memberAt) {
     return "Die Annahme hat schon begonnen. Bitte erneut „Annehmen“ klicken, um sie abzuschließen.";
   }
   return null;
@@ -150,8 +159,8 @@ export const POST = async (request: NextRequest, context: Context) => {
             { status: 400 },
           );
         }
-        await mailApplicant(application, INQUIRY_SUBJECT, text);
-        updated = await updateApplication(application, {
+        const messaged = await messageApplicant(application, INQUIRY_SUBJECT, text, workflowDeps);
+        updated = await updateApplication(messaged, {
           status: "inquiry",
           history: { by: auth.actor, type: "inquiry", text },
         });
@@ -175,8 +184,12 @@ export const POST = async (request: NextRequest, context: Context) => {
             { status: 400 },
           );
         }
-        if (mailText) await mailApplicant(application, REJECTION_SUBJECT, mailText);
-        updated = await updateApplication(application, {
+        // Erst Campai: scheitert der Tag, ist noch keine Absage verschickt.
+        const tagged = await tagRejection(application, workflowDeps);
+        if (mailText) {
+          await messageApplicant(tagged, REJECTION_SUBJECT, mailText, workflowDeps);
+        }
+        updated = await updateApplication(tagged, {
           status: "rejected",
           rejectionReason: reason,
           history: {
@@ -209,7 +222,12 @@ export const POST = async (request: NextRequest, context: Context) => {
         break;
 
       case "release":
-        updated = await releaseInvoice(application, auth.actor, workflowDeps);
+        updated = await releaseInvoice(
+          application,
+          auth.actor,
+          workflowDeps,
+          body.withoutInvoice === true,
+        );
         break;
 
       case "complete":
@@ -232,5 +250,28 @@ export const POST = async (request: NextRequest, context: Context) => {
       },
       { status: error instanceof WorkflowError ? 409 : 502 },
     );
+  }
+};
+
+/**
+ * Löscht eine laufende Aufnahme. Nur bei uns — Kontakt, Verträge und
+ * Rechnung in Campai bleiben, wie sie sind.
+ */
+export const DELETE = async (request: NextRequest, context: Context) => {
+  const auth = await authorizeApplications(request);
+  if ("response" in auth) return auth.response;
+  try {
+    const application = await load(context);
+    if (!application) return notFound();
+    if (!isOnboarding(application.status)) {
+      return NextResponse.json(
+        { error: "Löschen geht nur bei laufenden Aufnahmen." },
+        { status: 409 },
+      );
+    }
+    await deleteApplication(application.id);
+    return NextResponse.json({ deleted: application.id });
+  } catch (error) {
+    return errorResponse(error, "Antrag konnte nicht gelöscht werden.");
   }
 };

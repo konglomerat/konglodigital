@@ -5,6 +5,8 @@ export type RessortLink = {
   label: string;
   description?: string;
   comingSoon?: boolean;
+  /** Zahl offener/neuer Einträge, wie an der Leiste. */
+  badge?: number;
 };
 
 // Immer mindestens zwei Spalten — auch auf dem Telefon, wo die Kacheln dafür
@@ -61,7 +63,14 @@ export default function RessortLinks({
             href={link.href}
             className={`${tileClassName} transition hover:bg-primary-soft`}
           >
-            <span className={titleClassName}>{link.label}</span>
+            <span className="flex items-start justify-between gap-2">
+              <span className={titleClassName}>{link.label}</span>
+              {link.badge ? (
+                <span className="knglmrt-tag shrink-0 bg-primary px-[7px] py-[3px] text-white">
+                  {link.badge}
+                </span>
+              ) : null}
+            </span>
             {link.description ? (
               <span className="hidden text-muted-foreground sm:block">
                 {link.description}

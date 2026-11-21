@@ -28,6 +28,7 @@ import FormSection from "@/components/knglmrt/FormSection";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Textarea from "@/components/knglmrt/Textarea";
 import ReceiptsPageHeader from "../create/header";
+import ReceiptTagField from "../ReceiptTagField";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -765,6 +766,8 @@ export default function EigenbelegPage() {
   const [showCreateDebtorPanel, setShowCreateDebtorPanel] = useState(false);
   const [showUpdateDebtorPanel, setShowUpdateDebtorPanel] = useState(false);
   const [debtorError, setDebtorError] = useState<string | null>(null);
+  // Optionale Tags; Grund und „API“ setzt die App selbst davor.
+  const [tags, setTags] = useState<string[]>([]);
 
   const selectedReason = useWatch({ control, name: "reason" });
   const selectedBookingType = useWatch({ control, name: "bookingType" });
@@ -1098,6 +1101,7 @@ export default function EigenbelegPage() {
             values.reason === "Sonstiges"
               ? values.reasonOther?.trim() || values.reason
               : values.reason,
+            ...tags,
           ],
           occasion: receiptValues.occasion,
           internalNote,
@@ -1861,6 +1865,11 @@ export default function EigenbelegPage() {
               <option value="offen">offen</option>
               <option value="bezahlt">bezahlt</option>
             </NativeSelect>
+            <ReceiptTagField
+              value={tags}
+              onChange={setTags}
+              reservedCount={2}
+            />
           </div>
         </InternalNoteSection>
 

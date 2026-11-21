@@ -129,11 +129,14 @@ export default async function NewsSection() {
       <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {articles.map((article) => (
           <li key={article.id} className="flex">
+            {/* Wie die Workshop-Karten: ruhige Fläche, beim Hover ein Rahmen
+                in Primärfarbe. Er liegt als Ebene über der Karte, sonst
+                verdeckt ihn das Bild. */}
             <Link
               href={localizePathname(article.path, locale)}
-              className="knglmrt-terrazzo-hover group flex w-full flex-col border-2 border-[var(--primary-hairline)] bg-card transition-colors duration-300 ease-out hover:border-[var(--knglmrt-pink-60)] focus-visible:border-[var(--knglmrt-pink-60)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+              className="relative flex w-full flex-col bg-muted text-foreground no-underline focus-visible:outline-none after:pointer-events-none after:absolute after:inset-0 after:content-[''] after:transition-shadow after:duration-200 after:ease-[cubic-bezier(.2,0,0,1)] hover:after:shadow-[inset_0_0_0_3px_var(--primary)] focus-visible:after:shadow-[inset_0_0_0_3px_var(--primary)]"
             >
-              <div className="relative aspect-[4/3] w-full overflow-hidden border-b-2 border-[var(--primary-hairline)] bg-muted">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--knglmrt-paper-pink)] dark:bg-primary-soft">
                 {article.image ? (
                   <img
                     src={article.image}
@@ -151,15 +154,15 @@ export default async function NewsSection() {
                 )}
               </div>
 
-              <div className="flex flex-1 flex-col gap-1.5 px-4 py-3">
+              <div className="flex flex-1 flex-col gap-1.5 px-[18px] pb-4 pt-4">
                 {article.tag ? (
                   <span className="knglmrt-tag text-primary">
                     {article.tag}
                   </span>
                 ) : null}
-                <span className="knglmrt-card-title min-w-0">
+                <h3 className="knglmrt-card-title m-0 min-w-0 text-pretty">
                   {article.name}
-                </span>
+                </h3>
                 {article.description ? (
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     {markdownExcerpt(article.description, 110)}

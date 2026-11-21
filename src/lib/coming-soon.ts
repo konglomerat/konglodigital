@@ -3,7 +3,7 @@
 // alle Links dorthin.
 import { stripLocalePrefix } from "@/i18n/config";
 
-export const COMING_SOON_PREFIXES = ["/werkbereiche"];
+export const COMING_SOON_PREFIXES = ["/werkbereiche", "/workshops"];
 
 export const isComingSoonPath = (pathname: string) =>
   COMING_SOON_PREFIXES.some(

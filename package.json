@@ -2,6 +2,9 @@
   "name": "konglodigitalewerkstaetten",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -48,6 +51,7 @@
     "ical.js": "^2.2.1",
     "jspdf": "^4.2.0",
     "lexical": "0.35.0",
+    "jspdf-autotable": "^5.0.9",
     "mapbox-gl": "^3.10.0",
     "motion": "^12.34.0",
     "mqtt": "^5.14.1",
@@ -60,7 +64,8 @@
     "react-hook-form": "^7.71.1",
     "react-i18next": "^17.0.2",
     "react-select": "^5.10.2",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

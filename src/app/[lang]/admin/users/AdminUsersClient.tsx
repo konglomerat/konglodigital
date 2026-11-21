@@ -33,6 +33,8 @@ type CampaiContactOption = {
   id: string;
   name: string;
   email: string | null;
+  /** Adressen aus „Alternative Kommunikation" in Campai. */
+  alternativeEmails: string[];
   memberNumber: string | null;
   tags: string[];
   types: string[];
@@ -40,6 +42,18 @@ type CampaiContactOption = {
 };
 
 const MAX_CAMPAI_RESULTS = 8;
+
+type PendingAction = { kind: "unlink" | "delete"; profile: ActiveProfile };
+
+const contactEmails = (contact: CampaiContactOption) =>
+  [contact.email, ...(contact.alternativeEmails ?? [])].filter(
+    (email): email is string => Boolean(email),
+  );
+
+const profileDisplayName = (profile: ActiveProfile) =>
+  profile.campaiName ||
+  [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+  profile.email;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -85,6 +99,13 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
   );
   const [campaiSearchTerm, setCampaiSearchTerm] = useState("");
   const [selectedCampaiContactId, setSelectedCampaiContactId] = useState("");
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
+  const [pendingActionError, setPendingActionError] = useState<string | null>(
+    null,
+  );
+  const [isRunningPendingAction, setIsRunningPendingAction] = useState(false);
   const editingCampaiProfile = useMemo(
     () => profiles.find((profile) => profile.id === editingCampaiForId) ?? null,
     [editingCampaiForId, profiles],
@@ -150,7 +171,7 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
       : campaiContacts.filter((contact) => {
           const haystack = [
             contact.name,
-            contact.email ?? "",
+            ...contactEmails(contact),
             contact.memberNumber ?? "",
             contact.tags.join(" "),
           ]
@@ -163,21 +184,22 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
       return filtered;
     }
 
+    const score = (contact: CampaiContactOption) => {
+      const emails = contactEmails(contact).map((email) =>
+        email.toLocaleLowerCase("de-DE"),
+      );
+      const name = contact.name.toLocaleLowerCase("de-DE");
+      return (
+        (emails.includes(needle) ? 4 : 0) +
+        (name === needle ? 3 : 0) +
+        (emails.some((email) => email.startsWith(needle)) ? 2 : 0) +
+        (name.startsWith(needle) ? 1 : 0)
+      );
+    };
+
     return [...filtered].sort((left, right) => {
-      const leftEmail = left.email?.toLocaleLowerCase("de-DE") ?? "";
-      const rightEmail = right.email?.toLocaleLowerCase("de-DE") ?? "";
-      const leftName = left.name.toLocaleLowerCase("de-DE");
-      const rightName = right.name.toLocaleLowerCase("de-DE");
-      const leftScore =
-        (leftEmail === needle ? 4 : 0) +
-        (leftName === needle ? 3 : 0) +
-        (leftEmail.startsWith(needle) ? 2 : 0) +
-        (leftName.startsWith(needle) ? 1 : 0);
-      const rightScore =
-        (rightEmail === needle ? 4 : 0) +
-        (rightName === needle ? 3 : 0) +
-        (rightEmail.startsWith(needle) ? 2 : 0) +
-        (rightName.startsWith(needle) ? 1 : 0);
+      const leftScore = score(left);
+      const rightScore = score(right);
 
       if (leftScore !== rightScore) {
         return rightScore - leftScore;
@@ -208,14 +230,18 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
 
       try {
         const contacts = campaiContacts ?? (await loadCampaiContacts());
-        const matchingContact = contacts.find(
-          (contact) =>
-            contact.email?.trim().toLowerCase() ===
-            profile.email.trim().toLowerCase(),
+        const profileEmail = profile.email.trim().toLowerCase();
+        const matchingContact = contacts.find((contact) =>
+          contactEmails(contact).includes(profileEmail),
+        );
+        // Eine gespeicherte ID, die Campai nicht mehr führt, ist keine
+        // Auswahl — dann gilt der Kontakt mit passender Mail.
+        const currentContact = contacts.find(
+          (contact) => contact.id === profile.campaiContactId,
         );
 
         setSelectedCampaiContactId(
-          profile.campaiContactId ?? matchingContact?.id ?? "",
+          currentContact?.id ?? matchingContact?.id ?? "",
         );
       } catch {
         setSelectedCampaiContactId(profile.campaiContactId ?? "");
@@ -284,6 +310,60 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
     }
   };
 
+  const closePendingAction = useCallback(() => {
+    setPendingAction(null);
+    setPendingActionError(null);
+  }, []);
+
+  const runPendingAction = async () => {
+    if (!pendingAction) {
+      return;
+    }
+
+    const { kind, profile } = pendingAction;
+    setIsRunningPendingAction(true);
+    setPendingActionError(null);
+
+    try {
+      if (kind === "unlink") {
+        await fetchJson("/api/admin/users", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: profile.id, campaiContactId: null }),
+        });
+        setProfiles((currentProfiles) =>
+          currentProfiles.map((entry) =>
+            entry.id === profile.id
+              ? {
+                  ...entry,
+                  campaiContactId: null,
+                  campaiMemberNumber: null,
+                  campaiDebtorAccount: null,
+                  campaiName: null,
+                }
+              : entry,
+          ),
+        );
+      } else {
+        await fetchJson("/api/admin/users", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: profile.id }),
+        });
+        setProfiles((currentProfiles) =>
+          currentProfiles.filter((entry) => entry.id !== profile.id),
+        );
+      }
+      setPendingAction(null);
+    } catch (error) {
+      setPendingActionError(
+        error instanceof Error ? error.message : "Aktion fehlgeschlagen.",
+      );
+    } finally {
+      setIsRunningPendingAction(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <SubPageTitle
@@ -339,14 +419,13 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
               <Th>Erstellt</Th>
               <Th>Letzte Anmeldung</Th>
               <Th>Mail bestaetigt</Th>
+              <Th>
+                <span className="sr-only">Aktionen</span>
+              </Th>
             </THead>
             <TBody>
               {profiles.map((profile) => {
-                const fallbackName = [profile.firstName, profile.lastName]
-                  .filter(Boolean)
-                  .join(" ");
-                const displayName =
-                  profile.campaiName || fallbackName || profile.email;
+                const displayName = profileDisplayName(profile);
                 const hasCampaiLink = Boolean(profile.campaiContactId);
                 const isEditingCampai = editingCampaiForId === profile.id;
                 const profileHref = localizePathname(
@@ -366,7 +445,28 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
                     </Td>
                     <Td className="align-middle whitespace-nowrap">
                       {hasCampaiLink ? (
-                        <Badge tone="gebucht">Mit Campai verknuepft</Badge>
+                        <span className="flex items-center gap-1.5">
+                          <Badge tone="gebucht">Mit Campai verknuepft</Badge>
+                          <Button
+                            kind="quiet"
+                            size="chip"
+                            disabled={savingCampaiForId === profile.id}
+                            onClick={() => {
+                              void startCampaiLink(profile);
+                            }}
+                          >
+                            Ändern
+                          </Button>
+                          <Button
+                            kind="quiet"
+                            size="chip"
+                            onClick={() =>
+                              setPendingAction({ kind: "unlink", profile })
+                            }
+                          >
+                            Trennen
+                          </Button>
+                        </span>
                       ) : (
                         <Button
                           kind="quiet"
@@ -415,6 +515,17 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
                     <Td className="knglmrt-num align-middle">
                       {formatDateTime(profile.emailConfirmedAt) ?? "Nein"}
                     </Td>
+                    <Td className="align-middle">
+                      <Button
+                        kind="danger-secondary"
+                        size="chip"
+                        onClick={() =>
+                          setPendingAction({ kind: "delete", profile })
+                        }
+                      >
+                        Löschen
+                      </Button>
+                    </Td>
                   </Tr>
                 );
               })}
@@ -425,7 +536,11 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
 
       <Dialog
         open={Boolean(editingCampaiProfile)}
-        title="Campai-Konto verknuepfen"
+        title={
+          editingCampaiProfile?.campaiContactId
+            ? "Campai-Konto ändern"
+            : "Campai-Konto verknuepfen"
+        }
         width={672}
         onCancel={cancelCampaiLink}
         actions={
@@ -462,14 +577,7 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
           <>
             <div>
               <h3 className="knglmrt-card-title text-foreground">
-                {editingCampaiProfile.campaiName ||
-                  [
-                    editingCampaiProfile.firstName,
-                    editingCampaiProfile.lastName,
-                  ]
-                    .filter(Boolean)
-                    .join(" ") ||
-                  editingCampaiProfile.email}
+                {profileDisplayName(editingCampaiProfile)}
               </h3>
               <p className="text-muted-foreground">
                 {editingCampaiProfile.email}
@@ -525,7 +633,7 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
                           {contact.name}
                         </span>
                         <span className="block truncate text-[13px] leading-[18px] text-muted-foreground">
-                          {contact.email ?? "Keine Mail"}
+                          {contactEmails(contact).join(", ") || "Keine Mail"}
                         </span>
                         <span className="knglmrt-num block truncate text-muted-foreground">
                           {contact.memberNumber
@@ -549,6 +657,50 @@ export default function AdminUsersClient({ locale }: { locale: Locale }) {
               </p>
             ) : null}
           </>
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingAction)}
+        tone="danger"
+        title={
+          pendingAction?.kind === "delete"
+            ? "Konto löschen?"
+            : "Campai-Verknüpfung trennen?"
+        }
+        text={
+          pendingAction
+            ? pendingAction.kind === "delete"
+              ? `${profileDisplayName(pendingAction.profile)} (${pendingAction.profile.email}) verliert den Zugang. Profil und Rollen werden entfernt, der Campai-Kontakt bleibt erhalten.`
+              : `${profileDisplayName(pendingAction.profile)} sieht danach keine Daten aus Campai mehr, bis das Konto neu verknüpft ist.`
+            : undefined
+        }
+        onCancel={closePendingAction}
+        actions={
+          <>
+            <Button
+              type="button"
+              kind="secondary"
+              disabled={isRunningPendingAction}
+              onClick={closePendingAction}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              kind="danger-primary"
+              loading={isRunningPendingAction}
+              onClick={() => {
+                void runPendingAction();
+              }}
+            >
+              {pendingAction?.kind === "delete" ? "Löschen" : "Trennen"}
+            </Button>
+          </>
+        }
+      >
+        {pendingActionError ? (
+          <Notice tone="rosa">{pendingActionError}</Notice>
         ) : null}
       </Dialog>
     </div>

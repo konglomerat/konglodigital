@@ -115,7 +115,8 @@ export const GET = async (
     status: 200,
     headers: {
       "Cache-Control": "no-store",
-      "Content-Disposition": `attachment; filename="${fileNameBase}.pdf"`,
+      // ?inline=1 zeigt die Datei in der Vorschau der Beleg-Sidebar an.
+      "Content-Disposition": `${request.nextUrl.searchParams.get("inline") === "1" ? "inline" : "attachment"}; filename="${fileNameBase}.pdf"`,
       "Content-Type": contentType,
     },
   });

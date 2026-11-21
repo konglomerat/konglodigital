@@ -18,8 +18,6 @@ import {
 /** Wie weit das Panel in die Zukunft schaut und wie viele Zeilen es zeigt. */
 const DAYS_AHEAD = 60;
 const MAX_EVENTS = 6;
-/** Der Google-Feed wird pro Fenster einmal geholt, nicht pro Aufruf. */
-const REVALIDATE_SECONDS = 300;
 
 const weekdayFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: TIME_ZONE,
@@ -154,9 +152,7 @@ export function VereinCalendarSkeleton({ werkbereich, compact = false }: { werkb
 export default async function VereinCalendar({ werkbereich, compact = false }: { werkbereich?: string; compact?: boolean } = {}) {
   let events: CalendarEvent[];
   try {
-    events = await getUpcomingEvents(DAYS_AHEAD, {
-      revalidateSeconds: REVALIDATE_SECONDS,
-    });
+    events = await getUpcomingEvents(DAYS_AHEAD);
   } catch {
     return (
       <CalendarPanel werkbereich={werkbereich} compact={compact}>

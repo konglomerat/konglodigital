@@ -14,6 +14,7 @@ function compile(file, mocks = {}, globals = {}) {
   runInNewContext(source, {
     exports,
     URL,
+    AbortSignal,
     ...globals,
     require(name) {
       assert.ok(Object.hasOwn(mocks, name), `Unexpected import: ${name}`);

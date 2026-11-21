@@ -6,3 +6,10 @@ node_modules
 output
 *.log
 .DS_Store
+
+# Local data never belongs in a deployment build context.
+.migration-backups
+.db-backups
+.deployments
+.playwright-cli
+.next-*
