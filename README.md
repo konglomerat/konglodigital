@@ -6,6 +6,28 @@ shop, and the shared resource inventory in one place. The app aggregates live
 printer status, print-job telemetry, and per-job notes, while also integrating
 Campai for products and invoices and Supabase for authentication and data.
 
+## Website und Payload-CMS im selben Repository
+
+Die Website bleibt im Hauptverzeichnis, das Payload-CMS liegt unter
+[`apps/cms`](apps/cms/README.md). Beide Apps werden separat installiert,
+gestartet und deployt. Änderungen an CMS-Modellen und deren Darstellung können
+so in einem gemeinsamen PR geprüft werden.
+
+| Anwendung | Installation | Entwicklung | Build | Tests |
+| --- | --- | --- | --- | --- |
+| Website | `npm ci` | `npm run dev` | `npm run build` | `npm test` |
+| CMS | `npm run cms:install` | `npm run cms:dev` | `npm run cms:build` | `npm run cms:test` |
+
+Website-Konfiguration: `.env.local`; CMS-Konfiguration:
+`apps/cms/.env.development.local` (lokal) bzw. eigene Deployment-Variablen.
+Die CMS-Entwicklung verwendet die gemeinsame produktive Datenbank über SSH:
+**Redaktionelle Änderungen im lokalen CMS wirken auch produktiv.**
+Backups, Uploads und Zugangsdaten bleiben außerhalb von Git.
+
+Die Website wird weiterhin aus dem Repository-Hauptverzeichnis gebaut.
+Für das CMS muss der Deployment-Kontext auf `apps/cms` zeigen; das bestehende
+Dokploy-Drop-Verfahren bleibt verfügbar. Details stehen in der CMS-README.
+
 ## Features
 
 - Live printer status from the BambuLab cloud API + MQTT

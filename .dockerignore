@@ -13,3 +13,6 @@ output
 .deployments
 .playwright-cli
 .next-*
+
+# CMS is built and deployed independently from apps/cms.
+apps/cms

@@ -25,7 +25,11 @@
     "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
     "supabase:table-sync": "node scripts/supabase-table-sync.mjs",
     "test": "vitest run",
-    "access:seed-admin": "node --env-file=.env.local scripts/seed-bootstrap-admin.mjs"
+    "access:seed-admin": "node --env-file=.env.local scripts/seed-bootstrap-admin.mjs",
+    "cms:install": "npm --prefix apps/cms ci",
+    "cms:dev": "npm --prefix apps/cms run dev",
+    "cms:build": "npm --prefix apps/cms run build",
+    "cms:test": "npm --prefix apps/cms test"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
