@@ -5,9 +5,9 @@ import ExifReader from "exifreader";
 import sharp from "sharp";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import { hasRight } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { userHasRole } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { ensureResourcePrettyTitle } from "@/lib/resource-pretty-title";
 import { SHOWCASES_CACHE_TAG } from "@/app/[lang]/showcase/showcase-data";
 import { describeInventoryImages } from "@/lib/openai-vision";
@@ -37,7 +37,7 @@ import {
   generateVideoPreviewBuffer,
 } from "@/lib/video-preview";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
-import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import { SHOWCASE_RESOURCE_TYPE, isShowcaseResourceType } from "@/lib/showcase-resource-type";
 
 const splitList = (value: string) =>
   value
@@ -943,32 +943,26 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await readResourcePayload(request);
+  if (isShowcaseResourceType(payload.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet.", cmsPath: "/admin/collections/posts" }, { status: 409 });
+  }
   if (payload.mapFeatures?.some(isPlaceholderGpsPointFeature)) {
     return NextResponse.json(
       { error: "Location coordinates [0, 0] are invalid." },
       { status: 400 },
     );
   }
-  const isShowcase = payload.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
-  const canCreateByRight = hasRight(data.user, "resources:create");
   if (
     payload.isPrivate &&
-    !(await userHasRole(supabase, data.user, "admin"))
+    !can(await loadUserAccess(supabase, data.user), "showcase.private")
   ) {
     return NextResponse.json(
       { error: "Only admins can create private showcases." },
       { status: 403 },
     );
   }
-  if (!canCreateByRight && !isShowcase) {
-    return NextResponse.json(
-      { error: "Insufficient permissions." },
-      { status: 403 },
-    );
-  }
-  const writeSupabase = (
-    canCreateByRight ? supabase : adminSupabase
-  ) as typeof supabase;
+  // Anlegen darf jedes angemeldete Mitglied; der Service-Client schreibt.
+  const writeSupabase = adminSupabase as typeof supabase;
   const hasIncomingMedia =
     payload.imageFiles.length > 0 ||
     (Array.isArray(payload.imageUrls) && payload.imageUrls.length > 0);

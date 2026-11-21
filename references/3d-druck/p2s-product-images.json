@@ -1,0 +1,24 @@
+{
+  "retrievedAt": "2026-11-20",
+  "sourcePage": "https://online.challenger.sg/products/bambu-lab-p2s-combo-3d-ptr",
+  "sourceImage": "https://cdn.shopify.com/s/files/1/0614/3180/8075/files/P2SCombo_01.jpg?v=1764902901",
+  "depicts": "Bambu Lab P2S mit AMS 2 Pro – Produktabbildung",
+  "resources": [
+    {
+      "id": "c26aedee-dafa-403b-a418-5b3c26f74a4e",
+      "name": "Bambu Lab P2S mit AMS – Gerät 1",
+      "image": "https://media.konglomerat.org/t/resources/c26aedee-dafa-403b-a418-5b3c26f74a4e/p2s-ams-angle-white-cf8a209d-537c-4ea8-87ea-647dcb3731bf.png"
+    },
+    {
+      "id": "b7e3a3f5-f373-4cd4-8f4f-d5aa156e4ef8",
+      "name": "Bambu Lab P2S mit AMS – Gerät 2",
+      "image": "https://media.konglomerat.org/t/resources/b7e3a3f5-f373-4cd4-8f4f-d5aa156e4ef8/p2s-ams-angle-white-77991073-2a52-4627-840f-8e0cb834441a.png"
+    }
+  ],
+  "localAsset": "references/3d-druck/images/p2s-ams-angle-white.png",
+  "edit": {
+    "tool": "built-in image_gen",
+    "change": "Light gray background replaced with white; angled product view retained.",
+    "prompt": "Use case: precise-object-edit. Edit target: attached product photograph of Bambu Lab P2S with AMS on top. Change ONLY the light gray background to pure solid white (#FFFFFF). Preserve the exact printer, AMS, perspective, proportions, position, lighting on product, materials, all logos and text and screen content unchanged. Preserve a subtle natural contact shadow. Square product photograph for inventory. Do not redesign, repaint or add anything."
+  }
+}

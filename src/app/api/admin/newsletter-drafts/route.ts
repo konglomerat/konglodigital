@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -63,7 +64,7 @@ const requireNewsletterAccess = async (request: NextRequest) => {
   if (!data.user) {
     return { response: unauthorized(), userId: null };
   }
-  if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
+  if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
     return { response: forbidden(), userId: null };
   }
 

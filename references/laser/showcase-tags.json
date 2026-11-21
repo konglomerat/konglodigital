@@ -1,0 +1,26 @@
+{
+  "tag": "laser",
+  "updatedAt": "2026-11-20T22:02:41.679Z",
+  "projects": [
+    {
+      "id": "e667ea3b-d0f0-415b-b3e1-e389f1fe6b94",
+      "name": "Laser",
+      "reason": "Projektname und Beschreibung einer Holzfigur mit gebrannten Kanten."
+    },
+    {
+      "id": "44b6f1c8-aa39-46d7-b712-321d7cff2942",
+      "name": "Riesige Skadis Wand",
+      "reason": "Beschreibung: Die Wand selbst ist gelasert."
+    },
+    {
+      "id": "63e24f40-c2d8-46a7-b3c7-07a48f71bf0d",
+      "name": "nanoCUL Gehäuse",
+      "reason": "Beschreibung nennt ausdrücklich eine gelaserte Deckelvariante."
+    },
+    {
+      "id": "ffc67866-4706-4c31-93e8-3d4f0a31d0df",
+      "name": "Absaugung für Laser",
+      "reason": "Projekt behandelt die Absaugung im Laserbereich."
+    }
+  ]
+}

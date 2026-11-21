@@ -1,6 +1,9 @@
 import { VEREINSPROJEKTE, WERKBEREICHE } from "@/lib/werkbereiche";
 
 const PAGE_ALIASES: Record<string, string> = {
+  "3d-druck-anleitung": "/werkbereiche/3d-druck/anleitung",
+  "3d-druck-material": "/werkbereiche/3d-druck/material",
+  "3d-druck-preise": "/werkbereiche/3d-druck/preise",
   startseite: "/",
   home: "/",
   verein: "/verein",

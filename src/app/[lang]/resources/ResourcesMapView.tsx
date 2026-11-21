@@ -30,6 +30,7 @@ type ResourcesMapViewProps = {
   highlightedResourceId?: string | null;
   onVisibleResourceIdsChange?: (resourceIds: string[]) => void;
   className?: string;
+  initialMaxZoom?: number;
 };
 
 const defaultCenter = {
@@ -187,6 +188,7 @@ export default function ResourcesMapView({
   highlightedResourceId,
   onVisibleResourceIdsChange,
   className = "w-full aspect-[4/3]",
+  initialMaxZoom = 23,
 }: ResourcesMapViewProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
   const missingMapboxTokenMessage = tx("Missing Mapbox token.");
@@ -664,7 +666,7 @@ export default function ResourcesMapView({
       if (!bounds.isEmpty()) {
         fitMapBounds(bounds, {
           padding: 48,
-          maxZoom: 23,
+          maxZoom: initialMaxZoom,
         });
       } else {
         emitVisibleResourceIds(map);
@@ -690,6 +692,7 @@ export default function ResourcesMapView({
     resourceFeatureCollection,
     resourceTypes,
     useCompactMarkers,
+    initialMaxZoom,
   ]);
 
   useEffect(() => {

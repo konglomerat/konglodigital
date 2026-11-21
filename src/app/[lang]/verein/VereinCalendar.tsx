@@ -5,6 +5,8 @@
 // je Termin zwei Zeilen (Datum/Titel, Zeit/Ort), Fuß mit Link.
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { filterWerkbereichEvents } from "@/lib/werkbereich-calendar";
+import { findVereinsprojekt, findWerkbereich } from "@/lib/werkbereiche";
 
 import {
   CALENDAR_URL,
@@ -88,21 +90,24 @@ const groupByMonth = (events: CalendarEvent[]): CalendarMonth[] => {
 };
 
 /** Der Rahmen — geteilt von Skelett, Fehlerfall und gefülltem Panel. */
-function CalendarPanel({ children }: { children: ReactNode }) {
+function CalendarPanel({ children, werkbereich, compact = false }: { children: ReactNode; werkbereich?: string; compact?: boolean }) {
+  const areaName = werkbereich
+    ? findWerkbereich(werkbereich)?.name ?? findVereinsprojekt(werkbereich)?.name ?? werkbereich
+    : null;
   return (
     <div className="knglmrt-border bg-card">
-      <div className="flex items-baseline gap-2.5 bg-[var(--knglmrt-dark-100)] px-3.5 py-3 text-white">
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 bg-[var(--knglmrt-dark-100)] px-3.5 py-4 text-white">
         <span className="font-[family-name:var(--font-display)] text-[17px] font-black leading-5">
-          Kalender
+          {compact ? "Nächste Termine" : "Kalender"}
         </span>
-        <span className="text-[var(--knglmrt-dark-30)]">
-          Termine des Vereins
-        </span>
+        {!compact && <span className="text-[var(--knglmrt-dark-30)]">
+          {areaName ? `Termine · ${areaName}` : "Termine des Vereins"}
+        </span>}
       </div>
       {children}
       <div className="knglmrt-border-t px-3.5 py-[11px]">
         <Link href="/calendar" className="text-primary hover:text-primary/80">
-          Ganzer Kalender
+          {compact ? "Alle Termine →" : "Ganzer Kalender"}
         </Link>
       </div>
     </div>
@@ -121,14 +126,15 @@ function MonthBand({ label, first }: { label: string; first: boolean }) {
   );
 }
 
-export function VereinCalendarSkeleton() {
+export function VereinCalendarSkeleton({ werkbereich, compact = false }: { werkbereich?: string; compact?: boolean } = {}) {
   return (
-    <CalendarPanel>
+    <CalendarPanel werkbereich={werkbereich} compact={compact}>
       <MonthBand label="Wird geladen" first />
       <div aria-hidden="true" className="animate-pulse">
-        {[0, 1, 2, 3].map((row) => (
+        {Array.from({ length: compact ? 2 : 4 }, (_, row) => (
           <div
             key={row}
+            data-calendar-event
             className={`grid grid-cols-[0.72fr_1fr] gap-x-3 gap-y-1.5 px-3.5 py-2.5${
               row === 0 ? "" : " border-t border-border"
             }`}
@@ -145,7 +151,7 @@ export function VereinCalendarSkeleton() {
   );
 }
 
-export default async function VereinCalendar() {
+export default async function VereinCalendar({ werkbereich, compact = false }: { werkbereich?: string; compact?: boolean } = {}) {
   let events: CalendarEvent[];
   try {
     events = await getUpcomingEvents(DAYS_AHEAD, {
@@ -153,7 +159,7 @@ export default async function VereinCalendar() {
     });
   } catch {
     return (
-      <CalendarPanel>
+      <CalendarPanel werkbereich={werkbereich} compact={compact}>
         <div className="px-3.5 py-4 text-muted-foreground">
           Die Termine sind gerade nicht abrufbar.{" "}
           <a
@@ -169,34 +175,43 @@ export default async function VereinCalendar() {
     );
   }
 
-  const months = groupByMonth(events.slice(0, MAX_EVENTS));
+  const months = groupByMonth(filterWerkbereichEvents(events, werkbereich).slice(0, compact ? 2 : MAX_EVENTS));
 
   if (months.length === 0) {
     return (
-      <CalendarPanel>
+      <CalendarPanel werkbereich={werkbereich} compact={compact}>
         <div className="px-3.5 py-4 text-muted-foreground">
-          In den nächsten Wochen steht nichts im Kalender.
+          {werkbereich
+            ? "Für diesen Werkbereich sind in den nächsten 60 Tagen keine Termine angekündigt."
+            : "In den nächsten Wochen steht nichts im Kalender."}
         </div>
       </CalendarPanel>
     );
   }
 
   return (
-    <CalendarPanel>
+    <CalendarPanel werkbereich={werkbereich} compact={compact}>
       {months.map((month, monthIndex) => (
         <div key={month.key}>
           <MonthBand label={month.label} first={monthIndex === 0} />
           {month.events.map((event, eventIndex) => (
             <div
               key={event.id}
-              className={`grid grid-cols-[0.72fr_1fr] gap-x-3 gap-y-1 px-3.5 py-2.5${
+              data-calendar-event
+              className={`${compact ? "flex flex-col" : "grid grid-cols-[0.72fr_1fr]"} gap-x-3 gap-y-1 px-3.5 py-2.5${
                 eventIndex === 0 ? "" : " border-t border-border"
               }`}
             >
-              <span className="knglmrt-num text-primary">
+              {compact ? <>
+                <div className="flex flex-wrap gap-x-3 text-sm">
+                  <span className="knglmrt-num text-primary">{formatDate(event.start)}</span>
+                  <span className="knglmrt-num text-muted-foreground">{formatTimeRange(event)}</span>
+                </div>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{event.summary}</span>
+              </> : <><span className="knglmrt-num text-primary">
                 {formatDate(event.start)}
               </span>
-              <span className="min-w-0">{event.summary}</span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">{event.summary}</span>
               <span className="knglmrt-num text-muted-foreground">
                 {formatTimeRange(event)}
               </span>
@@ -205,7 +220,7 @@ export default async function VereinCalendar() {
                 title={event.location}
               >
                 {shortenLocation(event.location)}
-              </span>
+              </span></>}
             </div>
           ))}
         </div>

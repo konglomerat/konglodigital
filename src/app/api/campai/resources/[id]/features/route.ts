@@ -6,6 +6,10 @@ import {
   isPlaceholderGpsPointFeature,
   normalizeResourceMapFeatures,
 } from "@/app/[lang]/resources/map-features";
+import { canEditResource } from "@/lib/access/resource-access";
+import { isShowcaseResourceType } from "@/lib/showcase-resource-type";
+import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 type ResourceRow = {
@@ -78,7 +82,7 @@ export const PUT = async (
   const { data: existingResource, error: existingResourceError } =
     await supabase
       .from("resources")
-      .select("id, owner_id")
+      .select("id, owner_id, type")
       .eq("id", params.id)
       .maybeSingle();
 
@@ -92,6 +96,25 @@ export const PUT = async (
   if (!existingResource) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (isShowcaseResourceType(existingResource.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
+  }
+
+  if (
+    !canEditResource(await loadUserAccess(supabase, data.user), {
+      ownerId: existingResource.owner_id,
+      type: existingResource.type,
+    })
+  ) {
+    return forbiddenResponse("Für diesen Eintrag fehlt dir das Bearbeitungsrecht.");
+  }
+  // Wer nicht Eigentümer ist, schreibt über den Service-Client — die RLS
+  // kennt nur Eigentümer.
+  const writeSupabase = (
+    existingResource.owner_id === data.user.id
+      ? supabase
+      : createSupabaseAdminClient()
+  ) as typeof supabase;
 
   const payload = (await request.json()) as { mapFeatures?: unknown };
   const mapFeatures = normalizeResourceMapFeatures(payload.mapFeatures ?? []);
@@ -102,7 +125,7 @@ export const PUT = async (
     );
   }
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await writeSupabase
     .from("resources")
     .update({
       map_features: mapFeatures.length > 0 ? mapFeatures : null,

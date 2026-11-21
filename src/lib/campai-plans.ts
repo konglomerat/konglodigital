@@ -20,6 +20,15 @@
 // Legt der Verein einen weiteren Zugangskarten-Tarif an, benennt einen um
 // oder ändert einen Preis, greift das hier ohne Codeänderung — solange der
 // Tag gesetzt ist.
+//
+// Eine Ausnahme von „keine IDs im Code": die Pläne, die der Tarifwechsel aus
+// der Kontoseite bucht (`BOOKABLE_PLAN_IDS`). Sie tragen den Tag nicht, und
+// Abo klein und groß sind dort eigene Pläne ohne Optionen — welche Stufe ein
+// Plan ist, sagt deshalb seine ID. Gelesen werden sie wie jeder andere
+// Zugangskarten-Tarif, damit Verträge darauf als Tarif zählen; zum
+// Jahresbeitrag zählen sie nie, auch wenn die 10er Karte jährlich läuft.
+// Institutionen bekommen weiter die alte Gruppenkarte („Gruppe" im Namen
+// eines getaggten Plans) — für sie gibt es keinen eigenen neuen Plan.
 
 /** Der Zugangskarten-Tarif, wie Campai ihn führt. */
 export type CampaiAccessTariff =
@@ -41,7 +50,41 @@ export type CampaiTariffCatalog = {
   byOption: ReadonlyMap<string, CampaiTariffEntry>;
   /** IDs der jährlichen Beitragspläne ohne Zugangskarte (Jahresbeitrag). */
   annualFeePlans: ReadonlySet<string>;
+  /** Was der Tarifwechsel bucht, je Stufe — fehlt, was Campai nicht kennt. */
+  bookable: CampaiBookablePlans;
 };
+
+export type CampaiBookablePlan = {
+  planId: string;
+  label: string;
+  priceCents: number;
+  /** Das Kassenkonto, auf das Überweisungen für diesen Plan gehen. */
+  transferCashAccountId: string | null;
+};
+
+export type CampaiBookablePlans = Partial<
+  Record<Exclude<CampaiAccessTariff, "keiner">, CampaiBookablePlan>
+> & {
+  /** Die 10er Karte für Institutionen. */
+  punktekarteGruppe?: CampaiBookablePlan;
+};
+
+/** Die Pläne, die der Tarifwechsel aus der Kontoseite bucht. */
+export const BOOKABLE_PLAN_IDS: Record<
+  Exclude<CampaiAccessTariff, "keiner">,
+  string
+> = {
+  abo_klein: "6ab6f8b7744be89ef4ced0d3",
+  abo_gross: "6ab6fadb71bd5601926b8af2",
+  punktekarte: "6ac653ec5636ac2c462e3f0e",
+};
+
+const BOOKABLE_TARIFF_BY_PLAN = new Map(
+  Object.entries(BOOKABLE_PLAN_IDS).map(([tariff, planId]) => [
+    planId,
+    tariff as Exclude<CampaiAccessTariff, "keiner">,
+  ]),
+);
 
 const PAGE_SIZE = 100;
 
@@ -49,6 +92,7 @@ const PAGE_SIZE = 100;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
 const ZUGANGSKARTE_TAG = "zugangskarte";
+const GRUPPE = /gruppe/i;
 const GROSS = /gro(ß|ss)/i;
 const KLEIN = /klein/i;
 
@@ -68,6 +112,7 @@ type RawPlan = {
   type?: string | null;
   tags?: string[] | null;
   period?: { interval?: string | null } | null;
+  billing?: { sepaCreditTransferCashAccount?: string | null } | null;
   charge?: {
     amount?: RawAmount | null;
     options?: RawOption[] | null;
@@ -135,12 +180,29 @@ const buildCatalog = (plans: readonly RawPlan[]): CampaiTariffCatalog => {
   const byPlan = new Map<string, CampaiTariffEntry>();
   const byOption = new Map<string, CampaiTariffEntry>();
   const annualFeePlans = new Set<string>();
+  const bookable: CampaiBookablePlans = {};
 
   for (const plan of plans) {
     const planId = plan._id ?? "";
     const name = plan.name ?? "";
 
     if (!planId) continue;
+
+    const bookableTariff = BOOKABLE_TARIFF_BY_PLAN.get(planId);
+    if (bookableTariff) {
+      const priceCents = centsOf(plan.charge?.amount);
+      if (priceCents === null) continue;
+
+      byPlan.set(planId, { tariff: bookableTariff, label: name, priceCents });
+      bookable[bookableTariff] = {
+        planId,
+        label: name,
+        priceCents,
+        transferCashAccountId:
+          plan.billing?.sepaCreditTransferCashAccount ?? null,
+      };
+      continue;
+    }
 
     if (!hasAccessTag(plan)) {
       if (plan.type === "membershipFee" && plan.period?.interval === "year") {
@@ -173,9 +235,18 @@ const buildCatalog = (plans: readonly RawPlan[]): CampaiTariffCatalog => {
     if (priceCents === null) continue;
 
     byPlan.set(planId, { tariff: "punktekarte", label: name, priceCents });
+    if (GRUPPE.test(name)) {
+      bookable.punktekarteGruppe ??= {
+        planId,
+        label: name,
+        priceCents,
+        transferCashAccountId:
+          plan.billing?.sepaCreditTransferCashAccount ?? null,
+      };
+    }
   }
 
-  return { byPlan, byOption, annualFeePlans };
+  return { byPlan, byOption, annualFeePlans, bookable };
 };
 
 let cached: { at: number; catalog: CampaiTariffCatalog } | null = null;

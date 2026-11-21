@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { ALL_SCOPES } from "@/lib/access/access";
+import { extractReceiptCostCenters } from "@/lib/access/campai-receipt-cost-centers";
+import { loadAllowedCostCenters, loadUserAccess } from "@/lib/access/server";
+import { canViewReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
 import { fetchOwnDebtorAccount } from "@/lib/campai-own-debtor";
-import { userCanAccessModule } from "@/lib/roles";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const parseDebtorAccount = (value: unknown) => {
@@ -52,7 +55,13 @@ export const GET = async (
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");
   const { invoiceId } = await context.params;
 
-  if (!(await userCanAccessModule(supabase, data.user, "invoices"))) {
+  const allowedCostCenters = await loadAllowedCostCenters(
+    supabase,
+    await loadUserAccess(supabase, data.user),
+    "receipts.view",
+  );
+
+  if (allowedCostCenters !== ALL_SCOPES) {
     const receiptResponse = await fetch(
       `https://cloud.campai.com/api/${organizationId}/${mandateId}/finance/receipts/${invoiceId}`,
       {
@@ -74,15 +83,23 @@ export const GET = async (
     }
 
     const receiptPayload = (await receiptResponse.json()) as Record<string, unknown>;
-    // Ohne Belegverwaltungsrecht nur Belege des eigenen Debitorenkontos —
-    // bestimmt aus dem Campai-Kontakt, wie in der Belegliste.
-    const linkedDebtorAccount = await fetchOwnDebtorAccount(
-      supabase,
-      data.user.id,
-    ).catch(() => null);
+    // Ohne globale Buchhaltung: Belege der eigenen Bereiche oder des eigenen
+    // Debitorenkontos — bestimmt aus dem Campai-Kontakt, wie in der Belegliste.
+    const inOwnScopes =
+      allowedCostCenters.length > 0 &&
+      canViewReceiptCostCenters(
+        extractReceiptCostCenters(receiptPayload),
+        allowedCostCenters,
+      );
+    const linkedDebtorAccount = inOwnScopes
+      ? null
+      : await fetchOwnDebtorAccount(supabase, data.user.id).catch(() => null);
     const receiptAccount = extractReceiptAccount(receiptPayload);
 
-    if (linkedDebtorAccount === null || receiptAccount !== linkedDebtorAccount) {
+    if (
+      !inOwnScopes &&
+      (linkedDebtorAccount === null || receiptAccount !== linkedDebtorAccount)
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

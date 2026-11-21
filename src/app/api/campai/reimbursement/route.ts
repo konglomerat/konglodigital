@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+	costCenterForbiddenResponse,
+	getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import { canEditReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
 import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
 import {
@@ -8,7 +13,6 @@ import {
 	buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
 	const value = process.env[name];
@@ -90,17 +94,16 @@ const extractId = (payload: unknown): string | null => {
 };
 
 export const POST = async (request: NextRequest) => {
-	const { supabase } = createSupabaseRouteClient(request);
-	const { data } = await supabase.auth.getUser();
-
-	if (!data.user) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+	if (!routeAccess.ok) {
+		return routeAccess.response;
 	}
+	const { supabase, user } = routeAccess;
 
 	const tags = mergeCampaiTags(["API"]);
-	const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+	const memberProfile = await getMemberProfileByUserId(supabase, user.id);
 	const creatorNote = buildCampaiReceiptCreatorNote({
-		user: data.user,
+		user,
 		memberProfile,
 	});
 
@@ -192,6 +195,15 @@ export const POST = async (request: NextRequest) => {
 				},
 				{ status: 400 },
 			);
+		}
+
+		if (
+			!canEditReceiptCostCenters(
+				positions.map((position) => position.costCenter2),
+				routeAccess.allowedCostCenters,
+			)
+		) {
+			return costCenterForbiddenResponse();
 		}
 
 		const totalAmountCents = positions.reduce(

@@ -4,7 +4,12 @@ import type { NextRequest } from "next/server";
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasRight } from "@/lib/permissions";
+import {
+  canDeleteResource,
+  canEditResource,
+} from "@/lib/access/resource-access";
+import { loadUserAccess } from "@/lib/access/server";
+import { isShowcaseResourceType } from "@/lib/showcase-resource-type";
 
 type ResolveMode = "pick" | "merge";
 
@@ -17,6 +22,7 @@ type ResolvePayload = {
 type ResourceRow = {
   id: string;
   owner_id: string | null;
+  type: string | null;
   name: string;
   image: string | null;
   images: string[] | null;
@@ -114,7 +120,7 @@ export const POST = async (request: NextRequest) => {
 
   const { data: rows, error: loadError } = await supabase
     .from("resources")
-    .select("id, owner_id, name, image, images")
+    .select("id, owner_id, type, name, image, images")
     .in("id", [keepResourceId, removeResourceId]);
 
   if (loadError) {
@@ -134,10 +140,15 @@ export const POST = async (request: NextRequest) => {
   if (!keepResource || !removeResource) {
     return NextResponse.json({ error: "Resource not found." }, { status: 404 });
   }
+  if (isShowcaseResourceType(keepResource.type) || isShowcaseResourceType(removeResource.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
+  }
 
-  const canDeleteRemoveResource =
-    hasRight(data.user, "resources:delete") ||
-    removeResource.owner_id === data.user.id;
+  const access = await loadUserAccess(supabase, data.user);
+  const canDeleteRemoveResource = canDeleteResource(access, {
+    ownerId: removeResource.owner_id,
+    type: removeResource.type,
+  });
 
   if (!canDeleteRemoveResource) {
     return NextResponse.json(
@@ -146,10 +157,14 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
+  // Berechtigung ist oben geprüft; die RLS kennt nur Eigentümer, also
+  // schreibt ab hier der Service-Client.
+  const writeSupabase = adminSupabase as typeof supabase;
+
   try {
     if (mode === "pick") {
       await deleteResource({
-        supabase,
+        supabase: writeSupabase,
         adminSupabase,
         resource: removeResource,
       });
@@ -158,8 +173,10 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ success: true });
     }
 
-    const canEditKeepResource =
-      hasRight(data.user, "resources:edit") || keepResource.owner_id === data.user.id;
+    const canEditKeepResource = canEditResource(access, {
+      ownerId: keepResource.owner_id,
+      type: keepResource.type,
+    });
 
     if (!canEditKeepResource) {
       return NextResponse.json(
@@ -172,7 +189,7 @@ export const POST = async (request: NextRequest) => {
       new Set([...collectImageUrls(keepResource), ...collectImageUrls(removeResource)]),
     );
 
-    const { data: updatedKeepResource, error: updateError } = await supabase
+    const { data: updatedKeepResource, error: updateError } = await writeSupabase
       .from("resources")
       .update({
         image: mergedUrls[0] ?? null,
@@ -190,7 +207,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     await deleteResource({
-      supabase,
+      supabase: writeSupabase,
       adminSupabase,
       resource: removeResource,
       preserveUrls: new Set(mergedUrls),

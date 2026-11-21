@@ -1,6 +1,14 @@
 import type { PayloadBlock } from "./payload-cms";
 import type { Werkbereich } from "./werkbereiche";
 
+export type WerkbereichBlockGroup = "self-service" | "content";
+
+export function matchesWerkbereichBlockGroup(block: Record<string, unknown>, group?: WerkbereichBlockGroup) {
+  if (!group) return true;
+  const selfService = block.blockType === "cardGrid" && block.blockName === "3D-Druck Self-Service";
+  return group === "self-service" ? selfService : !selfService;
+}
+
 const richText = (text: string, heading = false) => ({
   root: { type: "root", version: 1, direction: "ltr", format: "", indent: 0,
     children: [{ type: heading ? "heading" : "paragraph", ...(heading ? { tag: "h2" } : {}),

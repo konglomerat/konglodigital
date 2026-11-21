@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   getStorySlideImageUrl,
   loadStorySource,
@@ -40,7 +41,7 @@ export const GET = async (request: NextRequest) => {
       return createUnauthorizedResponse();
     }
 
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "stories.manage")) {
       return createForbiddenResponse();
     }
 

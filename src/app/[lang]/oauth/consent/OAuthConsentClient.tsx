@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Button from "@/components/knglmrt/Button";
+import { can } from "@/lib/access/access";
+import type { AccountAccessResponse } from "@/app/api/account/access/route";
 import { createSupabaseCookieBrowserClient } from "@/lib/supabase/cookie-browser";
 
 type AuthorizationDetails = {
@@ -54,15 +56,16 @@ export default function OAuthConsentClient({
         return;
       }
 
-      const { data: access, error: accessError } = await supabase
-        .from("user_access")
-        .select("roles")
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
+      const accessResponse = await fetch("/api/account/access", {
+        cache: "no-store",
+      }).catch(() => null);
+      const accessData = accessResponse?.ok
+        ? ((await accessResponse.json()) as AccountAccessResponse)
+        : null;
 
       if (!isCurrent) return;
 
-      if (accessError) {
+      if (!accessData) {
         setView({
           status: "error",
           message: "Die Backend-Berechtigung konnte nicht geprüft werden.",
@@ -70,8 +73,7 @@ export default function OAuthConsentClient({
         return;
       }
 
-      const roles = Array.isArray(access?.roles) ? access.roles : [];
-      if (!roles.includes("backend")) {
+      if (!can(accessData.access, "backend.login")) {
         setView({ status: "denied" });
         return;
       }

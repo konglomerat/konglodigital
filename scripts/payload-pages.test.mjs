@@ -27,6 +27,73 @@ const werkbereiche = compile("src/lib/werkbereiche.ts");
 const paths = compile("src/lib/payload-page-path.ts", { "@/lib/werkbereiche": werkbereiche });
 const i18n = compile("src/i18n/config.ts");
 
+const blockGroups = compile("src/lib/werkbereich-content.ts");
+const jsxRuntime = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+function flattenElements(node) {
+  if (Array.isArray(node)) return node.flatMap(flattenElements);
+  if (!node || typeof node !== "object") return [];
+  return [node, ...flattenElements(node.props?.children)];
+}
+
+for (const signedIn of [false, true]) test(`printing self-service is ${signedIn ? "above the hero, once" : "absent for visitors"}`, async () => {
+  const blocks = [{ id: "tools", blockType: "cardGrid", blockName: "3D-Druck Self-Service" }, { id: "main", blockType: "content" }];
+  const pageView = compile("src/app/[lang]/werkbereiche/WerkbereichCmsPage.tsx", {
+    "react/jsx-runtime": jsxRuntime,
+    "@fortawesome/free-solid-svg-icons": { faArrowLeft: {} },
+    "@/lib/payload-cms": { loadPayloadWerkbereichPage: async () => ({ id: 8, title: "3D-Druck", layout: blocks }), resolvePayloadMediaUrl: () => null },
+    "@/lib/werkbereich-content": blockGroups,
+    "@/lib/server-session": { getServerSession: async () => ({ user: signedIn ? { id: "member" } : null }) },
+    "../components/PageTitle": { default: "PageTitle" },
+    "./PayloadBlocks": { default: "PayloadBlocks", PayloadHero: "PayloadHero" },
+    "./WerkbereichSideNav": { default: "SideNav" },
+    "./WerkbereichSidebar": { default: "Sidebar" },
+    "../components/page-editor/PageEditor": { default: "PageEditor" },
+  });
+  const renderer = compile("src/app/[lang]/werkbereiche/PayloadBlocks.tsx", {
+    "react/jsx-runtime": jsxRuntime,
+    "@/components/knglmrt/Button": { default: "Button" },
+    "@/lib/werkbereich-content": blockGroups,
+    "@/lib/payload-cms": {},
+    "./PayloadFormBlock": { default: "Form" },
+    "./PayloadExtendedBlocks": { default: "Extended" },
+    "./PayloadRichText": { default: "RichText" },
+    "./WorkshopBlocks": { default: "Workshop" },
+    "../components/page-editor/PageEditor": { EditableBlocks: "EditableBlocks" },
+  });
+  const elements = flattenElements(await pageView.default({ slug: "3d-druck", fallbackTitle: "3D-Druck" }));
+  const sections = elements.filter(node => node.type === "PayloadBlocks");
+  const renderedIds = sections.flatMap(section => Array.from(renderer.default(section.props)?.props.items ?? [], item => item.id));
+  assert.deepEqual(renderedIds, signedIn ? ["tools", "main"] : ["main"]);
+  if (signedIn) {
+    const toolsIndex = elements.indexOf(sections[0]);
+    assert.ok(elements.findIndex(node => node.type === "PageTitle") < toolsIndex);
+    assert.ok(toolsIndex < elements.findIndex(node => node.type === "PayloadHero"));
+  }
+});
+
+test("editing the split layout retains self-service and does not duplicate it", () => {
+  const tools = { id: "tools", blockType: "cardGrid", blockName: "3D-Druck Self-Service" };
+  const content = { id: "main", blockType: "inventory", heading: "Drucker" };
+  const page = { title: "3D-Druck", layout: [tools, content], sidebarLayout: [] };
+  let saved;
+  const editor = compile("src/app/[lang]/components/page-editor/PageEditor.tsx", {
+    "react/jsx-runtime": jsxRuntime,
+    react: { createContext: () => ({}), useContext: () => ({ session: { page, revision: "one" }, baseline: JSON.stringify(page), saving: false, update: next => { saved = next; } }), useState: () => ["main", () => {}] },
+    "next/navigation": {}, "@/lib/access/access": {}, "@/lib/access/use-access": {},
+    "@/lib/werkbereich-content": blockGroups,
+    "./Fields": { default: "Fields" },
+    "./InlineBlock": { default: "InlineBlock", supportsInlineText: () => false },
+    "./editor.css": {},
+  });
+  const tree = editor.EditableBlocks({ area: "layout", blockGroup: "content", items: [{ id: "main", node: "Content" }] });
+  const elements = flattenElements(tree);
+  assert.equal(elements.filter(node => node.type === "section").length, 1);
+  elements.find(node => node.type === "Fields").props.onChange({ ...content, heading: "Neue Überschrift" });
+  assert.equal(saved.layout.length, 2);
+  assert.deepEqual(saved.layout[0], tools);
+  assert.equal(saved.layout[1].heading, "Neue Überschrift");
+});
+
 function cms({ docs = [], configured = true, fail = false } = {}) {
   const requests = [];
   const api = compile("src/lib/payload-cms.ts", {
@@ -62,6 +129,49 @@ function route(api) {
 }
 
 const published = { id: 1, slug: "kontakt", title: "Kontakt", _status: "published", layout: [{ blockType: "contact", email: "hello@example.test" }] };
+
+function printingGuideRoute(api, segment = "anleitung") {
+  return compile(`src/app/[lang]/werkbereiche/3d-druck/${segment}/page.tsx`, {
+    "react/jsx-runtime": { jsx: (type, props) => ({ type, props }) },
+    "next/navigation": { notFound: () => { throw new Error("NOT_FOUND"); } },
+    "@/i18n/config": i18n,
+    "@/lib/payload-cms": api,
+    "../../../components/PayloadPageContent": {
+      default: "PayloadPageContent",
+      payloadPageMetadata: (page) => ({ title: page.meta?.title || page.title }),
+    },
+  });
+}
+
+test("printing guide references use the nested route and preserve locale on the back link", async () => {
+  const guide = { ...published, slug: "3d-druck-anleitung", title: "Selbst drucken" };
+  const { api } = cms({ docs: [guide] });
+  assert.equal(paths.getPayloadPagePath(guide.slug), "/werkbereiche/3d-druck/anleitung");
+  assert.equal(api.resolvePayloadLinkHref({ type: "reference", reference: { relationTo: "pages", value: guide } }), "/werkbereiche/3d-druck/anleitung");
+  const result = await printingGuideRoute(api).default({ params: Promise.resolve({ lang: "en" }) });
+  assert.equal(result.props.children.props.page, guide);
+  assert.equal(result.props.children.props.backLink.href, "/en/werkbereiche/3d-druck");
+  await assert.rejects(route(api).default({ params: Promise.resolve({ lang: "en", slug: guide.slug }) }), /REDIRECT:\/en\/werkbereiche\/3d-druck\/anleitung/);
+});
+
+test("printing guide never renders missing or draft CMS content", async () => {
+  for (const docs of [[], [{ ...published, slug: "3d-druck-anleitung", _status: "draft" }]]) {
+    await assert.rejects(printingGuideRoute(cms({ docs }).api).default({ params: Promise.resolve({ lang: "de" }) }), /NOT_FOUND/);
+  }
+});
+
+for (const segment of ["material", "preise"]) test(`${segment} page resolves CMS references, preserves the back link and hides drafts`, async () => {
+  const material = { ...published, slug: `3d-druck-${segment}`, title: segment };
+  const { api } = cms({ docs: [material] });
+  assert.equal(api.resolvePayloadLinkHref({ type: "reference", reference: { relationTo: "pages", value: material } }), `/werkbereiche/3d-druck/${segment}`);
+  const result = await printingGuideRoute(api, segment).default({ params: Promise.resolve({ lang: "en" }) });
+  assert.equal(result.props.children.props.page, material);
+  assert.equal(result.props.children.props.backLink.href, "/en/werkbereiche/3d-druck");
+  await assert.rejects(route(api).default({ params: Promise.resolve({ lang: "en", slug: material.slug }) }), new RegExp(`REDIRECT:/en/werkbereiche/3d-druck/${segment}`));
+  for (const docs of [[], [{ ...material, _status: "draft" }]]) {
+    await assert.rejects(printingGuideRoute(cms({ docs }).api, segment).default({ params: Promise.resolve({ lang: "de" }) }), /NOT_FOUND/);
+  }
+});
 
 test("an arbitrary published page reaches the existing block renderer and metadata", async () => {
   const { api, requests } = cms({ docs: [published] });

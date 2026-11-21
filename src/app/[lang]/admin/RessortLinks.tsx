@@ -21,9 +21,23 @@ const tileClassName =
 const titleClassName =
   "font-bold text-[length:var(--ui-size-field)] leading-[var(--ui-line-field)] sm:text-[length:var(--ui-size-card)] sm:leading-[var(--ui-line-card)]";
 
-export default function RessortLinks({ links }: { links: RessortLink[] }) {
+// Viele Kacheln (z. B. die Werkbereiche der Buchhaltung) brechen um, statt
+// sich eine Reihe zu teilen.
+export default function RessortLinks({
+  links,
+  wrap = false,
+}: {
+  links: RessortLink[];
+  wrap?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3.5 lg:flex lg:flex-nowrap lg:items-stretch">
+    <div
+      className={
+        wrap
+          ? "grid grid-cols-2 gap-2 sm:gap-3.5 lg:grid-cols-4"
+          : "grid grid-cols-2 gap-2 sm:gap-3.5 lg:flex lg:flex-nowrap lg:items-stretch"
+      }
+    >
       {links.map((link) =>
         link.comingSoon || !link.href ? (
           <div

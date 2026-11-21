@@ -36,10 +36,11 @@ import {
   isAnimatedGifUrl,
   isImageUrl,
 } from "@/lib/resource-media";
-import { userCanAccessModule } from "@/lib/roles";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
+import { loadShowcaseByIdentifier } from "@/app/[lang]/showcase/showcase-data";
+import { showcaseAsResourceRow } from "@/lib/payload-showcases";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
-import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
 
 export const runtime = "nodejs";
 
@@ -372,7 +373,7 @@ export const POST = async (request: NextRequest) => {
     const { supabase } = createSupabaseRouteClient(request);
     const { data } = await supabase.auth.getUser();
     if (!data.user) return unauthorized();
-    if (!(await userCanAccessModule(supabase, data.user, "volkshaus"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "newsletter.manage")) {
       return forbidden();
     }
 
@@ -428,19 +429,8 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    const adminSupabase = createSupabaseAdminClient();
-    const { data: showcaseRows, error: showcaseError } = await adminSupabase
-      .from("resources")
-      .select(
-        "id, pretty_title, name, excerpt, description, image, images, publish_date, updated_at, created_at, type",
-      )
-      .in(
-        "id",
-        showcaseItems.map((item) => item.showcaseId),
-      )
-      .ilike("type", SHOWCASE_RESOURCE_TYPE);
-
-    if (showcaseError) throw showcaseError;
+    const showcaseRecords = await Promise.all(showcaseItems.map(item => loadShowcaseByIdentifier(item.showcaseId)));
+    const showcaseRows = showcaseRecords.filter(record => record !== null).map(showcaseAsResourceRow);
     const rowById = new Map(
       ((showcaseRows ?? []) as ShowcaseRow[]).map((row) => [row.id, row]),
     );

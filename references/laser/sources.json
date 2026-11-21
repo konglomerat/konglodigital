@@ -1,0 +1,41 @@
+{
+  "retrievedAt": "2026-11-20",
+  "pages": [
+    "https://laser.konglomerat.org/",
+    "https://laser.konglomerat.org/selbst-lasern",
+    "https://laser.konglomerat.org/ausstattung",
+    "https://laser.konglomerat.org/faq"
+  ],
+  "assets": [
+    {
+      "key": "saint",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/8/6/0/f/860fa899fb19a917ded1e5900d74013795391905/st.laser.png",
+      "alt": "Illustration: Der Heilige der Laser"
+    },
+    {
+      "key": "laserpecker",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/2/9/0/1/2901bec58bd9d5ff9a7832b158e53fe1e271198e/Laserpecker2.png",
+      "alt": "Mobiler Laserpecker 2"
+    },
+    {
+      "key": "zing",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/8/2/3/c/823c1426005de047732cafe2b129afad8e929fef/laserZING-990x743.jpg",
+      "alt": "Epilog Zing 24 in der Laserwerkstatt"
+    },
+    {
+      "key": "lasersaur",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/7/b/3/8/7b38551d2821fc7b25d408399fe714befa1bc7b1/CRW_0080_web.jpg",
+      "alt": "Lasersaur – großer Do-It-Together-Laserschneider"
+    },
+    {
+      "key": "price",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/4/7/4/e/474e7b387da33b179870928e93bdd27b24b54bab/Preis_Minute.svg",
+      "alt": "Variabler Minutenpreis nach Nutzungsdauer"
+    },
+    {
+      "key": "cost",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/4/5/e/3/45e3f3ee21dff11500705b80487a67456d77e5ae/Kosten_Minute.svg",
+      "alt": "Gesamtkosten nach Nutzungsdauer"
+    }
+  ]
+}

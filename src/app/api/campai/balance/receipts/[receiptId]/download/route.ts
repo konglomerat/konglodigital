@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { ALL_SCOPES } from "@/lib/access/access";
+import { fetchCampaiReceiptCostCenters } from "@/lib/access/campai-receipt-cost-centers";
 import {
-  createSupabaseRouteClient,
-  withSupabaseCookies,
-} from "@/lib/supabase/route";
+  costCenterForbiddenResponse,
+  getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import { canViewReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
+import { withSupabaseCookies } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -32,17 +36,24 @@ export const GET = async (
   request: NextRequest,
   context: { params: Promise<{ receiptId: string }> },
 ) => {
-  const { supabase, response: routeResponse } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-
-  if (!data.user) {
-    return withRouteCookies(
-      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-      routeResponse,
-    );
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.view");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
+  const routeResponse = routeAccess.response;
 
   const { receiptId } = await context.params;
+
+  // Mit Bereichs-Buchhaltung erst nachsehen, wohin der Beleg gebucht ist.
+  if (routeAccess.allowedCostCenters !== ALL_SCOPES) {
+    const costCenters = await fetchCampaiReceiptCostCenters(receiptId);
+    if (
+      !costCenters ||
+      !canViewReceiptCostCenters(costCenters, routeAccess.allowedCostCenters)
+    ) {
+      return withRouteCookies(costCenterForbiddenResponse(), routeResponse);
+    }
+  }
   const apiKey = requiredEnv("CAMPAI_API_KEY");
   const organizationId = requiredEnv("CAMPAI_ORGANIZATION_ID");
   const mandateId = requiredEnv("CAMPAI_MANDATE_ID");

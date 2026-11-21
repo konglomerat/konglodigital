@@ -106,10 +106,15 @@ test('two distinct recent captures separated by 20 seconds are needed', () => {
 });
 
 const NextResponse = { json: (data, init) => ({ data, status: init?.status ?? 200, headers: new Headers() }) };
+const roleConfig = compile('src/lib/access/role-config.ts', {});
+const accessChecks = compile('src/lib/access/access.ts', { '@/lib/access/role-config': roleConfig });
+const accessForRoles = roles => ({ userId: 'u', assignments: roles.filter(role => roleConfig.isRoleName(role)).map(role => ({ userId: 'u', role, scopeId: null })) });
+
 function authFor(user, roles, calls = []) {
   return compile('src/lib/printer-automation/auth.ts', {
     'node:crypto': { timingSafeEqual }, 'next/server': { NextResponse },
-    '@/lib/roles': { userCanAccessModule: async () => roles.includes('admin') },
+    '@/lib/access/access': accessChecks,
+    '@/lib/access/server': { loadUserAccess: async () => accessForRoles(roles) },
     '@/lib/supabase/route': { createSupabaseRouteClient: () => ({ supabase: { auth: { getUser: async () => ({ data: { user } }) } }, response: {} }),
       withSupabaseCookies: target => { calls.push('cookies'); return target; } },
   });
@@ -313,7 +318,8 @@ test('page and worker enforce access even when middleware is bypassed', async ()
     const page = compile('src/app/[lang]/printers/automation/page.tsx', {
       'react/jsx-runtime': { jsx: type => type, jsxs: type => type }, './AutomationClient': { default: 'ui' }, 'next/link': { default: 'link' },
       'next/navigation': { redirect: () => { throw new Error('redirect'); } },
-      '@/lib/server-session': { getServerSession: async () => ({ user }), getServerSessionRoles: async () => roles },
+      '@/lib/access/access': accessChecks,
+      '@/lib/server-session': { getServerSession: async () => ({ user }), getServerAccess: async () => accessForRoles(roles) },
     });
     if (expected === 'redirect') await assert.rejects(page.default(), /redirect/); else assert.equal(await page.default(), expected);
   }
@@ -352,7 +358,8 @@ test('runner never dispatches in test mode or after stale status, revoked rights
     };
     const runner = compile('src/lib/printer-automation/runner.ts', {
       'node:crypto': { randomUUID }, '@/lib/bambu-cloud': { fetchPrintersFromCloud: async () => [++fetches > 1 && scenario === 'material-changed' ? { ...live, materialInventory: undefined } : live] },
-      '@/lib/roles': { getUserRoles: async () => scenario === 'revoked' ? ['member'] : ['admin'] },
+      '@/lib/access/access': accessChecks,
+      '@/lib/access/server': { loadAccessOf: async () => accessForRoles(scenario === 'revoked' ? [] : ['admin']) },
       '@/lib/supabase/admin': { createSupabaseAdminClient: () => db }, './decision': decisions, './types': types,
       './material': materials, './templates': templates,
       './vision': { inspectPrinterBed: async () => { if (scenario === 'vision-error') throw new Error('down'); return empty; } },

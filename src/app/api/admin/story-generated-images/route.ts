@@ -9,7 +9,8 @@ import sharp from "sharp";
 
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 import { createOpenAIClient } from "@/lib/openai";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import {
   DEFAULT_STORY_IMAGE_MODEL,
   isOpenAIStoryImageModel,
@@ -255,7 +256,7 @@ export const POST = async (request: NextRequest) => {
       return createUnauthorizedResponse();
     }
 
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "stories.manage")) {
       return createForbiddenResponse();
     }
 

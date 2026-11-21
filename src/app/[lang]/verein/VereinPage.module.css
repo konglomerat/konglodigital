@@ -1,0 +1,12 @@
+/* Keep the people in the opening photo visible, including in editor preview. */
+.photoIntro :global(article > div:last-child > section:first-child figure > img) {
+  aspect-ratio: 13 / 5;
+  object-fit: cover;
+  object-position: center 85%;
+}
+
+@media (max-width: 640px) {
+  .photoIntro :global(article > div:last-child > section:first-child figure > img) {
+    aspect-ratio: 4 / 3;
+  }
+}

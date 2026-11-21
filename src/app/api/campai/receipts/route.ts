@@ -5,8 +5,12 @@ import {
   addCampaiReceiptNotes,
   buildCampaiReceiptCreatorNote,
 } from "@/lib/campai-receipt-notes";
+import {
+  costCenterForbiddenResponse,
+  getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import { isCostCenterAllowed } from "@/lib/buchhaltung-werkbereiche";
 import { getMemberProfileByUserId } from "@/lib/member-profiles";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const requiredEnv = (name: string) => {
   const value = process.env[name];
@@ -252,15 +256,15 @@ const tryUploadReceiptFile = async (params: {
 };
 
 export const POST = async (request: NextRequest) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
+  const { supabase, user } = routeAccess;
 
-  const memberProfile = await getMemberProfileByUserId(supabase, data.user.id);
+  const memberProfile = await getMemberProfileByUserId(supabase, user.id);
   const creatorNote = buildCampaiReceiptCreatorNote({
-    user: data.user,
+    user,
     memberProfile,
   });
 
@@ -338,6 +342,9 @@ export const POST = async (request: NextRequest) => {
     const isRevenueReceipt = bookingType === "einnahme";
     const counterpartyAccount = parsePositiveInt(body.counterpartyAccount);
     const costCenter2 = parsePositiveInt(body.costCenter2);
+    if (!isCostCenterAllowed(costCenter2, routeAccess.allowedCostCenters)) {
+      return costCenterForbiddenResponse();
+    }
 
     if (amount <= 0) {
       return NextResponse.json(

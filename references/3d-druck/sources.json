@@ -1,0 +1,38 @@
+{
+  "retrievedAt": "2026-11-20",
+  "pages": [
+    "https://laser.konglomerat.org/3d-druck",
+    "https://laser.konglomerat.org/"
+  ],
+  "assets": [
+    {
+      "key": "werkstatt",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/6/a/4/1/6a413b9002e38145de4c6a239b53919762a62667/IMG_2468-1400x762.jpg",
+      "alt": "3D-Drucker in der Konglomerat-Werkstatt"
+    },
+    {
+      "key": "case-modell",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/2/6/0/1/2601103ba62960ca7f6bb59b815acdf5aea50bd2/Screenshot%202026-02-18%20at%2017.58.08.png",
+      "alt": "Kamera-Case mit flexiblem TPU-Einsatz – Modellansicht"
+    },
+    {
+      "key": "case-druck",
+      "url": "https://laser.konglomerat.org/_Resources/Persistent/3/7/3/e/373e6940c04298cae3b74f1fdc672bc126b73f6b/case2%20Small.jpeg",
+      "alt": "Gedrucktes Kamera-Case mit TPU-Einsatz"
+    }
+  ],
+  "links": [
+    "https://eu.store.bambulab.com/de/products/h2d",
+    "https://eu.store.bambulab.com/de/products/p1s",
+    "https://eu.store.bambulab.com/de/products/a1-mini",
+    "https://bambulab.com/en/download/studio",
+    "https://www.youtube.com/shorts/7EGkw270_UA",
+    "https://makerworld.com/en/models/1069492-rugged-box-for-dji-action-4-removable-tpu-insert?from=search#profileId-1059100",
+    "https://www.paypal.com/donate/?hosted_button_id=4F3UMFM3FAC9A"
+  ],
+  "editorialNotes": [
+    "Am 20.11.2026 vom Nutzer bestätigt: H2D mit AMS 2 (H2C in der Referenz ist falsch).",
+    "Beispielrechnung: 265 g PETG + 391 g TPU = 656 g. Bei kaufmännischer Rundung der Einzelpositionen ergeben sich 73,70 € statt 73,69 €.",
+    "Filamentmengen sind ein redaktioneller Stand der Referenz, kein Live-Bestand."
+  ]
+}

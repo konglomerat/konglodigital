@@ -482,6 +482,265 @@
   }
 }
 
+/* ------------------------------------------------------------------
+ * Werkbereichs-Übersicht (Variante 6c). Flache Kacheln ohne Kontur;
+ * Farbe wechselt in 200ms, Bewegung federt in 260ms — eine bewusst
+ * verspieltere Abweichung vom DS. Fokus löst denselben Zustand aus.
+ * ------------------------------------------------------------------ */
+.werk-group-title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.1;
+  color: var(--knglmrt-dark-100);
+}
+.werk-group-title-quiet {
+  font-size: 28px;
+  color: #6b6f76;
+}
+.werk-group-count {
+  font-family: var(--font-num);
+  font-size: 13px;
+  color: var(--knglmrt-pink-100);
+}
+.werk-group-count-quiet {
+  color: #6b6f76;
+}
+
+.werk-tile,
+.projekt-tile,
+.inaktiv-tile {
+  display: flex;
+  align-items: center;
+  height: 76px;
+  min-width: 0;
+  text-decoration: none;
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1),
+    color 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.werk-tile:focus-visible,
+.projekt-tile:focus-visible,
+.inaktiv-tile:focus-visible {
+  outline: 1px solid var(--knglmrt-ink);
+  outline-offset: 2px;
+}
+.werk-tile-name,
+.projekt-tile-name {
+  min-width: 0;
+  font-family: var(--font-core);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.15;
+}
+.werk-tile-logo {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  transition: filter 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.werk-tile-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid currentColor;
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+/* Werkbereich: Rosa-Papier, beim Überfahren Pink mit Gesicht von unten. */
+.werk-tile {
+  position: relative;
+  overflow: hidden;
+  gap: 16px;
+  padding: 0 96px 0 20px;
+  background-color: var(--knglmrt-paper-pink);
+  color: var(--knglmrt-dark-100);
+}
+.werk-tile:hover,
+.werk-tile:focus-visible {
+  background-color: var(--knglmrt-pink-100);
+  color: var(--knglmrt-paper);
+}
+/* Die Bitmaps (Beton, Laser) würden zur weißen Fläche — sie bleiben dunkel. */
+.werk-tile:hover .werk-tile-logo:not(.werk-tile-logo-bitmap),
+.werk-tile:focus-visible .werk-tile-logo:not(.werk-tile-logo-bitmap) {
+  filter: brightness(0) invert(1);
+}
+.werk-tile-face {
+  position: absolute;
+  right: 10px;
+  bottom: -12px;
+  color: var(--knglmrt-ink);
+  pointer-events: none;
+  transform: translateY(90px);
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.werk-tile:hover .werk-tile-face,
+.werk-tile:focus-visible .werk-tile-face {
+  transform: translateY(0) rotate(-8deg);
+}
+.werk-tile:nth-child(even):hover .werk-tile-face,
+.werk-tile:nth-child(even):focus-visible .werk-tile-face {
+  transform: translateY(0) rotate(8deg);
+}
+
+/* Projekt: dunkle Fläche, beim Überfahren Terrazzo mit Zettel-Name. */
+.projekt-tile {
+  gap: 12px;
+  padding: 0 10px;
+  background-color: var(--knglmrt-dark-100);
+  background-size: 400px 400px;
+  background-position: var(--terrazzo-pos, 0 0);
+}
+.projekt-tile:hover,
+.projekt-tile:focus-visible {
+  background-image: var(--terrazzo);
+}
+.projekt-tile-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  background: var(--knglmrt-paper);
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--knglmrt-pink-100);
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.projekt-tile-name {
+  padding: 4px 10px;
+  color: var(--knglmrt-paper);
+  background-color: transparent;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 200ms cubic-bezier(0.2, 0, 0, 1),
+    color 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.projekt-tile:hover .projekt-tile-name,
+.projekt-tile:focus-visible .projekt-tile-name {
+  background-color: var(--knglmrt-paper);
+  color: var(--knglmrt-dark-100);
+  transform: rotate(-2deg);
+}
+.projekt-tile:nth-child(even):hover .projekt-tile-name,
+.projekt-tile:nth-child(even):focus-visible .projekt-tile-name {
+  transform: rotate(2deg);
+}
+.projekt-tile:hover .projekt-tile-mark,
+.projekt-tile:focus-visible .projekt-tile-mark {
+  transform: translateY(-4px) rotate(6deg);
+}
+.projekt-tile:nth-child(even):hover .projekt-tile-mark,
+.projekt-tile:nth-child(even):focus-visible .projekt-tile-mark {
+  transform: translateY(-4px) rotate(-6deg);
+}
+
+/* Inaktiv: Grau-Papier, beim Überfahren nur eine Spur dunkler. */
+.inaktiv-tile {
+  gap: 16px;
+  padding: 0 20px;
+  background-color: var(--knglmrt-paper-grey);
+  color: var(--knglmrt-dark-100);
+}
+.inaktiv-tile .werk-tile-name {
+  color: #6b6f76;
+}
+.inaktiv-tile:hover,
+.inaktiv-tile:focus-visible {
+  background-color: #e6e6e6;
+}
+
+/* Mobil: zwei Spalten bleiben, die Kacheln werden flacher und enger. */
+@media (max-width: 559.98px) {
+  .werk-tile,
+  .projekt-tile,
+  .inaktiv-tile {
+    height: 60px;
+    gap: 10px;
+    padding: 0 10px;
+  }
+  .projekt-tile {
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .werk-tile-name,
+  .projekt-tile-name {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+  .projekt-tile-name {
+    padding: 2px 6px;
+  }
+  .werk-tile-logo {
+    width: 32px;
+    height: 32px;
+  }
+  .werk-tile-letter {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .projekt-tile-mark {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  .werk-tile-face {
+    right: 4px;
+    bottom: -10px;
+  }
+  .werk-tile-face svg {
+    width: auto;
+    height: 56px;
+  }
+}
+
+.dark .werk-group-title {
+  color: var(--foreground);
+}
+.dark .werk-group-title-quiet,
+.dark .werk-group-count-quiet,
+.dark .inaktiv-tile .werk-tile-name {
+  color: var(--muted-foreground);
+}
+.dark .werk-tile {
+  background-color: var(--primary-soft);
+  color: var(--foreground);
+}
+.dark .werk-tile:hover,
+.dark .werk-tile:focus-visible {
+  background-color: var(--knglmrt-pink-100);
+}
+.dark .inaktiv-tile {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+.dark .inaktiv-tile:hover,
+.dark .inaktiv-tile:focus-visible {
+  background-color: color-mix(in oklab, var(--muted) 88%, var(--foreground));
+}
+.dark .werk-tile:focus-visible,
+.dark .projekt-tile:focus-visible,
+.dark .inaktiv-tile:focus-visible {
+  outline-color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .werk-tile-face {
+    display: none;
+  }
+  .projekt-tile-mark,
+  .projekt-tile-name,
+  .projekt-tile:nth-child(n):hover .projekt-tile-mark,
+  .projekt-tile:nth-child(n):hover .projekt-tile-name,
+  .projekt-tile:nth-child(n):focus-visible .projekt-tile-mark,
+  .projekt-tile:nth-child(n):focus-visible .projekt-tile-name {
+    transform: none;
+  }
+}
+
 /*
  * Die schwarze Kontur als Utility — Breite und Farbe kommen aus
  * --hairline-width / --hairline-color, nicht aus Tailwinds border-Skala.

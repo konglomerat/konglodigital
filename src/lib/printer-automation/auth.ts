@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { userCanAccessModule } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseRouteClient, withSupabaseCookies } from "@/lib/supabase/route";
 
 export class AutomationError extends Error {
@@ -14,7 +15,7 @@ export async function adminAutomationRequest(request: NextRequest, action: (user
     cookies = response;
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw new AutomationError("Bitte anmelden.", 401);
-    if (!(await userCanAccessModule(supabase, data.user, "admin"))) {
+    if (!can(await loadUserAccess(supabase, data.user), "ressort.admin")) {
       throw new AutomationError("Diese Funktion ist nur für Admins freigegeben.", 403);
     }
     if (!["GET", "HEAD"].includes(request.method)) {

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { fetchPrintersFromCloud } from "@/lib/bambu-cloud";
 import type { BambuPrinter } from "@/lib/bambu";
-import { getUserRoles } from "@/lib/roles";
+import { can } from "@/lib/access/access";
+import { loadAccessOf } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { capturePrinterImage, dispatchPrint, getBridgeHealth } from "./bridge";
 import { confirmClearBed, isFreshIdle, isFreshPrinterState, normalizePrinterModel, observeIdle } from "./decision";
@@ -69,7 +70,7 @@ export async function runAutomationTick() {
 
       const { data: owner } = automation.authorized_by
         ? await db.auth.admin.getUserById(automation.authorized_by) : { data: { user: null } };
-      if (!owner.user || !(await getUserRoles(db, owner.user)).includes("admin")) {
+      if (!owner.user || !can(await loadAccessOf(db, owner.user), "ressort.admin")) {
         await save({ mode: "off", idle_since: null, clear_since: null, last_message: "Die Admin-Freigabe ist nicht mehr gültig." });
         return { printerId, result: "authorization-revoked" };
       }

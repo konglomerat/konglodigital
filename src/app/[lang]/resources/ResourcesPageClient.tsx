@@ -48,6 +48,9 @@ import {
   getResourcePreviewUrl,
 } from "@/lib/resource-media";
 import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import { can } from "@/lib/access/access";
+import { canEditResource } from "@/lib/access/resource-access";
+import { useAccess } from "@/lib/access/use-access";
 import Choice from "@/components/knglmrt/Choice";
 
 type Resource = ResourcePayload;
@@ -59,6 +62,8 @@ type ResourceCardProps = {
   tx: (key: string, sourceLocale?: Locale) => string;
   onHover: (resourceId: string | null) => void;
   onNavigate?: () => void;
+  /** Nur mit Bearbeitungsrecht steht „Bearbeiten" an der Karte. */
+  canEdit: boolean;
 };
 
 type ResourcesDataPayload = {
@@ -146,6 +151,7 @@ const ResourceCard = ({
   tx,
   onHover,
   onNavigate,
+  canEdit,
 }: ResourceCardProps) => {
   const typeConfig =
     resource.type &&
@@ -317,12 +323,14 @@ const ResourceCard = ({
               {highlightText(resource.name, normalizedSearchTerm)}
             </Link>
 
-            <Link
-              href={editPath}
-              className="font-normal text-muted-foreground hover:text-foreground"
-            >
-              {tx("Edit")}
-            </Link>
+            {canEdit ? (
+              <Link
+                href={editPath}
+                className="font-normal text-muted-foreground hover:text-foreground"
+              >
+                {tx("Edit")}
+              </Link>
+            ) : null}
           </h3>
 
           {resource.description ? (
@@ -384,6 +392,9 @@ export default function ResourcesPageClient({
   initialResourceType,
 }: ResourcesPageClientProps) {
   const { tx, locale } = useI18n(RESOURCES_NAMESPACE);
+  // Verwaltende Aktionen (Neu, Dubletten, Bearbeiten …) nur mit der passenden
+  // Inventar-Berechtigung; bis die Rechte geladen sind, bleiben sie weg.
+  const access = useAccess();
   const overviewStorageKey = "resourcesOverviewState";
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1080,34 +1091,51 @@ export default function ResourcesPageClient({
           "de",
         )}
         links={[
-          {
-            href: localizePathname("/resources/features", locale),
-            label: tx("Map features"),
-            icon: faLayerGroup,
-          },
-          {
-            href: localizePathname("/resources/duplicates", locale),
-            label: tx("Duplicates"),
-            icon: faClone,
-          },
-          {
-            href: localizePathname("/resources/batch", locale),
-            label: tx("Batch capture"),
-            icon: faCamera,
-          },
-          {
-            href: localizePathname("/resources/new", locale),
-            label: tx("New resource"),
-            icon: faPlus,
-            kind: "primary",
-          },
-          {
-            label: syncingCampai
-              ? tx("Syncing…", "en")
-              : tx("Sync all to Campai", "en"),
-            onClick: syncAllToCampai,
-            disabled: syncingCampai,
-          },
+          ...(can(access, "resources.edit")
+            ? [
+                {
+                  href: localizePathname("/resources/features", locale),
+                  label: tx("Map features"),
+                  icon: faLayerGroup,
+                },
+              ]
+            : []),
+          ...(can(access, "resources.delete")
+            ? [
+                {
+                  href: localizePathname("/resources/duplicates", locale),
+                  label: tx("Duplicates"),
+                  icon: faClone,
+                },
+              ]
+            : []),
+          // Anlegen darf jedes angemeldete Mitglied.
+          ...(access
+            ? [
+                {
+                  href: localizePathname("/resources/batch", locale),
+                  label: tx("Batch capture"),
+                  icon: faCamera,
+                },
+                {
+                  href: localizePathname("/resources/new", locale),
+                  label: tx("New resource"),
+                  icon: faPlus,
+                  kind: "primary" as const,
+                },
+              ]
+            : []),
+          ...(can(access, "resources.edit")
+            ? [
+                {
+                  label: syncingCampai
+                    ? tx("Syncing…", "en")
+                    : tx("Sync all to Campai", "en"),
+                  onClick: syncAllToCampai,
+                  disabled: syncingCampai,
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -1308,6 +1336,10 @@ export default function ResourcesPageClient({
                       tx={tx}
                       onHover={setHoveredResourceId}
                       onNavigate={() => persistOverviewState(window.scrollY)}
+                      canEdit={canEditResource(access, {
+                        ownerId: resource.ownerId,
+                        type: resource.type,
+                      })}
                     />
                   ))}
                 </div>

@@ -1,4 +1,5 @@
 import Button from "@/components/knglmrt/Button";
+import { matchesWerkbereichBlockGroup, type WerkbereichBlockGroup } from "@/lib/werkbereich-content";
 import {
   loadPayloadArchivePosts,
   resolvePayloadLinkHref,
@@ -13,6 +14,7 @@ import PayloadFormBlock, { type CmsForm } from "./PayloadFormBlock";
 import PayloadExtendedBlock from "./PayloadExtendedBlocks";
 import PayloadRichText from "./PayloadRichText";
 import WorkshopBlock from "./WorkshopBlocks";
+import { EditableBlocks } from "../components/page-editor/PageEditor";
 
 function CmsButton({
   link,
@@ -72,9 +74,9 @@ const COLUMN_CLASSNAME = {
   twoThirds: "lg:col-span-8",
 } as const;
 
-function ContentBlock({ block }: { block: PayloadBlock }) {
+function ContentBlock({ block, calendarIntro }: { block: PayloadBlock; calendarIntro?: boolean }) {
   return (
-    <section className="knglmrt-border-t py-6">
+    <section className="knglmrt-border-t py-6" data-calendar-intro={calendarIntro || undefined}>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {(block.columns ?? []).map((column, index) => (
           <div
@@ -213,13 +215,13 @@ function FormBlock({ block }: { block: PayloadBlock }) {
   );
 }
 
-async function PayloadBlockView({ block }: { block: PayloadBlock }) {
+async function PayloadBlockView({ block, werkbereich, sidebar, calendarIntro }: { block: PayloadBlock; werkbereich?: string; sidebar?: boolean; calendarIntro?: boolean }) {
   switch (block.blockType) {
     case "workshopInfo":
     case "equipment":
       return <WorkshopBlock block={block} />;
     case "content":
-      return <ContentBlock block={block} />;
+      return <ContentBlock block={block} calendarIntro={calendarIntro} />;
     case "mediaBlock":
       return (
         <section className="knglmrt-border-t py-6">
@@ -233,7 +235,7 @@ async function PayloadBlockView({ block }: { block: PayloadBlock }) {
     case "formBlock":
       return <FormBlock block={block} />;
     default:
-      return <PayloadExtendedBlock block={block} />;
+      return <PayloadExtendedBlock block={block} werkbereich={werkbereich} sidebar={sidebar} />;
   }
 }
 
@@ -284,13 +286,10 @@ export function PayloadHero({
   );
 }
 
-export default function PayloadBlocks({ blocks }: { blocks?: PayloadBlock[] | null }) {
+export default function PayloadBlocks({ blocks: sourceBlocks, werkbereich, area = "layout", blockGroup }: { blocks?: PayloadBlock[] | null; werkbereich?: string; area?: "layout" | "sidebarLayout"; blockGroup?: WerkbereichBlockGroup }) {
+  const blocks = sourceBlocks?.filter(block => matchesWerkbereichBlockGroup(block, blockGroup));
   if (!blocks?.length) return null;
   return (
-    <div>
-      {blocks.map((block, index) => (
-        <PayloadBlockView key={block.id ?? `${block.blockType}-${index}`} block={block} />
-      ))}
-    </div>
+    <EditableBlocks area={area} blockGroup={blockGroup} items={blocks.map((block, index) => ({ id: String(block.id ?? index), node: <PayloadBlockView key={block.id ?? `${block.blockType}-${index}`} block={block} werkbereich={werkbereich} sidebar={area === "sidebarLayout"} calendarIntro={area === "sidebarLayout" && blocks[index + 1]?.blockType === "appSlot" && blocks[index + 1]?.slot === "calendarUpcoming"} /> }))} />
   );
 }

@@ -1,0 +1,79 @@
+[
+  {
+    "source": "IMG_8483.jpeg",
+    "name": "werkstatt-ueberblick",
+    "alt": "Blick in die 3D-Druck-Werkstatt mit Druckern auf beiden Seiten",
+    "width": "full",
+    "file": "werkstatt-ueberblick.jpg"
+  },
+  {
+    "source": "IMG_8481.jpeg",
+    "name": "druckerregal",
+    "alt": "Druckerregal mit Bambu Lab H2D, A1 Mini und Filamentwechslern",
+    "width": "half",
+    "file": "druckerregal.jpg"
+  },
+  {
+    "source": "IMG_3081.jpeg",
+    "name": "arbeitsplatz",
+    "alt": "Computerarbeitsplatz und Werkzeugwand neben dem Lasercutter",
+    "width": "half",
+    "file": "arbeitsplatz.jpg"
+  },
+  {
+    "source": "IMG_8352.jpeg",
+    "name": "werkstatt-abendlicht",
+    "alt": "Beleuchtete 3D-Drucker und die beklebte Werkstatttür im Abendlicht",
+    "width": "full",
+    "file": "werkstatt-abendlicht.jpg"
+  },
+  {
+    "source": "IMG_6775.jpeg",
+    "name": "druck-blauer-rahmen",
+    "alt": "Ein blauer Rahmen entsteht auf der Druckplatte des H2D",
+    "width": "half",
+    "file": "druck-blauer-rahmen.jpg"
+  },
+  {
+    "source": "IMG_2495.mov",
+    "name": "werkstatt-einblick",
+    "alt": "Der H2D druckt eine Platte voller kleiner Bauteile",
+    "width": "half",
+    "file": "werkstatt-einblick.mp4"
+  },
+  {
+    "source": "IMG_2590.jpeg",
+    "name": "filamentlager",
+    "alt": "Filamentrollen in beschrifteten Aufbewahrungsboxen für PETG und PLA",
+    "width": "half",
+    "file": "filamentlager.jpg"
+  },
+  {
+    "source": "IMG_2598.jpeg",
+    "name": "filament-pla",
+    "alt": "Detail der PLA-Filamentbox mit grünem Schild",
+    "width": "half",
+    "file": "filament-pla.jpg"
+  },
+  {
+    "source": "IMG_0369.jpeg",
+    "name": "konglomerat-schriftzug",
+    "alt": "Gedruckter KONGLOMERAT-Schriftzug mit Pfeil an der Wand",
+    "width": "third",
+    "file": "konglomerat-schriftzug.jpg"
+  },
+  {
+    "source": "IMG_0355.jpeg",
+    "name": "schriftzug-druck",
+    "alt": "Ein weißer KONGLOMERAT-Pfeil wird im 3D-Drucker gefertigt",
+    "width": "third",
+    "file": "schriftzug-druck.jpg"
+  },
+  {
+    "source": "IMG_2575.jpeg",
+    "name": "werkstatt-hinweis",
+    "alt": "Gedruckter Hinweis am Abfallbehälter: Bis hier hin voll?",
+    "width": "third",
+    "file": "werkstatt-hinweis.jpg"
+  }
+]

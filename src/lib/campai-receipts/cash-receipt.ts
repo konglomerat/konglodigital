@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  costCenterForbiddenResponse,
+  getBuchhaltungRouteAccess,
+} from "@/lib/access/server";
+import { isCostCenterAllowed } from "@/lib/buchhaltung-werkbereiche";
 import { mergeCampaiTags } from "@/lib/campai-booking-tags";
 import { validateDebtorAddressForAmount } from "@/lib/campai-debtors";
 import { uploadCampaiReceiptFile } from "@/lib/campai-receipt-files";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 import {
   loadCampaiConfig,
@@ -219,10 +223,9 @@ export const handleCashReceipt = async (
   request: NextRequest,
   direction: CashReceiptDirection,
 ) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.edit");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   try {
@@ -242,6 +245,9 @@ export const handleCashReceipt = async (
       );
     }
     const receipt = parsed.receipt;
+    if (!isCostCenterAllowed(receipt.costCenter2, routeAccess.allowedCostCenters)) {
+      return costCenterForbiddenResponse();
+    }
     const positionAccount = receipt.positionAccount ?? defaultPositionAccount;
 
     if (direction === "revenue") {
@@ -309,7 +315,7 @@ export const handleCashReceipt = async (
       ? await writeReceiptNotes({
           config,
           receiptId,
-          user: data.user,
+          user: routeAccess.user,
           internalNote: receipt.notes,
         })
       : "Beleg erstellt, aber Campai hat keine Receipt-ID zurückgegeben – Notiz konnte nicht angelegt werden.";

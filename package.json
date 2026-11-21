@@ -20,13 +20,20 @@
     "i18n:sync": "npm run i18n:extract && node scripts/i18n-autotranslate.mjs",
     "supabase:compare": "node scripts/supabase-cutover-compare.mjs",
     "supabase:storage-sync": "node scripts/supabase-storage-sync.mjs",
-    "supabase:table-sync": "node scripts/supabase-table-sync.mjs"
+    "supabase:table-sync": "node scripts/supabase-table-sync.mjs",
+    "test": "vitest run",
+    "access:seed-admin": "node --env-file=.env.local scripts/seed-bootstrap-admin.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
     "@google/genai": "^1.42.0",
+    "@lexical/link": "0.35.0",
+    "@lexical/list": "0.35.0",
+    "@lexical/react": "0.35.0",
+    "@lexical/rich-text": "0.35.0",
+    "@lexical/selection": "0.35.0",
     "@mdxeditor/editor": "^3.54.0",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/ssr": "^0.8.0",
@@ -40,6 +47,7 @@
     "i18next": "^26.0.3",
     "ical.js": "^2.2.1",
     "jspdf": "^4.2.0",
+    "lexical": "0.35.0",
     "mapbox-gl": "^3.10.0",
     "motion": "^12.34.0",
     "mqtt": "^5.14.1",
@@ -63,6 +71,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3"
   }
 }

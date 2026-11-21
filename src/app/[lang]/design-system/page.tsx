@@ -13,6 +13,9 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
+import * as solidIcons from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import PageTitle from "../components/PageTitle";
 import Badge, { type BadgeTone } from "@/components/knglmrt/Badge";
 import Breadcrumbs from "@/components/knglmrt/Breadcrumbs";
@@ -32,6 +35,7 @@ import FieldShell from "@/components/knglmrt/FieldShell";
 import FormSection from "@/components/knglmrt/FormSection";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import Hand from "@/components/knglmrt/Hand";
+import { DOODLE_FIGURES } from "@/components/knglmrt/doodle-figures";
 import Notice from "@/components/knglmrt/Notice";
 import SearchField from "@/components/knglmrt/SearchField";
 import SectionNav from "@/components/knglmrt/SectionNav";
@@ -53,43 +57,94 @@ import {
 // Die Palette aus knglmrt-theme.css — Ebene 1, die einzige Stelle mit
 // Hex-Werten. Die Rampe läuft 100 / 60 / 30 (Prozent-Tints).
 type ColorToken = { name: string; note?: string };
+type ColorFamily = { name: string; tokens: ColorToken[] };
 
-const PALETTE_TOKENS: ColorToken[] = [
-  { name: "--knglmrt-pink-100", note: "Markenfarbe, nur Akzent" },
-  { name: "--knglmrt-pink-60" },
-  { name: "--knglmrt-pink-30" },
-  { name: "--knglmrt-pink-15", note: "zarte Kachelkontur" },
-  { name: "--knglmrt-yellow-100", note: "Erinnerung, Konfetti" },
-  { name: "--knglmrt-yellow-60" },
-  { name: "--knglmrt-yellow-30" },
-  { name: "--knglmrt-yellow-120", note: "Hover, trägt weiße Schrift" },
-  { name: "--knglmrt-blue-100", note: "kühle Tints, Konfetti" },
-  { name: "--knglmrt-blue-60" },
-  { name: "--knglmrt-blue-30" },
-  { name: "--knglmrt-green-100", note: "success" },
-  { name: "--knglmrt-green-60" },
-  { name: "--knglmrt-green-30" },
-  { name: "--knglmrt-red-100", note: "destructive" },
-  { name: "--knglmrt-red-60" },
-  { name: "--knglmrt-red-30" },
-  { name: "--knglmrt-brown-100", note: "Handschrift, Link-Hover" },
-  { name: "--knglmrt-brown-60" },
-  { name: "--knglmrt-brown-30" },
-  { name: "--knglmrt-brown-120", note: "Hover, trägt weiße Schrift" },
-  { name: "--knglmrt-dark-100", note: "invertierte Flächen, Fließtext" },
-  { name: "--knglmrt-dark-60", note: "stille Schrift" },
-  { name: "--knglmrt-dark-30", note: "Haarlinien" },
-  { name: "--knglmrt-ink", note: "Artwork und Kontur" },
-  { name: "--knglmrt-ink-soft", note: "nur Werkbereich-Marken" },
-  { name: "--knglmrt-paper", note: "das Blatt" },
-  { name: "--knglmrt-paper-pink", note: "Tint-Band" },
-  { name: "--knglmrt-paper-grey", note: "Summenzeilen" },
-  { name: "--knglmrt-vhc-primary", note: "Sub-Marke Volkshaus" },
-  { name: "--knglmrt-vhc-secondary", note: "Sub-Marke Volkshaus" },
-  { name: "--knglmrt-tint-avatar", note: "unter dem Gesicht im Avatar" },
-  { name: "--knglmrt-tint-zebra", note: "Zebra-Zeile in DataTable" },
-  { name: "--knglmrt-tint-quiet-hover", note: "leise Taste, gehovert" },
+const PALETTE: ColorFamily[] = [
+  {
+    name: "pink",
+    tokens: [
+      { name: "--knglmrt-pink-100", note: "Markenfarbe, nur Akzent" },
+      { name: "--knglmrt-pink-60" },
+      { name: "--knglmrt-pink-30" },
+      { name: "--knglmrt-pink-15", note: "zarte Kachelkontur" },
+    ],
+  },
+  {
+    name: "yellow",
+    tokens: [
+      { name: "--knglmrt-yellow-120", note: "Hover, trägt weiße Schrift" },
+      { name: "--knglmrt-yellow-100", note: "Erinnerung, Konfetti" },
+      { name: "--knglmrt-yellow-60" },
+      { name: "--knglmrt-yellow-30" },
+    ],
+  },
+  {
+    name: "blue",
+    tokens: [
+      { name: "--knglmrt-blue-100", note: "kühle Tints, Konfetti" },
+      { name: "--knglmrt-blue-60" },
+      { name: "--knglmrt-blue-30" },
+    ],
+  },
+  {
+    name: "green",
+    tokens: [
+      { name: "--knglmrt-green-100", note: "success" },
+      { name: "--knglmrt-green-60" },
+      { name: "--knglmrt-green-30" },
+    ],
+  },
+  {
+    name: "red",
+    tokens: [
+      { name: "--knglmrt-red-100", note: "destructive" },
+      { name: "--knglmrt-red-60" },
+      { name: "--knglmrt-red-30" },
+    ],
+  },
+  {
+    name: "brown",
+    tokens: [
+      { name: "--knglmrt-brown-120", note: "Hover, trägt weiße Schrift" },
+      { name: "--knglmrt-brown-100", note: "Handschrift, Link-Hover" },
+      { name: "--knglmrt-brown-60" },
+      { name: "--knglmrt-brown-30" },
+    ],
+  },
+  {
+    name: "dark",
+    tokens: [
+      { name: "--knglmrt-dark-100", note: "invertierte Flächen, Fließtext" },
+      { name: "--knglmrt-dark-60", note: "stille Schrift" },
+      { name: "--knglmrt-dark-30", note: "Haarlinien" },
+    ],
+  },
+  {
+    name: "ink",
+    tokens: [
+      { name: "--knglmrt-ink", note: "Artwork und Kontur" },
+      { name: "--knglmrt-ink-soft", note: "nur Werkbereich-Marken" },
+    ],
+  },
+  {
+    name: "paper",
+    tokens: [
+      { name: "--knglmrt-paper", note: "das Blatt" },
+      { name: "--knglmrt-paper-pink", note: "Tint-Band" },
+      { name: "--knglmrt-paper-grey", note: "Summenzeilen" },
+    ],
+  },
+  {
+    name: "tint",
+    tokens: [
+      { name: "--knglmrt-tint-avatar", note: "unter dem Gesicht im Avatar" },
+      { name: "--knglmrt-tint-zebra", note: "Zebra-Zeile in DataTable" },
+      { name: "--knglmrt-tint-quiet-hover", note: "leise Taste, gehovert" },
+    ],
+  },
 ];
+
+const PALETTE_TOKENS = PALETTE.flatMap((family) => family.tokens);
 
 const BUTTON_KINDS: ButtonKind[] = [
   "primary",
@@ -182,8 +237,183 @@ const DIVIDER_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
 // Die Bibliothek der gezeichneten Figuren ist im Bundle auf die tatsächlich
 // genutzten Motive gekürzt (siehe doodle-figures.ts) — mehr gibt es hier nicht
 // zu zeigen.
-const FACE_NUMBERS = [6, 19] as const;
-const HAND_NUMBERS = [4] as const;
+
+// Die Terrazzo-Flächen aus knglmrt-theme.css (.knglmrt-terrazzo-*). Im Dark
+// Mode fallen sie alle auf die neutrale Kartenfläche zurück.
+const TERRAZZO_CLASSES = [
+  { name: "fein-rosa", note: "fein, zartrosa – Standard" },
+  { name: "grob-rosa", note: "grob, zartrosa" },
+  { name: "grob-blau", note: "grob, hellblau" },
+  { name: "grob-grau", note: "grob, warmgrau" },
+  { name: "grob-hellgrau", note: "grob, kühles Hellgrau" },
+  { name: "hellgelb", note: "grob, cremegelb" },
+  { name: "kraeftig-gelb", note: "grob, Akzentfläche" },
+  { name: "kraeftig-blau", note: "grob, Akzentfläche" },
+  { name: "kraeftig-pink", note: "grob, Akzentfläche" },
+];
+
+// Alle Font-Awesome-Icons, die irgendwo in src/ verwendet werden.
+const USED_ICONS = [
+  "Binary",
+  "faAddressBook",
+  "faArrowDown",
+  "faArrowLeft",
+  "faArrowRight",
+  "faArrowRotateLeft",
+  "faArrowTrendDown",
+  "faArrowTrendUp",
+  "faArrowUp",
+  "faArrowUpRightFromSquare",
+  "faArrowsLeftRight",
+  "faArrowsRotate",
+  "faBan",
+  "faBars",
+  "faBolt",
+  "faBoxOpen",
+  "faBoxesStacked",
+  "faBullhorn",
+  "faCalendarCheck",
+  "faCalendarDays",
+  "faCamera",
+  "faCar",
+  "faChartPie",
+  "faCheck",
+  "faChevronDown",
+  "faChevronLeft",
+  "faChevronRight",
+  "faChevronUp",
+  "faCircleCheck",
+  "faCircleExclamation",
+  "faCircleInfo",
+  "faClipboardCheck",
+  "faClock",
+  "faClone",
+  "faCodeCompare",
+  "faColumns",
+  "faCopy",
+  "faCouch",
+  "faCube",
+  "faCubesStacked",
+  "faDesktop",
+  "faDiagramProject",
+  "faDisplay",
+  "faDoorOpen",
+  "faDownload",
+  "faEllipsis",
+  "faEnvelope",
+  "faEuroSign",
+  "faFileArrowDown",
+  "faFileArrowUp",
+  "faFileCircleCheck",
+  "faFileCirclePlus",
+  "faFileImport",
+  "faFileInvoice",
+  "faFileLines",
+  "faFilePdf",
+  "faFileSignature",
+  "faFilter",
+  "faFloppyDisk",
+  "faFolderOpen",
+  "faGear",
+  "faGears",
+  "faGraduationCap",
+  "faGripVertical",
+  "faHammer",
+  "faHandshake",
+  "faHouse",
+  "faIndustry",
+  "faKey",
+  "faLaptop",
+  "faLayerGroup",
+  "faLink",
+  "faList",
+  "faListCheck",
+  "faLocationDot",
+  "faMagnifyingGlass",
+  "faMap",
+  "faMicrochip",
+  "faMicrophone",
+  "faMinus",
+  "faMobileScreen",
+  "faMoneyBillTransfer",
+  "faMoon",
+  "faMusic",
+  "faNoteSticky",
+  "faPalette",
+  "faPaperPlane",
+  "faPen",
+  "faPenToSquare",
+  "faPercent",
+  "faPlug",
+  "faPlus",
+  "faReceipt",
+  "faRepeat",
+  "faRightLeft",
+  "faRotate",
+  "faRotateLeft",
+  "faSatellite",
+  "faSave",
+  "faScrewdriverWrench",
+  "faShieldHalved",
+  "faShirt",
+  "faSliders",
+  "faSort",
+  "faSortDown",
+  "faSortUp",
+  "faSpinner",
+  "faSun",
+  "faTable",
+  "faTableCellsLarge",
+  "faTabletScreenButton",
+  "faTag",
+  "faTent",
+  "faTrash",
+  "faTree",
+  "faTriangleExclamation",
+  "faUpRightFromSquare",
+  "faUser",
+  "faUsers",
+  "faVolumeHigh",
+  "faWandMagicSparkles",
+  "faWarehouse",
+  "faXmark",
+  "file",
+  "matches",
+  "src/app/api/admin/story-image/samplecover.png",
+] as const;
+
+const BRAND_MARKS = [
+  "logo/KNGLMRT_Bildmarke.svg",
+  "logo/KNGLMRT_Wortmarke.svg",
+  "KNGLMRT_Wortbildmarke_hoch.png",
+  "logo/konglodigital-logo.svg",
+  "logo/konglodigital-logo-white.svg",
+];
+
+const WERKBEREICH_MARKS = [
+  "3d-druck.svg",
+  "beton.png",
+  "buchdruck.svg",
+  "cnc.svg",
+  "elektronik.svg",
+  "foto-film.svg",
+  "holz.svg",
+  "k.svg",
+  "laser.png",
+  "materialvermittung.svg",
+  "printshop.svg",
+  "siebdruck.svg",
+  "textil.svg",
+];
+
+// Alle Motive, die im Bundle liegen (doodle-figures.ts), aufsteigend.
+const figureNumbers = (prefix: "Faces" | "Hands") =>
+  Object.keys(DOODLE_FIGURES)
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => Number(key.slice(prefix.length)))
+    .sort((a, b) => a - b);
+const FACE_NUMBERS = figureNumbers("Faces");
+const HAND_NUMBERS = figureNumbers("Hands");
 
 /** Ein Abschnitt: Überschrift, Einordnung, darunter die Muster. */
 function Section({
@@ -250,23 +480,43 @@ function useResolvedColors(names: string[]) {
   return values;
 }
 
-/** Ein Farbfeld: Fläche, Token-Name, Hex-Wert, Verwendung. */
-function Swatch({ token, value }: { token: ColorToken; value?: string }) {
+/**
+ * Eine Farbfamilie als Zeile: die Abstufungen nebeneinander, darunter Stufe
+ * und Hex-Wert. Die Verwendung steht im Tooltip.
+ */
+function ColorRow({
+  family,
+  values,
+}: {
+  family: ColorFamily;
+  values: Record<string, string>;
+}) {
+  const prefix = `--knglmrt-${family.name}`;
   return (
-    <div>
-      <div
-        className="knglmrt-border mb-1 h-10 w-full"
-        style={{ background: `var(${token.name})` }}
-      />
-      <code className="knglmrt-num block break-all">
-        {token.name.replace("--knglmrt-", "")}
-      </code>
-      <code className="knglmrt-num block text-muted-foreground">
-        {value || "\u00a0"}
-      </code>
-      {token.note ? (
-        <p className="knglmrt-tag text-muted-foreground">{token.note}</p>
-      ) : null}
+    <div className="flex items-start gap-3">
+      <code className="knglmrt-num w-14 shrink-0 pt-2">{family.name}</code>
+      <div className="grid flex-1 grid-cols-4 gap-px">
+        {family.tokens.map((token) => {
+          const step = token.name.replace(prefix, "").replace(/^-/, "") || "–";
+          return (
+            <div
+              key={token.name}
+              title={`${token.name}${token.note ? ` — ${token.note}` : ""}`}
+            >
+              <div
+                className="knglmrt-border h-8 w-full"
+                style={{ background: `var(${token.name})` }}
+              />
+              <code className="knglmrt-tag block truncate">
+                {step}{" "}
+                <span className="text-muted-foreground">
+                  {values[token.name] || ""}
+                </span>
+              </code>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -300,9 +550,29 @@ export default function DesignSystemPage() {
         source="src/app/knglmrt-theme.css"
         hint="Die Markenfarben — die einzige Stelle im Projekt mit Hex-Werten. Alles andere sind Rollen, die hierauf zeigen. Im Dark Mode unverändert."
       >
-        <div className="grid grid-cols-3 gap-x-4 gap-y-5 sm:grid-cols-5 lg:grid-cols-7">
-          {PALETTE_TOKENS.map((token) => (
-            <Swatch key={token.name} token={token} value={values[token.name]} />
+        <div className="grid max-w-[1100px] gap-x-8 gap-y-2 md:grid-cols-2">
+          {PALETTE.map((family) => (
+            <ColorRow key={family.name} family={family} values={values} />
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Terrazzo"
+        source="src/app/knglmrt-theme.css · public/branding/backgrounds"
+        hint="Alle Flächenvarianten als Klasse .knglmrt-terrazzo-*. Im Dark Mode ersetzt die Kartenfläche das Muster."
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {TERRAZZO_CLASSES.map((t) => (
+            <div key={t.name}>
+              <div
+                className={`knglmrt-border h-24 w-full knglmrt-terrazzo-${t.name}`}
+              />
+              <code className="knglmrt-num mt-1 block break-all">
+                terrazzo-{t.name}
+              </code>
+              <p className="knglmrt-tag text-muted-foreground">{t.note}</p>
+            </div>
           ))}
         </div>
       </Section>
@@ -1011,6 +1281,58 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section
+        title="Logos Konglomerat"
+        source="public/branding/logo · public/branding"
+        hint="Die Marken des Vereins und von konglodigital."
+      >
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+          {BRAND_MARKS.map((f) => (
+            <div
+              key={f}
+              className={`knglmrt-border flex flex-col items-center gap-1 p-2 ${
+                f.includes("white") ? "bg-[var(--knglmrt-dark-100)]" : ""
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/branding/${f}`}
+                alt={f}
+                className="h-14 w-full object-contain"
+              />
+              <code className="knglmrt-tag w-full truncate text-center text-muted-foreground">
+                {f.split("/").pop()}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Logos Werkbereiche"
+        source="public/branding/werkbereiche"
+        hint="Die Werkbereich-Marken als Bilddateien (Klasse .werkbereich-mark-image für die Einfärbung im Dark Mode)."
+      >
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+          {WERKBEREICH_MARKS.map((f) => (
+            <div
+              key={f}
+              className="knglmrt-border flex flex-col items-center gap-1 p-2"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/branding/werkbereiche/${f}`}
+                alt={f}
+                className="werkbereich-mark-image h-14 w-full object-contain"
+              />
+              <code className="knglmrt-tag w-full truncate text-center text-muted-foreground">
+                {f}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
         title="Noch nicht portiert"
         source="public/branding/controls_surfaces_tables-export/react/ui/"
         hint="Aus dem Export fehlen im Projekt noch Avatar und Card. Die Formularfelder und die Tabelle stehen — die alten Felder unter src/app/[lang]/components/ui/ laufen bis zur Umstellung weiter."
@@ -1034,6 +1356,36 @@ export default function DesignSystemPage() {
           <Button kind="ghost" iconOnly icon={faPlus} aria-label="Hinzufügen" />
           <Button kind="ghost" iconOnly icon={faTrash} aria-label="Löschen" />
           <Button kind="ghost" iconOnly icon={faXmark} aria-label="Schließen" />
+        </div>
+      </Section>
+
+      <Section
+        title="Icons"
+        source="@fortawesome/free-solid-svg-icons"
+        hint={`${USED_ICONS.length} Icons, die aktuell im Projekt verwendet werden.`}
+      >
+        <div className="grid grid-cols-4 gap-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12">
+          {USED_ICONS.map((name) => {
+            const icon = (solidIcons as unknown as Record<string, unknown>)[
+              name
+            ] as solidIcons.IconDefinition | undefined;
+            return (
+              <div
+                key={name}
+                title={name}
+                className="knglmrt-border flex flex-col items-center gap-1 px-1 py-2"
+              >
+                {icon ? (
+                  <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+                ) : (
+                  <span className="h-4 w-4" />
+                )}
+                <code className="knglmrt-tag w-full truncate text-center text-muted-foreground">
+                  {name.slice(2)}
+                </code>
+              </div>
+            );
+          })}
         </div>
       </Section>
     </div>

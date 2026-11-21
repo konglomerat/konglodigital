@@ -1,0 +1,79 @@
+.sidebar {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  font-size: 1rem;
+}
+
+/* Reused content blocks follow the width of the sidebar, not the viewport. */
+.sidebar :global(.grid) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar :global(.grid) > * {
+  min-width: 0;
+  grid-column: auto;
+}
+
+.sidebar > div > section {
+  display: block;
+  margin-top: 0;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.sidebar > div > section + section {
+  margin-top: 0.25rem;
+}
+
+.sidebar [data-inventory-place] > :not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar [data-inventory-place] :global(.inventory-place-map) {
+  height: 160px;
+}
+
+.sidebar address {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Keep the editable opening-hours text visually attached to its calendar. */
+.sidebar > div > section[data-calendar-intro] {
+  padding-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.sidebar > div > section[data-calendar-intro] + section[data-calendar-block] {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sidebar [data-calendar-event] {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  row-gap: 0.5rem;
+}
+
+.sidebar h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sidebar h3 {
+  font-size: 1.125rem;
+}
+
+.sidebar a {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.sidebar iframe,
+.sidebar audio,
+.sidebar video {
+  max-width: 100%;
+}

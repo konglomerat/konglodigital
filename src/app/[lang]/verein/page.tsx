@@ -1,6 +1,7 @@
 // src/app/[lang]/verein/page.tsx — die Vereinsseite nach dem Prototyp
 // "Konglo Digital Prototyp.dc.html" (Claude Design):
-// Über uns + Kalender nebeneinander → Freunde & Förderer → Das #Rosenwerk.
+// Über uns + Kalender nebeneinander → Werkstätten nutzen (Anreißer für
+// /tarife) → Freunde & Förderer → Das #Rosenwerk.
 // Der Kalender hängt in einer eigenen Suspense-Grenze; alles andere steht
 // sofort, ohne auf den Google-Feed zu warten.
 import { localizePathname } from "@/i18n/config";
@@ -21,13 +22,13 @@ import PayloadPageContent, {
   payloadPageMetadata,
 } from "../components/PayloadPageContent";
 import VereinCalendar, { VereinCalendarSkeleton } from "./VereinCalendar";
+import styles from "./VereinPage.module.css";
 
-// TODO: Sobald die Dokumente als PDF liegen (public/ oder CMS), hier die
-// Direktlinks eintragen — bis dahin führt jede Zeile auf die Vereinsseite.
-const WICHTIGE_LINKS = [
-  { label: "Vereinssatzung", href: "https://konglomerat.org" },
-  { label: "Beitragsordnung", href: "https://konglomerat.org" },
-  { label: "Merkblatt Datenschutz", href: "https://konglomerat.org" },
+// Die PDFs liegen unter public/dokumente/ und öffnen in einem neuen Tab.
+const WICHTIGE_DOKUMENTE = [
+  { label: "Vereinssatzung", href: "/dokumente/satzung.pdf" },
+  { label: "Beitragsordnung", href: "/dokumente/beitragsordnung.pdf" },
+  { label: "Geschäftsordnung", href: "/dokumente/geschaeftsordnung.pdf" },
 ];
 
 // Die Logodateien liegen unter public/branding/foerderer/ — siehe das
@@ -137,9 +138,9 @@ async function StaticVereinPage() {
           </p>
 
           <div>
-            <h3 className={captionClassName}>Wichtige Links</h3>
+            <h3 className={captionClassName}>Wichtige Dokumente</h3>
             <div className="flex flex-wrap gap-3">
-              {WICHTIGE_LINKS.map((link) => (
+              {WICHTIGE_DOKUMENTE.map((link) => (
                 <Button
                   key={link.label}
                   href={link.href}
@@ -162,6 +163,53 @@ async function StaticVereinPage() {
           </Suspense>
         </div>
       </div>
+
+      {/* Anreißer für /tarife: drei Einstiegspreise, der Rest steht dort. */}
+      <section className="mb-11 knglmrt-border-t pt-[26px]">
+        <div className="grid items-start gap-10 lg:grid-cols-[1.4fr_1fr]">
+          <div>
+            <h2 className="text-[length:var(--ui-size-title)] leading-[var(--ui-line-title)]">
+              Werkstätten nutzen
+            </h2>
+            <div className="knglmrt-lead mb-4">Tarife und Preise</div>
+            <p className="mb-4 max-w-[600px] text-pretty">
+              Als Mitglied kommst du günstiger rein und hast die Wahl zwischen
+              Abo und Punktekarte. Extern geht auch — tageweise oder mit der
+              10er-Karte. Enthalten ist jeweils der Zugang; für bestimmte
+              Maschinen brauchst du je nach Werkbereich eine Einweisung.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <Button href="/tarife" kind="primary">
+                Tarife und Preise ansehen
+              </Button>
+              <Button href="/registration" kind="secondary">
+                Mitglied werden
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <StatTile
+              label="Jahresbeitrag"
+              value="ab 120 €"
+              hint="macht dich zum Mitglied"
+              tone="rosa"
+            />
+            <StatTile
+              label="Abo für Mitglieder"
+              value="ab 15 €"
+              hint="pro Monat"
+              tone="grau"
+            />
+            <StatTile
+              label="Für Gäste"
+              value="ab 20 €"
+              hint="pro Tag, ohne Mitgliedschaft"
+              tone="grau"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Fläche bis an die Fensterkanten, Inhalt zurück in den Rahmen
           von <main> (max-w-[1600px], px-3 / md:px-7). */}
@@ -328,7 +376,7 @@ export default async function VereinPage() {
   if (!page) return <StaticVereinPage />;
 
   return (
-    <div>
+    <div className={page.layout?.[0]?.blockType === "mediaBlock" ? styles.photoIntro : undefined}>
       <PayloadPageContent page={page} />
       {/* Der Kalender bleibt ein Live-Baustein und folgt automatisch auf die
           redaktionell gepflegten Blöcke der Vereinsseite. */}

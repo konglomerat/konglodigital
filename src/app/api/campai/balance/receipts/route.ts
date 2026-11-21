@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { getBuchhaltungRouteAccess } from "@/lib/access/server";
+import { filterAllowedCostCenters } from "@/lib/buchhaltung-werkbereiche";
 import { listCampaiReceiptsByCostCenter2 } from "@/lib/campai-balance-receipts";
-import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 const parseCostCenterValues = (input: unknown): number[] => {
   if (!Array.isArray(input)) {
@@ -28,10 +29,9 @@ const parseCostCenterValues = (input: unknown): number[] => {
 };
 
 export const POST = async (request: NextRequest) => {
-  const { supabase } = createSupabaseRouteClient(request);
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const routeAccess = await getBuchhaltungRouteAccess(request, "receipts.view");
+  if (!routeAccess.ok) {
+    return routeAccess.response;
   }
 
   try {
@@ -39,7 +39,11 @@ export const POST = async (request: NextRequest) => {
       string,
       unknown
     >;
-    const costCenter2 = parseCostCenterValues(body.costCenter2);
+    // Mit Bereichs-Buchhaltung fallen fremde Kostenstellen still heraus.
+    const costCenter2 = filterAllowedCostCenters(
+      parseCostCenterValues(body.costCenter2),
+      routeAccess.allowedCostCenters,
+    );
 
     if (costCenter2.length === 0) {
       return NextResponse.json({ receipts: [] });
