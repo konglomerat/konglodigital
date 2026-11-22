@@ -1,9 +1,9 @@
 /**
- * Ressourcentyp, unter dem "Hier entstanden"-Beiträge in Supabase gespeichert sind.
+ * Historischer Supabase-Typ der nach Payload posts migrierten Beiträge.
  *
  * Der gespeicherte Wert bleibt bewusst "project": Er steckt in bestehenden
  * Datensätzen und in der RLS-Policy für Löschrechte (supabase/schema.sql).
- * Nur die Anzeige und der Code sprechen von "Showcase".
+ * Dient zum Ausschließen alter Kopien aus Inventaransichten und Schreibwegen.
  */
 export const SHOWCASE_RESOURCE_TYPE = "project";
 

@@ -1,0 +1,33 @@
+build
+/dist/
+/media/
+node_modules
+.DS_Store
+.env*
+!.env.example
+.next
+.vercel
+
+# Payload default media upload directory
+public/media/
+
+public/robots.txt
+public/sitemap*.xml
+
+# Local database backups
+.db-backups/
+*.tsbuildinfo
+
+# Local deployment archives
+.deployments/
+
+# Generated declarations, test output and local secrets
+next-env.d.ts
+/coverage/
+/playwright-report/
+/test-results/
+/.playwright-cli/
+/output/
+*.dump
+*.log
+*.pem

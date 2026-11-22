@@ -40,7 +40,7 @@ import {
   generateVideoPreviewBuffer,
 } from "@/lib/video-preview";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
-import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import { SHOWCASE_RESOURCE_TYPE, isShowcaseResourceType } from "@/lib/showcase-resource-type";
 
 const splitList = (value: string) =>
   value
@@ -1037,6 +1037,10 @@ export const PUT = async (
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (isShowcaseResourceType(existingResource.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
+  }
+
   // Eigene Einträge immer, fremde nur mit der Rolle (canEditResource). Wer
   // nicht Eigentümer ist, schreibt über den Service-Client — die RLS kennt
   // nur Eigentümer.
@@ -1055,6 +1059,9 @@ export const PUT = async (
   ) as typeof supabase;
 
   const payload = await readResourcePayload(request);
+  if (isShowcaseResourceType(payload.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet.", cmsPath: "/admin/collections/posts" }, { status: 409 });
+  }
   if (
     (payload.isPrivate ?? false) !== (existingResource.is_private ?? false) &&
     !can(access, "showcase.private")
@@ -1375,6 +1382,10 @@ export const DELETE = async (
   const isShowcase =
     typeof row.type === "string" &&
     row.type.trim().toLowerCase() === SHOWCASE_RESOURCE_TYPE;
+
+  if (isShowcase) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS verwaltet." }, { status: 409 });
+  }
 
   // Inventar nur mit resources.delete, Showcases auch die eigenen. Gelöscht
   // wird nach der Prüfung immer über den Service-Client — die RLS erlaubt

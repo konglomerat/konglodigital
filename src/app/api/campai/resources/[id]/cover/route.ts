@@ -6,6 +6,7 @@ import { toFile } from "openai/uploads";
 import sharp from "sharp";
 
 import { canEditResource } from "@/lib/access/resource-access";
+import { isShowcaseResourceType } from "@/lib/showcase-resource-type";
 import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
@@ -193,6 +194,9 @@ export const POST = async (
   }
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (isShowcaseResourceType(row.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
   }
 
   const resourceRow = row as ResourceRow & {

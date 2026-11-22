@@ -466,6 +466,9 @@ export default async function ResourceDetailPage({
   const [{ resource, errorMessage }, { resources: mapBasemapResources }] =
     await Promise.all([loadResource(id), loadMapBasemapResources()]);
 
+  if (resource?.type?.toLowerCase() === SHOWCASE_RESOURCE_TYPE) {
+    redirect(localizePathname(`/showcase/${resource.id}`, locale));
+  }
   if (resource) {
     const canonicalPath = localizePathname(buildResourcePath(resource), locale);
     const currentPath = localizePathname(`/resources/${id}`, locale);

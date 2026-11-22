@@ -37,7 +37,7 @@ import {
   generateVideoPreviewBuffer,
 } from "@/lib/video-preview";
 import { syncResourceToCampai, type ResourceSyncRecord } from "@/lib/campai-resource-rentals";
-import { SHOWCASE_RESOURCE_TYPE } from "@/lib/showcase-resource-type";
+import { SHOWCASE_RESOURCE_TYPE, isShowcaseResourceType } from "@/lib/showcase-resource-type";
 
 const splitList = (value: string) =>
   value
@@ -945,6 +945,9 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await readResourcePayload(request);
+  if (isShowcaseResourceType(payload.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet.", cmsPath: "/admin/collections/posts" }, { status: 409 });
+  }
   if (payload.mapFeatures?.some(isPlaceholderGpsPointFeature)) {
     return NextResponse.json(
       { error: "Location coordinates [0, 0] are invalid." },

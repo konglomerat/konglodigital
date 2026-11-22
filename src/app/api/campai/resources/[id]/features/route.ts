@@ -7,6 +7,7 @@ import {
   normalizeResourceMapFeatures,
 } from "@/app/[lang]/resources/map-features";
 import { canEditResource } from "@/lib/access/resource-access";
+import { isShowcaseResourceType } from "@/lib/showcase-resource-type";
 import { forbiddenResponse, loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
@@ -94,6 +95,9 @@ export const PUT = async (
 
   if (!existingResource) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (isShowcaseResourceType(existingResource.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
   }
 
   if (

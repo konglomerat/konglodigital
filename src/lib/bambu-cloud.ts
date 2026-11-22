@@ -6,6 +6,7 @@ import mqtt from "mqtt";
 import { unstable_cache } from "next/cache";
 
 import { type BambuPrinter, type PrinterStatus } from "@/lib/bambu";
+import { mergePrinterReport, parseMaterialInventory } from "@/lib/printer-automation/material";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type DeviceBind = {
@@ -43,6 +44,9 @@ type TaskEntry = {
   costTime?: number;
   weight?: number;
   mode?: string;
+  plateIndex?: number;
+  useAms?: boolean;
+  amsMapping?: number[];
   cover?: string;
   coverUrl?: string;
   thumbnail?: string;
@@ -74,6 +78,13 @@ export type PrintJob = {
   errorDetail?: string;
 };
 
+export type PrinterHistoryJob = Pick<PrintJob, "id" | "title" | "status" | "startTime" | "endTime" | "durationSeconds" | "weightGrams"> & {
+  printerId: string;
+  plate: number;
+  useAms: boolean;
+  amsMapping: number[];
+};
+
 export type PrinterUsageStats = {
   deviceId: string;
   deviceName?: string;
@@ -92,6 +103,7 @@ export type PrintUsageStats = {
 };
 
 type PushStatus = {
+  [key: string]: unknown;
   gcode_state?: string;
   gcode_file?: string;
   mc_percent?: string | number;
@@ -340,6 +352,7 @@ const requestJsonFrom = async <T>(
     headers,
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    signal: AbortSignal.timeout(20_000),
   });
 
   if (!response.ok) {
@@ -800,6 +813,12 @@ const getAccessToken = async () => {
   return renewAccessToken();
 };
 
+// Server-to-server only. The camera service never needs our database key or refresh token.
+export async function getCameraCloudCredentials() {
+  const token = await getAccessToken();
+  return { token, expiresAt: Math.min(tokenCache?.expiresAt ?? Date.now() + 300_000, Date.now() + 300_000) };
+}
+
 const requestJsonAuthenticated = async <T>(url: string, body?: unknown) => {
   const token = await getAccessToken();
   try {
@@ -1008,6 +1027,33 @@ export const fetchPrintJobsFromCloud = async (
   return (response.hits ?? []).map(toPrintJob);
 };
 
+const toPrinterHistoryJob = (task: TaskEntry): PrinterHistoryJob => ({
+  id: String(task.id), printerId: task.deviceId ?? "", title: task.title || "Unbenannter Druck",
+  status: String(task.status ?? "unknown"), startTime: task.startTime, endTime: task.endTime,
+  durationSeconds: task.costTime, weightGrams: task.weight,
+  plate: Number.isInteger(task.plateIndex) && task.plateIndex! > 0 ? task.plateIndex! : 1,
+  useAms: task.useAms === true,
+  amsMapping: Array.isArray(task.amsMapping) ? task.amsMapping.filter(v => Number.isInteger(v) && v >= -1 && v <= 255) : [],
+});
+
+export async function fetchPrinterHistory(printerId: string, offset = 0) {
+  const limit = 20;
+  const response = await requestJsonAuthenticated<TaskListResponse>(
+    `/v1/user-service/my/tasks?deviceId=${encodeURIComponent(printerId)}&limit=${limit}&offset=${offset}`,
+  );
+  const hits = response.hits ?? [];
+  return { jobs: hits.filter(task => task.deviceId === printerId).map(toPrinterHistoryJob),
+    nextOffset: hits.length && offset + hits.length < (response.total ?? Infinity) ? offset + hits.length : null };
+}
+
+export async function fetchPrinterHistoryJob(printerId: string, taskId: string): Promise<PrinterHistoryJob | null> {
+  if (!/^\d{1,24}$/.test(taskId)) return null;
+  const task = await requestJsonAuthenticated<TaskEntry>(`/v1/user-service/my/task/${taskId}`);
+  // Refetch from the authenticated account; never trust a client-supplied title, model or printer binding.
+  if (String(task.id) !== taskId || task.deviceId !== printerId) return null;
+  return toPrinterHistoryJob(task);
+}
+
 export const fetchPrintJobsAndUsageFromCloud = async (recentLimit = 20) => {
   const firstPage = await fetchTaskPage(TASK_HISTORY_PAGE_SIZE);
   const firstTasks = firstPage.hits ?? [];
@@ -1107,24 +1153,27 @@ const collectPushStatuses = async (
 
     client.on("connect", () => {
       deviceIds.forEach((deviceId) => {
-        client.subscribe(`device/${deviceId}/report`, { qos: 0 });
-        client.publish(
-          `device/${deviceId}/request`,
-          JSON.stringify({
-            pushing: {
-              sequence_id: sequenceId,
-              command: "pushall",
-              version: 1,
-              push_target: 1,
-            },
-          }),
-          { qos: 0 },
-        );
+        client.subscribe(`device/${deviceId}/report`, { qos: 0 }, (error) => {
+          if (error || settled) return;
+          client.publish(
+            `device/${deviceId}/request`,
+            JSON.stringify({
+              pushing: {
+                sequence_id: sequenceId,
+                command: "pushall",
+                version: 1,
+                push_target: 1,
+              },
+            }),
+            { qos: 0 },
+          );
+        });
       });
       responseTimer = setTimeout(() => finish(), MQTT_RESPONSE_WINDOW_MS);
     });
 
-    client.on("message", (topic, payload) => {
+    client.on("message", (topic, payload, packet) => {
+      if (packet.retain) return;
       const match = topic.match(/^device\/(.+)\/report$/);
       if (!match) {
         return;
@@ -1140,11 +1189,8 @@ const collectPushStatuses = async (
           return;
         }
 
-        statuses.set(match[1], {
-          ...statuses.get(match[1]),
-          ...parsed.print,
-        });
-        if (statuses.size === deviceIds.length) {
+        statuses.set(match[1], mergePrinterReport(statuses.get(match[1]) ?? {}, parsed.print) as PushStatus);
+        if (deviceIds.every((id) => Boolean(statuses.get(id)?.gcode_state && statuses.get(id)?.nozzle_diameter && statuses.get(id)?.ams))) {
           finish();
         }
       } catch {
@@ -1273,6 +1319,8 @@ export const fetchPrintersFromCloud = async (): Promise<BambuPrinter[]> => {
           : "unavailable",
       statusObservedAt: new Date(statusObservedAt).toISOString(),
       statusStale: Boolean(pushStatus && !freshPushStatus),
+      liveStateConfirmed: Boolean(freshPushStatus?.gcode_state),
+      materialInventory: parseMaterialInventory(pushStatus, device.model, new Date(statusObservedAt).toISOString(), Boolean(freshPushStatus?.gcode_state)),
       updatedAt: new Date(now).toISOString(),
     } satisfies BambuPrinter;
   });

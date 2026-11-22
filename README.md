@@ -6,9 +6,34 @@ shop, and the shared resource inventory in one place. The app aggregates live
 printer status, print-job telemetry, and per-job notes, while also integrating
 Campai for products and invoices and Supabase for authentication and data.
 
+## Website und Payload-CMS im selben Repository
+
+Die Website bleibt im Hauptverzeichnis, das Payload-CMS liegt unter
+[`apps/cms`](apps/cms/README.md). Beide Apps werden separat installiert,
+gestartet und deployt. Änderungen an CMS-Modellen und deren Darstellung können
+so in einem gemeinsamen PR geprüft werden.
+
+| Anwendung | Installation | Entwicklung | Build | Tests |
+| --- | --- | --- | --- | --- |
+| Website | `npm ci` | `npm run dev` | `npm run build` | `npm test` |
+| CMS | `npm run cms:install` | `npm run cms:dev` | `npm run cms:build` | `npm run cms:test` |
+
+Website-Konfiguration: `.env.local`; CMS-Konfiguration:
+`apps/cms/.env.development.local` (lokal) bzw. eigene Deployment-Variablen.
+Die CMS-Entwicklung verwendet die gemeinsame produktive Datenbank über SSH:
+**Redaktionelle Änderungen im lokalen CMS wirken auch produktiv.**
+Backups, Uploads und Zugangsdaten bleiben außerhalb von Git.
+
+Die Website wird weiterhin aus dem Repository-Hauptverzeichnis gebaut.
+Für das CMS muss der Deployment-Kontext auf `apps/cms` zeigen; das bestehende
+Dokploy-Drop-Verfahren bleibt verfügbar. Details stehen in der CMS-README.
+
 ## Features
 
 - Live printer status from the BambuLab cloud API + MQTT
+- Admin-only print automation with stored sliced files, an idle timer, camera
+  inspection and a persistent dispatch journal. Starts disabled; see
+  [setup and current transport limitations](docs/printer-automation.md).
 - Print job dashboard with description/notes
 - Member shop and checkout powered by Campai
 - Resource inventory (Inventar) with location mapping
@@ -68,6 +93,13 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 ### Content pages from Payload CMS
 
 The production CMS is `https://backend.konglomerat.org` (editor: `/admin`).
+Since 2026-11-22, the local CMS at `http://localhost:3106` and production share
+the same `konglo_cms` database. Start the CMS with `npm run dev:local` in the
+sibling `konglo` repository; it opens the private SSH tunnel automatically.
+Local editorial changes affect production immediately. Automatic schema push
+is disabled. The former isolated database remains available only as a backup
+and for explicitly guarded fixtures. See the CMS README for backup and storage
+details.
 Set `PAYLOAD_CMS_URL=https://backend.konglomerat.org` (without a trailing slash). Published entries in its existing `Pages`
 collection are used for these routes:
 
@@ -418,6 +450,35 @@ https://www.maker-space.de/maschinen/
 
 #### Werkbereiche: one page, reusable blocks
 
+### Editing pages in the frontend
+
+Members with the existing global **Backend** or **Admin** role see **Seite
+bearbeiten** on CMS-backed pages, including work areas and their subpages.
+Click text in content and call-to-action sections to edit directly in the page
+layout. Formatting controls appear on focus (headings, bold/italic, lists and
+links); active text formatting is highlighted. **Einstellungen** separately
+opens column and link settings without hiding the text or resetting undo history.
+Other sections offer structured settings (inventory tag, 2/3/4 columns,
+contact data, media-library selection and internal page links). Blocks can be
+reordered; the work-area sidebar uses the same editor. **Titel und Einstieg**
+edits the page title, introduction and metadata. No new block types are added.
+
+**Speichern & veröffentlichen** writes to Payload and refreshes the page.
+**Beenden** offers to discard unsaved changes. A browser-session draft protects
+against accidental navigation; it is scoped to the signed-in user and page.
+Special embedded rich-text nodes remain intact and can be edited via
+**Erweiterter Editor**. Uploading new media and creating new block instances
+remain available in that editor.
+
+The frontend proxies `/api/cms/pages/:id/editor` to the CMS's
+`/api/inline-pages/:id` with the signed-in user's Supabase access token.
+The CMS independently verifies the identity and current global CMS role for
+every request. Saves use a database transaction, row lock and content revision
+to reject concurrent changes (409). Changes to slugs, permissions and collection
+configuration are not accepted by this endpoint. Both repositories must be
+deployed together; this uses the existing Supabase SSO configuration and requires
+no shared administrator API key.
+
 In **Pages**, choose **Werkbereich** in the sidebar. The CMS assigns the canonical
 slug automatically and rejects a second page for that area, including drafts,
 duplicated pages and old slug aliases. Ordinary content pages leave this field
@@ -435,7 +496,11 @@ The prepared local database contains all 16 pages. Holz and 3D-Druck are publish
 **only locally** with visibly labelled sample content; the other 14 are drafts.
 Real locations, prices, times, equipment and contacts still need editorial input.
 
-#### Run the isolated local preview
+#### Historical isolated local preview
+
+These instructions describe the former isolated setup. Normal local editing
+now uses the shared production CMS database as described above; do not replace
+the current environment with these fixture settings.
 
 The local database is `konglo_cms_workareas_local` on local PostgreSQL. Never use
 the backend's production `.env` database for local development. Start the CMS
@@ -482,3 +547,83 @@ already work in this frontend's CMS blocks. Documents such as PDFs and legacy
 media keep the existing CMS storage path. See the backend README's “Openinary
 media storage” section for configuration, retention and the local integration
 tests. This change is prepared locally and has not been deployed.
+
+### „Hier entstanden“ in Payload Posts
+
+The local showcase now reads published `posts` from Payload. Manage them at
+`http://localhost:3106/admin/collections/posts`. The `Content` tab holds the title
+and rich text; `Beitragsdaten` holds the gallery, excerpt, author, tags,
+workshop, inventory references, links and social-media consent. Drafts are not
+returned to the public frontend. Existing UUID and slug URLs keep working.
+
+The local import contains 58 posts (57 published, one previously private record
+as a draft), with 163 media references. Existing media URLs are retained; choose
+a Media upload in a gallery row to replace its URL. Supabase originals remain
+untouched as a backup. Frontend editing redirects to Payload, and legacy project
+write endpoints reject changes. Newsletter drafts can have their own excerpt;
+they no longer overwrite the source post. Workshop grids and story generation
+also read Payload.
+
+Migration tools:
+
+- Frontend: `node scripts/export-showcases-for-payload.mjs .migration-backups/showcases-complete.json`
+  exports source records, references and public author names to an ignored file
+  with permissions 0600. It refuses to overwrite an existing export.
+- CMS repository: run `scripts/import-showcase-posts.mjs <absolute-export-path>`
+  using the Payload CLI and `.env.development.local`. It accepts only the local
+  `konglo_cms_workareas_local` database, backs up existing posts under
+  `.db-backups`, and skips already imported IDs so subsequent CMS edits survive.
+- CMS repository: `scripts/verify-showcase-posts.mjs <absolute-export-path>`
+  verifies source content, media order, links, status and anonymous draft access.
+- Frontend: `node --test scripts/payload-showcases.test.mjs scripts/payload-pages.test.mjs`.
+
+This migration has only been applied locally. Production requires a reviewed
+schema migration and a separate import; the guarded local scripts cannot write
+to the production database. A rollback can restore the previous frontend reader
+without deleting CMS posts because the Supabase source records were retained.
+
+### Legacy news archive
+
+The 101 public articles linked by the 13 archive pages at
+`https://konglomerat.org/aktuelles` are imported locally as `posts` with
+`sourceType: legacy-news`. They are available under `/showcase?ansicht=archiv`;
+the default showcase view and workshop project grids retain the existing
+workshop projects. In Payload, filter Beiträge by Herkunft → Legacy-News.
+The `Beitragsdaten` tab contains the original URL, import date and source date
+label, alongside the editable gallery, tags and excerpt.
+
+Original article text, links and photo credits are retained as editable rich
+text. The 376 image references are grouped in galleries and now use files from
+the Payload Media collection. Photos live on `media.konglomerat.org`; SVG graphics
+use Payload's own persistent file storage. The original files were
+copied with SHA-256 verification; gallery entries use Media relationships and
+their old URL fallback is cleared. Six source articles lack a day/month date: their
+source year is displayed explicitly, with January 1 used only for sorting.
+Imported articles receive no automatic social-media consent.
+
+`scripts/export-legacy-news.py` crawls the public archive and saves source HTML
+and `export.json` under the ignored `.migration-backups/legacy-news` directory.
+It requires `beautifulsoup4` and `markdownify` in a Python virtual environment.
+In the CMS repository, run `scripts/import-legacy-news.mjs <export.json>` and
+`scripts/verify-legacy-news.mjs <export.json>` via the Payload CLI with explicit
+local environment overrides, as above. Import is additive and idempotent by
+original URL, preserves later CMS edits, backs up existing posts, and refuses
+non-local databases. The original website is never modified. The prepared
+contents and Media relationships were subsequently merged into the shared
+production CMS database on 2026-11-22. The frontend deployment is independent.
+
+The CMS script `scripts/import-legacy-news-media.mjs` copies the archive images
+into the configured Openinary storage (SVGs into Payload's file storage) and links them to the imported posts. It
+requires the existing Openinary credentials and refuses non-local databases.
+`sample` transfers one image without editing posts. The migration keeps original
+bytes, creates CMS thumbnails, deduplicates by content hash, and checkpoints
+source URLs, checksums and Media IDs under `.db-backups/legacy-news-media`.
+Backups include the previous post galleries and downloaded originals. A retry
+reuses completed uploads; posts change only after successful transfer checks,
+and concurrent gallery edits cause an abort instead of being overwritten.
+`scripts/verify-legacy-news-media.mjs <export.json>` checks all public Media
+relationships and confirms that no gallery still depends on the old server.
+The source link to each historical article remains intentionally available.
+When deploying the migrated database, also transfer Payload's persistent media
+directory for locally stored formats such as SVG; Openinary files already live
+in the shared media storage.

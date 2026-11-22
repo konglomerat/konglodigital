@@ -11,12 +11,11 @@ import heroHelloImage from "../../../hero-hello.jpg";
 import MediaLightboxGallery from "../../components/MediaLightboxGallery";
 import PageTitle from "../../components/PageTitle";
 import ShareButton from "../../components/ShareButton";
-import ShowcaseDeleteButton from "../ShowcaseDeleteButton";
+import PayloadRichText from "../../werkbereiche/PayloadRichText";
 import type { Locale } from "@/i18n/config";
 import { getServerI18n } from "@/i18n/server";
 import { localizePathname } from "@/i18n/config";
 import { buildShowcasePath } from "@/lib/showcase-path";
-import { renderSimpleMarkdown } from "@/lib/simple-markdown";
 import { getServerAccess, getServerSession } from "@/lib/server-session";
 import { can } from "@/lib/access/access";
 import {
@@ -233,12 +232,7 @@ export default async function ShowcaseDetailPage({
     redirect(canonicalPath);
   }
 
-  // Eigene Showcases darf jeder bearbeiten und löschen, fremde nur mit der
-  // Rolle Showcase.
-  const canEdit = Boolean(
-    user && (showcase.ownerId === user.id || can(access, "showcase.edit")),
-  );
-  const canDelete = canEdit;
+  const canEdit = Boolean(user && can(access, "backend.login"));
   const heroMedia =
     showcase.images?.filter(
       (media): media is string => typeof media === "string",
@@ -248,7 +242,6 @@ export default async function ShowcaseDetailPage({
       ? getSupabaseRenderedImageUrl(mediaUrl, { width: 1600 })
       : mediaUrl,
   );
-  const renderedMarkdown = renderSimpleMarkdown(showcase.description ?? "");
   const hasTags = Boolean(showcase.tags && showcase.tags.length > 0);
   const hasShowcaseLinks = Boolean(
     showcase.showcaseLinks && showcase.showcaseLinks.length > 0,
@@ -256,7 +249,7 @@ export default async function ShowcaseDetailPage({
   const hasRelatedResources = Boolean(
     showcase.relatedResources && showcase.relatedResources.length > 0,
   );
-  const publishedDateLabel = formatDate(
+  const publishedDateLabel = (showcase.isLegacyNews ? showcase.legacyDateLabel : null) || formatDate(
     showcase.publishDate ?? showcase.createdAt,
   );
   const updatedDateLabel = formatDate(showcase.updatedAt ?? showcase.createdAt);
@@ -286,10 +279,10 @@ export default async function ShowcaseDetailPage({
       <header className="space-y-4">
         <PageTitle
           backLink={{
-            href: localizePathname("/showcase", locale),
+            href: `${localizePathname("/showcase", locale)}${showcase.isLegacyNews ? "?ansicht=archiv" : ""}`,
             label: tx("Zur Übersicht", "de"),
           }}
-          eyebrow={showcase.workshopResource?.name ?? tx("Beitrag", "de")}
+          eyebrow={showcase.isLegacyNews ? tx("Legacy-News · Archiv", "de") : showcase.workshopResource?.name ?? tx("Beitrag", "de")}
           eyebrowClassName="text-xs tracking-[0.2em] text-muted-foreground"
           title={showcase.name}
           titleClassName="mt-3 max-w-4xl "
@@ -301,9 +294,6 @@ export default async function ShowcaseDetailPage({
                   text={tx("Schau dir diesen Beitrag an.", "de")}
                 />
               ) : null}
-              {canDelete ? (
-                <ShowcaseDeleteButton showcaseId={showcase.id} />
-              ) : null}
             </>
           }
           links={[
@@ -314,7 +304,7 @@ export default async function ShowcaseDetailPage({
                       `/showcase/edit/${showcase.id}`,
                       locale,
                     ),
-                    label: tx("Bearbeiten", "de"),
+                    label: tx("Im CMS bearbeiten", "de"),
                     kind: "primary" as const,
                   },
                 ]
@@ -336,6 +326,13 @@ export default async function ShowcaseDetailPage({
         </div>
       </header>
 
+      {showcase.isLegacyNews && showcase.originalUrl ? (
+        <p className="rounded-lg border border-border bg-muted/30 px-6 py-4 text-sm text-muted-foreground">
+          {tx("Archivartikel von der bisherigen Konglomerat-Webseite. Angaben und Termine entsprechen dem damaligen Stand.", "de")} {" "}
+          <a href={showcase.originalUrl} target="_blank" rel="noreferrer" className="font-semibold underline">{tx("Originalartikel ansehen", "de")}</a>
+        </p>
+      ) : null}
+
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,0.72fr)] lg:items-start">
         <article className="space-y-8">
           <MediaLightboxGallery
@@ -351,14 +348,7 @@ export default async function ShowcaseDetailPage({
           />
 
           <section className="px-6 py-2 md:px-8">
-            <div
-              className="prose prose-zinc max-w-none prose-headings:font-semibold prose-a:text-primary prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-primary prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5 prose-blockquote:border-l-4 prose-blockquote:border-input prose-blockquote:pl-4"
-              dangerouslySetInnerHTML={{
-                __html:
-                  renderedMarkdown ||
-                  `<p>${tx("Für diesen Beitrag wurde noch keine Beschreibung hinterlegt.", "de")}</p>`,
-              }}
-            />
+            {showcase.richText ? <PayloadRichText data={showcase.richText} /> : <p>{tx("Für diesen Beitrag wurde noch keine Beschreibung hinterlegt.", "de")}</p>}
           </section>
 
           {hasTags ? (

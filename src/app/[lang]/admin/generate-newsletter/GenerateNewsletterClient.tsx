@@ -156,10 +156,7 @@ type NewsletterDraftsApiResponse = {
   draft?: NewsletterDraftRecord;
 };
 
-type ProjectExcerptSaveState = {
-  kind: "saving" | "saved" | "error";
-  message: string;
-};
+
 
 const STORAGE_KEY = "konglodigital.newsletter.config.v1";
 const MAX_SELECTED_SHOWCASES = 24;
@@ -565,12 +562,6 @@ export default function GenerateNewsletterClient({
   const [isConfigReady, setIsConfigReady] = useState(false);
   const [imagePositionSession, setImagePositionSession] =
     useState<ImagePositionSession | null>(null);
-  const [projectExcerptSaveStates, setProjectExcerptSaveStates] = useState<
-    Record<string, ProjectExcerptSaveState>
-  >({});
-  const projectExcerptSaveTimers = useRef<Map<string, number>>(new Map());
-  const projectExcerptLatestValues = useRef<Map<string, string>>(new Map());
-  const projectExcerptSavesInFlight = useRef<Set<string>>(new Set());
   const draggedItemId = useRef<string | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
   const previewResizeObserver = useRef<ResizeObserver | null>(null);
@@ -762,9 +753,6 @@ export default function GenerateNewsletterClient({
 
   useEffect(
     () => () => {
-      projectExcerptSaveTimers.current.forEach((timer) =>
-        window.clearTimeout(timer),
-      );
       previewResizeObserver.current?.disconnect();
     },
     [],
@@ -970,90 +958,6 @@ export default function GenerateNewsletterClient({
           : item,
       ),
     );
-  };
-
-  const persistShowcaseExcerpt = async (showcaseId: string) => {
-    if (projectExcerptSavesInFlight.current.has(showcaseId)) return;
-    const excerpt = projectExcerptLatestValues.current.get(showcaseId);
-    if (excerpt === undefined) return;
-
-    projectExcerptSavesInFlight.current.add(showcaseId);
-    try {
-      const response = await fetch("/api/admin/newsletter/project-excerpt", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showcaseId, excerpt }),
-      });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      if (!response.ok) {
-        throw new Error(
-          data.error ?? "Beitragstext konnte nicht gespeichert werden.",
-        );
-      }
-      if (projectExcerptLatestValues.current.get(showcaseId) === excerpt) {
-        setProjectExcerptSaveStates((current) => ({
-          ...current,
-          [showcaseId]: {
-            kind: "saved",
-            message: "Im Beitrag gespeichert.",
-          },
-        }));
-      }
-    } catch (error) {
-      if (projectExcerptLatestValues.current.get(showcaseId) === excerpt) {
-        setProjectExcerptSaveStates((current) => ({
-          ...current,
-          [showcaseId]: {
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Beitragstext konnte nicht gespeichert werden.",
-          },
-        }));
-      }
-    } finally {
-      projectExcerptSavesInFlight.current.delete(showcaseId);
-      if (projectExcerptLatestValues.current.get(showcaseId) !== excerpt) {
-        void persistShowcaseExcerpt(showcaseId);
-      }
-    }
-  };
-
-  const updateShowcaseExcerpt = (
-    itemId: string,
-    showcaseId: string,
-    value: string,
-  ) => {
-    const excerpt = value.slice(0, 5_000);
-    updateShowcaseOptions(itemId, { excerpt });
-    projectExcerptLatestValues.current.set(showcaseId, excerpt);
-    setProjectExcerptSaveStates((current) => ({
-      ...current,
-      [showcaseId]: {
-        kind: "saving",
-        message: "Wird im Beitrag gespeichert …",
-      },
-    }));
-
-    const previousTimer = projectExcerptSaveTimers.current.get(showcaseId);
-    if (previousTimer !== undefined) window.clearTimeout(previousTimer);
-    const timer = window.setTimeout(() => {
-      projectExcerptSaveTimers.current.delete(showcaseId);
-      void persistShowcaseExcerpt(showcaseId);
-    }, 650);
-    projectExcerptSaveTimers.current.set(showcaseId, timer);
-  };
-
-  const flushShowcaseExcerpt = (showcaseId: string) => {
-    const timer = projectExcerptSaveTimers.current.get(showcaseId);
-    if (timer !== undefined) {
-      window.clearTimeout(timer);
-      projectExcerptSaveTimers.current.delete(showcaseId);
-    }
-    void persistShowcaseExcerpt(showcaseId);
   };
 
   const openImagePositionDialog = (
@@ -1804,12 +1708,6 @@ export default function GenerateNewsletterClient({
                           <div className="space-y-2 sm:col-span-2 xl:col-span-4">
                             <Textarea
                             label="Newslettertext / Excerpt (Markdown)"
-                            error={
-                              projectExcerptSaveStates[showcase.id]?.kind ===
-                              "error"
-                                ? projectExcerptSaveStates[showcase.id].message
-                                : undefined
-                            }
                             value={item.options.excerpt}
                             rows={5}
                             maxLength={5_000}
@@ -1818,28 +1716,14 @@ export default function GenerateNewsletterClient({
                               "Kurzen Beitragstext für den Newsletter eingeben …"
                             }
                             onChange={(event) =>
-                              updateShowcaseExcerpt(
-                                item.id,
-                                showcase.id,
-                                event.target.value,
-                              )
+                              updateShowcaseOptions(item.id, { excerpt: event.target.value.slice(0, 5_000) })
                             }
-                            onBlur={() => flushShowcaseExcerpt(showcase.id)}
                           />
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                               <span>
-                                Änderungen erscheinen live in der Vorschau und
-                                werden am Beitrag gespeichert.
+                                Dieser Text gilt für diesen Newsletter und wird mit dem Entwurf gespeichert. Den Grundtext bearbeitest du im CMS.
                               </span>
-                              <span aria-live="polite" className="font-semibold">
-                                {projectExcerptSaveStates[showcase.id]?.kind ===
-                                "saving"
-                                  ? projectExcerptSaveStates[showcase.id].message
-                                  : projectExcerptSaveStates[showcase.id]?.kind ===
-                                      "saved"
-                                    ? projectExcerptSaveStates[showcase.id].message
-                                    : null}
-                              </span>
+                              <a className="font-semibold underline" href={`/showcase/edit/${showcase.id}`} target="_blank" rel="noreferrer">Beitrag im CMS bearbeiten</a>
                             </div>
                           </div>
                           <NativeSelect

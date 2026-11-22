@@ -22,6 +22,7 @@ import PayloadPageContent, {
   payloadPageMetadata,
 } from "../components/PayloadPageContent";
 import VereinCalendar, { VereinCalendarSkeleton } from "./VereinCalendar";
+import styles from "./VereinPage.module.css";
 
 // Die PDFs liegen unter public/dokumente/ und öffnen in einem neuen Tab.
 const WICHTIGE_DOKUMENTE = [
@@ -375,7 +376,7 @@ export default async function VereinPage() {
   if (!page) return <StaticVereinPage />;
 
   return (
-    <div>
+    <div className={page.layout?.[0]?.blockType === "mediaBlock" ? styles.photoIntro : undefined}>
       <PayloadPageContent page={page} />
       {/* Der Kalender bleibt ein Live-Baustein und folgt automatisch auf die
           redaktionell gepflegten Blöcke der Vereinsseite. */}

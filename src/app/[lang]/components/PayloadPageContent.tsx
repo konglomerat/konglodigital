@@ -7,6 +7,7 @@ import {
 
 import PageTitle from "./PageTitle";
 import PayloadBlocks, { PayloadHero } from "../werkbereiche/PayloadBlocks";
+import PageEditor from "./page-editor/PageEditor";
 
 export function payloadPageMetadata(
   page: PayloadPage | null,
@@ -27,18 +28,21 @@ export function payloadPageMetadata(
 export default function PayloadPageContent({
   page,
   showTitle = "withoutHero",
+  backLink,
 }: {
   page: PayloadPage;
   showTitle?: "always" | "never" | "withoutHero";
+  backLink?: { href: string; label: string };
 }) {
   const hasHero = Boolean(page.hero && page.hero.type !== "none");
   const shouldShowTitle =
     showTitle === "always" || (showTitle === "withoutHero" && !hasHero);
 
   return (
-    <article>
+    <PageEditor key={page.id} pageId={page.id}><article>
       {shouldShowTitle ? (
         <PageTitle
+          backLink={backLink}
           title={page.title}
           subTitle={page.meta?.description || undefined}
           className="mb-8"
@@ -46,6 +50,6 @@ export default function PayloadPageContent({
       ) : null}
       <PayloadHero hero={page.hero} />
       <PayloadBlocks blocks={page.layout} />
-    </article>
+    </article></PageEditor>
   );
 }

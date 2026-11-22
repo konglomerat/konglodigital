@@ -37,6 +37,7 @@ export const WERKBEREICHE: Werkbereich[] = [
       "Digitaldruck, Plotten und Weiterverarbeitung für Plakate, Hefte und Aushänge.",
     mark: "printshop",
     markExt: "svg",
+    inaktiv: true,
   },
   {
     slug: "neuweltbib",
@@ -130,7 +131,7 @@ export const WERKBEREICHE: Werkbereich[] = [
     slug: "cnc",
     name: "CNC",
     description:
-      "CNC-Fräsen für Holz, Kunststoff und Aluminium — Nutzung nach Einweisung.",
+      "CNC-Fräsen für Holz und Kunststoff — Nutzung nach Einweisung.",
     mark: "cnc",
     markExt: "svg",
   },

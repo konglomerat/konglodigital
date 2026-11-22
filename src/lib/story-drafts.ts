@@ -1,3 +1,5 @@
+import { loadAllShowcases, loadShowcaseByIdentifier } from "@/app/[lang]/showcase/showcase-data";
+import { showcaseAsResourceRow } from "@/lib/payload-showcases";
 import {
   DEFAULT_LOCALE,
   localizePathname,
@@ -12,7 +14,6 @@ import {
 import { getSupabaseRenderedImageUrl, isImageUrl } from "@/lib/resource-media";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
-  SHOWCASE_RESOURCE_TYPE,
   isShowcaseResourceType,
 } from "@/lib/showcase-resource-type";
 
@@ -160,43 +161,6 @@ const getFirstName = (value: string | null) => {
 
 const STORY_SELECTABLE_COLUMNS =
   "id, pretty_title, owner_id, name, description, image, images, type, social_media_consent, updated_at, created_at";
-const STORY_SHOWCASE_PAGE_SIZE = 200;
-
-const loadAllStoryShowcaseRows = async (
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-) => {
-  const showcases: StorySelectableRow[] = [];
-  let offset = 0;
-
-  while (true) {
-    const { data, error, count } = await supabase
-      .from("resources")
-      .select(STORY_SELECTABLE_COLUMNS, { count: "exact" })
-      .ilike("type", SHOWCASE_RESOURCE_TYPE)
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true })
-      .range(offset, offset + STORY_SHOWCASE_PAGE_SIZE - 1);
-
-    if (error) {
-      throw error;
-    }
-
-    const page = (data ?? []) as StorySelectableRow[];
-    showcases.push(...page);
-    offset += page.length;
-
-    if (
-      page.length === 0 ||
-      (count !== null
-        ? offset >= count
-        : page.length < STORY_SHOWCASE_PAGE_SIZE)
-    ) {
-      return showcases;
-    }
-  }
-};
-
 export const loadStorySelectableItems = async (limit = 400) => {
   const supabase = createSupabaseAdminClient();
   const recentItemLimit = Math.max(Math.trunc(limit), 1);
@@ -204,11 +168,12 @@ export const loadStorySelectableItems = async (limit = 400) => {
     supabase
       .from("resources")
       .select(STORY_SELECTABLE_COLUMNS)
+      .or("type.is.null,type.not.ilike.project")
       .order("updated_at", { ascending: false })
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
       .range(0, recentItemLimit - 1),
-    loadAllStoryShowcaseRows(supabase),
+    loadAllShowcases().then(rows => rows.map(showcaseAsResourceRow)),
   ]);
 
   if (recentResult.error) {
@@ -244,12 +209,28 @@ export const loadStorySource = async (
   itemId: string,
   locale = DEFAULT_LOCALE,
 ) => {
+  const showcase = await loadShowcaseByIdentifier(itemId);
+  if (showcase) {
+    const imageUrls = [...new Set([showcase.image, ...(showcase.images ?? [])].filter((url): url is string => Boolean(url) && isImageUrl(url!)))];
+    return {
+      id: showcase.id, prettyTitle: showcase.prettyTitle ?? null, name: showcase.name,
+      description: showcase.description ?? null, image: imageUrls[0] ?? null,
+      contentKind: "showcase", resourceType: "project", socialMediaConsent: showcase.socialMediaConsent === true,
+      updatedAt: showcase.updatedAt, authorFirstName: showcase.author?.name.split(/\s+/)[0] ?? null,
+      workshopName: showcase.workshopResource?.name ?? null, tags: showcase.tags ?? [], imageUrls,
+      path: localizePathname(buildShowcasePath(showcase), normalizeLocale(locale)), sourceLabel: "Beitrag",
+      downloadBaseName: slugifyResourceTitle(showcase.prettyTitle || showcase.name, `story-${showcase.id}`),
+    } satisfies StorySource;
+  }
+  // Numeric IDs belong to Payload. Never fall back to a stale migrated project.
+  if (!/^[0-9a-f-]{36}$/i.test(itemId)) return null;
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("resources")
     .select(
       "id, pretty_title, owner_id, name, description, image, images, type, tags, social_media_consent, workshop_resource_id, updated_at, created_at",
     )
+    .or("type.is.null,type.not.ilike.project")
     .eq("id", itemId)
     .maybeSingle();
 

@@ -9,6 +9,7 @@ import {
   canEditResource,
 } from "@/lib/access/resource-access";
 import { loadUserAccess } from "@/lib/access/server";
+import { isShowcaseResourceType } from "@/lib/showcase-resource-type";
 
 type ResolveMode = "pick" | "merge";
 
@@ -138,6 +139,9 @@ export const POST = async (request: NextRequest) => {
 
   if (!keepResource || !removeResource) {
     return NextResponse.json({ error: "Resource not found." }, { status: 404 });
+  }
+  if (isShowcaseResourceType(keepResource.type) || isShowcaseResourceType(removeResource.type)) {
+    return NextResponse.json({ error: "Beiträge werden jetzt im Payload-CMS bearbeitet." }, { status: 409 });
   }
 
   const access = await loadUserAccess(supabase, data.user);

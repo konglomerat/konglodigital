@@ -1,0 +1,3 @@
+
+# Treat published documents as binary assets.
+*.pdf binary

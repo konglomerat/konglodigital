@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+import InventoryBlock from "./InventoryBlock";
+import MediaGallery, { type GalleryItem } from "./MediaGallery";
+import InventoryPlaceMap from "./InventoryPlaceMap";
+import { getInventoryPlaceIdentifier } from "@/lib/inventory-place";
 
 import Button from "@/components/knglmrt/Button";
 import NewsSection from "@/app/NewsSection";
@@ -105,39 +109,32 @@ const GRID_COLUMNS = {
 } as const;
 
 function GalleryBlock({ block }: { block: PayloadBlock }) {
-  const items = (block.items ?? []) as ExtendedItem[];
+  const items = ((block.items ?? []) as ExtendedItem[]).flatMap((item) => {
+    const media = getMedia(item.media);
+    const src = resolvePayloadMediaUrl(media?.url);
+    if (!media || !src) return [];
+    const sizes = media.sizes as Record<string, { url?: string; width?: number }> | undefined;
+    const variants = ["small", "medium", "large", "xlarge"]
+      .map((size) => sizes?.[size])
+      .filter((size) => size?.url && size.width);
+    const poster = getMedia(item.poster);
+    return [{
+      src,
+      preview: resolvePayloadMediaUrl(sizes?.medium?.url) || src,
+      srcSet: variants.map((size) => `${resolvePayloadMediaUrl(size!.url)} ${size!.width}w`).join(", ") || undefined,
+      alt: media.alt || item.caption || "Einblick in die Werkstatt",
+      caption: item.caption || undefined,
+      video: Boolean(media.mimeType?.startsWith("video/")),
+      poster: resolvePayloadMediaUrl(poster?.url) || undefined,
+      width: item.width as GalleryItem["width"],
+      mediaWidth: media.width || undefined,
+      mediaHeight: media.height || undefined,
+    }];
+  });
   return (
-    <section className="knglmrt-border-t py-6">
+    <section className="knglmrt-border-t py-6" data-media-gallery>
       <Intro block={block} />
-      <div className={`grid gap-4 ${GRID_COLUMNS[block.columnCount ?? "3"]}`}>
-        {items.map((item, index) => {
-          const media = getMedia(item.media);
-          const src = resolvePayloadMediaUrl(media?.url);
-          if (!src) return null;
-          return (
-            <figure key={media?.id ?? index} className="min-w-0">
-              {media?.mimeType?.startsWith("video/") ? (
-                <video controls className="aspect-[4/3] w-full knglmrt-border object-cover" src={src}>
-                  <track kind="captions" />
-                </video>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={src}
-                  alt={media?.alt ?? item.caption ?? ""}
-                  loading="lazy"
-                  className="aspect-[4/3] w-full knglmrt-border object-cover"
-                />
-              )}
-              {item.caption ? (
-                <figcaption className="mt-2 text-sm text-muted-foreground">
-                  {item.caption}
-                </figcaption>
-              ) : null}
-            </figure>
-          );
-        })}
-      </div>
+      <MediaGallery items={items} columns={block.columnCount ?? "3"} />
     </section>
   );
 }
@@ -225,12 +222,16 @@ function EmbedBlock({ block }: { block: PayloadBlock }) {
 
 function ContactBlock({ block }: { block: PayloadBlock }) {
   const mapHref = safeHref(block.mapUrl);
+  const inventoryPlace = getInventoryPlaceIdentifier(block.mapUrl);
+  const hasContact = Boolean(block.address || block.email || block.phone);
+  const hasLinks = Boolean((mapHref && !inventoryPlace) || block.links?.some(entry => resolvePayloadLinkHref(entry.link)));
   return (
     <section className="knglmrt-border-t py-6">
       {block.heading ? <h2 className="mb-4">{block.heading}</h2> : null}
       <Intro block={block} />
-      <div className="grid gap-5 md:grid-cols-2">
-        <address className="not-italic knglmrt-border bg-card p-5">
+      {inventoryPlace ? <Suspense fallback={<p>Karte wird geladen …</p>}><InventoryPlaceMap identifier={inventoryPlace} /></Suspense> : null}
+      {hasContact || hasLinks ? <div className={`grid gap-5 ${inventoryPlace ? "mt-5" : ""} ${hasContact && hasLinks ? "md:grid-cols-2" : ""}`}>
+        {hasContact ? <address className="not-italic knglmrt-border bg-card p-5">
           {block.address ? (
             <p className="mb-3 whitespace-pre-line">{block.address}</p>
           ) : null}
@@ -247,9 +248,9 @@ function ContactBlock({ block }: { block: PayloadBlock }) {
               {block.phone}
             </a>
           ) : null}
-        </address>
-        <div className="flex flex-col justify-center gap-3 bg-primary-soft p-5">
-          {mapHref ? (
+        </address> : null}
+        {hasLinks ? <div className="flex flex-col justify-center gap-3 bg-primary-soft p-5">
+          {mapHref && !inventoryPlace ? (
             <Button href={mapHref} kind="primary" target="_blank" rel="noreferrer">
               Karte öffnen
             </Button>
@@ -269,8 +270,8 @@ function ContactBlock({ block }: { block: PayloadBlock }) {
               </Button>
             );
           })}
-        </div>
-      </div>
+        </div> : null}
+      </div> : null}
     </section>
   );
 }
@@ -387,13 +388,13 @@ function CardGridBlock({ block }: { block: PayloadBlock }) {
   );
 }
 
-function AppSlotBlock({ block }: { block: PayloadBlock }) {
+function AppSlotBlock({ block, werkbereich, sidebar }: { block: PayloadBlock; werkbereich?: string; sidebar?: boolean }) {
   switch (block.slot) {
     case "calendarUpcoming":
       return (
-        <section className="knglmrt-border-t py-6">
-          <Suspense fallback={<VereinCalendarSkeleton />}>
-            <VereinCalendar />
+        <section className="knglmrt-border-t py-6" data-calendar-block>
+          <Suspense fallback={<VereinCalendarSkeleton werkbereich={werkbereich} compact={sidebar} />}>
+            <VereinCalendar werkbereich={werkbereich} compact={sidebar} />
           </Suspense>
         </section>
       );
@@ -421,8 +422,10 @@ function AppSlotBlock({ block }: { block: PayloadBlock }) {
   }
 }
 
-export default function PayloadExtendedBlock({ block }: { block: PayloadBlock }) {
+export default function PayloadExtendedBlock({ block, werkbereich, sidebar }: { block: PayloadBlock; werkbereich?: string; sidebar?: boolean }) {
   switch (block.blockType) {
+    case "inventory":
+      return <InventoryBlock block={block} />;
     case "downloads":
       return <DownloadsBlock block={block} />;
     case "gallery":
@@ -440,7 +443,7 @@ export default function PayloadExtendedBlock({ block }: { block: PayloadBlock })
     case "cardGrid":
       return <CardGridBlock block={block} />;
     case "appSlot":
-      return <AppSlotBlock block={block} />;
+      return <AppSlotBlock block={block} werkbereich={werkbereich} sidebar={sidebar} />;
     default:
       return null;
   }

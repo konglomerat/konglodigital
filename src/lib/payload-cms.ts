@@ -56,6 +56,8 @@ export type PayloadContentColumn = PayloadRecord & {
 };
 
 export type PayloadBlock = PayloadRecord & {
+  contentSource?: "inventory" | "showcase" | null;
+  tag?: string | null;
   location?: string | null;
   access?: string | null;
   hours?: string | null;
@@ -112,6 +114,7 @@ export type PayloadPage = PayloadRecord & {
     | null;
   id: string | number;
   layout?: PayloadBlock[] | null;
+  sidebarLayout?: PayloadBlock[] | null;
   meta?:
     | (PayloadRecord & {
         description?: string | null;
@@ -179,9 +182,9 @@ const fetchPayloadJson = async <T>(url: URL): Promise<T | null> => {
   try {
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["payload-cms"] },
-      // Ein hängendes CMS soll die Seite nicht festhalten: nach fünf
-      // Sekunden greift der statische Inhalt (wie in payload-navigation).
+      ...(process.env.NODE_ENV === "development"
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: 60, tags: ["payload-cms"] } }),
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return null;
@@ -302,8 +305,7 @@ export const resolvePayloadLinkHref = (link: PayloadLink | null | undefined) => 
       }
 
       if (relationTo === "posts") {
-        const baseUrl = getPayloadCmsBaseUrl();
-        return baseUrl ? `${baseUrl}/posts/${slug}` : null;
+        return `/showcase/${encodeURIComponent(slug)}`;
       }
     }
   }
