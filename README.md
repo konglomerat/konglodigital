@@ -92,6 +92,15 @@ user. The dashboard is protected by middleware and will redirect to `/login`.
 
 ### Content pages from Payload CMS
 
+The website reads Payload's `redirects` collection at runtime. Exact source paths
+(including `/en/...`) redirect with HTTP 308. Custom targets and populated
+Pages/Posts references are supported; references use the website's `/werkbereiche`
+and `/showcase` routes. Rules refresh within 60 seconds without a rebuild.
+Destination query parameters take precedence over incoming parameters. Redirect
+chains are collapsed, cycles ignored. API/authentication routes, protected pages,
+static assets and non-GET/HEAD requests are excluded. If Payload is unavailable,
+normal routing continues, with a retry after 10 seconds.
+
 The production CMS is `https://backend.konglomerat.org` (editor: `/admin`).
 Since 2026-11-22, the local CMS at `http://localhost:3106` and production share
 the same `konglo_cms` database. Start the CMS with `npm run dev:local` in the
