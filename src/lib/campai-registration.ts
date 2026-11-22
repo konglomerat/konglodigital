@@ -84,7 +84,7 @@ export const DOCUMENT_LINKS = {
     "https://konglomerat.org/_Resources/Persistent/f/f/3/8/ff3887bd0ee99cf3e88de994fad1aff7180c7b4e/181213_Satzung%20Konglomerat%20e.V..pdf",
   feeRules:
     "https://konglomerat.org/_Resources/Persistent/2/7/6/0/276094e20517ea91f16dff9bd4d83cdc52f8ac53/241209_Beitragsordnung.pdf",
-  privacyPolicy: "https://konglomerat.org/datenschutz",
+  privacyPolicy: "/datenschutz",
 } as const;
 
 export type PaymentMethod = "sepaDirectDebit" | "sepaCreditTransfer";
