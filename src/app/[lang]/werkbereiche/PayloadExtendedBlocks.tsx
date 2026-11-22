@@ -4,6 +4,8 @@ import MediaGallery, { type GalleryItem } from "./MediaGallery";
 import InventoryPlaceMap from "./InventoryPlaceMap";
 import { getInventoryPlaceIdentifier } from "@/lib/inventory-place";
 
+import NewsletterSignup from "@/components/NewsletterSignup";
+import { RAPIDMAIL_SIGNUP_URL } from "@/lib/rapidmail-signup";
 import Button from "@/components/knglmrt/Button";
 import NewsSection from "@/app/NewsSection";
 import ResourceOfTheMonthSection from "@/app/ResourceOfTheMonthSection";
@@ -194,10 +196,14 @@ const ASPECT_RATIO = {
 function EmbedBlock({ block }: { block: PayloadBlock }) {
   const src = safeHref(block.url);
   if (!src || !src.startsWith("https://")) return null;
+  const url = new URL(src);
+  const isNewsletterForm = block.kind === "iframe" && url.origin + url.pathname === RAPIDMAIL_SIGNUP_URL;
   return (
     <section className="knglmrt-border-t py-6">
       {block.title ? <h2 className="mb-4">{block.title}</h2> : null}
-      {block.kind === "audio" ? (
+      {isNewsletterForm ? (
+        <NewsletterSignup />
+      ) : block.kind === "audio" ? (
         <audio controls className="w-full" src={src} />
       ) : block.kind === "video" ? (
         <video controls className="w-full knglmrt-border" src={src}>

@@ -1,5 +1,12 @@
 {
   "konglodigital": {
+    "Formular bei Rapidmail öffnen": "Open the form on Rapidmail",
+    "Die Anmeldung hat nicht geklappt. Prüfe deine Eingaben oder versuche es später noch einmal.": "We couldn’t complete your subscription. Check your details or try again later.",
+    "Fast geschafft! Schau in dein Postfach und bestätige deine Anmeldung über den Link in der E-Mail.": "Almost there! Check your inbox and follow the link in the email to confirm your subscription.",
+    "Mit deiner Anmeldung erhältst du den Newsletter des Konglomerat e.V. über Rapidmail. Du kannst dich jederzeit über den Link im Newsletter abmelden.": "By subscribing, you agree to receive the Konglomerat e.V. newsletter via Rapidmail. You can unsubscribe at any time using the link in each newsletter.",
+    "Nachname": "Last name",
+    "Vorname": "First name",
+    "Namen hinzufügen (optional)": "Add your name (optional)",
     "Einmal im Monat Neues aus den offenen Werkstätten per E-Mail.": "Get monthly news from the open workshops by email.",
     "Newsletter abonnieren": "Subscribe to the newsletter",
     ", wenn du eine andere E-Mail-Adresse nutzen möchtest.": "",

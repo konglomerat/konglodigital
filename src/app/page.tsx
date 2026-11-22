@@ -4,6 +4,7 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import type { Metadata } from "next";
 import Divider from "@/components/knglmrt/Divider";
 import Button from "@/components/knglmrt/Button";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import Face from "@/components/knglmrt/Face";
 import ShowcaseOfTheMonthSection from "./ShowcaseOfTheMonthSection";
 import ResourceOfTheMonthSection from "./ResourceOfTheMonthSection";
@@ -39,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // ist. Kein Skelett — leere Bereiche verschwinden ganz, und sie liegen
 // ohnehin unterhalb der ersten Bildschirmhöhe.
 async function HomeFeeds({ page }: { page?: PayloadPage }) {
-  const { tx, locale } = await getServerI18n();
+  const { tx } = await getServerI18n();
   return (
     <>
       {!page || !payloadPageHasAppSlot(page, "showcaseOfMonth") ? (
@@ -52,14 +53,12 @@ async function HomeFeeds({ page }: { page?: PayloadPage }) {
           <NewsSection />
         </Suspense>
       ) : null}
-      <section className="knglmrt-border-t flex flex-wrap items-center justify-between gap-4 bg-primary-soft px-6 py-7 md:px-10">
+      <section className="knglmrt-border-t grid gap-6 bg-primary-soft px-6 py-7 md:grid-cols-[1fr_1.5fr] md:px-10">
         <div>
           <h2>{tx("Newsletter", "de")}</h2>
           <p>{tx("Einmal im Monat Neues aus den offenen Werkstätten per E-Mail.", "de")}</p>
         </div>
-        <Button href={localizePathname("/newsletter", locale)} kind="primary" icon={faArrowRight} iconPosition="right">
-          {tx("Newsletter abonnieren", "de")}
-        </Button>
+        <NewsletterSignup />
       </section>
       {!page || !payloadPageHasAppSlot(page, "resourceOfMonth") ? (
         <Suspense fallback={null}>
