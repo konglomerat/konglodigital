@@ -18,8 +18,8 @@ export const DEFAULT_HEADER_LINKS: SiteNavItem[] = [
 ];
 
 export const DEFAULT_FOOTER_LINKS: SiteNavItem[] = [
-  { href: "https://konglomerat.org/impressum", label: "Impressum", newTab: true },
-  { href: "https://konglomerat.org/datenschutz", label: "Datenschutz", newTab: true },
+  { href: "/impressum", label: "Impressum" },
+  { href: "/datenschutz", label: "Datenschutz" },
   { href: "https://support.konglomerat.org", label: "Support", newTab: true },
   { href: "/design-system", label: "Design System" },
 ];

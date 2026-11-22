@@ -9,8 +9,8 @@ const menus = {
     { label: 'Hier entstanden', url: '/showcase' },
   ],
   footer: [
-    { label: 'Impressum', url: 'https://konglomerat.org/impressum', newTab: true },
-    { label: 'Datenschutz', url: 'https://konglomerat.org/datenschutz', newTab: true },
+    { label: 'Impressum', url: '/impressum' },
+    { label: 'Datenschutz', url: '/datenschutz' },
     { label: 'Support', url: 'https://support.konglomerat.org', newTab: true },
     { label: 'Design System', url: '/design-system' },
   ],
