@@ -10,6 +10,7 @@ import {
 } from "@/i18n/config";
 import { COMING_SOON_PREFIXES } from "@/lib/coming-soon";
 import { resilientSupabaseFetch } from "@/lib/supabase/fetch";
+import { loadCmsRedirects, resolveCmsRedirect } from "@/lib/cms-redirects";
 
 const protectedPagePrefixes = [
   "/account",
@@ -136,6 +137,24 @@ export async function middleware(request: NextRequest) {
   const { pathname: pathnameWithoutLocalePrefix, localeFromPath } =
     stripLocalePrefix(request.nextUrl.pathname);
   const locale = localeFromPath ?? DEFAULT_LOCALE;
+
+  // Content redirects must not intercept API calls, form submissions or login flows.
+  if (
+    ["GET", "HEAD"].includes(request.method) &&
+    !shouldBypassLocaleHandling(pathnameWithoutLocalePrefix) &&
+    !isPublicPath(pathnameWithoutLocalePrefix) &&
+    !requiresAuthentication(pathnameWithoutLocalePrefix) &&
+    !/^\/(?:api|oauth|registration)(?:\/|$)/.test(pathnameWithoutLocalePrefix)
+  ) {
+    const base = process.env.PAYLOAD_CMS_URL ?? process.env.PAYLOAD_PUBLIC_SERVER_URL ?? process.env.NEXT_PUBLIC_CMS_URL ?? "";
+    const destination = resolveCmsRedirect(new URL(request.url), await loadCmsRedirects(base));
+    if (destination) {
+      const response = NextResponse.redirect(destination, 308);
+      // Browsers/CDNs must re-check editable CMS rules instead of pinning a 308 forever.
+      response.headers.set("Cache-Control", "private, no-store");
+      return response;
+    }
+  }
 
   const authCookies: AuthCookie[] = [];
   let isAuthenticated = false;
