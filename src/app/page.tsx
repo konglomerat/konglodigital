@@ -38,7 +38,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // Startseite steht sofort, die Bereiche folgen, sobald ihre Abfrage fertig
 // ist. Kein Skelett — leere Bereiche verschwinden ganz, und sie liegen
 // ohnehin unterhalb der ersten Bildschirmhöhe.
-function HomeFeeds({ page }: { page?: PayloadPage }) {
+async function HomeFeeds({ page }: { page?: PayloadPage }) {
+  const { tx, locale } = await getServerI18n();
   return (
     <>
       {!page || !payloadPageHasAppSlot(page, "showcaseOfMonth") ? (
@@ -51,6 +52,15 @@ function HomeFeeds({ page }: { page?: PayloadPage }) {
           <NewsSection />
         </Suspense>
       ) : null}
+      <section className="knglmrt-border-t flex flex-wrap items-center justify-between gap-4 bg-primary-soft px-6 py-7 md:px-10">
+        <div>
+          <h2>{tx("Newsletter", "de")}</h2>
+          <p>{tx("Einmal im Monat Neues aus den offenen Werkstätten per E-Mail.", "de")}</p>
+        </div>
+        <Button href={localizePathname("/newsletter", locale)} kind="primary" icon={faArrowRight} iconPosition="right">
+          {tx("Newsletter abonnieren", "de")}
+        </Button>
+      </section>
       {!page || !payloadPageHasAppSlot(page, "resourceOfMonth") ? (
         <Suspense fallback={null}>
           <ResourceOfTheMonthSection />
