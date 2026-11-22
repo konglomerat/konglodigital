@@ -669,7 +669,8 @@ function calendarSection(
   assets: NewsletterAssets,
   theme: NewsletterTheme,
 ): string {
-  const timeZone = normalizeTimeZone(calendar?.timeZone);
+  if (!calendar) return "";
+  const timeZone = normalizeTimeZone(calendar.timeZone);
   const daysAhead = Math.min(31, Math.max(1, Number(calendar?.daysAhead) || 7));
   const calendarUrl =
     normalizeAbsoluteUrl(calendar?.calendarUrl, baseUrl) ??
@@ -836,7 +837,8 @@ function volkshausCalendarSection(
   calendar: NewsletterCalendar | undefined,
   baseUrl: string,
 ): string {
-  const timeZone = normalizeTimeZone(calendar?.timeZone);
+  if (!calendar) return "";
+  const timeZone = normalizeTimeZone(calendar.timeZone);
   const calendarUrl =
     normalizeAbsoluteUrl(calendar?.calendarUrl, baseUrl) ??
     normalizeAbsoluteUrl("https://neuesvolkshaus.de/aktuelles", baseUrl) ??

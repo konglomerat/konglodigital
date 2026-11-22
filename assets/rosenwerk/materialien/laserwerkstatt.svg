@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+ <defs>
+  <pattern id="holes" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#eeeae0"/><circle cx="3" cy="3" r="1.35" fill="#8d8982"/><circle cx="3.2" cy="3.5" r=".85" fill="#524f4b"/></pattern>
+  <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse"><path d="M0 18V0H18" fill="none" stroke="#bbd7bd" stroke-width="1.3"/></pattern>
+  <pattern id="keys" width="21" height="16" patternUnits="userSpaceOnUse"><rect x="1" y="1" width="18" height="13" rx="2" fill="#484d50"/><path d="M5 5h4" stroke="#c0c5c1"/></pattern>
+  <path id="leaf" d="M0 0Q-5-40 13-62Q25-52 20-35L9-28 21-30Q21-12 0 0Z" fill="#37865a"/>
+ </defs>
+ <rect width="1024" height="1024" fill="#e4e1d7"/>
+ <!-- Re-drawn door graphic: red print, circles, mask, palms and trainer. -->
+ <g transform="translate(4 4)">
+  <rect width="372" height="752" fill="#f2eee5"/>
+  <path fill="#ba2844" d="M75 0h251v228l-36 13-41-16-27 18-8-41-38-5-30-55-45-12z"/>
+  <path d="M145 68q22 52 66 55l38-13 20 21-7 8-13-12-26 11 40 21-4 11-51-18-37 33-14-8 24-35-36-4-18-25-14 14-9-8 22-31z" fill="#f8ead8"/>
+  <g fill="#eeeade" stroke="#373234" stroke-width="3"><circle cx="29" cy="103" r="27"/><circle cx="59" cy="151" r="25"/><circle cx="182" cy="47" r="32"/></g>
+  <g fill="#302e32" font-family="sans-serif" text-anchor="middle"><text x="29" y="107" font-size="10">CAFÉ</text><text x="183" y="52" font-size="19">Lpk’s</text></g>
+  <path d="M19 211l80-19 21 44-84 15z" fill="#262638"/><text x="31" y="232" fill="#eed147" font-size="28" font-style="italic" font-weight="bold">SXIN</text>
+  <path d="M103 199q-22-45 17-42 12 0 18 10 18-23 35-9 17 19-26 58z" fill="#237989"/><text x="111" y="184" fill="white" font-size="12">STICKERS</text>
+  <g font-family="serif" font-style="italic"><text x="143" y="274" font-size="89" fill="#b72638">Sale</text><text x="174" y="323" font-size="26" fill="#ae2638">ANTIFA</text></g>
+  <text transform="translate(351 249) rotate(-88)" fill="#2c92b1" stroke="#38324b" stroke-width="1" font-size="49" font-family="sans-serif" font-weight="bold">Petrol</text>
+  <g transform="translate(23 335)" stroke="#604773" stroke-width="5" fill="#e3cccc">
+   <path d="M9 62L2 7l22 16L37 0l8 27 24-14-8 58-5 96-14 24-29-18z"/><path d="M8 64q15-22 28 8 8-28 25-13L50 92l-10-16-11 29-6-25z M17 131l32 3-15 17z"/>
+   <path d="M11 178l41-5 13 15-52 10z" fill="#66517c"/>
+  </g>
+  <g transform="translate(132 353)" stroke="#514359" stroke-width="5" fill="#f1d4c0"><path d="M0 34q-8-28 27-34 35-3 50 26 4 25-18 41l-54-9z"/><circle cx="20" cy="29" r="8"/><circle cx="48" cy="35" r="8"/><path d="M12 51l41 5"/></g>
+  <g transform="translate(185 462)"><circle r="65" fill="#294b67"/><path d="M-48 9l22-47 6 18h38l15-17 16 43-24 23-9-12-8 15-8-12-12 13-3-18-19 3z" fill="#e9debf"/><path d="M-29 4l18 7-10 10zm42 3l18-7-6 16z" fill="#283e50"/></g>
+  <g transform="translate(310 385)" fill="#c8784a" stroke="#783a34" stroke-width="4"><path d="M-27 0h51l-7 43-34-1z"/><path d="M22 6q30-3 14 16l-18 4" fill="none"/><ellipse cy="48" rx="35" ry="5"/></g>
+  <path d="M0 735q40-90 75-59 56-65 89 0l54 56v20H0z" fill="#466b42"/>
+  <g transform="translate(250 683)"><use href="#leaf"/><use href="#leaf" transform="rotate(56)"/><use href="#leaf" transform="rotate(-51)"/><use href="#leaf" transform="translate(24 -47) rotate(28)"/></g>
+  <path d="M264 703l22-30 25 16 50 32 6 13-100 1z" fill="#bc4040" stroke="#733337" stroke-width="4"/>
+  <g font-family="sans-serif" font-weight="bold" fill="#282b32"><text x="20" y="302" font-size="15">DRUCK</text><text x="119" y="603" font-size="32">I</text><text x="158" y="606" font-size="39" fill="#be3345">♥</text><text x="195" y="606" font-size="22">WiFi</text></g>
+ </g>
+ <!-- Pegboard and paper notice -->
+ <rect x="400" y="2" width="620" height="430" fill="url(#holes)"/>
+ <path d="M418 19h85v105h-85z" fill="#fffdf7" stroke="#ccc4b7"/>
+ <g fill="#363333" font-family="sans-serif"><text x="423" y="40" font-size="13" font-weight="bold">3D-DRUCK</text><path d="M424 50h68v2h-68zm0 8h60v2h-60zm0 8h65v2h-65zm0 8h43v2h-43z"/><path d="M427 87h12v12h-12zm23 0h12v12h-12zm-23 18h12v12h-12zm16-6h5v8h-5zm9 7h7v9h-7z"/></g>
+ <!-- Self healing mat -->
+ <rect x="400" y="442" width="620" height="370" fill="#477d73"/><rect x="412" y="453" width="596" height="345" fill="url(#grid)" stroke="#accbb4" stroke-width="2"/>
+ <path d="M414 795l590-336m-430 338 429-246m-585 99 342-195" stroke="#abc7b0" stroke-width="1" fill="none"/>
+ <!-- Shelf labels and laser controls -->
+ <g font-family="sans-serif" font-weight="bold" fill="#242b30" font-size="19">
+  <rect y="782" width="388" height="36" fill="#e99696"/><text x="10" y="807">Bezahl deinen 3D-Druck!</text>
+  <text x="8" y="855">A1 Mini</text><text x="8" y="893">H2D</text><text x="8" y="933">P1S mit AMS</text><text x="8" y="970">P2S mit AMS</text>
+ </g>
+ <rect x="412" y="834" width="285" height="150" rx="6" fill="#292d31"/><rect x="419" y="842" width="271" height="116" fill="url(#keys)"/><rect x="493" y="961" width="95" height="14" rx="2" fill="#505457"/>
+ <rect x="720" y="835" width="283" height="152" rx="6" fill="#202a30"/><rect x="731" y="847" width="89" height="125" fill="#324149"/><g fill="#92a8ac"><path d="M741 860h62v3h-62zm0 14h51v3h-51zm0 14h63v3h-63zm0 14h37v3h-37z"/><path d="M833 858h140v4H833zm0 24h103v3H833zm0 17h117v3H833z"/></g><rect x="916" y="939" width="66" height="23" rx="3" fill="#83a95e"/>
+</svg>

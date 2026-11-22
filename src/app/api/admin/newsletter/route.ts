@@ -1,3 +1,5 @@
+import { cleanNewsletterExcerpt, newsletterExcerptLength, NEWSLETTER_EXCERPT_LIMIT, shortenNewsletterExcerpt } from "@/lib/newsletter-excerpt";
+import { recordNewsletterIssue } from "@/lib/newsletter-draft-records";
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -22,7 +24,6 @@ import {
   type NewsletterItem,
   type NewsletterShowcase,
 } from "@/lib/newsletter-builder";
-import { buildShowcasePath } from "@/lib/showcase-path";
 import { createHtmlZip, createRapidmailDraft } from "@/lib/rapidmail";
 import {
   MAX_NEWSLETTER_GIF_FRAMES,
@@ -38,8 +39,7 @@ import {
 } from "@/lib/resource-media";
 import { can } from "@/lib/access/access";
 import { loadUserAccess } from "@/lib/access/server";
-import { loadShowcaseByIdentifier } from "@/app/[lang]/showcase/showcase-data";
-import { showcaseAsResourceRow } from "@/lib/payload-showcases";
+import { loadNewsletterSources } from "@/lib/newsletter-sources";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export const runtime = "nodejs";
@@ -94,6 +94,7 @@ type NewsletterRequestBody = {
   subject?: unknown;
   intro?: unknown;
   showShowcasesHeading?: unknown;
+  includeCalendar?: unknown;
   items?: unknown;
   showcaseIds?: unknown;
   fromName?: unknown;
@@ -103,6 +104,7 @@ type NewsletterRequestBody = {
   send_at?: unknown;
   status?: unknown;
   design?: unknown;
+  draftName?: unknown;
 };
 
 const ASPECT_DIMENSIONS: Record<
@@ -312,19 +314,6 @@ const resolveShowcaseImage = (
     : getSupabaseRenderedImageUrl(source, { width: 1_080 });
 };
 
-const createExcerpt = (value: string | null | undefined) => {
-  const text = String(value ?? "")
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-    .replace(/^\s{0,3}(?:[-*+] |\d+\. )/gm, "")
-    .replace(/^\s{0,3}>\s?/gm, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!text) return "Noch keine Beschreibung hinterlegt.";
-  return text.length <= 520 ? text : `${text.slice(0, 519).trimEnd()}…`;
-};
-
 const createFilename = (title: string) => {
   const slug = title
     .normalize("NFD")
@@ -416,27 +405,30 @@ export const POST = async (request: NextRequest) => {
     const showcaseItems = rawItems.filter(
       (item): item is RawShowcaseItem => item.type === "showcase",
     );
-    if (showcaseItems.length === 0) {
-      return NextResponse.json(
-        { error: "Wähle mindestens einen Beitrag aus." },
-        { status: 400 },
-      );
-    }
     if (showcaseItems.length > MAX_SHOWCASES) {
       return NextResponse.json(
-        { error: `Es können höchstens ${MAX_SHOWCASES} Beiträge verwendet werden.` },
+        { error: `Es können höchstens ${MAX_SHOWCASES} Inhalte verwendet werden.` },
         { status: 400 },
       );
     }
 
-    const showcaseRecords = await Promise.all(showcaseItems.map(item => loadShowcaseByIdentifier(item.showcaseId)));
-    const showcaseRows = showcaseRecords.filter(record => record !== null).map(showcaseAsResourceRow);
+    const oversized = showcaseItems.find(item => typeof item.excerpt === "string" && newsletterExcerptLength(item.excerpt) > NEWSLETTER_EXCERPT_LIMIT);
+    if (oversized) {
+      return NextResponse.json({ error: `Ein Kurztext überschreitet ${NEWSLETTER_EXCERPT_LIMIT} Zeichen. Kürze ihn im Editor oder übernimm die vorgeschlagene Kurzfassung.` }, { status: 400 });
+    }
+
+    const showcaseRecords = await loadNewsletterSources(showcaseItems.map(item => item.showcaseId));
+    const showcaseRows = showcaseRecords.filter(record => record !== null).map(source => ({
+      id: source.id, name: source.name, excerpt: source.excerpt, description: source.description,
+      images: source.images, image: source.images[0], publish_date: source.publishDate,
+      updated_at: source.updatedAt,
+    }));
     const rowById = new Map(
       ((showcaseRows ?? []) as ShowcaseRow[]).map((row) => [row.id, row]),
     );
     if (rowById.size !== showcaseItems.length) {
       return NextResponse.json(
-        { error: "Mindestens ein ausgewählter Beitrag ist nicht mehr verfügbar." },
+        { error: "Mindestens ein ausgewählter Inhalt ist nicht mehr verfügbar." },
         { status: 400 },
       );
     }
@@ -467,13 +459,7 @@ export const POST = async (request: NextRequest) => {
         ? normalizeNewsletterAspect(item.aspect)
         : "original";
       const defaultHref = new URL(
-        localizePathname(
-          buildShowcasePath({
-            id: row.id,
-            prettyTitle: row.pretty_title ?? null,
-          }),
-          locale,
-        ),
+        localizePathname(showcaseRecords.find(source => source?.id === row.id)!.href, locale),
         baseUrl,
       ).toString();
       const href = textValue(item.href, 2_000) || defaultHref;
@@ -507,13 +493,9 @@ export const POST = async (request: NextRequest) => {
       return {
         id: row.id,
         title: row.name,
-        description: createExcerpt(
-          (typeof item.excerpt === "string"
-            ? item.excerpt.trim().slice(0, 5_000)
-            : "") ||
-            row.excerpt?.trim() ||
-            row.description,
-        ),
+        description: typeof item.excerpt === "string"
+          ? cleanNewsletterExcerpt(item.excerpt)
+          : shortenNewsletterExcerpt(row.excerpt?.trim() || row.description || ""),
         date:
           row.publish_date ?? row.updated_at ?? row.created_at ?? "",
         url: href,
@@ -551,7 +533,7 @@ export const POST = async (request: NextRequest) => {
       intro,
       design: normalizeNewsletterDesign(body.design),
       baseUrl,
-      calendar: await getCalendar(
+      calendar: body.includeCalendar === false ? undefined : await getCalendar(
         new URL(localizePathname("/calendar", locale), baseUrl).toString(),
       ),
       showShowcasesHeading: body.showShowcasesHeading !== false,
@@ -585,12 +567,53 @@ export const POST = async (request: NextRequest) => {
       });
     }
 
+    const archiveIssue = async (action: "export" | "draft", mailingId?: number | null) => {
+      try {
+        await recordNewsletterIssue(data.user.id, {
+          name: textValue(body.draftName, 160) || title,
+          design: normalizeNewsletterDesign(body.design), action, mailingId,
+          sourceIds: showcaseItems.map(item => item.showcaseId),
+          content: {
+            version: 2, title, subject, intro,
+            showShowcasesHeading: body.showShowcasesHeading !== false,
+            includeCalendar: body.includeCalendar !== false, previewViewport: "desktop",
+            fromName: textValue(body.fromName, 160), fromEmail: textValue(body.fromEmail, 320),
+            recipientListId: String(body.recipientListId ?? ""),
+            items: items.map((item, index) => {
+              if (item.type !== "showcase") return { ...item, id: `${item.type}:archive-${index}` };
+              const rendered = showcases.find(source => source.id === item.showcaseId)!;
+              const original = showcaseItems.find(source => source.showcaseId === item.showcaseId)!;
+              const row = rowById.get(item.showcaseId)!;
+              return {
+                id: `showcase:${item.showcaseId}`, type: "showcase", showcaseId: item.showcaseId,
+                options: {
+                  excerpt: rendered.description, layout: rendered.layout, aspect: rendered.aspect,
+                  href: rendered.url, linkText: rendered.linkText, showLink: rendered.showLink,
+                  imageMode: original.imageMode === "gif" ? "gif" : "single",
+                  imageUrl: resolveShowcaseImageSource(row, original.imageUrl),
+                  imagePositions: selectedImagePositions(row, original.imagePositions),
+                  gifImageUrls: selectedGifImages(row, original.gifImageUrls),
+                  gifFrameDurationMs: normalizeGifFrameDuration(original.gifFrameDurationMs),
+                },
+              };
+            }),
+          },
+        });
+        return null;
+      } catch {
+        // The output already exists. Never turn a successful remote creation
+        // into an error that invites the user to create a duplicate mailing.
+        return "Die Ausgabe wurde erstellt, aber ihr Verlauf konnte nicht gespeichert werden. Verwendungsmarkierungen sind möglicherweise unvollständig.";
+      }
+    };
     const zip = createHtmlZip(html);
     if (action === "export") {
+      const warning = await archiveIssue("export");
       return new NextResponse(new Uint8Array(zip), {
         status: 200,
         headers: {
           "Content-Type": "application/zip",
+          ...(warning ? { "X-Newsletter-History-Warning": encodeURIComponent(warning) } : {}),
           "Content-Disposition": `attachment; filename="${createFilename(title)}"`,
           "Cache-Control": "no-store",
         },
@@ -625,8 +648,10 @@ export const POST = async (request: NextRequest) => {
       zip,
     });
 
+    const warning = await archiveIssue("draft", mailing.id);
     return NextResponse.json({
       ok: true,
+      warning,
       mailing,
       counts: { showcases: showcases.length },
     });

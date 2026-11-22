@@ -12,6 +12,7 @@ export type SiteNavItem = {
 
 export const DEFAULT_HEADER_LINKS: SiteNavItem[] = [
   { href: "/verein", label: "Verein" },
+  { href: "/rosenwerk/karte", label: "Geländekarte" },
   { href: "/werkbereiche", label: "Werkbereiche" },
   { href: "/showcase", label: "Beiträge" },
   { href: "/workshops", label: "Workshops" },

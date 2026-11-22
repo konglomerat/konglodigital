@@ -1,0 +1,705 @@
+.page {
+  --ink: #25352c;
+  --paper: #f5f4ed;
+  --line: #d9ddd2;
+  --accent: #d4ed56;
+  color: var(--ink);
+  padding: 18px 0 32px;
+  max-width: 1700px;
+  margin: auto;
+  width: 100%;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.6;
+}
+.header h1 {
+  font-size: clamp(32px, 3.6vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  margin: 10px 0;
+}
+.header h1 span {
+  font-weight: 400;
+}
+.intro {
+  font-size: 14px;
+  color: #657065;
+  margin: 12px 0 0;
+}
+.inventoryLink {
+  font-size: 13px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding: 8px 0;
+  white-space: nowrap;
+}
+.explorer {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--paper);
+  height: min(760px, calc(100svh - 300px));
+  min-height: 570px;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--paper);
+}
+.sideTop {
+  padding: 24px 20px 12px;
+}
+.sideTop h2 {
+  font-size: 25px;
+  letter-spacing: -0.045em;
+  margin: 10px 0 20px;
+}
+.search {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid #c9cec1;
+  border-radius: 7px;
+  background: #fff;
+}
+.search > span {
+  font-size: 24px;
+  line-height: 16px;
+}
+.search input {
+  width: 100%;
+  min-width: 0;
+  font-size: 12px;
+  outline: none;
+  background: transparent;
+}
+.search:focus-within {
+  outline: 2px solid #677443;
+  outline-offset: 2px;
+}
+.search button {
+  font-size: 20px;
+}
+.filters {
+  display: flex;
+  gap: 5px;
+  margin-top: 13px;
+}
+.filters button {
+  font-size: 11px;
+  padding: 7px 9px;
+  border-radius: 5px;
+}
+.filters button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+.filters span {
+  margin-left: 5px;
+  opacity: 0.65;
+}
+.results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px 15px;
+  min-height: 100px;
+}
+.result {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 13px 8px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 12px;
+}
+.result:hover,
+.result[aria-pressed="true"] {
+  background: #e6eccf;
+}
+.result > span:nth-child(2) {
+  flex: 1;
+}
+.result strong {
+  display: block;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.result small {
+  display: block;
+  font-size: 10px;
+  color: #72796d;
+  margin-top: 3px;
+}
+.number {
+  font-size: 10px;
+  color: #89927e;
+  font-variant-numeric: tabular-nums;
+}
+.viewport {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: #e8e7dd;
+}
+.scene {
+  position: absolute;
+  inset: 0;
+}
+.scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.scene canvas:focus-visible {
+  outline: 3px solid #719648;
+  outline-offset: -3px;
+}
+.sceneStatus {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 20px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 5px 24px #25352c20;
+  max-width: 90%;
+  font-size: 13px;
+}
+.toolbar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  background: #fafbf6ee;
+  border: 1px solid #fff;
+  border-radius: 9px;
+  padding: 4px;
+  box-shadow: 0 3px 18px #263d2212;
+  z-index: 3;
+}
+.toolbar button {
+  font-size: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+.toolbar button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+.viewControls {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  display: grid;
+  gap: 8px;
+  z-index: 3;
+}
+.viewControls button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: #fafbf6ee;
+  border: 1px solid white;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 3px 18px #263d2212;
+}
+.viewControls button[aria-pressed="true"] {
+  background: var(--accent);
+}
+.indoorTools {
+  position: absolute;
+  top: 85px;
+  left: 20px;
+  display: grid;
+  gap: 5px;
+  background: #fafbf6ed;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  z-index: 3;
+}
+.indoorTools label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.indoorTools small {
+  font-size: 10px;
+  color: #667061;
+}
+.detail {
+  position: absolute;
+  bottom: 65px;
+  right: 20px;
+  z-index: 5;
+  width: 290px;
+  max-height: 65%;
+  overflow: auto;
+  border-radius: 12px;
+  background: #fafbf6f5;
+  box-shadow: 0 8px 30px #25352c24;
+  padding: 22px;
+}
+.detail h2 {
+  font-size: 21px;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  margin: 10px 0 14px;
+  padding-right: 10px;
+}
+.detail p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #657065;
+}
+.close {
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  font-size: 24px;
+}
+.preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 7px;
+  margin-bottom: 12px;
+}
+.action {
+  display: block;
+  background: var(--accent);
+  padding: 11px 13px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 14px;
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+}
+.roomLinks {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+.roomLinks button {
+  text-align: left;
+  font-size: 11px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.share {
+  font-size: 11px;
+  margin-top: 14px;
+  display: block;
+}
+.detail > small {
+  display: block;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mapLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  background: #f9faf3ed;
+  padding: 5px 8px;
+  white-space: nowrap;
+  border-radius: 4px;
+  border: 1px solid #ffffffaa;
+  box-shadow: 0 1px 8px #24392718;
+  font-size: 10px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.labels [hidden] {
+  display: none;
+}
+.mapFooter {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+  font-size: 10px;
+  color: #4f5b4c;
+}
+.mapFooter > span {
+  background: #f5f4edcc;
+  padding: 7px 10px;
+  border-radius: 5px;
+}
+.mapFooter i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #a66043;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+.footer {
+  font-size: 10px;
+  color: #737c6d;
+  margin-top: 13px;
+  line-height: 1.7;
+}
+.footer p {
+  margin: 0 0 4px;
+}
+.footer > div {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.footer a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.notice {
+  font-size: 12px;
+  padding: 15px;
+  color: #646d60;
+}
+.page button {
+  cursor: pointer;
+}
+.page button:focus-visible,
+.page a:focus-visible {
+  outline: 2px solid #597736;
+  outline-offset: 3px;
+}
+@media (min-width: 1500px) {
+  .explorer {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .explorer {
+    grid-template-columns: 245px minmax(0, 1fr);
+  }
+  .sideTop {
+    padding: 18px 14px 10px;
+  }
+  .toolbar {
+    left: 12px;
+    top: 12px;
+  }
+  .toolbar button {
+    padding: 9px 10px;
+    font-size: 11px;
+  }
+  .viewControls {
+    right: 12px;
+    top: 65px;
+  }
+  .indoorTools {
+    left: 12px;
+    top: 65px;
+  }
+  .mapFooter > span:last-child {
+    display: none;
+  }
+  .detail {
+    right: 12px;
+    bottom: 55px;
+    width: 260px;
+  }
+}
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .header h1 {
+    font-size: 35px;
+  }
+  .header .eyebrow {
+    font-size: 8px;
+  }
+  .intro {
+    font-size: 12px;
+    max-width: 250px;
+  }
+  .inventoryLink {
+    font-size: 10px;
+    margin-top: 6px;
+  }
+  .explorer {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    border-radius: 12px;
+  }
+  .viewport {
+    order: 0;
+    height: 57vh;
+    min-height: 390px;
+  }
+  .sidebar {
+    order: 1;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    max-height: 430px;
+  }
+  .sideTop h2 {
+    font-size: 22px;
+    margin: 6px 0 12px;
+  }
+  .sideTop > .eyebrow {
+    display: none;
+  }
+  .results {
+    max-height: 210px;
+  }
+  .detail {
+    max-height: 62%;
+    width: 250px;
+    padding: 17px;
+  }
+  .preview {
+    height: 85px;
+  }
+  .mapFooter {
+    left: 12px;
+    bottom: 10px;
+  }
+  .mapLabel {
+    font-size: 9px;
+    max-width: 150px;
+  }
+  .toolbar {
+    right: 12px;
+    width: max-content;
+    max-width: calc(100% - 24px);
+  }
+  .toolbar button {
+    padding: 9px 12px;
+  }
+}
+
+.compass {
+  position: absolute;
+  right: 28px;
+  bottom: 78px;
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+  color: #354336;
+}
+.scale {
+  position: absolute;
+  bottom: 60px;
+  left: 20px;
+  border-bottom: 2px solid #54614d;
+  border-left: 1px solid #54614d;
+  border-right: 1px solid #54614d;
+  text-align: center;
+  font-size: 10px;
+  color: #354336;
+  height: 18px;
+  pointer-events: none;
+}
+
+.indoorTools select {
+  max-width: 175px;
+  margin-left: 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 5px;
+  color: inherit;
+  background: #fff;
+  font: inherit;
+}
+
+.accessDirections {
+  display: none;
+}
+@media (max-width: 640px) {
+  .accessDetail {
+    left: 12px;
+    right: auto;
+    bottom: 45px;
+    width: auto;
+    max-width: calc(100% - 24px);
+    padding: 10px 32px 10px 12px;
+  }
+  .accessDetail h2 {
+    margin: 0 0 3px;
+    font-size: 16px;
+  }
+  .accessDetail .eyebrow,
+  .accessCopy {
+    display: none;
+  }
+  .accessDirections {
+    display: block;
+    font-size: 12px;
+    max-width: 225px;
+  }
+  .accessDirections summary {
+    cursor: pointer;
+  }
+  .accessDetail .share {
+    margin-top: 6px;
+  }
+}
+
+.walkPanel {
+  overflow-y: auto;
+  padding: 24px 20px;
+}
+.walkPanel h2 {
+  margin: 5px 0 12px;
+  font-size: 26px;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+.walkPanel p,
+.walkPanel li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.walkPanel .walkTime {
+  font-size: 20px;
+  color: #176251;
+  font-weight: 700;
+  margin: 0;
+}
+.walkPanel ol {
+  padding-left: 22px;
+  margin: 22px 0;
+}
+.walkPanel li {
+  padding-left: 3px;
+  margin: 0 0 12px;
+}
+.walkPanel li::marker {
+  font-weight: 700;
+  color: #176251;
+}
+.walkPanel small {
+  display: block;
+  color: #556254;
+  line-height: 1.5;
+}
+.walkLabel {
+  background: #203f36;
+  color: #fff;
+  font-weight: 650;
+  pointer-events: none;
+}
+.streetLabel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #5c625a;
+  pointer-events: none;
+  text-shadow:
+    0 0 4px white,
+    0 0 2px white;
+}
+
+button.walkLabel {
+  pointer-events: auto;
+}
+
+.walkStart,
+.walkActive {
+  position: absolute;
+  z-index: 4;
+  left: 20px;
+  bottom: 88px;
+}
+.walkActive {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  bottom: 18px;
+  right: 18px;
+}
+.walkStart button,
+.walkActive button,
+.walkHelp {
+  background: #24392f;
+  color: #fff;
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 2px 12px #18251e26;
+}
+.walkHelp {
+  background: #fffffff2;
+  color: #24392f;
+}
+.walkPad {
+  display: none;
+  touch-action: none;
+}
+.viewport:has(.walkActive)
+  :is(.toolbar, .viewControls, .indoorTools, .detail, .mapFooter) {
+  display: none;
+}
+@media (pointer: coarse), (max-width: 650px) {
+  .walkStart {
+    left: auto;
+    right: 10px;
+    bottom: 9px;
+  }
+  .walkActive {
+    left: 10px;
+    bottom: 12px;
+    right: 10px;
+  }
+  .walkHelp {
+    display: none;
+  }
+  .walkPad {
+    display: flex;
+    gap: 5px;
+    flex-basis: 100%;
+  }
+  .walkPad button {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: none;
+    user-select: none;
+  }
+}

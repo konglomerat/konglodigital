@@ -1,0 +1,346 @@
+{
+  "courtyards": [
+    {
+      "coordinates": [
+        [13.715843254314024, 51.0463011934101],
+        [13.71589394150638, 51.04631962155679],
+        [13.715742558649055, 51.04648349835341],
+        [13.715691520054861, 51.04646544916571]
+      ],
+      "sourceResourceId": "4a36f315-f1d2-49f8-a8b2-aa6627111d1a"
+    }
+  ],
+  "source": "Public Konglomerat inventory, 2026-11-22",
+  "buildings": [
+    {
+      "id": "osm-150966263",
+      "name": "#Rosenwerk",
+      "coordinates": [
+        [13.7147217, 51.0464575],
+        [13.715519, 51.0467395],
+        [13.7154621, 51.0468024],
+        [13.7154943, 51.0468139],
+        [13.7156106, 51.0468554],
+        [13.7156164, 51.0468575],
+        [13.7159958, 51.0464374],
+        [13.7160161, 51.0464149],
+        [13.7160376, 51.0463911],
+        [13.716231, 51.046177],
+        [13.7160769, 51.046122],
+        [13.7160566, 51.0461445],
+        [13.716023, 51.0461326],
+        [13.7152059, 51.0458436],
+        [13.7150925, 51.0459703],
+        [13.7150705, 51.0459625],
+        [13.7146943, 51.0463829],
+        [13.7147658, 51.0464082],
+        [13.7147217, 51.0464575]
+      ],
+      "heightEstimated": true,
+      "site": true,
+      "heightSource": "GeoSN DOM1 − DGM1"
+    }
+  ],
+  "origin": [13.7157, 51.0463],
+  "containers": [
+    {
+      "resourceId": "fa36945c-0cfa-48db-945c-696b82ebad42",
+      "coordinates": [
+        [13.714982627735623, 51.04682096218767],
+        [13.715011561426735, 51.0468306504352],
+        [13.715048357534727, 51.0467901179571],
+        [13.71501978789118, 51.046779951799834]
+      ]
+    },
+    {
+      "resourceId": "fa36945c-0cfa-48db-945c-696b82ebad42",
+      "coordinates": [
+        [13.71506544265074, 51.04687582394408],
+        [13.715007550533187, 51.04685747805547],
+        [13.715021548743522, 51.04684056463324],
+        [13.715079064482552, 51.04685921122359]
+      ]
+    }
+  ],
+  "frame": {
+    "anchor": [13.7152059, 51.0458436]
+  },
+  "attribution": "Gebäudegrundriss © OpenStreetMap-Mitwirkende, ODbL 1.0",
+  "machines": [
+    {
+      "id": "328454ed-e117-42d3-8e51-82b99672299b",
+      "name": "Formatkreissäge Altendorf F45",
+      "coordinates": [
+        [13.715021139380639, 51.046079751442875],
+        [13.715001178750896, 51.04610162485966],
+        [13.715034478297753, 51.04611286582343],
+        [13.715053973636884, 51.04609104043871]
+      ]
+    },
+    {
+      "id": "3198e271-019a-4c83-8fa8-4bc0b4b027ed",
+      "name": "Siri Drucktisch 3000 plus Siebdruckmaschine",
+      "coordinates": [
+        [13.716117770575664, 51.046298867747026],
+        [13.71609215671586, 51.04628977556919],
+        [13.716105197721674, 51.04627578673083],
+        [13.716130511068599, 51.046284850510176]
+      ]
+    },
+    {
+      "id": "87fb321e-006d-43d7-8e10-4f0a0e95d4fc",
+      "name": "CNC-Fräsmaschine in Holzwerkstatt",
+      "coordinates": [
+        [13.715070903799585, 51.046118241532525],
+        [13.715085781822523, 51.04610222191826],
+        [13.715105790196873, 51.04610931785547],
+        [13.71509091217527, 51.046125444981556]
+      ]
+    }
+  ],
+  "interiors": {
+    "Toilette": "79781213-aefd-401d-aa3d-052d5ee23a9a",
+    "Materialvermittlung": "08751840-b354-4566-b172-9f4df039f0f2",
+    "Raum ohne Namen (RON)": "124c28a7-aedf-47d6-9fe9-5c531dfb3f67",
+    "Laser- und 3D-Druckwerkstatt": "7e5fb658-0bf9-4afa-89ed-4bf0e189e734",
+    "Metallwerkstatt": "73a7847b-5f34-4eeb-af66-9e533689ac79",
+    "Holzwerkstatt": "ea40515b-22d2-45f5-bd1b-f4c70e1b8563",
+    "Kleines Badezimmer mit Waschbecken und kleinem Becken": "987e0d9d-5004-4566-a412-08a2e85d0b09",
+    "Siebdruckwerkstatt": "c283f601-4427-4103-9cde-cda0504f24da",
+    "Darkroom (Fotolabor)": "253eb4ca-8e8d-42d7-85f4-7132dfe969be"
+  },
+  "timberWorkshop": {
+    "inventoryOffsetU": 3.35,
+    "dockWallU": 2.5,
+    "doorCenterV": 32.57,
+    "doorHalfWidth": 1.69,
+    "cncRoomId": "91b605ef-b654-4fbe-b8bd-0779d3799f22",
+    "inventoryCorners": [
+      [13.714987341155194, 51.04606647919559],
+      [13.714946846519268, 51.04611137922069],
+      [13.715106808966539, 51.04616665857009],
+      [13.715146111319712, 51.04612215717117]
+    ],
+    "equipment": {
+      "planer": {
+        "id": "a7de4288-2406-482e-8775-c5b925c41cf0",
+        "name": "Hammer Hobelmaschine Modell A3 31g",
+        "point": [13.7149709071884, 51.0460980073908],
+        "photoOffset": [1.15, 0.68]
+      },
+      "bandsaw": {
+        "id": "139322b8-d2dd-4de1-9652-3c8f440eb3b6",
+        "name": "Vertikale Bandsäge mit Staubabsaugung",
+        "point": [13.7150035548954, 51.0461110614931]
+      },
+      "drill": {
+        "id": "661de86c-7deb-4d6e-8683-a1898775d5ad",
+        "name": "Säulenbohrmaschine Optimum B 26 Pro",
+        "point": [13.7150206571087, 51.0461258252212]
+      },
+      "mitre": {
+        "id": "85da6f17-d482-4291-a76c-6ab48208bbb5",
+        "name": "Festool Kappsäge KS 120 EB",
+        "point": [13.7150672722764, 51.046101719519]
+      },
+      "extractor": {
+        "id": "23d94e83-4e90-4b69-83a1-267a0a1c82b2",
+        "name": "Absauganlage Felder AF 22",
+        "point": [13.7150701749758, 51.0461079348975]
+      }
+    }
+  },
+  "metalWorkshop": {
+    "inventoryOffsetU": 3.42,
+    "dockWallU": 2.5,
+    "doorCenterV": 25.65,
+    "doorHalfWidth": 0.45,
+    "inventoryCorners": [
+      [13.714987979566843, 51.04606569159472],
+      [13.715034501009342, 51.04601247724216],
+      [13.715194275594826, 51.04606833584816],
+      [13.715146676600824, 51.046121525918664]
+    ],
+    "equipment": {
+      "bench": {
+        "id": "a7d22e34-3809-4737-bf32-40392a96e614",
+        "name": "Werkbank mit Schraubstock und Werkzeugen",
+        "point": [13.715024858707714, 51.046072311483066]
+      },
+      "stacker": {
+        "id": "1603f37e-9fa1-4f04-abd8-dbe080bdf073",
+        "name": "Hubwagen Modell SDJ1000 Trading EU",
+        "point": [13.715043353917508, 51.04603644542607]
+      },
+      "drill": {
+        "id": "2620ebd2-a8c5-4898-8670-276e9e2336b0",
+        "name": "Industriedesign Standbohrmaschine grün",
+        "point": [13.715085239430522, 51.04607453675774],
+        "photoOffset": [-2.78, 0.66]
+      },
+      "lathe": {
+        "id": "399c036c-bcc2-40e1-8845-16267f01c4e9",
+        "name": "Drehmaschine VEB IK Rathenow-Mögelin DMG 350 X 360",
+        "point": [13.715089144986223, 51.04606281430824],
+        "photoOffset": [0.29, 2.9]
+      },
+      "folder": {
+        "id": "7389483f-435d-438b-a69f-0a28590d7525",
+        "name": "Grüne Blechbiegemaschine mit Standfüßen und Rollen",
+        "point": [13.715107157909017, 51.046065946655744],
+        "photoOffset": [-1.6, 2.13]
+      },
+      "vacuum": {
+        "id": "6c44bab6-bfcb-482e-85c4-35e4e9994c0c",
+        "name": "Gelber Nass- und Trockensauger",
+        "point": [13.715062228968378, 51.04607236677242],
+        "photoOffset": [-1.66, -0.4]
+      },
+      "ladder": {
+        "id": "0e73b22d-c910-4487-b4d6-320fb0f0c765",
+        "name": "Mehrzweckleiter Aluminium Hymer Serie ALPE 3x7",
+        "point": [13.715092977523597, 51.046072452299825],
+        "photoOffset": [-2.43, -1.86]
+      },
+      "rearDrill": {
+        "id": "099c5dc6-24d2-4eb4-bda8-d9ace4953b26",
+        "name": "Standbohrmaschine Heckert",
+        "point": [13.715101091816877, 51.04607385065452],
+        "photoOffset": [1.44, 1.19]
+      }
+    }
+  },
+  "laserWorkshop": {
+    "corners": [
+      [13.71611716161101, 51.04619475436604],
+      [13.716157651680447, 51.04615085427645],
+      [13.71622983984767, 51.04617721968759],
+      [13.716190421058997, 51.046220471882606]
+    ],
+    "ronDoor": [2.85, 3.88]
+  },
+  "accessPoints": [
+    {
+      "id": "haupteingang",
+      "name": "Haupteingang",
+      "point": [13.7160161, 51.0464149],
+      "side": "Jagdweg 1–3",
+      "description": "Breite Außentreppe unter dem Vordach. Die Klingel des Rosenwerks sitzt neben den Briefkästen.",
+      "camera": [0.93, 0.25, 0.15],
+      "distance": 20
+    },
+    {
+      "id": "rollstuhlrampe",
+      "name": "Rollstuhlrampe",
+      "point": [13.71602699, 51.04613437],
+      "side": "Ecke Rosenstraße / Jagdweg",
+      "description": "Vom Parkplatz führt die Metallrampe über ein Wendepodest zurück entlang der Stirnfassade. Am zweiten Podest biegt sie zur Eingangstür unter dem Konglomerat-Schild ab. Gelbe Radabweiser und schwarze Pflanztaschen säumen den Weg.",
+      "camera": [-0.24, 0.66, 0.88],
+      "viewHeight": 1.20,
+      "distance": 19
+    },
+    {
+      "id": "lkw-laderampe",
+      "name": "LKW-Laderampe",
+      "point": [13.71497386, 51.04607471],
+      "side": "Werkhof · Rosenstraße 92",
+      "description": "Vor Metall- und Holzwerkstatt liegen drei fotografisch belegte Torfelder dicht beieinander. Eine offene Stahltreppe führt von der Ladekante quer hinunter in den Hof. Die drei weiter hinten dargestellten Tore sind in Anzahl und Position geschätzt.",
+      "camera": [-0.94, 0.09, 0.12],
+      "viewHeight": 2.45,
+      "distance": 18
+    },
+    {
+      "id": "seiteneingang-jagdweg",
+      "name": "Seiteneingang mit Häuschen",
+      "point": [13.71555, 51.046909],
+      "side": "Nördliche Hofeinfahrt · Jagdweg",
+      "description": "Am nördlichen Ende der Jagdweg-Fassade liegen die verglaste Pförtnerloge, die schmale Pforte unter dem Vordach und das zweiflügelige Hoftor. Beide Durchgänge sind im Modell offen.",
+      "camera": [0.8, 0.21, -0.57],
+      "distance": 18
+    },
+    {
+      "id": "geschaeftstreppen",
+      "name": "Geschäftstreppen",
+      "point": [13.715663, 51.04599084],
+      "side": "Ladenfront · Rosenstraße",
+      "description": "Zwei separate Außentreppen mit Vordächern führen von der Rosenstraße zu den Ladenportalen. Die westliche Treppe liegt beim Hoftor, die zweite weiter in Richtung Jagdweg.",
+      "camera": [-0.02, 0.24, 0.97],
+      "distance": 27
+    },
+    {
+      "id": "pflanzcontainer",
+      "name": "Pflanzcontainer und Wechselbrücken",
+      "point": [13.71630386, 51.04609069],
+      "side": "Ecke Rosenstraße / Jagdweg",
+      "description": "Die Pflanzgitterboxen und Palettenregale stehen quer zu den beiden versetzten Wechselbrücken. Dahinter, auf dem Grünstreifen zum Jagdweg, stehen die Fahrradbügel.",
+      "camera": [0.88, 0.29, 0.34],
+      "distance": 13.5
+    },
+    {
+      "id": "hintere-laderampe",
+      "name": "Hintere Laderampe",
+      "side": "Westlicher Werkhof",
+      "point": [13.71472932, 51.04638323],
+      "description": "Am Ende des langen Vordachs verspringt das Podest zur Gebäudeecke. Der Verlauf der hinteren Stufen ist aus Schrägansicht und Höhenraster angenähert. Die Gesamtzahl der Tore in diesem Abschnitt ist offen.",
+      "camera": [-0.96, 0.26, -0.18],
+      "distance": 17.5
+    },
+    {
+      "id": "rueckseite",
+      "name": "Rückseite am Nordhof",
+      "side": "Rückwärtiger Werkhof",
+      "point": [13.71511747, 51.04656872],
+      "description": "Der niedrige Nordflügel hat einen offenen, überdachten Abschnitt und einen geschlossenen Endbau. Dahinter stehen der Treppenkopf und der höhere Hallenbau.",
+      "camera": [-0.23, 0.49, -0.85],
+      "distance": 67,
+      "viewHeight": 7.1
+    },
+    {
+      "id": "hoftor-rosenstrasse",
+      "name": "Hoftor Rosenstraße",
+      "side": "Werkhof · Rosenstraße",
+      "description": "Neben dem westlichen Ladenportal führt die gepflasterte Einfahrt von der Rosenstraße zur LKW-Laderampe. Das verzinkte Schiebetor ist im Modell zur Seite gefahren.",
+      "point": [13.7150963, 51.045828],
+      "camera": [0.28, 0.2, 0.94],
+      "distance": 17
+    }
+  ],
+  "basement": {
+    "level": -1,
+    "height": -1.8,
+    "center": [13.7159147, 51.04648796]
+  },
+  "roomLevels": {
+    "253eb4ca-8e8d-42d7-85f4-7132dfe969be": -1,
+    "08751840-b354-4566-b172-9f4df039f0f2": 1
+  },
+  "upperFloors": [
+    {
+      "level": 1,
+      "height": 5.3
+    },
+    {
+      "level": 2,
+      "height": 9.9
+    },
+    {
+      "level": 3,
+      "height": 14.5
+    }
+  ],
+  "rampEquipment": [
+    [
+      [13.716137303239378, 51.04604919850769],
+      [13.716165855697227, 51.046010448935476],
+      [13.716308808354825, 51.046048202589674],
+      [13.71628097087725, 51.04608865547232]
+    ],
+    [
+      [13.716184455485461, 51.0461370739024],
+      [13.716214215147062, 51.046100322628234],
+      [13.71633644232557, 51.046140080823335],
+      [13.716307254307395, 51.046178193059035]
+    ]
+  ],
+  "inventoryLift": 0.87
+}

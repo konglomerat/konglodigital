@@ -2,31 +2,17 @@ import { redirect } from "next/navigation";
 
 import GenerateNewsletterClient from "./GenerateNewsletterClient";
 
-import { loadShowcases } from "@/app/[lang]/showcase/showcase-data";
+import { loadNewsletterLibrary } from "@/lib/newsletter-sources";
 import { localizePathname } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/server";
-import { buildShowcasePath } from "@/lib/showcase-path";
 import {
   listRapidmailMailings,
   listRapidmailRecipientLists,
   type RapidmailMailing,
   type RapidmailRecipientList,
 } from "@/lib/rapidmail";
-import { isImageUrl } from "@/lib/resource-media";
 import { can } from "@/lib/access/access";
 import { getServerAccess, getServerSession } from "@/lib/server-session";
-
-type NewsletterShowcase = {
-  id: string;
-  name: string;
-  prettyTitle: string | null;
-  excerpt: string | null;
-  description: string | null;
-  images: string[];
-  publishDate: string | null;
-  updatedAt: string | null;
-  href: string;
-};
 
 const deriveRapidmailDefaults = (
   recipientLists: RapidmailRecipientList[],
@@ -97,36 +83,17 @@ export default async function GenerateNewsletterPage() {
   const rapidmailSignal = AbortSignal.timeout(
     RAPIDMAIL_INITIAL_LOAD_TIMEOUT_MS,
   );
-  const [showcaseRecords, rapidmailResult] = await Promise.all([
-    loadShowcases(180),
+  const [library, rapidmailResult] = await Promise.all([
+    loadNewsletterLibrary(),
     Promise.allSettled([
       listRapidmailRecipientLists({ signal: rapidmailSignal }),
       listRapidmailMailings({ signal: rapidmailSignal }),
     ]),
   ]);
 
-  const showcases = showcaseRecords.map((showcase) => {
-    const images = Array.from(
-      new Set(
-        [showcase.image, ...(showcase.images ?? [])].filter(
-          (value): value is string =>
-            typeof value === "string" && Boolean(value) && isImageUrl(value),
-        ),
-      ),
-    );
-
-    return {
-      id: showcase.id,
-      name: showcase.name,
-      prettyTitle: showcase.prettyTitle ?? null,
-      excerpt: showcase.excerpt ?? null,
-      description: showcase.description ?? null,
-      images,
-      publishDate: showcase.publishDate ?? null,
-      updatedAt: showcase.updatedAt ?? null,
-      href: localizePathname(buildShowcasePath(showcase), locale),
-    } satisfies NewsletterShowcase;
-  });
+  const showcases = library.entries.map(entry => ({
+    ...entry, href: localizePathname(entry.href, locale),
+  }));
 
   let recipientLists: RapidmailRecipientList[] = [];
   let rapidmailError: string | null = null;
@@ -161,7 +128,9 @@ export default async function GenerateNewsletterPage() {
   return (
     <GenerateNewsletterClient
       locale={locale}
+      userId={user.id}
       showcases={showcases}
+      sourceWarnings={library.warnings}
       recipientLists={recipientLists}
       issueDefaults={createIssueDefaults()}
       rapidmailDefaults={rapidmailDefaults}

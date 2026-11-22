@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   faArrowDown,
@@ -35,17 +35,15 @@ import NewsletterImagePositionDialog, {
   type NewsletterImagePosition,
 } from "./NewsletterImagePositionDialog";
 
-type NewsletterShowcase = {
-  id: string;
-  name: string;
-  prettyTitle: string | null;
-  excerpt: string | null;
-  description: string | null;
-  images: string[];
-  publishDate: string | null;
-  updatedAt: string | null;
-  href: string;
+import type { NewsletterSource as NewsletterShowcase, NewsletterSourceKind } from "@/lib/newsletter-sources";
+
+import { NEWSLETTER_EXCERPT_LIMIT, newsletterExcerptLength, shortenNewsletterExcerpt } from "@/lib/newsletter-excerpt";
+import { newsletterUsage, isNewNewsletterSource, type NewsletterIssue } from "@/lib/newsletter-history";
+
+const SOURCE_LABELS: Record<NewsletterSourceKind, string> = {
+  project: "Projekte", archive: "Archiv-News", page: "Seiten", workshop: "Werkbereiche", event: "Termine",
 };
+
 
 type RecipientList = {
   id: number;
@@ -97,7 +95,9 @@ type BuilderItem = ShowcaseItem | ButtonItem | BannerItem;
 
 type GenerateNewsletterClientProps = {
   locale: string;
+  userId: string;
   showcases: NewsletterShowcase[];
+  sourceWarnings: string[];
   recipientLists: RecipientList[];
   issueDefaults: {
     title: string;
@@ -114,6 +114,7 @@ type GenerateNewsletterClientProps = {
 
 type DraftResponse = {
   error?: string;
+  warning?: string | null;
   mailing?: {
     id: number | null;
     status: string | null;
@@ -128,6 +129,7 @@ type NewsletterDraftContent = {
   subject: string;
   intro: string;
   showShowcasesHeading: boolean;
+  includeCalendar: boolean;
   items: BuilderItem[];
   previewViewport: "desktop" | "mobile";
   fromName: string;
@@ -139,6 +141,11 @@ type StoredConfig = Partial<Omit<NewsletterDraftContent, "version">> & {
   version?: 1 | 2;
   design?: NewsletterDesign;
   draftName?: string;
+  activeDraftId?: string;
+  pendingDraftId?: string;
+  expectedUpdatedAt?: string | null;
+  savedSnapshot?: string | null;
+  savedLocallyAt?: string;
 };
 
 type NewsletterDraftRecord = {
@@ -148,11 +155,14 @@ type NewsletterDraftRecord = {
   content: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  revisions?: Array<{ name: string; design: NewsletterDesign; content: Record<string, unknown>; updatedAt: string }>;
 };
 
 type NewsletterDraftsApiResponse = {
   error?: string;
   drafts?: NewsletterDraftRecord[];
+  issues?: NewsletterIssue[];
+  conflict?: boolean;
   draft?: NewsletterDraftRecord;
 };
 
@@ -299,7 +309,7 @@ const createShowcaseItem = (showcase: NewsletterShowcase): ShowcaseItem => ({
   type: "showcase",
   showcaseId: showcase.id,
   options: {
-    excerpt: showcase.excerpt?.trim() || showcase.description || "",
+    excerpt: shortenNewsletterExcerpt(showcase.excerpt?.trim() || showcase.description || ""),
     layout: "split",
     aspect: "original",
     imageMode: "single",
@@ -358,9 +368,16 @@ const restoreItems = (
       (raw.type === "showcase" || legacy.type === "project") &&
       rawShowcaseId
     ) {
-      const showcase = showcaseMap.get(rawShowcaseId);
+      // Keep unavailable references visible and removable instead of silently
+      // dropping content when a source is unpublished or temporarily offline.
+      const showcase = showcaseMap.get(rawShowcaseId) ?? {
+        id: rawShowcaseId, name: "Nicht verfügbarer Inhalt", prettyTitle: null,
+        excerpt: null, description: null, publishDate: null, updatedAt: null,
+        href: "", kind: "project" as const,
+        images: [raw.options?.imageUrl, ...(Array.isArray(raw.options?.gifImageUrls) ? raw.options.gifImageUrls : [])]
+          .filter((url): url is string => typeof url === "string" && Boolean(url)),
+      };
       if (
-        !showcase ||
         usedShowcaseIds.has(showcase.id) ||
         usedShowcaseIds.size >= MAX_SELECTED_SHOWCASES
       ) {
@@ -511,7 +528,9 @@ function ItemControls({
 
 export default function GenerateNewsletterClient({
   locale,
+  userId,
   showcases,
+  sourceWarnings,
   recipientLists,
   issueDefaults,
   rapidmailDefaults,
@@ -527,6 +546,8 @@ export default function GenerateNewsletterClient({
   const [design, setDesign] = useState<NewsletterDesign>("konglomerat");
   const [showShowcasesHeading, setShowShowcasesHeading] = useState(true);
   const [items, setItems] = useState<BuilderItem[]>([]);
+  const [sourceKind, setSourceKind] = useState<NewsletterSourceKind | "all">("all");
+  const [includeCalendar, setIncludeCalendar] = useState(true);
   const [query, setQuery] = useState("");
   const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
   const deferredQuery = useDeferredValue(query);
@@ -550,6 +571,14 @@ export default function GenerateNewsletterClient({
     kind: "success" | "error";
     text: string;
   } | null>(null);
+  const storageKey = `${STORAGE_KEY}.${userId}`;
+  const [issues, setIssues] = useState<NewsletterIssue[]>([]);
+  const [activityFilter, setActivityFilter] = useState<"all" | "new" | "unused">("all");
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = useState<string | null>(null);
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [saveConflict, setSaveConflict] = useState(false);
+  const saveInFlight = useRef(false);
+  const pendingDraftId = useRef<string | null>(null);
   const [drafts, setDrafts] = useState<NewsletterDraftRecord[]>([]);
   const [activeDraftId, setActiveDraftId] = useState("");
   const [draftName, setDraftName] = useState(issueDefaults.title);
@@ -599,6 +628,7 @@ export default function GenerateNewsletterClient({
       subject,
       intro,
       showShowcasesHeading,
+      includeCalendar,
       items,
       previewViewport,
       fromName,
@@ -613,13 +643,14 @@ export default function GenerateNewsletterClient({
       previewViewport,
       recipientListId,
       showShowcasesHeading,
+      includeCalendar,
       subject,
       title,
     ],
   );
   const currentDraftSnapshot = useMemo(
-    () => draftSnapshot(draftName.trim(), design, currentDraftContent),
-    [currentDraftContent, design, draftName],
+    () => draftSnapshot(draftName.trim() || title.trim() || "Unbenannter Entwurf", design, currentDraftContent),
+    [currentDraftContent, design, draftName, title],
   );
   const newDraftSnapshot = useMemo(
     () =>
@@ -629,6 +660,7 @@ export default function GenerateNewsletterClient({
         subject: issueDefaults.subject,
         intro: issueDefaults.intro,
         showShowcasesHeading: true,
+        includeCalendar: true,
         items: [],
         previewViewport: "desktop",
         fromName: rapidmailDefaults.fromName,
@@ -645,7 +677,7 @@ export default function GenerateNewsletterClient({
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored = window.localStorage.getItem(storageKey);
       if (stored) {
         const config = JSON.parse(stored) as StoredConfig;
         if (config.version === 1 || config.version === 2) {
@@ -653,9 +685,15 @@ export default function GenerateNewsletterClient({
           if (typeof config.subject === "string") setSubject(config.subject);
           if (typeof config.intro === "string") setIntro(config.intro);
           setDesign(normalizeDesign(config.design));
+          setActiveDraftId(config.activeDraftId ?? "");
+          pendingDraftId.current = config.pendingDraftId ?? null;
+          setExpectedUpdatedAt(config.expectedUpdatedAt ?? null);
+          setSavedDraftSnapshot(config.savedSnapshot ?? null);
+          setRecoveryMessage("Dein letzter Arbeitsstand wurde aus der lokalen Sicherung wiederhergestellt.");
           if (typeof config.draftName === "string") {
             setDraftName(config.draftName.slice(0, 160));
           }
+          setIncludeCalendar(config.includeCalendar !== false);
           if (typeof config.showShowcasesHeading === "boolean") {
             setShowShowcasesHeading(config.showShowcasesHeading);
           }
@@ -679,7 +717,7 @@ export default function GenerateNewsletterClient({
     } finally {
       setIsConfigReady(true);
     }
-  }, [showcaseMap]);
+  }, [showcaseMap, storageKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -698,6 +736,7 @@ export default function GenerateNewsletterClient({
           );
         }
         setDrafts(data.drafts ?? []);
+        setIssues(data.issues ?? []);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setDraftStorageError(
@@ -720,10 +759,15 @@ export default function GenerateNewsletterClient({
       ...currentDraftContent,
       design,
       draftName,
+      activeDraftId,
+      pendingDraftId: pendingDraftId.current ?? undefined,
+      expectedUpdatedAt,
+      savedSnapshot: savedDraftSnapshot,
+      savedLocallyAt: new Date().toISOString(),
     };
 
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.setItem(storageKey, JSON.stringify(config));
     } catch {
       // Änderungen bleiben im aktuellen Tab erhalten.
     }
@@ -732,6 +776,10 @@ export default function GenerateNewsletterClient({
     design,
     draftName,
     isConfigReady,
+    activeDraftId,
+    expectedUpdatedAt,
+    savedDraftSnapshot,
+    storageKey,
   ]);
 
   useEffect(() => {
@@ -775,11 +823,19 @@ export default function GenerateNewsletterClient({
       item.options.gifImageUrls.length < 2,
   );
 
+  const usage = useMemo(() => newsletterUsage(issues, design), [issues, design]);
+  const hasLongExcerpt = items.some(item => item.type === "showcase" && newsletterExcerptLength(item.options.excerpt) > NEWSLETTER_EXCERPT_LIMIT);
+
   const filteredShowcases = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase("de");
-    if (!normalized) return showcases;
+    const candidates = showcases.filter(entry =>
+      (sourceKind === "all" || entry.kind === sourceKind) &&
+      (activityFilter !== "unused" || !usage.used.has(entry.id)) &&
+      (activityFilter !== "new" || isNewNewsletterSource(entry, usage.lastIssue?.createdAt)),
+    );
+    if (!normalized) return candidates;
 
-    return showcases.filter((showcase) =>
+    return candidates.filter((showcase) =>
       [
         showcase.name,
         showcase.prettyTitle,
@@ -791,7 +847,7 @@ export default function GenerateNewsletterClient({
         .toLocaleLowerCase("de")
         .includes(normalized),
     );
-  }, [deferredQuery, showcases]);
+  }, [deferredQuery, showcases, sourceKind, activityFilter, usage]);
 
   const requestItems = useMemo(
     () =>
@@ -827,9 +883,10 @@ export default function GenerateNewsletterClient({
       subject,
       intro,
       showShowcasesHeading,
+      includeCalendar,
       items: requestItems,
     }),
-    [design, intro, locale, requestItems, showShowcasesHeading, subject, title],
+    [design, intro, locale, requestItems, showShowcasesHeading, includeCalendar, subject, title],
   );
   const previewRequestBody = useMemo(
     () => JSON.stringify({ ...newsletterPayload, action: "preview" }),
@@ -839,16 +896,18 @@ export default function GenerateNewsletterClient({
   useEffect(() => {
     if (!isConfigReady) return;
     if (
-      selectedShowcaseCount === 0 ||
+      hasLongExcerpt ||
       hasInvalidGif ||
       !title.trim() ||
       !subject.trim()
     ) {
       setPreviewHtml("");
       setPreviewError(
-        hasInvalidGif
+        hasLongExcerpt
+          ? "Ein Kurztext ist zu lang. Kürze ihn oder übernimm die vorgeschlagene Kurzfassung."
+          : hasInvalidGif
           ? "Wähle für jedes GIF mindestens zwei Bilder aus."
-          : selectedShowcaseCount > 0 && (!title.trim() || !subject.trim())
+          : (!title.trim() || !subject.trim())
             ? "Titel und Betreffzeile müssen ausgefüllt sein."
             : null,
       );
@@ -896,6 +955,7 @@ export default function GenerateNewsletterClient({
     };
   }, [
     isConfigReady,
+    hasLongExcerpt,
     hasInvalidGif,
     previewNonce,
     previewRequestBody,
@@ -909,7 +969,7 @@ export default function GenerateNewsletterClient({
     if (selectedShowcaseCount >= MAX_SELECTED_SHOWCASES) {
       setStatus({
         kind: "error",
-        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_SHOWCASES} Beiträge möglich, damit die E-Mail nicht abgeschnitten wird.`,
+        text: `Pro Newsletter sind höchstens ${MAX_SELECTED_SHOWCASES} Inhalte möglich, damit die E-Mail nicht abgeschnitten wird.`,
       });
       return;
     }
@@ -1057,7 +1117,7 @@ export default function GenerateNewsletterClient({
     ) {
       setStatus({
         kind: "error",
-        text: `Die Auswahl wurde auf ${MAX_SELECTED_SHOWCASES} Beiträge begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
+        text: `Die Auswahl wurde auf ${MAX_SELECTED_SHOWCASES} Inhalte begrenzt, damit die E-Mail zuverlässig zugestellt wird.`,
       });
     }
     setItems((current) => {
@@ -1066,6 +1126,11 @@ export default function GenerateNewsletterClient({
   };
 
   const resetToNewDraft = () => {
+    pendingDraftId.current = null;
+    setExpectedUpdatedAt(null);
+    setSaveConflict(false);
+    setDraftStorageError(null);
+    setRecoveryMessage(null);
     const defaultRecipientListId = rapidmailDefaults.recipientListId
       ? String(rapidmailDefaults.recipientListId)
       : "";
@@ -1076,6 +1141,7 @@ export default function GenerateNewsletterClient({
     setSubject(issueDefaults.subject);
     setIntro(issueDefaults.intro);
     setShowShowcasesHeading(true);
+    setIncludeCalendar(true);
     setItems([]);
     setPreviewViewport("desktop");
     setFromName(rapidmailDefaults.fromName);
@@ -1086,6 +1152,7 @@ export default function GenerateNewsletterClient({
   };
 
   const startNewDraft = () => {
+    if (saveInFlight.current) return;
     if (
       isDraftDirty &&
       !window.confirm(
@@ -1098,6 +1165,11 @@ export default function GenerateNewsletterClient({
   };
 
   const applyDraft = (draft: NewsletterDraftRecord) => {
+    pendingDraftId.current = null;
+    setExpectedUpdatedAt(draft.updatedAt);
+    setSaveConflict(false);
+    setDraftStorageError(null);
+    setRecoveryMessage(null);
     const raw = draft.content as Partial<NewsletterDraftContent>;
     const normalizedContent: NewsletterDraftContent = {
       version: 2,
@@ -1114,6 +1186,7 @@ export default function GenerateNewsletterClient({
           ? raw.intro.slice(0, 5_000)
           : issueDefaults.intro,
       showShowcasesHeading: raw.showShowcasesHeading !== false,
+      includeCalendar: raw.includeCalendar !== false,
       items: restoreItems(raw.items, showcaseMap),
       previewViewport:
         raw.previewViewport === "mobile" ? "mobile" : "desktop",
@@ -1141,6 +1214,7 @@ export default function GenerateNewsletterClient({
     setSubject(normalizedContent.subject);
     setIntro(normalizedContent.intro);
     setShowShowcasesHeading(normalizedContent.showShowcasesHeading);
+    setIncludeCalendar(normalizedContent.includeCalendar);
     setItems(normalizedContent.items);
     setPreviewViewport(normalizedContent.previewViewport);
     setFromName(normalizedContent.fromName);
@@ -1153,6 +1227,7 @@ export default function GenerateNewsletterClient({
   };
 
   const handleDraftSelection = (id: string) => {
+    if (saveInFlight.current) return;
     if (id === activeDraftId) return;
     if (
       isDraftDirty &&
@@ -1171,68 +1246,100 @@ export default function GenerateNewsletterClient({
     if (draft) applyDraft(draft);
   };
 
-  const handleSaveIntermediateDraft = async () => {
-    const normalizedName =
-      draftName.trim() || title.trim() || "Unbenannter Entwurf";
+  const refreshDrafts = async () => {
+    const response = await fetch("/api/admin/newsletter-drafts");
+    const data = await response.json() as NewsletterDraftsApiResponse;
+    if (!response.ok) throw new Error(data.error ?? "Verlauf konnte nicht geladen werden.");
+    setDrafts(data.drafts ?? []);
+    setIssues(data.issues ?? []);
+    return data.drafts ?? [];
+  };
+
+  const handleSaveIntermediateDraft = useCallback(async () => {
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
+    const normalizedName = draftName.trim() || title.trim() || "Unbenannter Entwurf";
+    const id = activeDraftId || pendingDraftId.current || window.crypto.randomUUID();
+    pendingDraftId.current = id;
     setIsSavingDraft(true);
     setDraftStorageError(null);
-    setStatus(null);
+    try {
+      // Persist the creation ID before the request so a lost response is retryable.
+      window.localStorage.setItem(storageKey, JSON.stringify({ ...currentDraftContent, design, draftName,
+        activeDraftId, pendingDraftId: id, expectedUpdatedAt, savedSnapshot: savedDraftSnapshot }));
+    } catch { /* Database saving remains available without local storage. */ }
     try {
       const response = await fetch("/api/admin/newsletter-drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: activeDraftId || undefined,
-          name: normalizedName,
-          design,
-          content: currentDraftContent,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, create: !activeDraftId, expectedUpdatedAt,
+          name: normalizedName, design, content: currentDraftContent }),
       });
-      const data = (await response.json().catch(() => ({}))) as NewsletterDraftsApiResponse;
+      const data = await response.json() as NewsletterDraftsApiResponse;
       if (!response.ok || !data.draft) {
-        throw new Error(
-          data.error ?? "Newsletter-Entwurf konnte nicht gespeichert werden.",
-        );
+        setSaveConflict(response.status === 409);
+        throw new Error(data.error ?? "Der Entwurf konnte nicht gespeichert werden.");
       }
-
       const savedDraft = data.draft;
-      setDraftName(savedDraft.name);
       setActiveDraftId(savedDraft.id);
-      setDrafts((current) =>
-        [savedDraft, ...current.filter((entry) => entry.id !== savedDraft.id)].sort(
-          (left, right) =>
-            new Date(right.updatedAt).getTime() -
-            new Date(left.updatedAt).getTime(),
-        ),
-      );
-      setSavedDraftSnapshot(
-        draftSnapshot(savedDraft.name, savedDraft.design, currentDraftContent),
-      );
-      setStatus({
-        kind: "success",
-        text: "Entwurf in der Datenbank zwischengespeichert.",
-      });
+      setExpectedUpdatedAt(savedDraft.updatedAt);
+      setSaveConflict(false);
+      setDrafts(current => [savedDraft, ...current.filter(entry => entry.id !== savedDraft.id)]
+        .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)));
+      // Use the submitted snapshot, not edits made while the request was running.
+      setSavedDraftSnapshot(draftSnapshot(normalizedName, design, currentDraftContent));
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Newsletter-Entwurf konnte nicht gespeichert werden.";
-      setDraftStorageError(message);
-      setStatus({ kind: "error", text: message });
+      setDraftStorageError(error instanceof Error ? error.message : "Speichern fehlgeschlagen. Deine Änderungen bleiben im Editor.");
     } finally {
+      saveInFlight.current = false;
       setIsSavingDraft(false);
+    }
+  }, [activeDraftId, currentDraftContent, design, draftName, expectedUpdatedAt, savedDraftSnapshot, storageKey, title]);
+
+  useEffect(() => {
+    if (!isConfigReady || isDraftsLoading || isSavingDraft || !isDraftDirty || draftStorageError) return;
+    const timer = window.setTimeout(() => { void handleSaveIntermediateDraft(); }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [isConfigReady, isDraftsLoading, isSavingDraft, isDraftDirty, draftStorageError, handleSaveIntermediateDraft]);
+
+  useEffect(() => {
+    if (!isDraftDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDraftDirty]);
+
+  const duplicateDraft = (source?: NewsletterDraftRecord | NewsletterIssue) => {
+    if (saveInFlight.current) return;
+    if (source) applyDraft({ ...source, design: normalizeDesign(source.design), revisions: [] });
+    setDraftName(`${source?.name ?? draftName} – Kopie`.slice(0, 160));
+    setActiveDraftId("");
+    setExpectedUpdatedAt(null);
+    pendingDraftId.current = null;
+    setSavedDraftSnapshot(null);
+    setDraftStorageError(null);
+    setSaveConflict(false);
+    setRecoveryMessage("Neue Kopie angelegt. Gestaltung, Absender und Inhalte wurden übernommen.");
+  };
+
+  const reloadServerDraft = async () => {
+    try {
+      const available = await refreshDrafts();
+      const found = available.find(draft => draft.id === (activeDraftId || pendingDraftId.current));
+      if (found) applyDraft(found);
+      else setDraftStorageError("Der Entwurf ist auf dem Server nicht verfügbar. Sichere deinen Arbeitsstand als Kopie.");
+    } catch (error) {
+      setDraftStorageError(error instanceof Error ? error.message : "Serverstand konnte nicht geladen werden.");
     }
   };
 
   const handleExport = async () => {
-    if (selectedShowcaseCount === 0) return;
     setBusyAction("export");
     setStatus(null);
     try {
       const response = await fetch("/api/admin/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newsletterPayload, action: "export" }),
+        body: JSON.stringify({ ...newsletterPayload, draftName, fromName, fromEmail, recipientListId, action: "export" }),
       });
       if (!response.ok) {
         const raw = await response.text();
@@ -1256,9 +1363,12 @@ export default function GenerateNewsletterClient({
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
+      void refreshDrafts().catch(() => setDraftStorageError("Der Verwendungsverlauf konnte nicht aktualisiert werden. Lade die Seite erneut."));
       setStatus({
         kind: "success",
-        text: "ZIP mit Newsletter-HTML wurde heruntergeladen.",
+        text: response.headers.get("X-Newsletter-History-Warning")
+          ? `ZIP wurde heruntergeladen. ${decodeURIComponent(response.headers.get("X-Newsletter-History-Warning")!)}`
+          : "ZIP mit Newsletter-HTML wurde heruntergeladen.",
       });
     } catch (error) {
       setStatus({
@@ -1283,6 +1393,7 @@ export default function GenerateNewsletterClient({
         body: JSON.stringify({
           ...newsletterPayload,
           action: "draft",
+          draftName,
           fromName,
           fromEmail,
           recipientListId: Number(recipientListId),
@@ -1294,9 +1405,10 @@ export default function GenerateNewsletterClient({
           data.error ?? "Rapidmail-Entwurf konnte nicht erstellt werden.",
         );
       }
+      void refreshDrafts().catch(() => setDraftStorageError("Der Verwendungsverlauf konnte nicht aktualisiert werden. Lade die Seite erneut."));
       setStatus({
         kind: "success",
-        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} mit ${data.counts?.showcases ?? selectedShowcaseCount} Beiträgen wurde erstellt.`,
+        text: `Rapidmail-Entwurf${data.mailing?.id ? ` #${data.mailing.id}` : ""} wurde erstellt.${data.warning ? ` ${data.warning}` : ""}`,
       });
     } catch (error) {
       setStatus({
@@ -1312,7 +1424,7 @@ export default function GenerateNewsletterClient({
   };
 
   const canExport =
-    selectedShowcaseCount > 0 &&
+    !hasLongExcerpt &&
     !hasInvalidGif &&
     Boolean(title.trim()) &&
     Boolean(subject.trim()) &&
@@ -1334,13 +1446,13 @@ export default function GenerateNewsletterClient({
       <SubPageTitle
         ressort="oeffentlichkeitsarbeit"
         title="Newsletter zusammenstellen"
-        subTitle="Wähle Beiträge aus KongloDigital, ordne sie mit Bannern und Buttons und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
+        subTitle="Wähle Inhalte aus KongloDigital, ergänze freie Texte und Links und prüfe das Ergebnis direkt als E-Mail. Erst der letzte Schritt legt einen Entwurf in Rapidmail an – versendet wird hier nichts."
       />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="knglmrt-border-section bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Verfügbare Beiträge
+            Verfügbare Inhalte
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {showcases.length}
@@ -1348,7 +1460,7 @@ export default function GenerateNewsletterClient({
         </div>
         <div className="rounded-lg border border-primary-border bg-primary-soft p-4 ">
           <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
-            Im Newsletter
+            Ausgewählte Quellen
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {selectedShowcaseCount}
@@ -1369,7 +1481,7 @@ export default function GenerateNewsletterClient({
           <NativeSelect
             label="Gespeicherter Entwurf"
             value={activeDraftId}
-            disabled={isDraftsLoading}
+            disabled={isDraftsLoading || isSavingDraft}
             onChange={(event) => handleDraftSelection(event.target.value)}
           >
             <option value="">
@@ -1390,11 +1502,16 @@ export default function GenerateNewsletterClient({
             onChange={(event) => setDraftName(event.target.value)}
           />
           <div className="flex flex-wrap gap-2">
+            <Button type="button" kind="secondary" disabled={isSavingDraft} onClick={() => duplicateDraft()}>Ausgabe duplizieren</Button>
+            {usage.lastIssue ? <Button type="button" kind="secondary" disabled={isSavingDraft} onClick={() => {
+              if (!isDraftDirty || window.confirm("Aktuellen Arbeitsstand verwerfen und die letzte Ausgabe als neue Kopie übernehmen?")) duplicateDraft(usage.lastIssue!);
+            }}>Letzte Ausgabe übernehmen</Button> : null}
             <Button
               type="button"
               kind="secondary"
               icon={faFileCirclePlus}
               onClick={startNewDraft}
+              disabled={isSavingDraft}
             >
               Neuer Entwurf
             </Button>
@@ -1405,20 +1522,33 @@ export default function GenerateNewsletterClient({
               disabled={!canSaveIntermediateDraft}
               onClick={handleSaveIntermediateDraft}
             >
-              {isSavingDraft ? "Speichert …" : "Zwischenspeichern"}
+              {isSavingDraft ? "Speichert …" : "Jetzt speichern"}
             </Button>
           </div>
         </div>
-        <div className="mt-3 text-xs text-muted-foreground">
-          {activeDraft ? (
-            <span>
-              {isDraftDirty ? "Ungespeicherte Änderungen" : "Gespeichert"} · zuletzt{" "}
-              {formatSavedAt(activeDraft.updatedAt)}
-            </span>
-          ) : (
-            <span>Noch nicht in der Datenbank gespeichert.</span>
-          )}
-        </div>
+        <p className="mt-3 text-xs text-muted-foreground" role="status" aria-live="polite">
+          {isSavingDraft ? "Speichert …" : draftStorageError ? "Nicht auf dem Server gespeichert" : isDraftDirty ? "Änderungen werden automatisch gespeichert …" : activeDraft ? `Gespeichert · ${formatSavedAt(activeDraft.updatedAt)}` : "Automatisches Speichern beginnt mit deiner ersten Änderung."}
+        </p>
+        {recoveryMessage ? <p className="mt-2 text-sm text-muted-foreground">{recoveryMessage}</p> : null}
+        {activeDraft?.revisions?.length ? (
+          <NativeSelect label="Älteren Speicherstand wiederherstellen" className="mt-3" value="" disabled={isSavingDraft} onChange={event => {
+            if (!event.target.value) return;
+            const revision = activeDraft.revisions?.[Number(event.target.value)];
+            if (!revision || !window.confirm("Diesen älteren Speicherstand wiederherstellen? Der aktuelle Serverstand bleibt im Verlauf erhalten.")) return;
+            applyDraft({ ...activeDraft, ...revision, updatedAt: activeDraft.updatedAt });
+            setSavedDraftSnapshot(null);
+            setRecoveryMessage("Älterer Speicherstand wiederhergestellt. Er wird als neuer Stand gespeichert.");
+          }}>
+            <option value="">Die letzten zehn Speicherstände</option>
+            {activeDraft.revisions.map((revision, index) => <option key={`${revision.updatedAt}-${index}`} value={index}>{formatSavedAt(revision.updatedAt)} · {revision.name}</option>)}
+          </NativeSelect>
+        ) : null}
+        {saveConflict ? <div className="mt-3 flex gap-2">
+          <Button type="button" kind="secondary" onClick={() => {
+            if (window.confirm("Lokale Änderungen verwerfen und den aktuellen Serverstand laden?")) void reloadServerDraft();
+          }}>Serverstand laden</Button>
+          <Button type="button" kind="secondary" onClick={() => duplicateDraft()}>Meine Änderungen als Kopie sichern</Button>
+        </div> : null}
         {draftStorageError ? (
           <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-warning">
             {draftStorageError}
@@ -1507,7 +1637,8 @@ export default function GenerateNewsletterClient({
                 maxLength={4000}
                 onChange={(event) => setIntro(event.target.value)}
               />
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-3">
+                <Choice label="Kalenderübersicht der nächsten sieben Tage anhängen" checked={includeCalendar} onChange={event => setIncludeCalendar(event.target.checked)} />
                 <Choice
                   label={`Überschrift „${
                     design === "volkshaus-cotta"
@@ -1523,9 +1654,10 @@ export default function GenerateNewsletterClient({
             </div>
           </FormSection>
 
+          {sourceWarnings.map(warning => <p key={warning} role="alert" className="rounded-lg border border-border bg-muted p-4 text-sm">{warning}</p>)}
           <FormSection
             title="Inhalte und Reihenfolge"
-            description="Hier bearbeitest und sortierst du Beiträge und freie Inhaltsblöcke. Neue Beiträge wählst du in der Beitragsbibliothek aus."
+            description="Hier bearbeitest und sortierst du ausgewählte Inhalte und freie Texte. Weitere Inhalte findest du in der Inhaltsbibliothek."
           >
             <div className="mb-5 flex flex-wrap gap-2">
               <Button
@@ -1534,7 +1666,7 @@ export default function GenerateNewsletterClient({
                 icon={faPlus}
                 onClick={() => setIsProjectLibraryOpen(true)}
               >
-                Beiträge hinzufügen
+                Inhalt hinzufügen
               </Button>
               <Button type="button" kind="secondary" icon={faLink} onClick={addButton}>
                 Button
@@ -1545,7 +1677,7 @@ export default function GenerateNewsletterClient({
                 icon={faBullhorn}
                 onClick={addBanner}
               >
-                Banner
+                Freier Text
               </Button>
               {items.length > 0 ? (
                 <Button
@@ -1565,7 +1697,7 @@ export default function GenerateNewsletterClient({
                   Noch keine Inhalte ausgewählt
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Öffne die Beitragsbibliothek und füge den ersten Beitrag hinzu.
+                  Füge Inhalte hinzu oder verwende nur den Einstieg und die Kalenderübersicht.
                 </p>
                 <Button
                   type="button"
@@ -1574,7 +1706,7 @@ export default function GenerateNewsletterClient({
                   className="mt-4"
                   onClick={() => setIsProjectLibraryOpen(true)}
                 >
-                  Beitragsbibliothek öffnen
+                  Inhaltsbibliothek öffnen
                 </Button>
               </div>
             ) : (
@@ -1670,14 +1802,14 @@ export default function GenerateNewsletterClient({
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             {item.type === "showcase"
-                              ? "Beitrag"
+                              ? (showcase ? SOURCE_LABELS[showcase.kind] : "Inhalt")
                               : item.type === "banner"
-                                ? "Banner"
+                                ? "Freier Text"
                                 : "Eigener Button"}
                           </p>
                           <h3 className="truncate font-semibold text-foreground">
                             {item.type === "showcase"
-                              ? (showcase?.name ?? "Nicht verfügbarer Beitrag")
+                              ? (showcase?.name ?? "Nicht verfügbarer Inhalt")
                               : item.title || "Ohne Titel"}
                           </h3>
                           {item.type === "showcase" && showcase ? (
@@ -1703,29 +1835,43 @@ export default function GenerateNewsletterClient({
                         />
                       </div>
 
+                      {item.type === "showcase" && !showcase ? (
+                        <p role="alert" className="mt-3 text-sm text-destructive">Dieser Inhalt ist nicht mehr verfügbar oder konnte nicht geladen werden. Lade die Seite erneut oder entferne ihn aus dem Newsletter.</p>
+                      ) : null}
                       {item.type === "showcase" && showcase ? (
                         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
                           <div className="space-y-2 sm:col-span-2 xl:col-span-4">
                             <Textarea
-                            label="Newslettertext / Excerpt (Markdown)"
+                            label="Kurztext"
                             value={item.options.excerpt}
-                            rows={5}
+                            rows={3}
                             maxLength={5_000}
                             placeholder={
                               showcase.description ||
-                              "Kurzen Beitragstext für den Newsletter eingeben …"
+                              "Kurztext für den Newsletter eingeben …"
                             }
                             onChange={(event) =>
                               updateShowcaseOptions(item.id, { excerpt: event.target.value.slice(0, 5_000) })
                             }
                           />
+                            <div className="flex flex-wrap items-center gap-3 text-xs" aria-live="polite">
+                              <span>{newsletterExcerptLength(item.options.excerpt)} / {NEWSLETTER_EXCERPT_LIMIT} Zeichen</span>
+                              {newsletterExcerptLength(item.options.excerpt) > NEWSLETTER_EXCERPT_LIMIT ? <>
+                                <span role="alert" className="text-destructive">Zu lang – bitte kürzen. Es wird nichts still abgeschnitten.</span>
+                                <Button type="button" kind="secondary" onClick={() => updateShowcaseOptions(item.id, { excerpt: shortenNewsletterExcerpt(item.options.excerpt) })}>Kurzfassung übernehmen</Button>
+                                <p className="basis-full rounded border border-border bg-muted p-3">Vorschlag: {shortenNewsletterExcerpt(item.options.excerpt)}</p>
+                              </> : null}
+                            </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                               <span>
-                                Dieser Text gilt für diesen Newsletter und wird mit dem Entwurf gespeichert. Den Grundtext bearbeitest du im CMS.
+                                Dieser Text gilt nur für diesen Newsletter. Die Kurzfassung ist frei bearbeitbar; maximal 520 Zeichen.
                               </span>
-                              <a className="font-semibold underline" href={`/showcase/edit/${showcase.id}`} target="_blank" rel="noreferrer">Beitrag im CMS bearbeiten</a>
+                              <a className="font-semibold underline" href={showcase.href} target="_blank" rel="noreferrer">Original öffnen</a>
                             </div>
                           </div>
+                          <details className="sm:col-span-2 xl:col-span-4">
+                            <summary className="cursor-pointer text-sm font-semibold">Bild, Layout und Link einstellen</summary>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                           <NativeSelect
                             label="Layout"
                               value={item.options.layout}
@@ -1765,7 +1911,7 @@ export default function GenerateNewsletterClient({
                           </NativeSelect>
                           <div className="space-y-2">
                             <NativeSelect
-                            label="Beitragsbild"
+                            label="Bild"
                             error={
                               item.options.imageMode === "gif" &&
                               item.options.gifImageUrls.length < 2
@@ -1988,7 +2134,7 @@ export default function GenerateNewsletterClient({
 
                           <div className="sm:col-span-2 xl:col-span-4">
                             <Choice
-                              label="Link zum Beitrag anzeigen"
+                              label="Weiterführenden Link anzeigen"
                               checked={item.options.showLink}
                               onChange={(event) =>
                                 updateShowcaseOptions(item.id, {
@@ -1997,6 +2143,8 @@ export default function GenerateNewsletterClient({
                               }
                             />
                           </div>
+                            </div>
+                          </details>
                         </div>
                       ) : null}
 
@@ -2030,7 +2178,7 @@ export default function GenerateNewsletterClient({
                       {item.type === "banner" ? (
                         <div className="mt-4 grid gap-4 border-t border-primary-border pt-4 sm:grid-cols-2">
                           <Field
-                            label="Bannertitel"
+                            label="Überschrift"
                             value={item.title}
                             maxLength={100}
                             onChange={(event) =>
@@ -2040,7 +2188,7 @@ export default function GenerateNewsletterClient({
                             }
                           />
                           <Textarea
-                            label="Bannertext"
+                            label="Text"
                             value={item.content}
                             rows={3}
                             maxLength={1000}
@@ -2114,9 +2262,9 @@ export default function GenerateNewsletterClient({
                   Newsletter fertigstellen
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {selectedShowcaseCount === 0
-                    ? "Wähle mindestens einen Beitrag aus."
-                    : `${selectedShowcaseCount} ${selectedShowcaseCount === 1 ? "Beitrag" : "Beiträge"} im Entwurf.`}
+                  {items.length === 0
+                    ? "Newsletter mit Einstieg und optionaler Kalenderübersicht."
+                    : `${items.length} ${items.length === 1 ? "Inhalt" : "Inhalte"} im Entwurf.`}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2205,7 +2353,7 @@ export default function GenerateNewsletterClient({
                   iconOnly
                   icon={faRotate}
                   onClick={() => setPreviewNonce((current) => current + 1)}
-                  disabled={selectedShowcaseCount === 0}
+                  disabled={!canExport}
                   loading={isPreviewLoading}
                   aria-label="Vorschau neu laden"
                 />
@@ -2253,8 +2401,7 @@ export default function GenerateNewsletterClient({
                       Vorschau wartet auf Inhalte
                     </p>
                     <p className="mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                      Sobald du einen Beitrag auswählst, wird die echte
-                      E-Mail-Vorschau automatisch erzeugt.
+                      Fülle Titel und Betreff aus. Die E-Mail-Vorschau wird automatisch erzeugt.
                     </p>
                   </div>
                 </div>
@@ -2286,13 +2433,13 @@ export default function GenerateNewsletterClient({
                   id="showcase-library-title"
                   className="text-xl font-semibold text-foreground"
                 >
-                  Beitragsbibliothek
+                  Inhaltsbibliothek
                 </h2>
                 <p
                   id="showcase-library-description"
                   className="mt-1 text-sm text-muted-foreground"
                 >
-                  Wähle Beiträge aus KongloDigital aus. Sie werden am Ende des
+                  Wähle Projekte, Archiv-News, Seiten, Werkbereiche oder Termine der nächsten 28 Tage. Sie werden am Ende des
                   Newsletters eingefügt und anschließend dort bearbeitet.
                 </p>
               </div>
@@ -2300,16 +2447,29 @@ export default function GenerateNewsletterClient({
                 type="button"
                 onClick={() => setIsProjectLibraryOpen(false)}
                 className="shrink-0 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label="Beitragsbibliothek schließen"
+                aria-label="Inhaltsbibliothek schließen"
               >
                 Schließen
               </button>
             </header>
 
             <div className="border-b border-border bg-muted/30 px-5 py-4 sm:px-6">
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Button type="button" kind="secondary" onClick={() => { addBanner(); setIsProjectLibraryOpen(false); }}>Freier Text</Button>
+                <Button type="button" kind="secondary" onClick={() => { addButton(); setIsProjectLibraryOpen(false); }}>Eigener Link</Button>
+              </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <NativeSelect label="Verwendung" value={activityFilter} onChange={event => setActivityFilter(event.target.value as "all" | "new" | "unused")}>
+                  <option value="all">Alle</option>
+                  <option value="new" disabled={!usage.lastIssue}>Neu seit der letzten Ausgabe</option>
+                  <option value="unused">Noch nicht verwendet</option>
+                </NativeSelect>
+                <NativeSelect label="Inhaltsart" value={sourceKind} onChange={event => setSourceKind(event.target.value as NewsletterSourceKind | "all")}>
+                  <option value="all">Alle Inhalte</option>
+                  {Object.entries(SOURCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </NativeSelect>
                 <Field
-                  label="Beiträge durchsuchen"
+                  label="Inhalte durchsuchen"
                   className="flex-1"
                   autoFocus
                   type="search"
@@ -2337,7 +2497,7 @@ export default function GenerateNewsletterClient({
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
                   {filteredShowcases.length}{" "}
-                  {filteredShowcases.length === 1 ? "Beitrag" : "Beiträge"}
+                  {filteredShowcases.length === 1 ? "Inhalt" : "Inhalte"}
                   {query.trim() ? " gefunden" : " verfügbar"}
                 </span>
                 <span>
@@ -2346,10 +2506,14 @@ export default function GenerateNewsletterClient({
               </div>
             </div>
 
+            <p className="px-5 py-2 text-xs text-muted-foreground">
+              {usage.lastIssue ? `Letzte Ausgabe: ${formatSavedAt(usage.lastIssue.createdAt)}. ` : "Noch keine Ausgabe erfasst. "}
+              Erfasst werden eigene ZIP-Exporte und Rapidmail-Übergaben dieses Designs seit Einführung dieser Funktion; kein Versandnachweis. Bei Terminen ist das Veröffentlichungsdatum unbekannt.
+            </p>
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
               {filteredShowcases.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-input bg-muted/40 px-5 py-10 text-center text-sm text-muted-foreground">
-                  Keine passenden Beiträge gefunden.
+                  Keine passenden Inhalte gefunden.
                 </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -2423,8 +2587,12 @@ export default function GenerateNewsletterClient({
                                   : "Hinzufügen"}
                             </span>
                           </span>
+                          <span className="mt-1 block text-xs font-semibold text-primary">
+                            {usage.used.has(showcase.id) ? `Bereits verwendet · ${formatSavedAt(usage.used.get(showcase.id)!.createdAt)} · ${usage.used.get(showcase.id)!.output.action === "export" ? "exportiert" : "an Rapidmail übergeben"}` : "Noch nicht verwendet"}
+                            {isNewNewsletterSource(showcase, usage.lastIssue?.createdAt) ? " · Neu seit der letzten Ausgabe" : ""}
+                          </span>
                           <span className="mt-1 block text-xs text-muted-foreground">
-                            {formatDate(showcase.publishDate ?? showcase.updatedAt)}
+                            {SOURCE_LABELS[showcase.kind]} · {formatDate(showcase.publishDate ?? showcase.updatedAt)}
                           </span>
                           <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
                             {description
@@ -2443,7 +2611,7 @@ export default function GenerateNewsletterClient({
 
             <footer className="flex flex-col gap-3 border-t border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="text-sm text-muted-foreground">
-                Maximal {MAX_SELECTED_SHOWCASES} Beiträge, damit Footer und
+                Maximal {MAX_SELECTED_SHOWCASES} Inhalte, damit Footer und
                 Abmeldelink in E-Mail-Programmen sichtbar bleiben.
               </p>
               <Button

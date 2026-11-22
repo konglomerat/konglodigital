@@ -1397,6 +1397,7 @@ export default function ResourcesPageClient({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
+          <Button href={localizePathname("/rosenwerk/karte", locale)} icon={faMap}>{tx("3D-Geländekarte", "de")}</Button>
           {access ? (
             <Button
               kind="emphasis"

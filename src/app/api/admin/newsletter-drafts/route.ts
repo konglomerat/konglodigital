@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -6,20 +7,12 @@ import { loadUserAccess } from "@/lib/access/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
+import { DRAFT_COLUMNS, publicDraftContent, serializeNewsletterDraft as serializeDraft, type NewsletterDraftRow } from "@/lib/newsletter-draft-records";
+
 export const runtime = "nodejs";
 
 const NEWSLETTER_DESIGNS = ["konglomerat", "volkshaus-cotta"] as const;
 type NewsletterDesign = (typeof NEWSLETTER_DESIGNS)[number];
-
-type NewsletterDraftRow = {
-  id: string;
-  created_by: string;
-  name: string;
-  design: NewsletterDesign;
-  content: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-};
 
 const unauthorized = () =>
   NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,17 +38,8 @@ const normalizeContent = (value: unknown) => {
     return null;
   }
 
-  return JSON.parse(serialized) as Record<string, unknown>;
+  return publicDraftContent(JSON.parse(serialized) as Record<string, unknown>);
 };
-
-const serializeDraft = (row: NewsletterDraftRow) => ({
-  id: row.id,
-  name: row.name,
-  design: normalizeDesign(row.design),
-  content: row.content ?? {},
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
 
 const requireNewsletterAccess = async (request: NextRequest) => {
   const { supabase } = createSupabaseRouteClient(request);
@@ -78,18 +62,22 @@ export const GET = async (request: NextRequest) => {
     if (!auth.userId) return unauthorized();
 
     const supabase = createSupabaseAdminClient();
-    const { data, error } = await supabase
-      .from("newsletter_drafts")
-      .select("id, created_by, name, design, content, created_at, updated_at")
-      .eq("created_by", auth.userId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-
-    if (error) throw error;
-
+    const rows: NewsletterDraftRow[] = [];
+    for (let offset = 0; ; offset += 100) {
+      const { data, error } = await supabase.from("newsletter_drafts")
+        .select(DRAFT_COLUMNS).eq("created_by", auth.userId)
+        .order("updated_at", { ascending: false }).order("id").range(offset, offset + 99);
+      if (error) throw error;
+      rows.push(...(data ?? []) as NewsletterDraftRow[]);
+      if (!data || data.length < 100) break;
+    }
     return NextResponse.json({
-      drafts: ((data ?? []) as NewsletterDraftRow[]).map(serializeDraft),
-    });
+      drafts: rows.filter(row => row.content?._kind !== "issue").map(serializeDraft),
+      issues: rows.filter(row => row.content?._kind === "issue").map(row => ({
+        ...serializeDraft(row), output: row.content._output,
+      })),
+    }, { headers: { "Cache-Control": "no-store" } });
+
   } catch (error) {
     return NextResponse.json(
       {
@@ -114,6 +102,8 @@ export const POST = async (request: NextRequest) => {
       name?: unknown;
       design?: unknown;
       content?: unknown;
+      expectedUpdatedAt?: unknown;
+      create?: unknown;
     };
     const id = typeof body.id === "string" ? body.id.trim() : "";
     const name = normalizeName(body.name);
@@ -136,29 +126,34 @@ export const POST = async (request: NextRequest) => {
     const supabase = createSupabaseAdminClient();
     const now = new Date().toISOString();
 
-    if (id) {
-      const { data, error } = await supabase
-        .from("newsletter_drafts")
-        .update({ name, design, content, updated_at: now })
-        .eq("id", id)
-        .eq("created_by", auth.userId)
-        .select("id, created_by, name, design, content, created_at, updated_at")
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) {
-        return NextResponse.json(
-          { error: "Der Newsletter-Entwurf wurde nicht gefunden." },
-          { status: 404 },
-        );
+    if (id && body.create !== true) {
+      const { data: previous, error: readError } = await supabase.from("newsletter_drafts")
+        .select(DRAFT_COLUMNS).eq("id", id).eq("created_by", auth.userId).maybeSingle();
+      if (readError) throw readError;
+      if (!previous || previous.content?._kind === "issue") {
+        return NextResponse.json({ error: "Der Newsletter-Entwurf wurde nicht gefunden." }, { status: 404 });
       }
-
+      if (typeof body.expectedUpdatedAt !== "string" || body.expectedUpdatedAt !== previous.updated_at) {
+        return NextResponse.json({ error: "Dieser Entwurf wurde inzwischen an anderer Stelle geändert. Lade den Serverstand oder sichere deine Änderungen als Kopie.", conflict: true }, { status: 409 });
+      }
+      const revisions = [
+        { name: previous.name, design: previous.design, content: publicDraftContent(previous.content), updatedAt: previous.updated_at },
+        ...(Array.isArray(previous.content._revisions) ? previous.content._revisions : []),
+      ].slice(0, 10);
+      const updatedAt = new Date(Math.max(Date.now(), new Date(previous.updated_at).getTime() + 1)).toISOString();
+      const { data, error } = await supabase.from("newsletter_drafts")
+        .update({ name, design, content: { ...content, _revisions: revisions }, updated_at: updatedAt })
+        .eq("id", id).eq("created_by", auth.userId).eq("updated_at", body.expectedUpdatedAt)
+        .select(DRAFT_COLUMNS).maybeSingle();
+      if (error) throw error;
+      if (!data) return NextResponse.json({ error: "Der Entwurf wurde gleichzeitig geändert. Bitte lade den Serverstand oder sichere eine Kopie.", conflict: true }, { status: 409 });
       return NextResponse.json({ draft: serializeDraft(data as NewsletterDraftRow) });
     }
 
     const { data, error } = await supabase
       .from("newsletter_drafts")
       .insert({
+        ...(id ? { id } : {}),
         created_by: auth.userId,
         name,
         design,
@@ -168,6 +163,14 @@ export const POST = async (request: NextRequest) => {
       .select("id, created_by, name, design, content, created_at, updated_at")
       .single();
 
+    if (error?.code === "23505" && id && body.create === true) {
+      const { data: existing } = await supabase.from("newsletter_drafts").select(DRAFT_COLUMNS)
+        .eq("id", id).eq("created_by", auth.userId).maybeSingle();
+      if (existing && existing.content?._kind !== "issue" && existing.name === name && existing.design === design && isDeepStrictEqual(publicDraftContent(existing.content), content)) {
+        return NextResponse.json({ draft: serializeDraft(existing as NewsletterDraftRow) });
+      }
+      return NextResponse.json({ error: "Dieser Entwurf existiert bereits. Lade den Serverstand oder sichere eine Kopie.", conflict: true }, { status: 409 });
+    }
     if (error) throw error;
 
     return NextResponse.json(
