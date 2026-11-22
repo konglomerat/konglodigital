@@ -17,7 +17,7 @@
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "dev:local": "node scripts/dev-shared-cms.mjs",
-    "test": "node --experimental-strip-types --test scripts/test-supabase-sso.mjs scripts/test-inline-pages.mjs scripts/test-shared-files.mjs"
+    "test": "node --experimental-strip-types --test scripts/test-supabase-sso.mjs scripts/test-inline-pages.mjs scripts/test-shared-files.mjs scripts/test-theme.mjs"
   },
   "dependencies": {
     "@payloadcms/admin-bar": "3.90.2",

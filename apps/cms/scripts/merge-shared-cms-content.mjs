@@ -79,7 +79,6 @@ try{
   const fields=payload.config.globals.find(g=>g.slug===slug).fields
   await payload.updateGlobal({slug,req,data:remap(fields,clean(original)),context})
  }
- const normalize=value=>JSON.parse(JSON.stringify(value,(key,v)=>['id','updatedAt','createdAt','url','thumbnailURL','populatedAuthors','breadcrumbs'].includes(key)?undefined:v))
  // URLs are meaningful content except for computed Media URLs. Check all page/post fields.
  const normalizeContent=value=>JSON.parse(JSON.stringify(value,(key,v)=>['id','updatedAt','createdAt','populatedAuthors','breadcrumbs'].includes(key)?undefined:v))
  for(const collection of ['pages','posts'])for(const original of source.collections[collection]){
