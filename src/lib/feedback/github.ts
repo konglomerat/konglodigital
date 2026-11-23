@@ -30,7 +30,14 @@ const requiredEnv = (name: string) => {
   return value;
 };
 
-const encodeJwtPart = (value: object) =>
+// Docker-Env-Files (z. B. in Dokploy) übernehmen Anführungszeichen und „\n“
+// wörtlich, anders als Next.js lokal. Beides wird hier aufgelöst.
+const readPrivateKey = () =>
+  requiredEnv("GITHUB_APP_PRIVATE_KEY")
+    .replace(/^(["'])([\s\S]*)\1$/, "$2")
+    .replace(/\\n/g, "\n");
+
+const encodeJwtPart =(value: object) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
 
 const createAppJwt = () => {
@@ -47,7 +54,7 @@ const createAppJwt = () => {
   ].join(".");
   const signature = createSign("RSA-SHA256")
     .update(unsigned)
-    .sign(requiredEnv("GITHUB_APP_PRIVATE_KEY"), "base64url");
+    .sign(readPrivateKey(), "base64url");
 
   return `${unsigned}.${signature}`;
 };
