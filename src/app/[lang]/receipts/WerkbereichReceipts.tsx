@@ -67,6 +67,10 @@ import PeriodFilter, {
 } from "./PeriodFilter";
 import ProjectFilter, { type ProjectFilterOption } from "./ProjectFilter";
 import ReceiptSearch from "./ReceiptSearch";
+import ReceiptsSummaryBar, {
+  type BreakdownCategory,
+  type BreakdownSide,
+} from "./ReceiptsSummaryBar";
 import ReceiptDetailDrawer from "./receipt-detail-drawer";
 import {
   exportTable,
@@ -128,11 +132,36 @@ type BalancePreferences = NonNullable<MemberProfilePreferences["balance"]>;
 const NO_TAG_KEY = "\u0000ohne-tag";
 const NO_TAG_LABEL = "Ohne Tag";
 
+// Auswertung: so viele Tags je Seite, der Rest als „weitere“.
+const BREAKDOWN_MAX_TAGS = 6;
+const BREAKDOWN_REST_KEY = "\u0000weitere";
+// Farben der Tags — in der Tabelle wie in der Auswertung. Die umsatzstärksten
+// Tags bekommen je eine eigene Farbe, alle weiteren teilen sich die neutrale.
+const TAG_COLORS = [
+  "var(--knglmrt-pink-100)",
+  "var(--knglmrt-dark-100)",
+  "var(--knglmrt-blue-100)",
+  "var(--knglmrt-yellow-100)",
+  "var(--knglmrt-brown-100)",
+  "var(--knglmrt-green-100)",
+  "var(--knglmrt-pink-60)",
+  "var(--knglmrt-blue-60)",
+  "var(--knglmrt-green-60)",
+  "var(--knglmrt-brown-60)",
+];
+const OTHER_TAG_COLOR = "var(--knglmrt-dark-30)";
+const NO_TAG_COLOR = "var(--knglmrt-dark-60)";
+
 /** Die Tags, die Menschen gesetzt haben — ohne die, die die App selbst setzt. */
 const getUserTags = (receipt: CampaiBalanceReceipt): string[] =>
   receipt.tags
     .map((tag) => tag.trim())
     .filter((tag) => tag && !SYSTEM_RECEIPT_TAGS.has(tag));
+
+/** Umbuchung des Vorjahres-Überhangs von der Basis auf den Werkbereich. */
+const OVERHANG_TAG = "Überhang";
+const isOverhangReceipt = (receipt: CampaiBalanceReceipt): boolean =>
+  receipt.tags.some((tag) => tag.trim() === OVERHANG_TAG);
 
 const getReceiptTagKeys = (receipt: CampaiBalanceReceipt): string[] => {
   const tags = getUserTags(receipt);
@@ -696,35 +725,6 @@ function FilterSelect<T extends string>({
   );
 }
 
-// Ein Wert der Saldo-Zeile: schmal Beschriftung über dem Wert, breit daneben.
-function SummaryFigure({
-  label,
-  value,
-  valueClassName,
-  title,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-  title?: string;
-}) {
-  return (
-    <span
-      title={title}
-      className="flex flex-col whitespace-nowrap @min-[1100px]:flex-row @min-[1100px]:items-baseline @min-[1100px]:gap-1.5"
-    >
-      <span className="text-[length:clamp(11px,3cqw,14px)] leading-4 text-muted-foreground @min-[1100px]:text-[length:var(--ui-size-body)] @min-[1100px]:leading-normal @min-[1100px]:text-foreground">
-        {label}
-      </span>
-      <span
-        className={`knglmrt-num font-bold! text-[length:clamp(10px,2.9cqw,15px)]! ${valueClassName ?? ""}`}
-      >
-        {value}
-      </span>
-    </span>
-  );
-}
-
 type WerkbereichReceiptsProps = {
   werkbereich: BuchhaltungWerkbereich;
   /** Einziger freigegebener Werkbereich: /receipts leitet direkt hierher. */
@@ -973,41 +973,39 @@ export default function WerkbereichReceipts({
 
   // Der Kassenbestand ist ein Stand, keine Bewegung: er hängt nicht an den
   // Filtern der Tabelle.
-  useEffect(() => {
-    let active = true;
-
-    const loadCashRegisters = async () => {
-      try {
-        const summary = await fetchJson<CampaiCashRegisterBalanceSummary>(
-          "/api/campai/cash-registers",
-        );
-
-        if (!active) {
-          return;
-        }
-
-        setCashRegisterSummary(summary);
-        setCashRegisterError(null);
-      } catch (error) {
-        if (!active) {
-          return;
-        }
-
-        setCashRegisterSummary(null);
-        setCashRegisterError(
-          error instanceof Error
-            ? error.message
-            : "Barkassen-Bestand konnte nicht geladen werden.",
-        );
+  // Nach einer Kassenbuchung wird er neu geholt.
+  const cashRegisterRequestRef = useRef(0);
+  const loadCashRegisters = useCallback(async () => {
+    const request = ++cashRegisterRequestRef.current;
+    try {
+      const summary = await fetchJson<CampaiCashRegisterBalanceSummary>(
+        "/api/campai/cash-registers",
+      );
+      if (request !== cashRegisterRequestRef.current) {
+        return;
       }
-    };
-
-    void loadCashRegisters();
-
-    return () => {
-      active = false;
-    };
+      setCashRegisterSummary(summary);
+      setCashRegisterError(null);
+    } catch (error) {
+      if (request !== cashRegisterRequestRef.current) {
+        return;
+      }
+      setCashRegisterSummary(null);
+      setCashRegisterError(
+        error instanceof Error
+          ? error.message
+          : "Barkassen-Bestand konnte nicht geladen werden.",
+      );
+    }
   }, []);
+
+  useEffect(() => {
+    void loadCashRegisters();
+    return () => {
+      // Antworten nach dem Verlassen der Seite verwerfen.
+      cashRegisterRequestRef.current += 1;
+    };
+  }, [loadCashRegisters]);
 
   // Merkt sich den zuletzt geöffneten Werkbereich (für /receipts), die
   // Spaltenauswahl und den Zeilenabstand.
@@ -1463,9 +1461,12 @@ export default function WerkbereichReceipts({
 
   // Die Summen zählen genau die Zeilen, die in der Tabelle stehen — also auch
   // nach Projekt und Suche gefiltert.
-  const { totalIncome, totalExpense, saldo, transferSaldo } = useMemo(() => {
+  const { totalIncome, totalExpense, overhang, saldo, transferSaldo } = useMemo(() => {
     let income = 0;
     let expense = 0;
+    // Der Überhang aus dem Vorjahr ist keine Einnahme des Jahres — er steht in
+    // der Saldo-Rechnung für sich und zählt nur im Guthaben.
+    let overhangSum = 0;
     // Zahlungsweg pro Beleg: Campai bucht Barzahlungen auf ein Kassenkonto
     // (160xx), alles andere gilt hier als überwiesen.
     let transfer = 0;
@@ -1474,7 +1475,13 @@ export default function WerkbereichReceipts({
       const paidInCash = receipt.paymentAccounts.some(isCashRegisterAccount);
       const amount = receipt.totalGrossAmount ?? 0;
 
-      if (receipt.type && INCOME_TYPES.has(receipt.type)) {
+      if (isOverhangReceipt(receipt)) {
+        const signed = getSignedAmount(receipt);
+        overhangSum += signed;
+        if (!paidInCash) {
+          transfer += signed;
+        }
+      } else if (receipt.type && INCOME_TYPES.has(receipt.type)) {
         income += amount;
         if (!paidInCash) {
           transfer += amount;
@@ -1490,24 +1497,35 @@ export default function WerkbereichReceipts({
     return {
       totalIncome: income,
       totalExpense: expense,
-      saldo: income - expense,
+      overhang: overhangSum,
+      saldo: overhangSum + income - expense,
       transferSaldo: transfer,
     };
-  }, [filteredReceipts]);
+  }, [filteredReceipts, getSignedAmount]);
 
   // Projekt oder Suche schränken die Tabelle auf einen Ausschnitt ein.
   const isNarrowed =
     activeProjectKeys.length > 0 ||
     activeTagKeys.length > 0 ||
     searchTerms.length > 0;
-  const summaryScopeLabel =
+  // Bei mehreren Projekten oder Tags nur die Anzahl — die ganze Liste steht
+  // im Tooltip, sonst sprengt sie die Summenleiste.
+  const scopeNames =
     activeProjectKeys.length > 0 && activeTagKeys.length === 0
-      ? activeProjectKeys.map((key) => getProjectLabel(key)).join(", ")
+      ? activeProjectKeys.map((key) => getProjectLabel(key))
       : activeTagKeys.length > 0 && activeProjectKeys.length === 0
-        ? activeTagKeys.map(getTagFilterLabel).join(", ")
+        ? activeTagKeys.map(getTagFilterLabel)
+        : [];
+  const summaryScopeLabel =
+    scopeNames.length === 1
+      ? scopeNames[0]
+      : scopeNames.length > 1
+        ? `${scopeNames.length} ${activeTagKeys.length > 0 ? "Tags" : "Projekte"}`
         : isNarrowed
           ? "Auswahl"
           : `${werkbereich.label} gesamt`;
+  const summaryScopeDetail =
+    scopeNames.length > 1 ? scopeNames.join(", ") : undefined;
 
   const cashRegisterAccount =
     CASH_REGISTER_ACCOUNT_BY_COST_CENTER2[werkbereich.value];
@@ -1527,6 +1545,148 @@ export default function WerkbereichReceipts({
     showCashRegister && cashRegisterBalance !== null
       ? transferSaldo + cashRegisterBalance
       : saldo;
+
+  // Für die Saldo-Rechnung: was vor dem Zeitraum in der Kasse lag, steckt im
+  // Kassenbestand, aber in keiner Einnahme des Zeitraums.
+  const saldoParts =
+    showCashRegister && cashRegisterBalance !== null
+      ? {
+          carryOver: availableSaldo - saldo,
+          cash: cashRegisterBalance,
+          account: transferSaldo,
+        }
+      : null;
+
+  // Auswertung nach Tags: genau die Zeilen der Tabelle. Ist nach Tags
+  // gefiltert, zeigt sie nur diese — ein Beleg mit weiteren Tags zählt dann
+  // nicht noch bei Tags, die gar nicht ausgewählt sind.
+  // Die Farben dagegen kommen aus allen Tags vor dem Tag-Filter, damit ein Tag
+  // seine Farbe behält, wenn man ihn auswählt.
+  const breakdownColorReceipts = useMemo(() => {
+    if (searchTerms.length === 0) {
+      return receiptsMatchingProjects;
+    }
+    return receiptsMatchingProjects.filter((receipt) => {
+      const text = getSearchText(receipt, searchScope).toLowerCase();
+      return searchTerms.every((term) => text.includes(term));
+    });
+  }, [getSearchText, receiptsMatchingProjects, searchScope, searchTerms]);
+
+  // Ein Tag hat überall dieselbe Farbe — Tabelle, beide Seiten der
+  // Auswertung; die größten zuerst. Grundlage sind alle Belege vor dem
+  // Tag-Filter, damit ein Tag seine Farbe behält, wenn man ihn auswählt.
+  const tagColorByKey = useMemo(() => {
+    const volume = new Map<string, number>();
+    for (const receipt of breakdownColorReceipts) {
+      const amount = Math.abs(getSignedAmount(receipt));
+      for (const key of getReceiptTagKeys(receipt)) {
+        volume.set(key, (volume.get(key) ?? 0) + amount);
+      }
+    }
+
+    const colorByKey = new Map<string, string>();
+    Array.from(volume.entries())
+      .filter(([key]) => key !== NO_TAG_KEY)
+      .sort((left, right) => right[1] - left[1])
+      .forEach(([key], index) => {
+        colorByKey.set(key, TAG_COLORS[index] ?? OTHER_TAG_COLOR);
+      });
+    colorByKey.set(NO_TAG_KEY, NO_TAG_COLOR);
+    return colorByKey;
+  }, [breakdownColorReceipts, getSignedAmount]);
+
+  const breakdownSides = useMemo<BreakdownSide[]>(() => {
+    const byKind = {
+      expense: { total: 0, tags: new Map<string, number>() },
+      income: { total: 0, tags: new Map<string, number>() },
+    };
+    const activeKeys = new Set(activeTagKeys);
+
+    for (const receipt of filteredReceipts) {
+      // Der Überhang steht in der Saldo-Rechnung, nicht bei den Einnahmen.
+      if (isOverhangReceipt(receipt)) continue;
+      const signed = getSignedAmount(receipt);
+      if (signed === 0) continue;
+      const side = signed > 0 ? byKind.income : byKind.expense;
+      const amount = Math.abs(signed);
+      side.total += amount;
+      // Mehrfach getaggte Belege zählen bei jedem ihrer (aktiven) Tags.
+      for (const key of getReceiptTagKeys(receipt)) {
+        if (activeKeys.size > 0 && !activeKeys.has(key)) continue;
+        side.tags.set(key, (side.tags.get(key) ?? 0) + amount);
+      }
+    }
+
+    const buildCategories = (tags: Map<string, number>): BreakdownCategory[] => {
+      const sorted = Array.from(tags.entries()).sort((left, right) => {
+        if (left[0] === NO_TAG_KEY) return 1;
+        if (right[0] === NO_TAG_KEY) return -1;
+        return right[1] - left[1];
+      });
+      const tagged = sorted.filter(([key]) => key !== NO_TAG_KEY);
+      const untagged = sorted.filter(([key]) => key === NO_TAG_KEY);
+      const shown = tagged.slice(0, BREAKDOWN_MAX_TAGS);
+      const rest = tagged.slice(BREAKDOWN_MAX_TAGS);
+      const categories: BreakdownCategory[] = shown.map(([key, amount]) => ({
+        key,
+        label: getTagFilterLabel(key),
+        amount,
+        color: tagColorByKey.get(key) ?? OTHER_TAG_COLOR,
+        clickable: true,
+      }));
+      if (rest.length > 0) {
+        categories.push({
+          key: BREAKDOWN_REST_KEY,
+          label: `${rest.length} weitere`,
+          amount: rest.reduce((sum, [, amount]) => sum + amount, 0),
+          color: "var(--knglmrt-brown-30)",
+          clickable: false,
+        });
+      }
+      for (const [key, amount] of untagged) {
+        categories.push({
+          key,
+          label: NO_TAG_LABEL,
+          amount,
+          color: NO_TAG_COLOR,
+          clickable: true,
+        });
+      }
+      return categories;
+    };
+
+    return [
+      {
+        kind: "expense",
+        title: "Ausgaben",
+        total: byKind.expense.total,
+        categories: buildCategories(byKind.expense.tags),
+      },
+      {
+        kind: "income",
+        title: "Einnahmen",
+        total: byKind.income.total,
+        categories: buildCategories(byKind.income.tags),
+      },
+    ];
+  }, [
+    activeTagKeys,
+    filteredReceipts,
+    getSignedAmount,
+    getTagFilterLabel,
+    tagColorByKey,
+  ]);
+
+  // Klick auf einen Tag filtert die Tabelle darauf, ein zweiter hebt es auf.
+  const toggleBreakdownTag = useCallback(
+    (key: string) => {
+      setSelectedTags(
+        activeTagKeys.length === 1 && activeTagKeys[0] === key ? [] : [key],
+      );
+    },
+    [activeTagKeys],
+  );
+
   const visibleColumnCount = visibleColumns.length;
 
   const toggleSort = useCallback((key: SortKey) => {
@@ -1825,11 +1985,36 @@ export default function WerkbereichReceipts({
                   className="inline-flex max-w-full flex-nowrap gap-1 overflow-hidden align-middle"
                   title={receipt.tags.join(", ")}
                 >
-                  {receipt.tags.map((tag) => (
-                    <span key={tag} className={`${CHIP_CLASS_NAME} bg-muted`}>
-                      {highlight(tag, "tags")}
-                    </span>
-                  ))}
+                  {receipt.tags.map((tag) => {
+                    // Technische Tags („API“) bleiben grau, ohne Farbfeld.
+                    const color = SYSTEM_RECEIPT_TAGS.has(tag.trim())
+                      ? null
+                      : (tagColorByKey.get(tag.trim()) ?? OTHER_TAG_COLOR);
+                    return (
+                      <span
+                        key={tag}
+                        className={`${CHIP_CLASS_NAME} ${color ? "inline-flex! items-center gap-1.5" : "bg-muted"}`}
+                        style={
+                          color
+                            ? {
+                                background: `color-mix(in srgb, ${color} 22%, transparent)`,
+                              }
+                            : undefined
+                        }
+                      >
+                        {color ? (
+                          <span
+                            aria-hidden="true"
+                            className="size-2 shrink-0"
+                            style={{ background: color }}
+                          />
+                        ) : null}
+                        <span className="min-w-0 overflow-hidden text-ellipsis">
+                          {highlight(tag, "tags")}
+                        </span>
+                      </span>
+                    );
+                  })}
                 </div>
               ) : (
                 "—"
@@ -1879,7 +2064,7 @@ export default function WerkbereichReceipts({
           );
       }
     },
-    [costCenterLabelMap, highlight],
+    [costCenterLabelMap, highlight, tagColorByKey],
   );
 
   // Kassenbuchungen sind keine Belege — die Detailansicht hätte nichts zu laden.
@@ -2525,60 +2710,38 @@ export default function WerkbereichReceipts({
           unteren Innenabstand der Shell (40px) festhalten. Der negative
           Rand zieht sie stattdessen näher an den Rand. */}
       {showSummary ? (
-        <div className="@container sticky bottom-0 z-10 shrink-0 bg-background py-3 md:static md:-mb-7 md:py-0">
-          {/* Bricht nie um: unter 1100px stehen die Beschriftungen über den
-              Werten, und Schrift, Abstände und Innenränder wachsen mit der
-              Breite der Zeile (cqw) — so passt sie bis auf Telefonbreite. */}
-          <div className="flex flex-nowrap items-stretch justify-end gap-2 @min-[640px]:gap-3">
-            <span
-              className="knglmrt-num mr-auto self-center whitespace-nowrap text-muted-foreground"
-              title={`${sortedReceipts.length} ${sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}`}
-            >
-              {sortedReceipts.length}
-              <span className="hidden @min-[640px]:inline">
-                {" "}
-                {sortedReceipts.length === 1 ? "Buchung" : "Buchungen"}
-              </span>
-            </span>
-            <div className="flex flex-nowrap items-center gap-x-[clamp(8px,2.5cqw,32px)] knglmrt-border bg-muted px-[clamp(8px,2.5cqw,20px)] py-2 @min-[1100px]:py-3">
-              {showCashRegister ? (
-                <SummaryFigure
-                  label="Barkasse"
-                  title={cashRegisterError ?? undefined}
-                  value={
-                    cashRegisterBalance !== null
-                      ? formatCents(cashRegisterBalance)
-                      : "—"
-                  }
-                />
-              ) : null}
-              <SummaryFigure
-                label="Einnahmen"
-                value={formatSignedCents(totalIncome)}
-                valueClassName="text-emerald-700 dark:text-emerald-400"
-              />
-              <SummaryFigure
-                label="Ausgaben"
-                value={formatCents(-totalExpense)}
-                valueClassName="text-destructive"
-              />
-            </div>
-            <div className="flex shrink-0 flex-col justify-center gap-0.5 bg-[var(--knglmrt-dark-100)] px-[clamp(8px,2.5cqw,20px)] py-2 text-white @min-[1100px]:flex-row @min-[1100px]:items-center @min-[1100px]:gap-5 @min-[1100px]:py-3">
-              <span className="knglmrt-label whitespace-nowrap text-[length:clamp(11px,3cqw,14px)]!">
-                Guthaben
-                <span className="hidden @min-[640px]:inline">
-                  {" "}
-                  · {summaryScopeLabel}
-                </span>
-              </span>
-              <span
-                className={`knglmrt-value whitespace-nowrap text-[length:clamp(13px,4cqw,24px)]! leading-tight! @min-[1100px]:text-[length:var(--ui-size-value)]! ${availableSaldo < 0 ? "text-[var(--knglmrt-pink-60)]" : ""}`}
-              >
-                {formatCents(availableSaldo)}
-              </span>
-            </div>
-          </div>
-        </div>
+        <ReceiptsSummaryBar
+          count={sortedReceipts.length}
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          overhang={overhang}
+          sides={breakdownSides}
+          activeTagKeys={activeTagKeys}
+          onToggleTag={toggleBreakdownTag}
+          netLabel={isNarrowed ? "Saldo" : "Guthaben"}
+          netScope={summaryScopeLabel}
+          netScopeDetail={summaryScopeDetail}
+          isNarrowed={isNarrowed}
+          saldoParts={saldoParts}
+          net={availableSaldo}
+          periodLabel={describePeriod(period)}
+          cashRegister={
+            cashRegisterAccount !== undefined
+              ? {
+                  label: werkbereich.label,
+                  balance: cashRegisterBalance,
+                  error: cashRegisterError,
+                  costCenter2: werkbereich.value,
+                  onBooked: () => {
+                    void loadCashRegisters();
+                    void loadReceipts(werkbereichCostCenterValues);
+                  },
+                }
+              : null
+          }
+          formatCents={formatCents}
+          formatSignedCents={formatSignedCents}
+        />
       ) : null}
     </div>
   );

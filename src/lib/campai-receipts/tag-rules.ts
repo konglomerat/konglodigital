@@ -3,5 +3,9 @@
 export const MAX_RECEIPT_TAGS = 20;
 export const MAX_RECEIPT_TAG_LENGTH = 40;
 
-/** Setzt die App selbst; in Auswahllisten und Filtern nicht anbieten. */
-export const SYSTEM_RECEIPT_TAGS: ReadonlySet<string> = new Set(["API"]);
+/** Technische Tags: „API“ setzt die App selbst, „scripted“ stammt aus einem
+ *  Import-Skript. In Auswahllisten, Filtern und der Auswertung nicht anbieten. */
+export const SYSTEM_RECEIPT_TAGS: ReadonlySet<string> = new Set([
+  "API",
+  "scripted",
+]);
