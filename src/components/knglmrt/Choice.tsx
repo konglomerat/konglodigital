@@ -43,9 +43,13 @@ export default function Choice({
   ...rest
 }: ChoiceProps) {
   return (
+    // `relative`, damit das sr-only-Feld (position: absolute) am Label hängt.
+    // Ohne positionierten Vorfahren rechnet es sich sonst gegen das Dokument
+    // und macht es in der Verwaltung (h-screen, nur der Inhalt scrollt) höher
+    // als den Bildschirm — am Ende der Liste rutscht dann die ganze Seite.
     <label
       className={cn(
-        "inline-flex items-start gap-2.5",
+        "relative inline-flex items-start gap-2.5",
         disabled ? "cursor-default opacity-45" : "cursor-pointer",
         className,
       )}

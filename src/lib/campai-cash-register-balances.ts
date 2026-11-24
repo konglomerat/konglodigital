@@ -6,6 +6,8 @@
 // `balance`-Feld; finance/accounting/balances/list liefert es über die
 // Kassenkonten.
 
+import { belongsToWerkbereich } from "@/lib/buchhaltung-werkbereiche";
+
 export type CampaiCashRegisterBalance = {
   account: number;
   name: string;
@@ -213,6 +215,29 @@ export const CASH_REGISTER_ACCOUNT_BY_COST_CENTER2: Record<string, number> = {
   "63": 16010, // Zündstoffe
   "80": 16120, // #VHC (inkl. Unterprojekte 801–807)
 };
+
+/** Barkasse eines Werkbereichs; Unterprojekte (801) gehören zur Kasse ihres
+ *  Bereichs (80). */
+export const cashRegisterAccountForCostCenter2 = (
+  costCenter2: string | number | null | undefined,
+): number | null => {
+  if (costCenter2 === null || costCenter2 === undefined) {
+    return null;
+  }
+  const value = String(costCenter2).trim();
+  const match = Object.entries(CASH_REGISTER_ACCOUNT_BY_COST_CENTER2).find(
+    ([werkbereich]) => belongsToWerkbereich(value, werkbereich),
+  );
+  return match ? match[1] : null;
+};
+
+/** Umkehrung der festen Zuordnung: zu welchem Werkbereich gehört die Kasse? */
+export const costCenter2ForCashRegisterAccount = (
+  account: number,
+): string | null =>
+  Object.entries(CASH_REGISTER_ACCOUNT_BY_COST_CENTER2).find(
+    ([, registerAccount]) => registerAccount === account,
+  )?.[0] ?? null;
 
 /** Campai bucht den Anfangsbestand beim Anlegen einer Barkasse immer gegen
  *  90000 (Saldenvorträge Sachkonten) — das lässt sich dort nicht ändern. */

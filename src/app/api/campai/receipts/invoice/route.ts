@@ -23,7 +23,14 @@ import {
   costCenterForbiddenResponse,
   getBuchhaltungRouteAccess,
 } from "@/lib/access/server";
-import { canEditReceiptCostCenters } from "@/lib/buchhaltung-werkbereiche";
+import {
+  canEditReceiptCostCenters,
+  isCostCenterAllowed,
+} from "@/lib/buchhaltung-werkbereiche";
+import {
+  costCenter2ForCashRegisterAccount,
+  isCashRegisterAccount,
+} from "@/lib/campai-cash-register-balances";
 import {
   addCampaiReceiptNotes,
   buildCampaiReceiptCreatorNote,
@@ -68,6 +75,9 @@ type InvoiceBody = {
   positions?: PositionPayload[];
   isNet?: boolean;
   paid?: boolean;
+  /** Sachkonto der Barkasse (16000–16999): Rechnung wurde bar bezahlt, die
+   *  Zahlung wird nach dem Anlegen mit dieser Kasse verbucht. */
+  paidCashRegisterAccount?: string | number;
   paymentMethod?: string;
   paymentCashAccountId?: string;
   costCenter1?: string | number;
@@ -274,6 +284,97 @@ const isAvailableCashAccount = async (
   );
 };
 
+type ReceiptAmountResponse = {
+  completing?: boolean | null;
+  totalGrossAmount?: number | null;
+  totalAmountLeftToPay?: number | null;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Offener Betrag der frisch angelegten Rechnung. Campai rechnet die Summen
+// selbst (Netto/Brutto, Rabatt, Steuer) — deshalb von dort lesen statt
+// nachrechnen, und kurz warten, solange der Beleg noch `completing` ist.
+const loadAmountLeftToPay = async (
+  config: CampaiConfig,
+  receiptId: string,
+): Promise<number | null> => {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (attempt > 0) await sleep(500);
+    const response = await fetch(
+      `${config.baseUrl}/finance/receipts/${encodeURIComponent(receiptId)}`,
+      {
+        headers: { "X-API-Key": config.apiKey },
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) continue;
+    const receipt = (await response.json().catch(() => null)) as
+      | ReceiptAmountResponse
+      | null;
+    if (!receipt || receipt.completing) continue;
+    const amount = receipt.totalAmountLeftToPay ?? receipt.totalGrossAmount;
+    if (typeof amount === "number" && Number.isFinite(amount)) {
+      return Math.round(amount);
+    }
+  }
+  return null;
+};
+
+// „Bar bezahlt“: Zahlung mit der Barkasse auf die Rechnung buchen — wie
+// „Zahlung erfassen → Kasse“ in Campai. Danach steht die Rechnung auf bezahlt
+// und der Betrag im Kassenbuch der Kasse.
+const addCashRegisterPayment = async ({
+  config,
+  receiptId,
+  cashRegisterAccount,
+  date,
+}: {
+  config: CampaiConfig;
+  receiptId: string;
+  cashRegisterAccount: number;
+  date: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> => {
+  const amount = await loadAmountLeftToPay(config, receiptId);
+  if (amount === null) {
+    return {
+      ok: false,
+      error: "Der offene Betrag der Rechnung konnte nicht gelesen werden.",
+    };
+  }
+  if (amount <= 0) {
+    return { ok: true };
+  }
+
+  const response = await fetch(
+    `${config.baseUrl}/finance/receipts/${encodeURIComponent(receiptId)}/payments`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": config.apiKey,
+      },
+      body: JSON.stringify({
+        amount,
+        account: cashRegisterAccount,
+        date,
+        note: "Bar bezahlt",
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    return {
+      ok: false,
+      error: errorBody || `Campai-Fehler ${response.status}`,
+    };
+  }
+
+  return { ok: true };
+};
+
 const resolvePositionAccount = (body: InvoiceBody): number => {
   const requested = parsePositiveInt(body.positionAccount);
   return requested ?? loadInvoiceAccount();
@@ -329,6 +430,34 @@ export const POST = async (request: NextRequest) => {
     )
   ) {
     return costCenterForbiddenResponse();
+  }
+
+  // Barkasse frei wählbar, weil Positionen verschiedene Kostenstellen haben
+  // können — aber nur eine, auf die der Bereich auch buchen darf.
+  const paidInCash =
+    body.paidCashRegisterAccount !== undefined &&
+    body.paidCashRegisterAccount !== "";
+  const paidCashRegisterAccount = paidInCash
+    ? parsePositiveInt(body.paidCashRegisterAccount)
+    : null;
+  if (paidInCash) {
+    if (
+      !paidCashRegisterAccount ||
+      !isCashRegisterAccount(paidCashRegisterAccount)
+    ) {
+      return NextResponse.json(
+        { error: "Bitte eine gültige Barkasse auswählen." },
+        { status: 400 },
+      );
+    }
+    if (
+      !isCostCenterAllowed(
+        costCenter2ForCashRegisterAccount(paidCashRegisterAccount),
+        routeAccess.allowedCostCenters,
+      )
+    ) {
+      return costCenterForbiddenResponse();
+    }
   }
 
   let defaultPositionAccount: number;
@@ -567,6 +696,8 @@ export const POST = async (request: NextRequest) => {
     };
   } else if (paymentMethodType) {
     paymentMethodPayload = { type: paymentMethodType };
+  } else if (paidCashRegisterAccount) {
+    paymentMethodPayload = { type: "cash" };
   }
 
   const payload = {
@@ -590,7 +721,8 @@ export const POST = async (request: NextRequest) => {
     customerType: "debtor",
     customerNumber: selectedCustomerNumber ? [selectedCustomerNumber] : [],
     description: body.description ?? "",
-    paid: body.paid === true,
+    // Bei Barzahlung markiert erst die Kassenzahlung die Rechnung als bezahlt.
+    paid: paidCashRegisterAccount ? false : body.paid === true,
     paymentMethod: paymentMethodPayload,
     note: body.note ?? "",
     discount: 0,
@@ -652,8 +784,27 @@ export const POST = async (request: NextRequest) => {
     }
   }
 
+  let paymentWarning: string | undefined;
+  if (paidCashRegisterAccount) {
+    if (!receiptId) {
+      paymentWarning =
+        "Die Barzahlung konnte nicht verbucht werden, weil Campai keine Receipt-ID zurückgegeben hat. Bitte die Zahlung in Campai erfassen.";
+    } else {
+      const paymentResult = await addCashRegisterPayment({
+        config,
+        receiptId,
+        cashRegisterAccount: paidCashRegisterAccount,
+        date: payloadReceiptDate,
+      });
+      if (!paymentResult.ok) {
+        paymentWarning = `Rechnung erstellt, aber die Barzahlung konnte nicht verbucht werden: ${paymentResult.error} Bitte die Zahlung in Campai erfassen.`;
+      }
+    }
+  }
+
   return NextResponse.json({
     id: receiptId,
     noteWarning,
+    paymentWarning,
   });
 };

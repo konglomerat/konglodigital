@@ -34,6 +34,10 @@ import {
   CAMPAI_PAYMENT_METHOD_TYPES,
   type CampaiPaymentMethodType,
 } from "@/lib/campai-payment-methods";
+import {
+  type CampaiCashRegisterBalanceSummary,
+  cashRegisterAccountForCostCenter2,
+} from "@/lib/campai-cash-register-balances";
 import { euroAmountValidationMessage } from "@/lib/euro-input";
 import ReceiptsPageHeader from "../create/header";
 import ReceiptTagField from "../ReceiptTagField";
@@ -186,7 +190,19 @@ export default function NewSimpleInvoicePage() {
   const [city, setCity] = useState("");
   const [details1, setDetails1] = useState("");
   const [details2, setDetails2] = useState("");
-  const [paid, setPaid] = useState(false);
+  // „Bar bezahlt“: nach dem Anlegen bucht der Server eine Zahlung mit dieser
+  // Barkasse auf die Rechnung. Frei wählbar, weil Positionen verschiedene
+  // Kostenstellen haben können.
+  const [paidInCash, setPaidInCash] = useState(false);
+  const [cashRegisterAccount, setCashRegisterAccount] = useState("");
+  const [cashRegisters, setCashRegisters] = useState<
+    CampaiCashRegisterBalanceSummary["registers"]
+  >([]);
+  const [cashRegistersLoading, setCashRegistersLoading] = useState(false);
+  const [cashRegistersError, setCashRegistersError] = useState<string | null>(
+    null,
+  );
+  const [hasLoadedCashRegisters, setHasLoadedCashRegisters] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>(
     [],
@@ -410,6 +426,94 @@ export default function NewSimpleInvoicePage() {
       active = false;
     };
   }, [hasLoadedBankConnections, paymentMethod]);
+
+  useEffect(() => {
+    if (!paidInCash || hasLoadedCashRegisters) {
+      return;
+    }
+
+    let active = true;
+
+    const loadCashRegisters = async () => {
+      try {
+        setCashRegistersLoading(true);
+        const response = await fetchJson<CampaiCashRegisterBalanceSummary>(
+          "/api/campai/cash-registers",
+        );
+
+        if (!active) {
+          return;
+        }
+
+        const items = [...(response.registers ?? [])].sort((a, b) =>
+          a.name.localeCompare(b.name, "de"),
+        );
+        setCashRegisters(items);
+        setCashRegistersError(
+          items.length === 0
+            ? "Es wurden keine Barkassen in Campai gefunden."
+            : null,
+        );
+        setHasLoadedCashRegisters(true);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setCashRegisters([]);
+        setCashRegistersError(
+          error instanceof Error
+            ? error.message
+            : "Barkassen konnten nicht geladen werden.",
+        );
+      } finally {
+        if (active) {
+          setCashRegistersLoading(false);
+        }
+      }
+    };
+
+    loadCashRegisters();
+
+    return () => {
+      active = false;
+    };
+  }, [hasLoadedCashRegisters, paidInCash]);
+
+  // Gehören alle Positionen zum selben Werkbereich, ist dessen Kasse der
+  // naheliegende Vorschlag. Eine bewusst gewählte Kasse bleibt stehen.
+  const suggestedCashRegisterAccount = useMemo(() => {
+    const accounts = new Set(
+      positions.map((position) =>
+        cashRegisterAccountForCostCenter2(position.costCenter2),
+      ),
+    );
+    if (accounts.size !== 1) {
+      return "";
+    }
+    const [account] = accounts;
+    return account &&
+      cashRegisters.some((register) => register.account === account)
+      ? String(account)
+      : "";
+  }, [cashRegisters, positions]);
+
+  useEffect(() => {
+    if (!paidInCash || cashRegisterAccount || !suggestedCashRegisterAccount) {
+      return;
+    }
+    setCashRegisterAccount(suggestedCashRegisterAccount);
+  }, [cashRegisterAccount, paidInCash, suggestedCashRegisterAccount]);
+
+  const handlePaidInCashChange = (checked: boolean) => {
+    setPaidInCash(checked);
+    if (
+      checked &&
+      !paymentMethod &&
+      paymentMethods.some((item) => item.value === "cash")
+    ) {
+      setPaymentMethod("cash");
+    }
+  };
 
   const validPositions = useMemo(() => {
     return positions
@@ -655,14 +759,28 @@ export default function NewSimpleInvoicePage() {
       return;
     }
 
+    if (paidInCash && !cashRegisterAccount) {
+      setErrorMessage("Bitte die Barkasse auswählen, in die bezahlt wurde.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const statusNoteLine = `Status: ${paid ? "bezahlt" : "offen"}`;
+      const cashRegisterName = cashRegisters.find(
+        (register) => String(register.account) === cashRegisterAccount,
+      )?.name;
+      const statusNoteLine = paidInCash
+        ? `Status: bar bezahlt (${cashRegisterName ?? `Kasse ${cashRegisterAccount}`})`
+        : "Status: offen";
       const internalNote = [note.trim(), statusNoteLine]
         .filter(Boolean)
         .join("\n");
 
-      const response = await fetchJson<{ id: string | null }>(
+      const response = await fetchJson<{
+        id: string | null;
+        noteWarning?: string;
+        paymentWarning?: string;
+      }>(
         "/api/campai/receipts/invoice",
         {
           method: "POST",
@@ -675,7 +793,9 @@ export default function NewSimpleInvoicePage() {
             recipientEmail: recipientEmail.trim() || undefined,
             debtorName: debtorName.trim(),
             customerNumber: debtorAccount,
-            paid,
+            paidCashRegisterAccount: paidInCash
+              ? cashRegisterAccount
+              : undefined,
             paymentMethod: paymentMethod || undefined,
             paymentCashAccountId:
               paymentMethod === "sepaCreditTransfer"
@@ -700,9 +820,19 @@ export default function NewSimpleInvoicePage() {
 
       setSuccessMessage(
         response.id
-          ? `Rechnung erstellt (ID: ${response.id}).`
+          ? `Rechnung erstellt (ID: ${response.id})${
+              paidInCash && !response.paymentWarning
+                ? ", Barzahlung verbucht"
+                : ""
+            }.`
           : "Rechnung erfolgreich erstellt.",
       );
+      const warnings = [response.paymentWarning, response.noteWarning].filter(
+        Boolean,
+      );
+      if (warnings.length > 0) {
+        setErrorMessage(warnings.join(" "));
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -1301,12 +1431,45 @@ export default function NewSimpleInvoicePage() {
             />
             <FieldShell as="div" label="Status">
               <Choice
-                label="Bezahlt"
+                label="Bar bezahlt"
                 className="h-11 items-center"
-                checked={paid}
-                onChange={(event) => setPaid(event.target.checked)}
+                checked={paidInCash}
+                onChange={(event) =>
+                  handlePaidInCashChange(event.target.checked)
+                }
               />
             </FieldShell>
+
+            {paidInCash ? (
+              <NativeSelect
+                label="Barkasse"
+                required
+                hint={
+                  cashRegistersError
+                    ? undefined
+                    : cashRegistersLoading
+                      ? "Barkassen werden geladen."
+                      : "Die Zahlung wird nach dem Anlegen mit dieser Kasse auf die Rechnung gebucht."
+                }
+                error={cashRegistersError ?? undefined}
+                value={cashRegisterAccount}
+                onChange={(event) => setCashRegisterAccount(event.target.value)}
+                disabled={cashRegistersLoading || cashRegisters.length === 0}
+              >
+                <option value="">
+                  {cashRegistersLoading
+                    ? "Barkassen werden geladen"
+                    : cashRegisters.length === 0
+                      ? "Keine Barkassen verfügbar"
+                      : "Bitte Barkasse wählen"}
+                </option>
+                {cashRegisters.map((register) => (
+                  <option key={register.account} value={register.account}>
+                    {register.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            ) : null}
           </div>
         </FormSection>
 
