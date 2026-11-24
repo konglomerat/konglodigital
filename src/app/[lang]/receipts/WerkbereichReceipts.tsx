@@ -610,6 +610,17 @@ const getHeaderButtonAlignmentClassName = (
   return "justify-start";
 };
 
+// Zwischenspeicher über Seitenwechsel hinweg: Kommt man aus einem Formular
+// oder Beleg zurück, steht die Liste sofort da und wird im Hintergrund
+// aufgefrischt, statt mit Ladeanzeige komplett neu von Campai zu kommen.
+// Lebt nur im Speicher des Tabs; ein Neuladen holt alles frisch.
+const receiptsCache = new Map<string, CampaiBalanceReceipt[]>();
+let costCentersCache: {
+  all: CostCenterOption[];
+  costCenter1Labels: CostCenterOption[];
+} | null = null;
+let cashRegisterCache: CampaiCashRegisterBalanceSummary | null = null;
+
 const fetchJson = async <T,>(url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
   const data = (await response.json()) as { error?: string } & T;
@@ -745,10 +756,12 @@ export default function WerkbereichReceipts({
     useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [hiddenColumnKeys, setHiddenColumnKeys] = useState<ColumnKey[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
-  const [allCostCenters, setAllCostCenters] = useState<CostCenterOption[]>([]);
+  const [allCostCenters, setAllCostCenters] = useState<CostCenterOption[]>(
+    () => costCentersCache?.all ?? [],
+  );
   const [costCenter1Labels, setCostCenter1Labels] = useState<
     CostCenterOption[]
-  >([]);
+  >(() => costCentersCache?.costCenter1Labels ?? []);
   const [costCentersError, setCostCentersError] = useState<string | null>(null);
 
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
@@ -759,13 +772,17 @@ export default function WerkbereichReceipts({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [cashRegisterSummary, setCashRegisterSummary] =
-    useState<CampaiCashRegisterBalanceSummary | null>(null);
+    useState<CampaiCashRegisterBalanceSummary | null>(() => cashRegisterCache);
   const [cashRegisterError, setCashRegisterError] = useState<string | null>(
     null,
   );
 
-  const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>([]);
-  const [loadingReceipts, setLoadingReceipts] = useState(true);
+  const [receipts, setReceipts] = useState<CampaiBalanceReceipt[]>(
+    () => receiptsCache.get(werkbereich.value) ?? [],
+  );
+  const [loadingReceipts, setLoadingReceipts] = useState(
+    () => !receiptsCache.has(werkbereich.value),
+  );
   const [receiptsError, setReceiptsError] = useState<string | null>(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(
     null,
@@ -803,8 +820,12 @@ export default function WerkbereichReceipts({
         costCenter1Labels?: CostCenterOption[];
       };
 
-      setAllCostCenters(allData.costCenters ?? []);
-      setCostCenter1Labels(costCenter1Data.costCenter1Labels ?? []);
+      costCentersCache = {
+        all: allData.costCenters ?? [],
+        costCenter1Labels: costCenter1Data.costCenter1Labels ?? [],
+      };
+      setAllCostCenters(costCentersCache.all);
+      setCostCenter1Labels(costCentersCache.costCenter1Labels);
     } catch (error) {
       setCostCentersError(
         error instanceof Error
@@ -936,8 +957,12 @@ export default function WerkbereichReceipts({
     [werkbereich.value],
   );
 
+  const cacheKey = werkbereich.value;
   const loadReceipts = useCallback(async (values: string[]) => {
-    setLoadingReceipts(true);
+    // Mit Daten aus dem Zwischenspeicher still auffrischen, ohne Ladeanzeige.
+    if (!receiptsCache.has(cacheKey)) {
+      setLoadingReceipts(true);
+    }
     setReceiptsError(null);
     try {
       const response = await fetch("/api/campai/balance/receipts", {
@@ -954,8 +979,10 @@ export default function WerkbereichReceipts({
       const data = (await response.json()) as {
         receipts?: CampaiBalanceReceipt[];
       };
+      receiptsCache.set(cacheKey, data.receipts ?? []);
       setReceipts(data.receipts ?? []);
     } catch (error) {
+      receiptsCache.delete(cacheKey);
       setReceipts([]);
       setReceiptsError(
         error instanceof Error
@@ -965,7 +992,7 @@ export default function WerkbereichReceipts({
     } finally {
       setLoadingReceipts(false);
     }
-  }, []);
+  }, [cacheKey]);
 
   useEffect(() => {
     void loadReceipts(werkbereichCostCenterValues);
@@ -984,6 +1011,7 @@ export default function WerkbereichReceipts({
       if (request !== cashRegisterRequestRef.current) {
         return;
       }
+      cashRegisterCache = summary;
       setCashRegisterSummary(summary);
       setCashRegisterError(null);
     } catch (error) {

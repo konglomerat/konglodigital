@@ -8,7 +8,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
-import FieldShell from "@/components/knglmrt/FieldShell";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
 import SearchField from "@/components/knglmrt/SearchField";
 
@@ -71,81 +70,74 @@ export default function ReceiptSearch<T extends string>({
 
   const scopeLabel =
     scopes.find((option) => option.value === scope)?.label ?? "";
+  const placeholder = scope === scopes[0]?.value ? "Suchen" : `${scopeLabel} …`;
 
   if (!isExpanded) {
     return (
-      <FieldShell
-        as="div"
-        htmlFor={controlId}
-        label="Suche"
-        className="shrink-0"
+      // Sieht aus wie ein leeres Suchfeld mit Platzhalter; erst beim Klick
+      // kommt das echte Feld samt Auswahl, worin gesucht wird.
+      <button
+        id={controlId}
+        type="button"
+        onClick={() => setIsOpen(true)}
+        title="Buchungen durchsuchen (/)"
+        aria-label="Buchungen durchsuchen"
+        className="inline-flex h-[38px] shrink-0 items-center gap-3 whitespace-nowrap knglmrt-border bg-card px-4 text-muted-foreground transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
       >
-        <button
-          id={controlId}
-          type="button"
-          onClick={() => setIsOpen(true)}
-          title="Buchungen durchsuchen (/)"
-          className="inline-flex h-[38px] shrink-0 items-center gap-3 whitespace-nowrap knglmrt-border bg-card px-4 transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-        >
-          <FontAwesomeIcon
-            icon={faMagnifyingGlass}
-            aria-hidden="true"
-            className="h-3.5 w-3.5 shrink-0"
-          />
-          <span className="font-bold">{scopeLabel}</span>
-        </button>
-      </FieldShell>
+        <FontAwesomeIcon
+          icon={faMagnifyingGlass}
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0"
+        />
+        <span>{placeholder}</span>
+      </button>
     );
   }
 
   return (
-    <FieldShell as="div" htmlFor={controlId} label="Suche" className="shrink-0">
-      <div
-        ref={containerRef}
-        role="search"
-        className="flex items-center"
-        onBlur={(event) => {
-          if (
-            !value &&
-            !containerRef.current?.contains(event.relatedTarget as Node | null)
-          ) {
-            setIsOpen(false);
-          }
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            close();
-          }
-        }}
+    <div
+      ref={containerRef}
+      role="search"
+      className="flex shrink-0 items-center"
+      onBlur={(event) => {
+        if (
+          !value &&
+          !containerRef.current?.contains(event.relatedTarget as Node | null)
+        ) {
+          setIsOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          close();
+        }
+      }}
+    >
+      <SearchField
+        ref={inputRef}
+        id={controlId}
+        size="small"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onClear={close}
+        placeholder={placeholder}
+        aria-label="Buchungen durchsuchen"
+        className="h-[38px] w-[clamp(110px,26cqw,240px)]"
+      />
+      <NativeSelect
+        aria-label="Suchen in"
+        title="Suchen in"
+        value={scope}
+        onChange={(event) => onScopeChange(event.target.value as T)}
+        className="-ml-px w-auto max-w-[clamp(84px,20cqw,180px)] shrink-0"
+        selectClassName="h-[38px] py-0 text-muted-foreground"
       >
-        <SearchField
-          ref={inputRef}
-          id={controlId}
-          size="small"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onClear={close}
-          placeholder={
-            scope === scopes[0]?.value ? "Suchen" : `${scopeLabel} …`
-          }
-          aria-label="Buchungen durchsuchen"
-          className="h-[38px] w-[clamp(110px,26cqw,240px)]"
-        />
-        <NativeSelect
-          aria-label="Suchen in"
-          title="Suchen in"
-          value={scope}
-          onChange={(event) => onScopeChange(event.target.value as T)}
-          className="-ml-px w-auto max-w-[clamp(84px,20cqw,180px)] shrink-0"
-          selectClassName="h-[38px] py-0 text-muted-foreground"
-        >
-          {scopes.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </NativeSelect>
-      </div>
-    </FieldShell>
+        {scopes.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </NativeSelect>
+    </div>
   );
 }

@@ -284,7 +284,7 @@ export default function ReimbursementForm({
       {isMember ? (
         <div className="space-y-2">
           <PageTitle
-            backLink={{ href: "/account", label: "Zurück" }}
+            backLink={{ href: "/account", label: "Zurück", preferHistory: true }}
             title="Rückerstattung einreichen"
             subTitle={REIMBURSEMENT_DESCRIPTION}
           />

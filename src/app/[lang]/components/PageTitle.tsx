@@ -1,17 +1,11 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import Button from "@/components/knglmrt/Button";
+import BackLink from "./BackLink";
 
 type PageTitleButtonKind =
-  | "primary"
-  | "secondary"
-  | "emphasis"
-  | "danger-primary"
-  | "danger-secondary";
+  "primary" | "secondary" | "emphasis" | "danger-primary" | "danger-secondary";
 
 type PageTitleButtonSize = "small" | "medium" | "large";
 
@@ -42,6 +36,8 @@ type PageTitleBackLink = {
   href: string;
   label: ReactNode;
   icon?: IconProp;
+  // Zur vorherigen App-Seite zurück statt zu `href`, falls es eine gibt.
+  preferHistory?: boolean;
 };
 
 type PageTitleProps = {
@@ -56,6 +52,30 @@ type PageTitleProps = {
   eyebrowClassName?: string;
   titleClassName?: string;
   subTitleClassName?: string;
+};
+
+// Rasterplätze für Augenbraue, Zurück-Taste, Überschrift und Aktionen. Die
+// Klassen stehen ausgeschrieben, damit Tailwind sie findet.
+const getTitleLayout = ({
+  hasBack,
+  hasEyebrow,
+}: {
+  hasBack: boolean;
+  hasEyebrow: boolean;
+}) => {
+  const titleRow = hasEyebrow ? "row-start-2" : "row-start-1";
+  const titleCol = hasBack ? "col-start-2" : "col-start-1";
+  return {
+    columns: hasBack
+      ? "grid-cols-[auto_minmax(0,1fr)_auto]"
+      : "grid-cols-[minmax(0,1fr)_auto]",
+    eyebrow: `${titleCol} row-start-1`,
+    back: `col-start-1 ${titleRow}`,
+    // Neben Taste und Aktionen wird es schmal: lange Wörter trennen statt
+    // unter die Aktionen laufen.
+    heading: `${titleCol} ${titleRow} hyphens-auto break-words`,
+    actions: `${hasBack ? "col-start-3" : "col-start-2"} ${titleRow}`,
+  };
 };
 
 export default function PageTitle({
@@ -91,41 +111,42 @@ export default function PageTitle({
     : baseSubTitleClassName;
   const Heading = headingLevel === 2 ? "h2" : "h1";
   const backLinkElement = backLink ? (
-    <Link
+    <BackLink
       href={backLink.href}
-      className="inline-flex w-fit shrink-0 items-center gap-2 knglmrt-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-primary-soft"
-    >
-      <FontAwesomeIcon
-        icon={backLink.icon ?? faArrowLeft}
-        className="h-3.5 w-3.5"
-      />
-      <span>{backLink.label}</span>
-    </Link>
+      label={backLink.label}
+      icon={backLink.icon}
+      preferHistory={backLink.preferHistory}
+    />
   ) : null;
+
+  const hasActions = Boolean(customActions) || (links?.length ?? 0) > 0;
+  const layout = getTitleLayout({
+    hasBack: Boolean(backLinkElement),
+    hasEyebrow: Boolean(eyebrow),
+  });
 
   return (
     <header className={wrapperClassName}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          {backLinkElement}
-          {eyebrow ? (
-            <p
-              className={`${resolvedEyebrowClassName} ${backLink ? "mt-4" : ""}`}
-            >
-              {eyebrow}
-            </p>
-          ) : null}
-          <Heading
-            className={`${resolvedTitleClassName}${
-              backLink && !eyebrow ? " mt-4" : ""
-            }`}
-          >
-            {title}
-          </Heading>
-        </div>
+      {/* Eine Zeile aus Zurück-Taste, Überschrift und Aktionen, vertikal
+          mittig zueinander; die Augenbraue steht darüber in der Titelspalte.
+          Lange Überschriften brechen um, die Aktionen bleiben rechts. */}
+      <div className={`grid items-center gap-x-4 gap-y-3 ${layout.columns}`}>
+        {eyebrow ? (
+          <p className={`${resolvedEyebrowClassName} ${layout.eyebrow}`}>
+            {eyebrow}
+          </p>
+        ) : null}
+        {backLinkElement ? (
+          <div className={layout.back}>{backLinkElement}</div>
+        ) : null}
+        <Heading className={`${resolvedTitleClassName} ${layout.heading}`}>
+          {title}
+        </Heading>
 
-        {customActions || (links && links.length > 0) ? (
-          <div className="flex flex-wrap items-center gap-2">
+        {hasActions ? (
+          <div
+            className={`flex flex-wrap items-center justify-end gap-2 ${layout.actions}`}
+          >
             {customActions}
             {(links ?? []).map((link, index) => {
               const actionKey =

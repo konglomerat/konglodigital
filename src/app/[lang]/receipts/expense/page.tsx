@@ -28,6 +28,7 @@ import Field from "@/components/knglmrt/Field";
 import FieldShell from "@/components/knglmrt/FieldShell";
 import FormSection from "@/components/knglmrt/FormSection";
 import NativeSelect from "@/components/knglmrt/NativeSelect";
+import Notice from "@/components/knglmrt/Notice";
 import {
   euroAmountPattern,
   euroAmountValidationMessage,
@@ -231,6 +232,17 @@ export default function AusgabePage() {
         description="Einbuchung von Rechnungen und Belegen, die durch Ausgaben des Vereins oder einer seiner Projekte und Werkbereiche entstanden sind."
         helperText="Pflichtfelder sind mit * markiert."
       />
+
+      {/* Mitglieder buchen ausgelegtes Geld oft hier statt als
+          Rückerstattung — dann bekommen sie es nie zurück. */}
+      <Notice tone="gelb" faceNumber={8} title="Schon aus eigener Tasche bezahlt?">
+        Dann bitte als{" "}
+        <Link
+          href="/receipts/reimbursement"
+          className="font-bold underline underline-offset-4 hover:text-primary"
+        >Rückerstattung einreichen.</Link>{" "}
+        Ansonsten wird es doppelt bezahlt :(
+      </Notice>
 
       {costCentersError ? (
         <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">

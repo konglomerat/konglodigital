@@ -30,6 +30,7 @@ import FeedbackWidget from "./FeedbackWidget";
 import MobileTopNav from "./MobileTopNav";
 import SiteFooter from "./SiteFooter";
 import TopNav from "./TopNav";
+import { NavigationTracker } from "./[lang]/components/BackLink";
 import { localizePathname } from "@/i18n/config";
 import {
   DEFAULT_HEADER_LINKS,
@@ -183,6 +184,7 @@ export default async function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <I18nProvider locale={locale}>
+          <NavigationTracker />
           <AppShell
             mobileNavigation={
               <MobileTopNav

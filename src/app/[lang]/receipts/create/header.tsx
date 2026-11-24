@@ -13,7 +13,14 @@ export default function ReceiptsPageHeader({
 }: ReceiptsPageHeaderProps) {
   return (
     <div className="space-y-2">
-      <SubPageTitle ressort="buchhaltung" title={title} subTitle={description} />
+      {/* Buchungsformulare öffnet man aus der Übersicht wie aus einem
+          Werkbereich — „Zurück" soll dorthin, woher man kam. */}
+      <SubPageTitle
+        ressort="buchhaltung"
+        title={title}
+        subTitle={description}
+        preferHistory
+      />
       {helperText ? (
         <p className="text-muted-foreground">{helperText}</p>
       ) : null}

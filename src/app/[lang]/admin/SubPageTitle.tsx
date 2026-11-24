@@ -17,6 +17,9 @@ type SubPageTitleProps = {
   // Ohne Zurück-Taste, wenn die Ressort-Startseite übersprungen wird, weil es
   // nur diese eine Unterseite gibt.
   hideBack?: boolean;
+  // Zurück zur vorherigen App-Seite statt zum festen Ziel, falls es eine gibt
+  // (z. B. Formulare, die man aus verschiedenen Listen heraus öffnet).
+  preferHistory?: boolean;
 };
 
 // Unterseite eines Ressorts: Zurück-Taste oben, darunter die kleinere Überschrift.
@@ -28,13 +31,16 @@ export default function SubPageTitle({
   customActions,
   backHref,
   hideBack = false,
+  preferHistory = false,
 }: SubPageTitleProps) {
   const parent = getRessort(ressort);
 
   return (
     <PageTitle
       backLink={
-        hideBack ? undefined : { href: backHref ?? parent.href, label: "Zurück" }
+        hideBack
+          ? undefined
+          : { href: backHref ?? parent.href, label: "Zurück", preferHistory }
       }
       title={title}
       subTitle={subTitle}
